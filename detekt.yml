@@ -1,0 +1,102 @@
+# Detekt configuration for RAD Shift Tracker
+# Tuned for Jetpack Compose codebase
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 140
+  LongParameterList:
+    active: true
+    functionThreshold: 12  # Compose functions often have many params
+    constructorThreshold: 13
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 30  # Repository classes can be large
+    thresholdInInterfaces: 15
+    thresholdInObjects: 15
+    thresholdInEnums: 10
+  ComplexCondition:
+    active: false  # Parsing logic needs complex conditions
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+
+empty-blocks:
+  active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false  # We catch Exception intentionally for robustness
+  SwallowedException:
+    active: false  # We log exceptions now
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '([a-z][a-zA-Z0-9]*)|([A-Z][a-zA-Z0-9]*)'  # Allow PascalCase for Compose
+    excludes: ['**/test/**', '**/androidTest/**']
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][a-zA-Z0-9]*'
+  MatchingDeclarationName:
+    active: false  # Files can have multiple declarations
+
+performance:
+  active: true
+  SpreadOperator:
+    active: true
+  ForEachOnRange:
+    active: false
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+potential-bugs:
+  active: true
+  UnsafeCallOnNullableType:
+    active: true
+  CastToNullableType:
+    active: false  # We use suppression where needed
+
+style:
+  active: true
+  MagicNumber:
+    active: false  # Disabled due to many constants in UI code
+  WildcardImport:
+    active: false  # Compose often uses wildcards
+  UnusedImports:
+    active: true
+  UnusedPrivateMember:
+    active: true
+    allowedNames: '_.*'
+  UnusedPrivateProperty:
+    active: true
+    allowedNames: '_.*'
+  MaxLineLength:
+    active: false  # Compose chains can be long
+  ReturnCount:
+    active: false  # Parsing and pay calculation have many early returns
+  LoopWithTooManyJumpStatements:
+    active: false  # JSON parsing uses continues

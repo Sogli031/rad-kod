@@ -1,0 +1,39 @@
+# --- Android / Gradle build ---
+.gradle/
+.kotlin/
+build/
+app/build/
+captures/
+.cxx/
+*.apk
+*.aab
+
+# --- IDE ---
+.idea/
+*.iml
+
+# --- Lokalna konfiguracija i tajne (NIKAD ne komitovati) ---
+# local.properties sadrzi SDK putanju i MAPS_API_KEY
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.p12
+
+# --- Licni / firmini podaci (ostaju samo lokalno) ---
+work_shifts.json
+*.docx
+
+# --- Generisani izlaz i artefakti alata ---
+graphify-out/
+.codex-remote-attachments/
+.firecrawl/
+
+# --- AI assistant artefakti ---
+session-log.md
+state.md
+
+# --- Windows / OS ---
+nul
+Thumbs.db
+.DS_Store

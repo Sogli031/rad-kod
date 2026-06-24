@@ -1,0 +1,220 @@
+package com.rad.shifttracker
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import java.util.Locale
+
+// Existing dialog flow is intentionally grouped; detekt stays active for newly added methods.
+@Suppress("LongMethod")
+@Composable
+fun CloudBackupDialog(
+    signInState: com.rad.shifttracker.data.backup.SignInState,
+    syncState: com.rad.shifttracker.data.backup.SyncState,
+    lastSyncTime: Long?,
+    onSignIn: () -> Unit,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit,
+    onSignOut: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val isSignedIn = signInState is com.rad.shifttracker.data.backup.SignInState.SignedIn
+    val email = (signInState as? com.rad.shifttracker.data.backup.SignInState.SignedIn)?.email
+    val isSyncing = syncState is com.rad.shifttracker.data.backup.SyncState.Syncing
+    val syncError = (syncState as? com.rad.shifttracker.data.backup.SyncState.Error)?.message
+
+    PopupDialog(
+        title = "Cloud Backup",
+        onDismiss = onDismiss,
+        widthRatio = 0.85f,
+        scrollable = true,
+        accent = THEME.accentPrimary
+    ) {
+        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentPrimary) {
+            SectionLabel(text = "Status")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Nalog:",
+                    color = THEME.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = email ?: "Nije povezano",
+                    color = if (isSignedIn) THEME.success else THEME.textMuted,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (isSyncing) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Status:",
+                        color = THEME.textSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = THEME.info,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Sinhronizacija...",
+                            color = THEME.info,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            if (lastSyncTime != null && !isSyncing) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Poslednji backup:",
+                        color = THEME.textSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = formatSyncTime(lastSyncTime),
+                        color = THEME.success,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            // Show sync error if present
+            if (syncError != null && !isSyncing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(THEME.danger.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = syncError,
+                        color = THEME.danger,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        if (!isSignedIn) {
+            GlowButton(
+                text = "Poveži Google",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                bgColor = THEME.accentPrimary,
+                textColor = THEME.textDark,
+                textStyle = MaterialTheme.typography.labelLarge,
+                onClick = onSignIn
+            )
+        } else {
+            PopupCard {
+                SectionLabel(text = "Akcije")
+                RoundedButton(
+                    text = "Backup",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.success,
+                    textColor = THEME.textDark,
+                    radius = 14.dp,
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    bold = true,
+                    enabled = !isSyncing,
+                    onClick = onBackup
+                )
+                RoundedButton(
+                    text = "Restore",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.info,
+                    textColor = THEME.textPrimary,
+                    radius = 14.dp,
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    bold = true,
+                    enabled = !isSyncing,
+                    onClick = onRestore
+                )
+                RoundedButton(
+                    text = "Odjavi se",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.bgCardElevated,
+                    textColor = THEME.danger,
+                    borderColor = THEME.danger,
+                    radius = 14.dp,
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    bold = true,
+                    enabled = !isSyncing,
+                    onClick = onSignOut
+                )
+            }
+        }
+    }
+}
+
+private fun formatSyncTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    val seconds = diff / 1000
+    val hours = seconds / 3600
+    val days = hours / 24
+
+    return when {
+        seconds < 3600 -> "Pre manje od sat"
+        hours < 24 -> "Pre $hours h"
+        days == 1L -> "Juče"
+        days < 7 -> "Pre $days dana"
+        else -> {
+            val date = java.text.SimpleDateFormat("dd.MM. HH:mm", Locale.getDefault())
+            date.format(java.util.Date(timestamp))
+        }
+    }
+}

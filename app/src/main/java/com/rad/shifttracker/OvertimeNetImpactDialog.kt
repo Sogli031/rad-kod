@@ -1,0 +1,126 @@
+package com.rad.shifttracker
+
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import com.rad.shifttracker.ui.components.AutoSizeText
+
+@Composable
+fun OvertimeNetImpactDialog(
+    impact: MonthlyOvertimeNetImpact,
+    onDismiss: () -> Unit
+) {
+    PopupDialog(
+        title = "Prekovremeno",
+        onDismiss = onDismiss,
+        widthRatio = 0.85f,
+        scrollable = true,
+        accent = THEME.weekendOt
+    ) {
+        if (!impact.hasAnyNetEffect) {
+            PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+                Text(
+                    text = "Nema prekovremenih sati u ovom mesecu.",
+                    color = THEME.warning,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            return@PopupDialog
+        }
+
+        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.weekendOt) {
+            SectionLabel(text = "Dodatna neto zarada")
+            AutoSizeText(
+                text = signedMoneyText(impact.paidOvertimeNetDifference),
+                color = THEME.weekendOt,
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
+                minFontSize = MaterialTheme.typography.titleMedium.fontSize,
+                maxLines = 1,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Za ${formatHours(impact.overtimeHours)} prekovremenog rada.",
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            OvertimeImpactMoneyRow(
+                label = "Vraćeno kroz Za sate",
+                value = signedMoneyText(impact.compTimeRecoveryNetEffect),
+                color = if (impact.compTimeRecoveryNetEffect > 0.0) THEME.compTime else THEME.textMuted,
+                visible = impact.compTimeRecoveryNetEffect > 0.0
+            )
+            OvertimeImpactMoneyRow(
+                label = "Gubitak zbog manjka sati",
+                value = "-${moneyText(impact.deficitNetLoss)}",
+                color = THEME.danger,
+                visible = impact.deficitNetLoss > 0.0
+            )
+            OvertimeImpactMoneyRow(
+                label = "Konačna razlika",
+                value = signedMoneyText(impact.netDifference),
+                color = if (impact.netDifference >= 0.0) THEME.success else THEME.danger,
+                visible = impact.deficitNetLoss > 0.0 || impact.compTimeRecoveryNetEffect > 0.0
+            )
+            Text(
+                text = "Razlika u odnosu na isti mesec bez tih sati.",
+                color = THEME.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private val MonthlyOvertimeNetImpact.hasAnyNetEffect: Boolean
+    get() = paidOvertimeNetDifference > 0.0 || compTimeRecoveryNetEffect > 0.0 || deficitNetLoss > 0.0
+
+@Composable
+private fun OvertimeImpactMoneyRow(
+    label: String,
+    value: String,
+    color: Color,
+    visible: Boolean
+) {
+    if (!visible) return
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AutoSizeText(
+            text = label,
+            color = THEME.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
+            minFontSize = MaterialTheme.typography.bodySmall.fontSize,
+            maxLines = 1,
+            modifier = Modifier.weight(1.15f)
+        )
+        Text(
+            text = value,
+            color = color,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(0.85f)
+        )
+    }
+}
