@@ -9,11 +9,10 @@ import org.junit.Test
 
 class OptionsDialogTextTest {
     @Test
-    fun `options dialog exposes cloud and payslip reconstruction`() {
+    fun `options dialog exposes cloud export holidays and notification access`() {
         assertEquals(
             listOf(
                 "Google cloud",
-                "Popuni mesec po platnom listiću",
                 "Export rada i obračuna za izabrani mesec",
                 "Praznici",
                 "Pristup obaveštenjima"

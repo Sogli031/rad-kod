@@ -4,7 +4,6 @@ import com.rad.shifttracker.AbsenceRangeNetImpact
 import com.rad.shifttracker.AnnualNetPayAverages
 import com.rad.shifttracker.AnnualNetPayMonth
 import com.rad.shifttracker.AppConfig
-import com.rad.shifttracker.BrigadeType
 import com.rad.shifttracker.DayRecord
 import com.rad.shifttracker.MonthKey
 import com.rad.shifttracker.MonthSummary
@@ -28,7 +27,6 @@ import com.rad.shifttracker.grossHourlyRateForMonth
 import com.rad.shifttracker.previousMonthKey
 import com.rad.shifttracker.recentNetPayAverageMonthKeys
 import com.rad.shifttracker.resolveHourlyValueForMonth
-import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -297,33 +295,6 @@ internal class RepositoryPayQueries(
             taxRelief = taxRelief,
             taxPercent = taxPercent
         )
-    }
-
-    fun calculatePayrollSlipPreviewNetBeforeDeductionsUnsafe(
-        month: MonthKey,
-        monthRecords: List<DayRecord>,
-        grossAdditions: MonthlyGrossAdditions
-    ): Double {
-        if (month.year <= 0 || month.month !in 1..12) return 0.0
-        val grossHourlyRate = grossHourlyRateUnsafe(month.year, month.month)
-        val summary = createSummaryCalculator().calculateMonthSummary(
-            records = monthRecords,
-            baseRate = grossHourlyRate,
-            startingCompBalance = 0,
-            startingCompBalanceMinutes = 0,
-            yearsOfService = calculateYearsOfServiceUnsafe(month.year, month.month),
-            brigadeType = BrigadeType.TROBRIGADA,
-            summaryYear = month.year,
-            summaryMonth = month.month,
-            payBases = payBaseResolver.resolvedPayBasesForWorkMonthReadOnly(month.year, month.month)
-        )
-        return calculateMonthlyNetPayBreakdownUnsafe(
-            year = month.year,
-            month = month.month,
-            summary = summary,
-            grossHourlyRate = grossHourlyRate,
-            grossAdditions = grossAdditions.sanitizeMonthlyGrossAdditions(month.year, month.month)
-        ).netPayBeforeDeductions
     }
 
     fun calculateAnnualMonthNetPayUnsafe(

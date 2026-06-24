@@ -59,7 +59,6 @@ internal sealed class DialogState {
     object Minuli : DialogState()
     object Options : DialogState()
     object CloudBackup : DialogState()
-    object PayrollSlipReconstruction : DialogState()
     object AdvancePayment : DialogState()
     object InitialCompBalance : DialogState()
     object DeleteMonth : DialogState()
@@ -240,7 +239,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         repo.getRecentNetPayAverage(payrollMonthKey.year, payrollMonthKey.month, recentNetPayAverageAsOfDate)
     }
     val scheduler = remember { ShiftScheduler() }
-    val payrollSlipService = remember { PayrollSlipReconstructionService() }
     val foodReceiptReminderStatus = remember(repoTick.intValue, currentYear, currentMonth) {
         FoodReceiptReminderScheduler.selectedMonthStatus(context, repo, MonthKey(currentYear, currentMonth))
     }
@@ -359,7 +357,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             today = today,
             vacationAsOfDate = vacationAsOfDate,
             scheduler = scheduler,
-            payrollSlipService = payrollSlipService,
             repo = repo,
             repoTick = repoTick.intValue,
             summary = payrollSummary,

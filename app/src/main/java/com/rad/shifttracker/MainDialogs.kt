@@ -98,16 +98,6 @@ internal fun MainDialogs(
             )
         }
 
-        DialogState.PayrollSlipReconstruction -> {
-            PayrollSlipReconstructionDialog(
-                year = data.currentYear,
-                month = data.currentMonth,
-                repo = data.repo,
-                service = data.payrollSlipService,
-                onDismiss = onDismiss
-            )
-        }
-
         DialogState.CloudBackup -> {
             CloudBackupDialog(
                 signInState = cloudBackup.signInState,
@@ -202,7 +192,6 @@ private fun MainOptionsDialog(
     OptionsDialog(
         repo = data.repo,
         onCloudClick = { data.onDialogChange(DialogState.CloudBackup) },
-        onPayrollSlipClick = { data.onDialogChange(DialogState.PayrollSlipReconstruction) },
         onMonthlyExportClick = {
             data.onMonthlyExportClick()
             data.onDialogChange(DialogState.None)
@@ -239,7 +228,6 @@ internal data class MainDialogData(
     val today: LocalDate,
     val vacationAsOfDate: LocalDate,
     val scheduler: ShiftScheduler,
-    val payrollSlipService: PayrollSlipReconstructionService,
     val repo: ShiftRepository,
     val repoTick: Int,
     val summary: MonthSummary,

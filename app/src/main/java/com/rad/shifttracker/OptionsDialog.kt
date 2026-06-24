@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 internal fun OptionsDialog(
     repo: ShiftRepository,
     onCloudClick: () -> Unit,
-    onPayrollSlipClick: () -> Unit,
     onMonthlyExportClick: () -> Unit,
     onHolidaysClick: () -> Unit,
     onNotificationAccessClick: () -> Unit,
@@ -60,18 +59,6 @@ internal fun OptionsDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                bgColor = THEME.accentSecondary,
-                textColor = THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = onPayrollSlipClick
-            )
-            RoundedButton(
-                text = actions[2],
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
                 bgColor = THEME.info,
                 textColor = THEME.textDark,
                 radius = 14.dp,
@@ -80,7 +67,7 @@ internal fun OptionsDialog(
                 onClick = onMonthlyExportClick
             )
             RoundedButton(
-                text = actions[3],
+                text = actions[2],
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -92,7 +79,7 @@ internal fun OptionsDialog(
                 onClick = onHolidaysClick
             )
             RoundedButton(
-                text = actions[4],
+                text = actions[3],
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -271,7 +258,6 @@ private fun FoodReceiptReminderSwitch(
 
 internal fun optionsDialogActionLabels(): List<String> = listOf(
     "Google cloud",
-    PAYROLL_SLIP_DIALOG_TITLE,
     "Export rada i obračuna za izabrani mesec",
     "Praznici",
     "Pristup obaveštenjima"

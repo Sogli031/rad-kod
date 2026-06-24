@@ -606,46 +606,6 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         return outcome.recordsDeletedCount
     }
 
-    fun applyPayrollSlipReconstruction(
-        result: PayrollSlipReconstructionResult,
-        allowMismatchedComparison: Boolean = false
-    ): Int {
-        if (result.hasBlockingErrors) return 0
-        if (!allowMismatchedComparison && !result.comparison.allHoursExact) return 0
-
-        val key = result.input.month
-        val daysInMonth = YearMonth.of(key.year, key.month).lengthOfMonth()
-        val validRecords = result.records.filter { draft ->
-            draft.year == key.year && draft.month == key.month && draft.day in 1..daysInMonth
-        }
-        if (validRecords.isEmpty()) return 0
-
-        synchronized(lock) {
-            val existingRecords = recordStore.getMonthRecords(key)
-            for (record in existingRecords) {
-                recordStore.delete(record.year, record.month, record.day)
-            }
-            for (draft in validRecords) {
-                recordStore.set(draft.toDayRecord())
-            }
-
-            val sanitizedAdditions = result.additions.sanitizeMonthlyGrossAdditions(key.year, key.month)
-            if (sanitizedAdditions.hasAny) {
-                payState.monthlyGrossAdditions[key] = sanitizedAdditions
-            } else {
-                payState.monthlyGrossAdditions.remove(key)
-            }
-            if (payState.brigadeType != BrigadeType.TROBRIGADA) {
-                payState.brigadeType = BrigadeType.TROBRIGADA
-                payState.invalidateSummariesRollingAndCompBalance()
-            }
-            invalidateSummaryAndRollingDependentsUnsafe(key)
-        }
-
-        notifyChange()
-        return validRecords.size
-    }
-
     fun deleteAutoFilledHolidayRecordsBefore(cutoffMonth: MonthKey): Int {
         val deleted = synchronized(lock) {
             holidayRecords.deleteAutoFilledHolidayRecordsBefore(cutoffMonth)
@@ -1452,18 +1412,6 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val monthRecords = recordStore.getMonthRecords(monthKey)
         val summary = getSummary(year, month)
         payQueries.calculateMonthlyPayDetailsUnsafe(year, month, monthRecords, summary)
-    }
-
-    fun calculatePayrollSlipPreviewNetBeforeDeductions(
-        month: MonthKey,
-        records: List<DayRecord>,
-        additions: MonthlyGrossAdditions
-    ): Double = synchronized(lock) {
-        payQueries.calculatePayrollSlipPreviewNetBeforeDeductionsUnsafe(
-            month = month,
-            monthRecords = records,
-            grossAdditions = additions
-        )
     }
 
     fun getAnnualNetPayAverages(year: Int): AnnualNetPayAverages = synchronized(lock) {
