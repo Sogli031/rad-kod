@@ -144,6 +144,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             transportDailyAmount = payState.transportDailyAmount,
             creditDeductionEnabled = payState.creditDeductionEnabled,
             monthlyCreditDeductionAmount = payState.monthlyCreditDeductionAmount,
+            unionMember = payState.unionMember,
+            unionDuesRate = payState.unionDuesRate,
             foodReceiptReminderEnabled = foodReceiptReminderEnabledState,
             lastBloodDonationDate = lastBloodDonationDateState,
             bloodDonationCount = bloodDonationCountState,
@@ -409,6 +411,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             }
             payState.creditDeductionEnabled = snapshot.creditDeductionEnabled
             payState.monthlyCreditDeductionAmount = snapshot.monthlyCreditDeductionAmount.sanitizeMonthlyNetAdjustment()
+            payState.unionMember = snapshot.unionMember
+            payState.unionDuesRate = snapshot.unionDuesRate.sanitizeUnionDuesRate()
             foodReceiptReminderEnabledState = snapshot.foodReceiptReminderEnabled
             bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
             lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
@@ -1390,6 +1394,13 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         ).sanitized()
     }
 
+    private fun currentUnionDuesSettingsUnsafe(): UnionDuesSettings {
+        return UnionDuesSettings(
+            unionMember = payState.unionMember,
+            unionDuesRate = payState.unionDuesRate
+        ).sanitized()
+    }
+
     private fun calculateFoodOverageDeductionUnsafe(receipt: MonthlyReceipt): Double {
         if (!receipt.isSalaryAvailable) return 0.0
         return getMonthlyFoodSpendingBreakdownUnsafe(receipt.payrollMonth).foodOverageNet
@@ -1582,6 +1593,26 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
 
     fun getCreditDeductionSettings(): CreditDeductionSettings = synchronized(lock) {
         currentCreditDeductionSettingsUnsafe()
+    }
+
+    fun setUnionDuesSettings(unionMember: Boolean, unionDuesRate: Double) {
+        val sanitizedRate = unionDuesRate.sanitizeUnionDuesRate()
+        val changed = synchronized(lock) {
+            val changed = payState.unionMember != unionMember ||
+                payState.unionDuesRate != sanitizedRate
+            if (changed) {
+                payState.unionMember = unionMember
+                payState.unionDuesRate = sanitizedRate
+            }
+            changed
+        }
+        if (changed) {
+            notifyChange()
+        }
+    }
+
+    fun getUnionDuesSettings(): UnionDuesSettings = synchronized(lock) {
+        currentUnionDuesSettingsUnsafe()
     }
 
     var foodReceiptReminderEnabled: Boolean

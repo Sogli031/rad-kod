@@ -23,6 +23,8 @@ internal class RepositoryPayState(config: AppConfig) {
     var transportDailyAmount = config.pay.transportPerWorkDay
     var creditDeductionEnabled = false
     var monthlyCreditDeductionAmount = 0.0
+    var unionMember = false
+    var unionDuesRate = config.pay.defaultUnionDuesRate
     var employeeContributionsPercent = config.pay.defaultEmployeeContributionsPercent
     var taxRelief = config.pay.defaultTaxRelief
     var taxPercent = config.pay.defaultTaxPercent

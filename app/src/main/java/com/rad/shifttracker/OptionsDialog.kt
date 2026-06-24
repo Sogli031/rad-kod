@@ -96,6 +96,7 @@ internal fun OptionsDialog(
                 onCheckedChange = onFoodReceiptReminderChange
             )
             CreditDeductionSettingsSection(repo = repo)
+            UnionDuesSettingsSection(repo = repo)
         }
     }
 }
@@ -211,6 +212,120 @@ private fun parseCreditDeductionAmountInput(input: String): Double? {
     if (input.isBlank()) return 0.0
     val value = input.toDoubleOrNull() ?: return null
     return if (value.isFinite() && value >= 0.0) value else null
+}
+
+@Composable
+private fun UnionDuesSettingsSection(repo: ShiftRepository) {
+    val settings = repo.getUnionDuesSettings()
+    var enabled by remember(settings.unionMember) { mutableStateOf(settings.unionMember) }
+    var rateInput by remember(settings.unionDuesRate) {
+        mutableStateOf(formatUnionDuesPercent(settings.unionDuesRate))
+    }
+    var rateError by remember { mutableStateOf<String?>(null) }
+
+    SectionLabel(text = UNION_DUES_SECTION_LABEL)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = UNION_DUES_ENABLED_LABEL,
+            color = THEME.textPrimary,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = enabled,
+            onCheckedChange = { checked ->
+                enabled = checked
+                rateError = null
+                repo.setUnionDuesSettings(
+                    unionMember = checked,
+                    unionDuesRate = parseUnionDuesPercentInput(rateInput) ?: settings.unionDuesRate
+                )
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = THEME.textDark,
+                checkedTrackColor = THEME.accentPrimary,
+                uncheckedThumbColor = THEME.textMuted,
+                uncheckedTrackColor = THEME.bgCard
+            )
+        )
+    }
+    if (enabled) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = UNION_DUES_RATE_LABEL,
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+            ) {
+                ModernTextField(
+                    value = rateInput,
+                    onValueChange = {
+                        rateInput = filterDecimalInput(it)
+                        rateError = null
+                    },
+                    hintText = "1.5",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(0.55f)
+                )
+                Text(
+                    text = "%",
+                    color = THEME.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                RoundedButton(
+                    text = ADVANCE_PAYMENT_SAVE_LABEL,
+                    modifier = Modifier.weight(0.35f).height(56.dp),
+                    bgColor = THEME.accentPrimary,
+                    textColor = THEME.textDark,
+                    textStyle = MaterialTheme.typography.labelMedium,
+                    onClick = {
+                        val parsedRate = parseUnionDuesPercentInput(rateInput)
+                        if (parsedRate == null) {
+                            rateError = "Unesi ispravnu stopu članarine."
+                            return@RoundedButton
+                        }
+                        repo.setUnionDuesSettings(unionMember = enabled, unionDuesRate = parsedRate)
+                        rateInput = formatUnionDuesPercent(parsedRate)
+                        rateError = null
+                    }
+                )
+            }
+            rateError?.let { message ->
+                Text(
+                    text = message,
+                    color = THEME.danger,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun formatUnionDuesPercent(rate: Double): String {
+    return formatMoney2(rate * 100.0)
+}
+
+private fun parseUnionDuesPercentInput(input: String): Double? {
+    if (input.isBlank()) return null
+    val percent = input.toDoubleOrNull() ?: return null
+    if (!percent.isFinite() || percent <= 0.0 || percent > 100.0) return null
+    return percent / 100.0
 }
 
 @Composable

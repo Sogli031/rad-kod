@@ -1,5 +1,7 @@
 package com.rad.shifttracker
 
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.YearMonth
@@ -57,7 +59,9 @@ fun calculateMonthlyNetPayBreakdown(
     taxRelief: Double,
     taxPercent: Double,
     grossAdditions: MonthlyGrossAdditions = MonthlyGrossAdditions(summary.year, summary.month),
-    includeRegress: Boolean = true
+    includeRegress: Boolean = true,
+    unionMember: Boolean = false,
+    unionDuesRate: Double = 0.0
 ): MonthlyNetPayBreakdown {
     val safeGrossHourlyRate = grossHourlyRate.sanitizeMoney()
     val safeFundHours = monthlyFundHours.coerceAtLeast(0)
@@ -110,7 +114,6 @@ fun calculateMonthlyNetPayBreakdown(
     }
     val grossAdditionsTotal = grossMealAddition + grossRegressAddition + grossBonusAddition
     val grossTotal = grossBaseBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal
-    val netDeductionsTotal = mealSpentNet
 
     if (grossTotal <= 0.0) {
         val netHourlyBase = calculateInformativeNetHourlyBase(
@@ -142,6 +145,7 @@ fun calculateMonthlyNetPayBreakdown(
             mealCoveredNet = 0.0,
             netRegressAddition = 0.0,
             netBonusAddition = 0.0,
+            unionDuesNet = 0.0,
             netDeductionsTotal = 0.0,
             displayPay = 0.0
         )
@@ -151,6 +155,8 @@ fun calculateMonthlyNetPayBreakdown(
     val taxableBase = calculateTaxableBase(grossTotal, safeTaxRelief)
     val tax = taxableBase * safeTaxPercent / 100.0
     val netPayBeforeDeductions = max(0.0, grossTotal - employeeContributions - tax)
+    val unionDuesNet = calculateUnionDuesNet(netPayBeforeDeductions, unionMember, unionDuesRate)
+    val netDeductionsTotal = mealSpentNet + unionDuesNet
     val netWithoutSeniority = calculateNetFromGross(
         grossTotal = grossBaseBeforeSeniority + grossAdditionsTotal,
         contributionsPercent = safeContributionsPercent,
@@ -187,9 +193,27 @@ fun calculateMonthlyNetPayBreakdown(
         mealCoveredNet = mealCoveredNet,
         netRegressAddition = netRegressAddition,
         netBonusAddition = netBonusAddition,
+        unionDuesNet = unionDuesNet,
         netDeductionsTotal = netDeductionsTotal,
         displayPay = max(0.0, netPayBeforeDeductions - netDeductionsTotal)
     )
+}
+
+fun calculateUnionDuesNet(
+    netPayBeforeDeductions: Double,
+    unionMember: Boolean,
+    unionDuesRate: Double
+): Double {
+    if (!unionMember) return 0.0
+    val safeNet = netPayBeforeDeductions.sanitizeMoney()
+    val safeRate = if (unionDuesRate.isFinite() && unionDuesRate > 0.0) unionDuesRate.coerceAtMost(1.0) else 0.0
+    if (safeNet <= 0.0 || safeRate <= 0.0) return 0.0
+    return roundMoneyHalfUp(safeNet * safeRate)
+}
+
+private fun roundMoneyHalfUp(value: Double): Double {
+    if (!value.isFinite()) return 0.0
+    return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).toDouble()
 }
 
 private fun calculateNetFromGross(

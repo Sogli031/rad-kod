@@ -79,7 +79,8 @@ data class PayConfig(
     val difficultWorkConditionsPercent: Double = 0.0,
     val defaultEmployeeContributionsPercent: Double = 19.9,
     val defaultTaxRelief: Double = 34_221.0,
-    val defaultTaxPercent: Double = 10.0
+    val defaultTaxPercent: Double = 10.0,
+    val defaultUnionDuesRate: Double = DEFAULT_UNION_DUES_RATE
 )
 
 data class AppConfig(

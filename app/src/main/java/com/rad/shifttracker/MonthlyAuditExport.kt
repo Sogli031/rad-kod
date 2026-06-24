@@ -44,11 +44,14 @@ internal fun grossAdditionsBreakdownMap(
 internal fun netDeductionsBreakdownMap(
     payBreakdown: MonthlyNetPayBreakdown
 ): Map<String, Any?> {
-    val otherDeductions = payBreakdown.netDeductionsTotal - payBreakdown.mealSpentNet
+    val otherDeductions = payBreakdown.netDeductionsTotal -
+        payBreakdown.mealSpentNet -
+        payBreakdown.unionDuesNet
     return linkedMapOf(
         "mealSpentNet" to payBreakdown.mealSpentNet,
         "advanceNet" to 0.0,
         "creditDeductionNet" to 0.0,
+        "unionDuesNet" to payBreakdown.unionDuesNet,
         "otherDeductionsNet" to otherDeductions.zeroIfTiny(),
         "totalNetDeductions" to payBreakdown.netDeductionsTotal,
         "displayPayFormulaDescription" to
@@ -119,6 +122,7 @@ internal fun auditChecksMap(
     val netDeductionsParts = netDeductionsBreakdown.doubleValue("mealSpentNet") +
         netDeductionsBreakdown.doubleValue("advanceNet") +
         netDeductionsBreakdown.doubleValue("creditDeductionNet") +
+        netDeductionsBreakdown.doubleValue("unionDuesNet") +
         netDeductionsBreakdown.doubleValue("otherDeductionsNet")
     val netDeductionsMatch = moneyMatches(
         netDeductionsBreakdown.doubleValue("totalNetDeductions"),

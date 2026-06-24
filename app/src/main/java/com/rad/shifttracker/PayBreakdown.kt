@@ -30,6 +30,7 @@ data class MonthlyNetPayBreakdown(
     val mealCoveredNet: Double,
     val netRegressAddition: Double,
     val netBonusAddition: Double,
+    val unionDuesNet: Double,
     val netDeductionsTotal: Double,
     val displayPay: Double,
     val hourlyValue: Double? = null

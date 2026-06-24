@@ -208,7 +208,9 @@ internal class RepositoryPayQueries(
         taxPercent: Double = payState.taxPercent,
         grossAdditions: MonthlyGrossAdditions = monthlyGrossAdditionsUnsafe(year, month),
         includeRegress: Boolean = true,
-        includeHourlyValue: Boolean = false
+        includeHourlyValue: Boolean = false,
+        unionMember: Boolean = payState.unionMember,
+        unionDuesRate: Double = payState.unionDuesRate
     ): MonthlyNetPayBreakdown {
         val breakdown = calculateMonthlyNetPayBreakdown(
             summary = summary,
@@ -218,7 +220,9 @@ internal class RepositoryPayQueries(
             taxRelief = taxRelief,
             taxPercent = taxPercent,
             grossAdditions = grossAdditions,
-            includeRegress = includeRegress
+            includeRegress = includeRegress,
+            unionMember = unionMember,
+            unionDuesRate = unionDuesRate
         )
         return if (includeHourlyValue) withHourlyValueUnsafe(year, month, breakdown) else breakdown
     }

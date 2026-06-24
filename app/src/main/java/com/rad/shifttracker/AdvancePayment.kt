@@ -52,6 +52,27 @@ data class CreditDeductionSettings(
     }
 }
 
+const val DEFAULT_UNION_DUES_RATE = 0.015
+
+internal const val UNION_DUES_SECTION_LABEL = "Sindikalna članarina"
+internal const val UNION_DUES_ENABLED_LABEL = "Član sindikata"
+internal const val UNION_DUES_RATE_LABEL = "Stopa članarine (%)"
+
+data class UnionDuesSettings(
+    val unionMember: Boolean = false,
+    val unionDuesRate: Double = DEFAULT_UNION_DUES_RATE
+) {
+    val activeRate: Double
+        get() = if (unionMember) unionDuesRate.sanitizeUnionDuesRate() else 0.0
+
+    fun sanitized(): UnionDuesSettings {
+        return UnionDuesSettings(
+            unionMember = unionMember,
+            unionDuesRate = unionDuesRate.sanitizeUnionDuesRate()
+        )
+    }
+}
+
 data class MonthlyNetAdjustments(
     val year: Int,
     val month: Int,
@@ -161,6 +182,10 @@ internal fun Double.sanitizeMonthlyNetAdjustment(): Double {
     } else {
         0.0
     }
+}
+
+internal fun Double.sanitizeUnionDuesRate(): Double {
+    return if (isFinite() && this > 0.0) coerceAtMost(1.0) else DEFAULT_UNION_DUES_RATE
 }
 
 internal fun Double?.sanitizeMonthlyNetOverrideOrNull(): Double? {

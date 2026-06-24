@@ -24,6 +24,8 @@ internal data class ShiftRepositorySnapshot(
     val transportDailyAmount: Double,
     val creditDeductionEnabled: Boolean,
     val monthlyCreditDeductionAmount: Double,
+    val unionMember: Boolean,
+    val unionDuesRate: Double,
     val foodReceiptReminderEnabled: Boolean,
     val lastBloodDonationDate: LocalDate?,
     val bloodDonationCount: Int,

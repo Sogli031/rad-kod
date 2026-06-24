@@ -8,6 +8,12 @@ Datumi su u formatu GGGG-MM-DD.
 ### Dodato
 - Projekat povezan sa GitHub repozitorijumom (`Sogli/rad`), uz `.gitignore`,
   `README.md` i ovaj dnevnik izmena.
+- **Sindikalna članarina** (NEZ.SIND.RAD.JUGOSLAVIJE) — opciona obustava iz neto
+  zarade. U *Opcije* dodato podešavanje (član sindikata + stopa, podrazumevano
+  1,5%). Članarina = `round2(netPayBeforeDeductions × stopa)` (HALF_UP), umanjuje
+  prikazanu platu (`displayPay`), a NE dira poresku osnovicu, doprinose ni porez.
+  Prikazana kao zasebna stavka u razradi plate i u audit exportu
+  (`netDeductionsBreakdown.unionDuesNet`). Podešavanje se čuva u JSON-u.
 
 ### Uklonjeno
 - Opcija **„Popuni mesec po platnom listiću"** iz menija *Opcije* i ceo prateći

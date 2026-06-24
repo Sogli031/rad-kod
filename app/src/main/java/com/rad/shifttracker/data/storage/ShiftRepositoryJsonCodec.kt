@@ -4,6 +4,7 @@ import android.util.Log
 import com.rad.shifttracker.AnnualLeaveCalculationInput
 import com.rad.shifttracker.AppConfig
 import com.rad.shifttracker.BrigadeType
+import com.rad.shifttracker.DEFAULT_UNION_DUES_RATE
 import com.rad.shifttracker.DayRecord
 import com.rad.shifttracker.KnownPayBaseAnchor
 import com.rad.shifttracker.MAX_BASE_PAY
@@ -23,6 +24,7 @@ import com.rad.shifttracker.sanitizeMonthlyGrossAddition
 import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
 import com.rad.shifttracker.sanitizeMonthlyNetAdjustment
 import com.rad.shifttracker.sanitizePayBaseOrNull
+import com.rad.shifttracker.sanitizeUnionDuesRate
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -61,6 +63,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         data[TRANSPORT_DAILY_AMOUNT_KEY] = snapshot.transportDailyAmount
         data[CREDIT_DEDUCTION_ENABLED_KEY] = snapshot.creditDeductionEnabled
         data[MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY] = snapshot.monthlyCreditDeductionAmount
+        data[UNION_MEMBER_KEY] = snapshot.unionMember
+        data[UNION_DUES_RATE_KEY] = snapshot.unionDuesRate
         data[FOOD_RECEIPT_REMINDER_ENABLED_KEY] = snapshot.foodReceiptReminderEnabled
         snapshot.lastBloodDonationDate?.let { date ->
             data[BLOOD_DONATION_LAST_DATE_KEY] = date.toString()
@@ -152,6 +156,9 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val parsedCreditDeductionEnabled = json.optBoolean(CREDIT_DEDUCTION_ENABLED_KEY, false)
         val parsedMonthlyCreditDeductionAmount =
             json.optDouble(MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY, 0.0).sanitizeMonthlyNetAdjustment()
+        val parsedUnionMember = json.optBoolean(UNION_MEMBER_KEY, false)
+        val parsedUnionDuesRate =
+            json.optDouble(UNION_DUES_RATE_KEY, DEFAULT_UNION_DUES_RATE).sanitizeUnionDuesRate()
         val parsedFoodReceiptReminderEnabled = json.optBoolean(FOOD_RECEIPT_REMINDER_ENABLED_KEY, false)
         val parsedLastBloodDonationDate = json.optLocalDateOrNull(BLOOD_DONATION_LAST_DATE_KEY)
         val parsedBloodDonationHistory = parseBloodDonationHistory(
@@ -220,6 +227,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             transportDailyAmount = parsedTransportDailyAmount,
             creditDeductionEnabled = parsedCreditDeductionEnabled,
             monthlyCreditDeductionAmount = parsedMonthlyCreditDeductionAmount,
+            unionMember = parsedUnionMember,
+            unionDuesRate = parsedUnionDuesRate,
             foodReceiptReminderEnabled = parsedFoodReceiptReminderEnabled,
             lastBloodDonationDate = parsedBloodDonationHistory.firstOrNull() ?: parsedLastBloodDonationDate,
             bloodDonationCount = parsedBloodDonationCount,
@@ -668,6 +677,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val TRANSPORT_DAILY_AMOUNT_KEY = "config_transport_per_work_day"
         const val CREDIT_DEDUCTION_ENABLED_KEY = "creditDeductionEnabled"
         const val MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY = "monthlyCreditDeductionAmount"
+        const val UNION_MEMBER_KEY = "unionMember"
+        const val UNION_DUES_RATE_KEY = "unionDuesRate"
         const val FOOD_RECEIPT_REMINDER_ENABLED_KEY = "food_receipt_reminder_enabled"
         const val BLOOD_DONATION_LAST_DATE_KEY = "blood_donation_last_date"
         const val BLOOD_DONATION_COUNT_KEY = "blood_donation_count"
