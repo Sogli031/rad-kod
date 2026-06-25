@@ -3,7 +3,7 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [Nezavršeno]
+## [1.2] - 2026-06-25
 
 ### Promenjeno
 - **Backup u oblak čuva punu istoriju.** Lokalni podaci se i dalje automatski
