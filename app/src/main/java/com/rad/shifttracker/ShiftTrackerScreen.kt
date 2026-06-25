@@ -412,8 +412,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onSignIn = { signInLauncher.launch(backup.getSignInIntent()) },
             onBackup = {
                 scope.launch {
-                    val json = repo.exportJson()
-                    val error = backup.backup(json)
+                    // Backup u oblak čuva PUNU istoriju (spaja sa prethodnom arhivom),
+                    // iako lokalno čuvanje i dalje orezuje na ~24 meseca.
+                    val error = backup.backupArchive { existing -> repo.exportCloudBackupJson(existing) }
                     withContext(Dispatchers.Main) {
                         val message = if (error == null) "Backup uspešan." else "Backup neuspešan: $error"
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()

@@ -241,6 +241,93 @@ class GoogleDriveBackup(private val context: Context) {
         }
     }
 
+    /**
+     * Backup koji čuva punu istoriju u oblaku: prvo pročita postojeću arhivu,
+     * pozove [merge] da je spoji sa trenutnim stanjem, pa upiše rezultat. Čitanje
+     * i upis su pod istim lock-om. Ako postojeća arhiva postoji ali se ne može
+     * pročitati, operacija se PREKIDA bez upisa — da se puna arhiva nikad ne
+     * pregazi orezanim podacima.
+     *
+     * @param merge prima JSON prethodne arhive (ili null ako backup ne postoji)
+     *   i vraća JSON koji treba upisati.
+     */
+    suspend fun backupArchive(merge: (existingJson: String?) -> String): String? {
+        if (!isNetworkAvailable()) {
+            val error = "Nema internet konekcije"
+            _syncState.value = SyncState.Error(error)
+            return error
+        }
+
+        return syncMutex.withLock {
+            val drive = ensureValidDriveService()
+            if (drive == null) {
+                val error = "Niste prijavljeni"
+                _syncState.value = SyncState.Error(error)
+                return@withLock error
+            }
+
+            withContext(Dispatchers.IO) {
+                try {
+                    _syncState.value = SyncState.Syncing
+                    runArchiveBackup(drive, merge)
+                } catch (e: UserRecoverableAuthIOException) {
+                    Log.w(TAG, "Auth error during archive backup, attempting credential refresh")
+                    val refreshedDrive = refreshCredentialsIfNeeded()
+                    if (refreshedDrive == null) {
+                        val error = "Sesija istekla - prijavite se ponovo"
+                        _syncState.value = SyncState.Error(error)
+                        return@withContext error
+                    }
+                    runArchiveBackup(refreshedDrive, merge)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Archive backup failed: ${e.javaClass.simpleName}", e)
+                    val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
+                    _syncState.value = SyncState.Error(error)
+                    error
+                }
+            }
+        }
+    }
+
+    private suspend fun runArchiveBackup(drive: Drive, merge: (String?) -> String): String? {
+        val result = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
+            val existingFileId = findBackupFile(drive)
+            val existingJson = existingFileId?.let { fileId ->
+                val outputStream = ByteArrayOutputStream()
+                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
+                outputStream.toString("UTF-8")
+            }
+
+            val mergedJson = merge(existingJson)
+            val contentStream = ByteArrayContent.fromString("application/json", mergedJson)
+
+            if (existingFileId != null) {
+                drive.files().update(existingFileId, null, contentStream).execute()
+                Log.d(TAG, "Archive backup updated")
+            } else {
+                val fileMetadata = com.google.api.services.drive.model.File().apply {
+                    name = BACKUP_FILE_NAME
+                    parents = listOf(APP_DATA_FOLDER)
+                }
+                drive.files().create(fileMetadata, contentStream).execute()
+                Log.d(TAG, "Archive backup created")
+            }
+            true
+        }
+
+        if (result == null) {
+            val error = "Timeout - spora mreža"
+            _syncState.value = SyncState.Error(error)
+            return error
+        }
+
+        val now = System.currentTimeMillis()
+        _lastSyncTime.value = now
+        prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
+        _syncState.value = SyncState.Success
+        return null
+    }
+
     private suspend fun retryBackup(drive: Drive, jsonData: String): String? {
         return try {
             val result = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
