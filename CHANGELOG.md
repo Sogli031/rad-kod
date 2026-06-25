@@ -3,6 +3,19 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [1.2] - 2026-06-25
+
+### Promenjeno
+- **Backup u oblak čuva punu istoriju.** Lokalni podaci se i dalje automatski
+  orezuju na ~24 meseca radi brzine, ali Google Drive backup sada akumulira
+  kompletnu istoriju: pri svakom backup-u se prethodna arhiva iz oblaka spaja sa
+  trenutnim stanjem (`exportCloudBackupJson` + `CloudArchiveMerger`), pa stari
+  meseci van prozora ostaju sačuvani. Stariji od prozora dolaze iz arhive,
+  meseci u prozoru iz trenutnog stanja (poštuju se izmene i brisanja). Početni
+  saldo sati/odmora se za arhivu uzima originalan (iz arhive) da se ne broji
+  duplo. Ako se postojeća arhiva ne može pročitati, backup se prekida bez upisa
+  da se puna arhiva ne pregazi orezanim podacima.
+
 ## [1.1] - 2026-06-24
 
 ### Dodato

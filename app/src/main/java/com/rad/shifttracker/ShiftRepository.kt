@@ -14,6 +14,7 @@ import com.rad.shifttracker.data.repository.RepositoryPayState
 import com.rad.shifttracker.data.repository.RepositoryVacationTracker
 import com.rad.shifttracker.data.repository.RollingPayBaseMonthSimulator
 import com.rad.shifttracker.data.repository.ShiftRecordStore
+import com.rad.shifttracker.data.storage.CloudArchiveMerger
 import com.rad.shifttracker.data.storage.LocalShiftStorage
 import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
@@ -362,6 +363,26 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val snapshot = synchronized(lock) {
             pruneIrrelevantHistoryUnsafe()
             buildSnapshotUnsafe()
+        }
+        return jsonCodec.encode(snapshot)
+    }
+
+    /**
+     * Backup za oblak koji NE briše istoriju: spaja postojeću arhivu iz oblaka sa
+     * trenutnim stanjem tako da stari (lokalno orezani) meseci ostanu sačuvani.
+     * Namerno ne poziva [pruneIrrelevantHistoryUnsafe] — lokalno čuvanje i dalje
+     * orezuje na ~24 meseca, ali kopija u oblaku akumulira punu istoriju.
+     *
+     * @param existingCloudJson sadržaj prethodnog backup-a iz oblaka, ili null/prazno
+     *   ako backup još ne postoji (ili se nije mogao pročitati).
+     */
+    fun exportCloudBackupJson(existingCloudJson: String?): String {
+        val snapshot = synchronized(lock) {
+            val current = buildSnapshotUnsafe()
+            val archive = existingCloudJson
+                ?.takeIf { it.isNotBlank() }
+                ?.let { runCatching { jsonCodec.decode(it) }.getOrNull() }
+            if (archive == null) current else CloudArchiveMerger.merge(archive, current)
         }
         return jsonCodec.encode(snapshot)
     }

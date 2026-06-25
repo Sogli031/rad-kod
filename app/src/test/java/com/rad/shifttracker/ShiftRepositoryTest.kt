@@ -2,6 +2,7 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -4020,6 +4021,89 @@ class ShiftRepositoryTest {
         assertEquals(1_222.0, resolved.paidHolidayHourlyBase.value, 0.001)
         assertEquals(1_333.0, resolved.sickHourlyBase.value, 0.001)
         assertEquals(PayBaseSelectionMode.MANUAL, repo.getMonthlyPayBases(2025, 11)?.selectionMode)
+    }
+
+    // ============= cloud backup (puna istorija, razdvojeno od orezivanja) =============
+
+    @Test
+    fun `cloud backup cuva mesece van retention prozora`() {
+        // Arhiva: 6 meseci unutar prozora -> exportJson ništa ne orezuje
+        val archiveRepo = ShiftRepository()
+        for (month in 1..6) {
+            archiveRepo.set(2025, month, 1, Shift.FIRST, 8, holidayOverride = false)
+        }
+        archiveRepo.setMonthlyGrossAdditions(2025, 1, MonthlyGrossAdditions(2025, 1, mealGross = 1_234.0))
+        val archiveJson = archiveRepo.exportJson()
+        assertTrue(JSONObject(archiveJson).has("2025"))
+
+        // Trenutno stanje: ista istorija + produženo daleko, pa se 2025-01.. orežu iz memorije
+        repo.importFromJson(archiveJson)
+        populateMonthMarkers(MonthKey(2025, 7), MonthKey(2027, 12))
+        repo.pruneIrrelevantHistory()
+        assertNull(repo.get(2025, 1, 1))
+
+        val merged = JSONObject(repo.exportCloudBackupJson(archiveJson))
+        // Stari mesec preživljava iz arhive
+        assertTrue(merged.getJSONObject("2025").getJSONObject("01").has("01"))
+        // Skorašnji mesec dolazi iz trenutnog stanja
+        assertTrue(merged.getJSONObject("2027").getJSONObject("12").has("01"))
+        // Mesečni dodatak iz starog meseca je sačuvan
+        assertTrue(merged.has("monthly_gross_additions"))
+    }
+
+    @Test
+    fun `cloud backup koristi originalni pocetni saldo iz arhive`() {
+        val archiveRepo = ShiftRepository()
+        archiveRepo.initialCompBalanceValue = 7
+        for (month in 1..6) {
+            archiveRepo.set(2025, month, 1, Shift.FIRST, 8, holidayOverride = false)
+        }
+        val archiveJson = archiveRepo.exportJson()
+
+        repo.importFromJson(archiveJson)
+        // Vikend-rad u starom mesecu menja saldo na granici (2025-01-04 je subota)
+        repo.set(2025, 1, 4, Shift.FIRST, 8, weekendOvertimeType = OvertimeType.COMP_TIME)
+        populateMonthMarkers(MonthKey(2025, 7), MonthKey(2027, 12))
+        repo.pruneIrrelevantHistory()
+
+        // Lokalni početni saldo je preračunat na granicu (više nije 7)
+        assertNotEquals(7, repo.initialCompBalanceValue)
+        // Arhiva zadržava ORIGINALNI početni saldo da se sati ne broje duplo
+        val merged = JSONObject(repo.exportCloudBackupJson(archiveJson))
+        assertEquals(7, merged.getInt("initial_comp_balance"))
+    }
+
+    @Test
+    fun `cloud backup ne vraca obrisane skorasnje zapise`() {
+        val archiveRepo = ShiftRepository()
+        for (month in 1..6) {
+            archiveRepo.set(2026, month, 1, Shift.FIRST, 8, holidayOverride = false)
+        }
+        archiveRepo.set(2026, 5, 2, Shift.FIRST, 8, holidayOverride = false)
+        val archiveJson = archiveRepo.exportJson()
+
+        repo.importFromJson(archiveJson)
+        repo.delete(2026, 5, 2)
+
+        val merged = JSONObject(repo.exportCloudBackupJson(archiveJson))
+        val may = merged.getJSONObject("2026").getJSONObject("05")
+        assertFalse(may.has("02"))
+        assertTrue(may.has("01"))
+    }
+
+    @Test
+    fun `cloud backup bez postojece arhive vraca trenutno stanje`() {
+        populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
+        val merged = JSONObject(repo.exportCloudBackupJson(null))
+        assertTrue(merged.getJSONObject("2025").getJSONObject("01").has("01"))
+        assertTrue(merged.getJSONObject("2025").getJSONObject("03").has("01"))
+    }
+
+    @Test
+    fun `cloud backup ignorise neispravan postojeci backup`() {
+        populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
+        val merged = JSONObject(repo.exportCloudBackupJson("{ ovo nije validan json"))
+        assertTrue(merged.getJSONObject("2025").has("01"))
     }
 
 }
