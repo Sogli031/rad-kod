@@ -40,15 +40,17 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Unit tests + detekt + lint + assemble
-        run: ./gradlew testDebugUnitTest detekt lintDebug assembleDebug --no-daemon --stacktrace
+      # release buildType je potpisan debug ključem (vidi app/build.gradle.kts),
+      # pa assembleRelease daje instalabilan app-release.apk bez pravog keystore-a.
+      - name: Unit tests + detekt + lint + assemble release
+        run: ./gradlew testDebugUnitTest detekt lintDebug assembleRelease --no-daemon --stacktrace
 
-      - name: Upload debug APK
+      - name: Upload release APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rad-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: rad-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: warn
 
       - name: Upload reports
