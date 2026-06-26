@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import android.app.Application
+import com.rad.shifttracker.data.backup.BackupScheduler
 import com.rad.shifttracker.data.backup.GoogleDriveBackup
 import com.rad.shifttracker.data.backup.GoogleDriveBackupProvider
 
@@ -40,14 +41,18 @@ class RadApplication : Application() {
         // Učitaj iz lokalne memorije ODMAH (sinhrono, brzo)
         shiftRepository.loadFromLocal(this)
 
-        // Auto-save SAMO lokalno pri svakoj promeni podataka
-        // Cloud backup se radi isključivo ručno iz Settings ekrana
+        // Pri svakoj promeni: lokalni save, podsetnici i zakazivanje pozadinskog
+        // cloud backup-a (debounce — niz brzih izmena se spoji u jedan backup;
+        // worker preskače posao ako korisnik nije prijavljen).
         shiftRepository.onChange {
             shiftRepository.saveToLocal(this@RadApplication)
             FoodReceiptReminderScheduler.reschedule(this@RadApplication, shiftRepository)
             BloodDonationReminderScheduler.reschedule(this@RadApplication, shiftRepository)
+            BackupScheduler.scheduleDebounced(this@RadApplication)
         }
         FoodReceiptReminderScheduler.reschedule(this, shiftRepository)
         BloodDonationReminderScheduler.reschedule(this, shiftRepository)
+        // Dnevni safety-net backup ako korisnik dugo ne menja podatke.
+        BackupScheduler.schedulePeriodic(this)
     }
 }

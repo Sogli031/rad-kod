@@ -3,6 +3,31 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [1.3] - 2026-06-26
+
+### Dodato
+- **Automatski backup u pozadini.** Posle svake izmene podataka zakazuje se
+  (debounce ~10 min, da se niz brzih izmena spoji u jedan) pozadinski backup
+  preko `WorkManager`-a, uz dnevni „safety-net" ako se dugo ništa ne menja. Radi
+  samo kad ima mreže i kad je nalog povezan; pri neuspehu se ponavlja uz backoff.
+- **Vraćanje konkretne ranije verzije.** U *Cloud Backup* dodato „Vrati raniju
+  verziju…" — lista svih sačuvanih verzija sa vremenom, sadržajem (meseci/dani/
+  sati) i oznakom mogućeg pada podataka. Pre vraćanja se traži potvrda i napravi
+  sigurnosna kopija trenutnog stanja, pa je i sam restore poništiv.
+
+### Promenjeno
+- **Verzionisani Google backup.** Svaki backup se sada upisuje kao zaseban fajl
+  `rad_backup_<vreme>.json` umesto da prepisuje jedan jedini fajl, pa se čuva
+  više starijih verzija i može se vratiti ranije stanje. Zadržavanje je
+  deda-otac-sin (poslednjih nekoliko + dnevno/nedeljno/mesečno), uz garanciju da
+  se poslednja ispravna verzija nikad ne obriše.
+- **Zaštita od slučajnog brisanja.** Pre upisa se novi backup poredi sa
+  poslednjom dobrom verzijom; ako liči na masovno brisanje (nestao ceo mesec,
+  obrisani svi podaci, pad dana ili radnih sati preko 50%), verzija se i dalje
+  sačuva ali se označi i korisnik dobije upozorenje — ranije verzije ostaju
+  netaknute. Spajanje sa prethodnom arhivom (puna istorija) i prekid upisa kad
+  se arhiva ne može pročitati su zadržani.
+
 ## [1.2] - 2026-06-25
 
 ### Promenjeno

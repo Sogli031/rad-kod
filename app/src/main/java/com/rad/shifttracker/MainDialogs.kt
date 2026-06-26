@@ -106,6 +106,7 @@ internal fun MainDialogs(
                 onSignIn = cloudBackup.onSignIn,
                 onBackup = cloudBackup.onBackup,
                 onRestore = cloudBackup.onRestore,
+                onShowVersions = cloudBackup.onShowVersions,
                 onSignOut = cloudBackup.onSignOut,
                 onDismiss = onDismiss
             )
@@ -263,5 +264,6 @@ internal data class CloudBackupDialogData(
     val onSignIn: () -> Unit,
     val onBackup: () -> Unit,
     val onRestore: () -> Unit,
+    val onShowVersions: () -> Unit,
     val onSignOut: () -> Unit
 )

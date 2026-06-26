@@ -37,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.rad.shifttracker.data.backup.BackupOutcome
+import com.rad.shifttracker.data.backup.BackupVersion
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -125,6 +127,17 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val signInState by backup.signInState.collectAsState()
     val syncState by backup.syncState.collectAsState()
     val lastSyncTime by backup.lastSyncTime.collectAsState()
+    // Dijalog ranijih verzija backup-a (lista se učitava pri otvaranju).
+    var showBackupVersionsDialog by rememberSaveable { mutableStateOf(false) }
+    var backupVersions by remember { mutableStateOf<List<BackupVersion>?>(null) }
+    var restoringVersion by remember { mutableStateOf(false) }
+    LaunchedEffect(showBackupVersionsDialog) {
+        if (showBackupVersionsDialog) {
+            backupVersions = null
+            val loaded = backup.listVersions().sortedByDescending { it.createdAtMillis }
+            backupVersions = loaded
+        }
+    }
     // Use rememberSaveable to persist state across configuration changes (rotation)
     var showOnboarding by rememberSaveable { mutableStateOf(backup.isFirstLaunch()) }
     var onboardingStep by rememberSaveable { mutableStateOf(defaultOnboardingSteps().first()) }
@@ -412,35 +425,54 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onSignIn = { signInLauncher.launch(backup.getSignInIntent()) },
             onBackup = {
                 scope.launch {
-                    // Backup u oblak čuva PUNU istoriju (spaja sa prethodnom arhivom),
-                    // iako lokalno čuvanje i dalje orezuje na ~24 meseca.
-                    val error = backup.backupArchive { existing -> repo.exportCloudBackupJson(existing) }
+                    // Verzionisani backup: nova verzija u oblaku (spaja sa prethodnom
+                    // arhivom radi pune istorije), uz detekciju anomalija i retenciju.
+                    val outcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+                        repo.buildCloudBackup(existing)
+                    }
                     withContext(Dispatchers.Main) {
-                        val message = if (error == null) "Backup uspešan." else "Backup neuspešan: $error"
-                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, backupResultMessage(outcome), Toast.LENGTH_LONG).show()
                     }
                 }
             },
             onRestore = {
                 scope.launch {
-                    val json = backup.restore()
-                    val success = json?.let { repo.importFromJson(it) } ?: false
+                    val message = restoreLatestMessage(backup.restoreLatest(), repo)
                     withContext(Dispatchers.Main) {
-                        val message = when {
-                            json == null -> "Nema backup-a."
-                            success -> "Restore uspešan."
-                            else -> "Restore neuspešan."
-                        }
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
+            onShowVersions = { showBackupVersionsDialog = true },
             onSignOut = {
                 scope.launch { backup.signOut() }
             }
         ),
         onDismiss = dismissDialog
     )
+
+    if (showBackupVersionsDialog) {
+        BackupVersionsDialog(
+            versions = backupVersions,
+            isBusy = restoringVersion,
+            onRestoreVersion = { version ->
+                scope.launch {
+                    restoringVersion = true
+                    // Sigurnosna kopija trenutnog stanja pre vraćanja — i restore je poništiv.
+                    backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+                        repo.buildCloudBackup(existing)
+                    }
+                    val message = restoreVersionMessage(backup.restoreVersion(version.fileId), repo)
+                    withContext(Dispatchers.Main) {
+                        restoringVersion = false
+                        showBackupVersionsDialog = false
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onDismiss = { showBackupVersionsDialog = false }
+        )
+    }
 
     if (showOnboarding) {
         OnboardingDialog(
@@ -464,6 +496,31 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
 
 internal fun mainContentBottomPaddingDp(): Int {
     return UI.bottomBarHeight + UI.largeSpacing
+}
+
+/** Korisnička poruka posle verzionisanog backup-a (uspeh / upozorenje / greška). */
+internal fun backupResultMessage(outcome: BackupOutcome): String = when (outcome) {
+    is BackupOutcome.Success ->
+        if (outcome.flagged) {
+            "Backup sačuvan, ali liči na veliki pad podataka " +
+                "(${outcome.reasons.joinToString("; ")}). " +
+                "Ranije verzije su sačuvane i mogu se vratiti."
+        } else {
+            "Backup uspešan."
+        }
+    is BackupOutcome.Failure -> "Backup neuspešan: ${outcome.message}"
+}
+
+/** Uvezi najnoviji backup i vrati korisničku poruku. */
+internal fun restoreLatestMessage(json: String?, repo: ShiftRepository): String {
+    if (json == null) return "Nema backup-a."
+    return if (repo.importFromJson(json)) "Restore uspešan." else "Restore neuspešan."
+}
+
+/** Uvezi izabranu verziju backup-a i vrati korisničku poruku. */
+internal fun restoreVersionMessage(json: String?, repo: ShiftRepository): String {
+    if (json == null) return "Vraćanje neuspešno."
+    return if (repo.importFromJson(json)) "Vraćeno na izabranu verziju." else "Vraćanje neuspešno."
 }
 
 private suspend fun saveSelectedMonthWorkAndPayExport(

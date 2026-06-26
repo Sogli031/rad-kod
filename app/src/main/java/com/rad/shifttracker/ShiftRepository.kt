@@ -2,6 +2,8 @@ package com.rad.shifttracker
 
 import android.content.Context
 import android.util.Log
+import com.rad.shifttracker.data.backup.BackupStats
+import com.rad.shifttracker.data.backup.CloudBackupContent
 import com.rad.shifttracker.data.repository.ChangeNotificationManager
 import com.rad.shifttracker.data.repository.RepositoryAbsenceSimulator
 import com.rad.shifttracker.data.repository.RepositoryBulkOperations
@@ -377,14 +379,30 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
      *   ako backup još ne postoji (ili se nije mogao pročitati).
      */
     fun exportCloudBackupJson(existingCloudJson: String?): String {
-        val snapshot = synchronized(lock) {
+        return jsonCodec.encode(buildCloudSnapshot(existingCloudJson))
+    }
+
+    /**
+     * Kao [exportCloudBackupJson], ali uz JSON vraća i [BackupStats] otisak
+     * (broj dana/meseci/radnih sati) spojenog stanja — koristi ga verzionisani
+     * backup za metapodatke verzije i detekciju anomalija.
+     */
+    fun buildCloudBackup(existingCloudJson: String?): CloudBackupContent {
+        val snapshot = buildCloudSnapshot(existingCloudJson)
+        return CloudBackupContent(
+            json = jsonCodec.encode(snapshot),
+            stats = BackupStats.from(snapshot.records)
+        )
+    }
+
+    private fun buildCloudSnapshot(existingCloudJson: String?): ShiftRepositorySnapshot {
+        return synchronized(lock) {
             val current = buildSnapshotUnsafe()
             val archive = existingCloudJson
                 ?.takeIf { it.isNotBlank() }
                 ?.let { runCatching { jsonCodec.decode(it) }.getOrNull() }
             if (archive == null) current else CloudArchiveMerger.merge(archive, current)
         }
-        return jsonCodec.encode(snapshot)
     }
 
     fun importFromJson(jsonText: String): Boolean {
