@@ -419,17 +419,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                         repo.buildCloudBackup(existing)
                     }
                     withContext(Dispatchers.Main) {
-                        val message = when (outcome) {
-                            is BackupOutcome.Success -> if (outcome.flagged) {
-                                "Backup sačuvan, ali liči na veliki pad podataka " +
-                                    "(${outcome.reasons.joinToString("; ")}). " +
-                                    "Ranije verzije su sačuvane i mogu se vratiti."
-                            } else {
-                                "Backup uspešan."
-                            }
-                            is BackupOutcome.Failure -> "Backup neuspešan: ${outcome.message}"
-                        }
-                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, backupResultMessage(outcome), Toast.LENGTH_LONG).show()
                     }
                 }
             },
@@ -476,6 +466,19 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
 
 internal fun mainContentBottomPaddingDp(): Int {
     return UI.bottomBarHeight + UI.largeSpacing
+}
+
+/** Korisnička poruka posle verzionisanog backup-a (uspeh / upozorenje / greška). */
+internal fun backupResultMessage(outcome: BackupOutcome): String = when (outcome) {
+    is BackupOutcome.Success ->
+        if (outcome.flagged) {
+            "Backup sačuvan, ali liči na veliki pad podataka " +
+                "(${outcome.reasons.joinToString("; ")}). " +
+                "Ranije verzije su sačuvane i mogu se vratiti."
+        } else {
+            "Backup uspešan."
+        }
+    is BackupOutcome.Failure -> "Backup neuspešan: ${outcome.message}"
 }
 
 private suspend fun saveSelectedMonthWorkAndPayExport(

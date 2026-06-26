@@ -397,7 +397,7 @@ class GoogleDriveBackup(private val context: Context) {
         }
         val content = ByteArrayContent.fromString("application/json", json)
         val created = drive.files().create(metadata, content).setFields("id").execute()
-        return created.id ?: throw IllegalStateException("Drive nije vratio id nove verzije")
+        return created.id ?: error("Drive nije vratio id nove verzije")
     }
 
     private fun pruneOldVersions(drive: Drive, allVersions: List<BackupVersion>) {
