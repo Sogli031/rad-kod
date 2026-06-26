@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.rad.shifttracker.data.backup.BackupOutcome
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -412,18 +413,29 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onSignIn = { signInLauncher.launch(backup.getSignInIntent()) },
             onBackup = {
                 scope.launch {
-                    // Backup u oblak čuva PUNU istoriju (spaja sa prethodnom arhivom),
-                    // iako lokalno čuvanje i dalje orezuje na ~24 meseca.
-                    val error = backup.backupArchive { existing -> repo.exportCloudBackupJson(existing) }
+                    // Verzionisani backup: nova verzija u oblaku (spaja sa prethodnom
+                    // arhivom radi pune istorije), uz detekciju anomalija i retenciju.
+                    val outcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+                        repo.buildCloudBackup(existing)
+                    }
                     withContext(Dispatchers.Main) {
-                        val message = if (error == null) "Backup uspešan." else "Backup neuspešan: $error"
+                        val message = when (outcome) {
+                            is BackupOutcome.Success -> if (outcome.flagged) {
+                                "Backup sačuvan, ali liči na veliki pad podataka " +
+                                    "(${outcome.reasons.joinToString("; ")}). " +
+                                    "Ranije verzije su sačuvane i mogu se vratiti."
+                            } else {
+                                "Backup uspešan."
+                            }
+                            is BackupOutcome.Failure -> "Backup neuspešan: ${outcome.message}"
+                        }
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     }
                 }
             },
             onRestore = {
                 scope.launch {
-                    val json = backup.restore()
+                    val json = backup.restoreLatest()
                     val success = json?.let { repo.importFromJson(it) } ?: false
                     withContext(Dispatchers.Main) {
                         val message = when {

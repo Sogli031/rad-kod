@@ -27,7 +27,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 
 private const val TAG = "GoogleDriveBackup"
-private const val BACKUP_FILE_NAME = "rad_backup.json"
 private const val APP_DATA_FOLDER = "appDataFolder"
 private const val PREFS_NAME = "rad_backup_prefs"
 private const val KEY_FIRST_LAUNCH_DONE = "first_launch_done"
@@ -165,296 +164,6 @@ class GoogleDriveBackup(private val context: Context) {
             .build()
     }
 
-    suspend fun backup(jsonData: String): String? {
-        // Check network availability first
-        if (!isNetworkAvailable()) {
-            val error = "Nema internet konekcije"
-            _syncState.value = SyncState.Error(error)
-            return error
-        }
-
-        // Use mutex to prevent concurrent backup/restore operations
-        return syncMutex.withLock {
-            val drive = ensureValidDriveService()
-            if (drive == null) {
-                val error = "Niste prijavljeni"
-                _syncState.value = SyncState.Error(error)
-                return@withLock error
-            }
-
-            withContext(Dispatchers.IO) {
-                try {
-                    _syncState.value = SyncState.Syncing
-
-                    // Wrap network operations with timeout
-                    val result = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
-                        // Check if backup file exists
-                        val existingFileId = findBackupFile(drive)
-
-                        val contentStream = ByteArrayContent.fromString("application/json", jsonData)
-
-                        if (existingFileId != null) {
-                            // Update existing file
-                            drive.files().update(existingFileId, null, contentStream).execute()
-                            Log.d(TAG, "Backup updated")
-                        } else {
-                            // Create new file
-                            val fileMetadata = com.google.api.services.drive.model.File().apply {
-                                name = BACKUP_FILE_NAME
-                                parents = listOf(APP_DATA_FOLDER)
-                            }
-                            drive.files().create(fileMetadata, contentStream).execute()
-                            Log.d(TAG, "Backup created")
-                        }
-                        true
-                    }
-
-                    if (result == null) {
-                        val error = "Timeout - spora mreža"
-                        _syncState.value = SyncState.Error(error)
-                        return@withContext error
-                    }
-
-                    val now = System.currentTimeMillis()
-                    _lastSyncTime.value = now
-                    prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
-                    _syncState.value = SyncState.Success
-                    null // null = success
-                } catch (e: UserRecoverableAuthIOException) {
-                    // Token expired or revoked - try to refresh
-                    Log.w(TAG, "Auth error, attempting credential refresh")
-                    val refreshedDrive = refreshCredentialsIfNeeded()
-                    if (refreshedDrive == null) {
-                        val error = "Sesija istekla - prijavite se ponovo"
-                        _syncState.value = SyncState.Error(error)
-                        return@withContext error
-                    }
-                    // Retry backup with refreshed credentials
-                    retryBackup(refreshedDrive, jsonData)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Backup failed: ${e.javaClass.simpleName}", e)
-                    val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
-                    _syncState.value = SyncState.Error(error)
-                    error
-                }
-            }
-        }
-    }
-
-    /**
-     * Backup koji čuva punu istoriju u oblaku: prvo pročita postojeću arhivu,
-     * pozove [merge] da je spoji sa trenutnim stanjem, pa upiše rezultat. Čitanje
-     * i upis su pod istim lock-om. Ako postojeća arhiva postoji ali se ne može
-     * pročitati, operacija se PREKIDA bez upisa — da se puna arhiva nikad ne
-     * pregazi orezanim podacima.
-     *
-     * @param merge prima JSON prethodne arhive (ili null ako backup ne postoji)
-     *   i vraća JSON koji treba upisati.
-     */
-    suspend fun backupArchive(merge: (existingJson: String?) -> String): String? {
-        if (!isNetworkAvailable()) {
-            val error = "Nema internet konekcije"
-            _syncState.value = SyncState.Error(error)
-            return error
-        }
-
-        return syncMutex.withLock {
-            val drive = ensureValidDriveService()
-            if (drive == null) {
-                val error = "Niste prijavljeni"
-                _syncState.value = SyncState.Error(error)
-                return@withLock error
-            }
-
-            withContext(Dispatchers.IO) {
-                try {
-                    _syncState.value = SyncState.Syncing
-                    runArchiveBackup(drive, merge)
-                } catch (e: UserRecoverableAuthIOException) {
-                    Log.w(TAG, "Auth error during archive backup, attempting credential refresh")
-                    val refreshedDrive = refreshCredentialsIfNeeded()
-                    if (refreshedDrive == null) {
-                        val error = "Sesija istekla - prijavite se ponovo"
-                        _syncState.value = SyncState.Error(error)
-                        return@withContext error
-                    }
-                    runArchiveBackup(refreshedDrive, merge)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Archive backup failed: ${e.javaClass.simpleName}", e)
-                    val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
-                    _syncState.value = SyncState.Error(error)
-                    error
-                }
-            }
-        }
-    }
-
-    private suspend fun runArchiveBackup(drive: Drive, merge: (String?) -> String): String? {
-        val result = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
-            val existingFileId = findBackupFile(drive)
-            val existingJson = existingFileId?.let { fileId ->
-                val outputStream = ByteArrayOutputStream()
-                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
-                outputStream.toString("UTF-8")
-            }
-
-            val mergedJson = merge(existingJson)
-            val contentStream = ByteArrayContent.fromString("application/json", mergedJson)
-
-            if (existingFileId != null) {
-                drive.files().update(existingFileId, null, contentStream).execute()
-                Log.d(TAG, "Archive backup updated")
-            } else {
-                val fileMetadata = com.google.api.services.drive.model.File().apply {
-                    name = BACKUP_FILE_NAME
-                    parents = listOf(APP_DATA_FOLDER)
-                }
-                drive.files().create(fileMetadata, contentStream).execute()
-                Log.d(TAG, "Archive backup created")
-            }
-            true
-        }
-
-        if (result == null) {
-            val error = "Timeout - spora mreža"
-            _syncState.value = SyncState.Error(error)
-            return error
-        }
-
-        val now = System.currentTimeMillis()
-        _lastSyncTime.value = now
-        prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
-        _syncState.value = SyncState.Success
-        return null
-    }
-
-    private suspend fun retryBackup(drive: Drive, jsonData: String): String? {
-        return try {
-            val result = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
-                val existingFileId = findBackupFile(drive)
-                val contentStream = ByteArrayContent.fromString("application/json", jsonData)
-
-                if (existingFileId != null) {
-                    drive.files().update(existingFileId, null, contentStream).execute()
-                } else {
-                    val fileMetadata = com.google.api.services.drive.model.File().apply {
-                        name = BACKUP_FILE_NAME
-                        parents = listOf(APP_DATA_FOLDER)
-                    }
-                    drive.files().create(fileMetadata, contentStream).execute()
-                }
-                true
-            }
-
-            if (result == null) {
-                val error = "Timeout - spora mreža"
-                _syncState.value = SyncState.Error(error)
-                return error
-            }
-
-            val now = System.currentTimeMillis()
-            _lastSyncTime.value = now
-            prefs.edit().putLong(KEY_LAST_SYNC_TIME, now).apply()
-            _syncState.value = SyncState.Success
-            Log.d(TAG, "Backup retry successful")
-            null
-        } catch (e: Exception) {
-            Log.e(TAG, "Backup retry failed", e)
-            val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
-            _syncState.value = SyncState.Error(error)
-            error
-        }
-    }
-
-    suspend fun restore(): String? {
-        // Check network availability first
-        if (!isNetworkAvailable()) {
-            _syncState.value = SyncState.Error("Nema internet konekcije")
-            return null
-        }
-
-        // Use mutex to prevent concurrent backup/restore operations
-        return syncMutex.withLock {
-            val drive = ensureValidDriveService() ?: return@withLock null
-
-            withContext(Dispatchers.IO) {
-                try {
-                    _syncState.value = SyncState.Syncing
-                    val outcome = runRestoreAttempt(drive)
-                    handleRestoreOutcome(outcome)
-                } catch (e: UserRecoverableAuthIOException) {
-                    // Token expired or revoked - try to refresh
-                    Log.w(TAG, "Auth error during restore, attempting credential refresh")
-                    val refreshedDrive = refreshCredentialsIfNeeded()
-                    if (refreshedDrive == null) {
-                        _syncState.value = SyncState.Error("Sesija istekla - prijavite se ponovo")
-                        return@withContext null
-                    }
-                    // Retry restore with refreshed credentials
-                    retryRestore(refreshedDrive)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Restore failed", e)
-                    _syncState.value = SyncState.Error("Greska: ${e.message ?: e.javaClass.simpleName}")
-                    null
-                }
-            }
-        }
-    }
-
-    private suspend fun retryRestore(drive: Drive): String? {
-        return try {
-            val outcome = runRestoreAttempt(drive)
-            val data = handleRestoreOutcome(outcome)
-            if (outcome is RestoreOutcome.Found) {
-                Log.d(TAG, "Restore retry successful")
-            }
-            data
-        } catch (e: Exception) {
-            Log.e(TAG, "Restore retry failed", e)
-            _syncState.value = SyncState.Error("Greska: ${e.message ?: e.javaClass.simpleName}")
-            null
-        }
-    }
-
-    private sealed class RestoreOutcome {
-        data object Timeout : RestoreOutcome()
-        data object NoBackup : RestoreOutcome()
-        data class Found(val jsonData: String) : RestoreOutcome()
-    }
-
-    private suspend fun runRestoreAttempt(drive: Drive): RestoreOutcome {
-        val result: RestoreOutcome? = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
-            val fileId = findBackupFile(drive)
-            if (fileId == null) {
-                RestoreOutcome.NoBackup
-            } else {
-                val outputStream = ByteArrayOutputStream()
-                drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
-                RestoreOutcome.Found(outputStream.toString("UTF-8"))
-            }
-        }
-        return result ?: RestoreOutcome.Timeout
-    }
-
-    private fun handleRestoreOutcome(outcome: RestoreOutcome): String? = when (outcome) {
-        is RestoreOutcome.Timeout -> {
-            _syncState.value = SyncState.Error("Timeout - spora mreža")
-            null
-        }
-        is RestoreOutcome.NoBackup -> {
-            _syncState.value = SyncState.Idle
-            Log.d(TAG, "No backup found")
-            null
-        }
-        is RestoreOutcome.Found -> {
-            _syncState.value = SyncState.Success
-            Log.d(TAG, "Restore completed")
-            outcome.jsonData
-        }
-    }
-
-    private fun findBackupFile(drive: Drive): String? = BackupFileLookup(drive).findBackupFileId()
-
     fun isSignedIn(): Boolean = _signInState.value is SignInState.SignedIn
 
     fun isFirstLaunch(): Boolean {
@@ -463,6 +172,243 @@ class GoogleDriveBackup(private val context: Context) {
 
     fun markFirstLaunchDone() {
         prefs.edit().putBoolean(KEY_FIRST_LAUNCH_DONE, true).apply()
+    }
+
+    // ---------------------------------------------------------------------------
+    // Verzionisani backup: svaka promena ide u NOV fajl rad_backup_<ts>.json sa
+    // metapodacima u appProperties, uz detekciju anomalija i deda-otac-sin
+    // retenciju. Tako se stare verzije čuvaju i nikad se dobra kopija ne pregazi.
+    // ---------------------------------------------------------------------------
+
+    /** Lista svih verzija u oblaku (najnovija prva), bez skidanja sadržaja. */
+    suspend fun listVersions(): List<BackupVersion> {
+        if (!isNetworkAvailable()) return emptyList()
+        return syncMutex.withLock {
+            val drive = ensureValidDriveService() ?: return@withLock emptyList()
+            withContext(Dispatchers.IO) {
+                try {
+                    withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(drive) }.orEmpty()
+                } catch (e: UserRecoverableAuthIOException) {
+                    val refreshed = refreshCredentialsIfNeeded() ?: return@withContext emptyList()
+                    withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(refreshed) }.orEmpty()
+                } catch (e: Exception) {
+                    Log.e(TAG, "List versions failed: ${e.javaClass.simpleName}", e)
+                    emptyList()
+                }
+            }
+        }
+    }
+
+    /**
+     * Napravi novu verziju backup-a. [build] dobija sadržaj prethodne (najsvežije)
+     * arhive iz oblaka i vraća sadržaj + otisak koji treba upisati. Ako prethodna
+     * verzija postoji ali se ne može pročitati, operacija se PREKIDA bez upisa —
+     * da se puna istorija ne pregazi orezanim podacima.
+     */
+    suspend fun backupVersioned(
+        appVersion: String?,
+        build: (existingJson: String?) -> CloudBackupContent
+    ): BackupOutcome {
+        if (!isNetworkAvailable()) {
+            _syncState.value = SyncState.Error("Nema internet konekcije")
+            return BackupOutcome.Failure("Nema internet konekcije")
+        }
+        return syncMutex.withLock {
+            val drive = ensureValidDriveService()
+            if (drive == null) {
+                _syncState.value = SyncState.Error("Niste prijavljeni")
+                return@withLock BackupOutcome.Failure("Niste prijavljeni")
+            }
+            withContext(Dispatchers.IO) {
+                try {
+                    _syncState.value = SyncState.Syncing
+                    runVersionedBackup(drive, appVersion, build)
+                } catch (e: UserRecoverableAuthIOException) {
+                    Log.w(TAG, "Auth error during versioned backup, refreshing")
+                    val refreshed = refreshCredentialsIfNeeded()
+                    if (refreshed == null) {
+                        _syncState.value = SyncState.Error("Sesija istekla - prijavite se ponovo")
+                        return@withContext BackupOutcome.Failure("Sesija istekla - prijavite se ponovo")
+                    }
+                    runVersionedBackup(refreshed, appVersion, build)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Versioned backup failed: ${e.javaClass.simpleName}", e)
+                    val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
+                    _syncState.value = SyncState.Error(error)
+                    BackupOutcome.Failure(error)
+                }
+            }
+        }
+    }
+
+    private sealed class VersionedRunResult {
+        data object ArchiveUnreadable : VersionedRunResult()
+        data class Done(val flagged: Boolean, val reasons: List<String>) : VersionedRunResult()
+    }
+
+    private suspend fun runVersionedBackup(
+        drive: Drive,
+        appVersion: String?,
+        build: (existingJson: String?) -> CloudBackupContent
+    ): BackupOutcome {
+        val nowMillis = System.currentTimeMillis()
+        val result: VersionedRunResult? = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
+            val versions = listVersionsInternal(drive)
+            val latest = VersionedBackupPlanner.latest(versions)
+            val existingJson = latest?.let { downloadContent(drive, it.fileId) }
+            if (latest != null && existingJson == null) {
+                return@withTimeoutOrNull VersionedRunResult.ArchiveUnreadable
+            }
+
+            val content = build(existingJson)
+            val baseline = VersionedBackupPlanner.baselineStats(versions)
+            val verdict = BackupAnomalyGuard.assess(baseline, content.stats)
+            val flagged = verdict.isSuspicious
+
+            val props = BackupMetadata.toProperties(nowMillis, content.stats, flagged, appVersion)
+            val newId = createVersionFile(drive, nowMillis, content.json, props)
+            val newVersion = BackupMetadata.buildVersion(
+                fileId = newId,
+                fileName = BackupMetadata.fileName(nowMillis),
+                driveCreatedAtMillis = nowMillis,
+                props = props
+            )
+            pruneOldVersions(drive, versions + newVersion)
+
+            val reasons = (verdict as? BackupAnomalyGuard.Verdict.Suspicious)?.reasons.orEmpty()
+            VersionedRunResult.Done(flagged, reasons)
+        }
+
+        return when (result) {
+            null -> {
+                _syncState.value = SyncState.Error("Timeout - spora mreža")
+                BackupOutcome.Failure("Timeout - spora mreža")
+            }
+            VersionedRunResult.ArchiveUnreadable -> {
+                val error = "Ne mogu da pročitam postojeći backup — prekinuto radi zaštite"
+                _syncState.value = SyncState.Error(error)
+                BackupOutcome.Failure(error)
+            }
+            is VersionedRunResult.Done -> {
+                _lastSyncTime.value = nowMillis
+                prefs.edit().putLong(KEY_LAST_SYNC_TIME, nowMillis).apply()
+                _syncState.value = SyncState.Success
+                Log.d(TAG, "Versioned backup created (flagged=${result.flagged})")
+                BackupOutcome.Success(result.flagged, result.reasons)
+            }
+        }
+    }
+
+    /** Vrati sadržaj najnovije verzije (za standardni „Restore"). */
+    suspend fun restoreLatest(): String? {
+        val versions = listVersions()
+        val latest = VersionedBackupPlanner.latest(versions) ?: return null
+        return restoreVersion(latest.fileId)
+    }
+
+    /** Vrati sadržaj konkretne verzije po Drive fileId. */
+    suspend fun restoreVersion(fileId: String): String? {
+        if (!isNetworkAvailable()) {
+            _syncState.value = SyncState.Error("Nema internet konekcije")
+            return null
+        }
+        return syncMutex.withLock {
+            val drive = ensureValidDriveService() ?: return@withLock null
+            withContext(Dispatchers.IO) {
+                try {
+                    _syncState.value = SyncState.Syncing
+                    val json = withTimeoutOrNull(NETWORK_TIMEOUT_MS) { downloadContent(drive, fileId) }
+                    finishRestore(json)
+                } catch (e: UserRecoverableAuthIOException) {
+                    val refreshed = refreshCredentialsIfNeeded()
+                    if (refreshed == null) {
+                        _syncState.value = SyncState.Error("Sesija istekla - prijavite se ponovo")
+                        return@withContext null
+                    }
+                    val json = withTimeoutOrNull(NETWORK_TIMEOUT_MS) { downloadContent(refreshed, fileId) }
+                    finishRestore(json)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Restore version failed", e)
+                    _syncState.value = SyncState.Error("Greska: ${e.message ?: e.javaClass.simpleName}")
+                    null
+                }
+            }
+        }
+    }
+
+    private fun finishRestore(json: String?): String? {
+        if (json == null) {
+            _syncState.value = SyncState.Error("Ne mogu da pročitam backup")
+            return null
+        }
+        _syncState.value = SyncState.Success
+        return json
+    }
+
+    private fun listVersionsInternal(drive: Drive): List<BackupVersion> {
+        val versions = mutableListOf<BackupVersion>()
+        var pageToken: String? = null
+        do {
+            val response = drive.files().list()
+                .setSpaces(APP_DATA_FOLDER)
+                .setQ("trashed = false")
+                .setOrderBy("createdTime desc")
+                .setFields("nextPageToken, files(id, name, createdTime, appProperties)")
+                .setPageToken(pageToken)
+                .execute()
+            for (file in response.files.orEmpty()) {
+                val id = file.id ?: continue
+                val name = file.name ?: continue
+                if (!isOurBackupFile(name)) continue
+                versions += BackupMetadata.buildVersion(
+                    fileId = id,
+                    fileName = name,
+                    driveCreatedAtMillis = file.createdTime?.value,
+                    props = file.appProperties
+                )
+            }
+            pageToken = response.nextPageToken
+        } while (pageToken != null)
+        return versions
+    }
+
+    private fun isOurBackupFile(name: String): Boolean =
+        BackupMetadata.isLegacyName(name) || BackupMetadata.parseCreatedAt(name) != null
+
+    private fun downloadContent(drive: Drive, fileId: String): String? = try {
+        val outputStream = ByteArrayOutputStream()
+        drive.files().get(fileId).executeMediaAndDownloadTo(outputStream)
+        outputStream.toString("UTF-8")
+    } catch (e: Exception) {
+        Log.w(TAG, "Neuspešno čitanje verzije $fileId", e)
+        null
+    }
+
+    private fun createVersionFile(
+        drive: Drive,
+        nowMillis: Long,
+        json: String,
+        props: Map<String, String>
+    ): String {
+        val metadata = com.google.api.services.drive.model.File().apply {
+            name = BackupMetadata.fileName(nowMillis)
+            parents = listOf(APP_DATA_FOLDER)
+            appProperties = HashMap(props)
+        }
+        val content = ByteArrayContent.fromString("application/json", json)
+        val created = drive.files().create(metadata, content).setFields("id").execute()
+        return created.id ?: throw IllegalStateException("Drive nije vratio id nove verzije")
+    }
+
+    private fun pruneOldVersions(drive: Drive, allVersions: List<BackupVersion>) {
+        val toDelete = BackupRetentionPolicy.selectForDeletion(allVersions)
+        for (version in toDelete) {
+            try {
+                drive.files().delete(version.fileId).execute()
+            } catch (e: Exception) {
+                Log.w(TAG, "Neuspešno orezivanje verzije ${version.fileId}", e)
+            }
+        }
     }
 }
 
@@ -478,26 +424,15 @@ sealed class SyncState {
     data class Error(val message: String) : SyncState()
 }
 
-internal class BackupFileLookup(private val drive: Drive) {
-    fun findBackupFileId(): String? {
-        val result = drive.files().list()
-            .setSpaces(APP_DATA_FOLDER)
-            .setQ("name = '$BACKUP_FILE_NAME' and trashed = false")
-            .setOrderBy("modifiedTime desc")
-            .setFields("files(id, name, modifiedTime)")
-            .execute()
+/** Sadržaj jedne verzije backup-a + njen otisak (za metapodatke i anomalije). */
+data class CloudBackupContent(val json: String, val stats: BackupStats)
 
-        val files = result.files.orEmpty()
-        files.drop(1).forEach { duplicate ->
-            duplicate.id?.let { id ->
-                try {
-                    drive.files().delete(id).execute()
-                } catch (e: Exception) {
-                    Log.w(TAG, "Neuspešno brisanje starog backup fajla: $id", e)
-                }
-            }
-        }
-
-        return files.firstOrNull()?.id
-    }
+/** Ishod verzionisanog backup-a. */
+sealed class BackupOutcome {
+    /**
+     * @param flagged true ako [BackupAnomalyGuard] sumnja na masovno brisanje —
+     *   verzija je svejedno sačuvana, ali korisnika treba upozoriti.
+     */
+    data class Success(val flagged: Boolean, val reasons: List<String>) : BackupOutcome()
+    data class Failure(val message: String) : BackupOutcome()
 }

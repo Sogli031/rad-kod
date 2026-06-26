@@ -3,6 +3,21 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Neobjavljeno]
+
+### Promenjeno
+- **Verzionisani Google backup.** Svaki backup se sada upisuje kao zaseban fajl
+  `rad_backup_<vreme>.json` umesto da prepisuje jedan jedini fajl, pa se čuva
+  više starijih verzija i može se vratiti ranije stanje. Zadržavanje je
+  deda-otac-sin (poslednjih nekoliko + dnevno/nedeljno/mesečno), uz garanciju da
+  se poslednja ispravna verzija nikad ne obriše.
+- **Zaštita od slučajnog brisanja.** Pre upisa se novi backup poredi sa
+  poslednjom dobrom verzijom; ako liči na masovno brisanje (nestao ceo mesec,
+  obrisani svi podaci, pad dana ili radnih sati preko 50%), verzija se i dalje
+  sačuva ali se označi i korisnik dobije upozorenje — ranije verzije ostaju
+  netaknute. Spajanje sa prethodnom arhivom (puna istorija) i prekid upisa kad
+  se arhiva ne može pročitati su zadržani.
+
 ## [1.2] - 2026-06-25
 
 ### Promenjeno
