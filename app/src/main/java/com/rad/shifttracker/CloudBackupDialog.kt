@@ -32,6 +32,7 @@ fun CloudBackupDialog(
     onSignIn: () -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    onShowVersions: () -> Unit,
     onSignOut: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -169,7 +170,7 @@ fun CloudBackupDialog(
                     onClick = onBackup
                 )
                 RoundedButton(
-                    text = "Restore",
+                    text = "Restore (najnovije)",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
@@ -180,6 +181,20 @@ fun CloudBackupDialog(
                     bold = true,
                     enabled = !isSyncing,
                     onClick = onRestore
+                )
+                RoundedButton(
+                    text = "Vrati raniju verziju…",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.bgCardElevated,
+                    textColor = THEME.info,
+                    borderColor = THEME.info,
+                    radius = 14.dp,
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    bold = true,
+                    enabled = !isSyncing,
+                    onClick = onShowVersions
                 )
                 RoundedButton(
                     text = "Odjavi se",
