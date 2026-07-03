@@ -4106,4 +4106,44 @@ class ShiftRepositoryTest {
         assertTrue(merged.getJSONObject("2025").has("01"))
     }
 
+    @Test
+    fun `obrisan najstariji mesec se ne vraca iz cloud arhive`() {
+        populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
+        val archiveJson = repo.exportCloudBackupJson(null)
+
+        repo.deleteMonth(2025, 1)
+
+        // Bez tombstone-a bi se granica merge-a pomerila na 2025-02 pa bi
+        // arhiva ponovo isporučila obrisani januar.
+        val merged = JSONObject(repo.exportCloudBackupJson(archiveJson))
+        assertFalse(merged.getJSONObject("2025").has("01"))
+        assertTrue(merged.getJSONObject("2025").has("02"))
+        assertTrue(merged.getJSONObject("2025").has("03"))
+    }
+
+    @Test
+    fun `tombstone obrisanog meseca prezivljava export import`() {
+        populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
+        val archiveJson = repo.exportCloudBackupJson(null)
+        repo.deleteMonth(2025, 1)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val merged = JSONObject(restored.exportCloudBackupJson(archiveJson))
+        assertFalse(merged.getJSONObject("2025").has("01"))
+    }
+
+    @Test
+    fun `ponovni unos u obrisan mesec ponistava tombstone`() {
+        populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
+        repo.deleteMonth(2025, 1)
+        repo.set(2025, 1, 15, Shift.FIRST, 8, holidayOverride = false)
+
+        val exported = JSONObject(repo.exportJson())
+
+        assertFalse(exported.has("deleted_months"))
+        assertTrue(exported.getJSONObject("2025").getJSONObject("01").has("15"))
+    }
+
 }

@@ -54,5 +54,11 @@ internal data class ShiftRepositorySnapshot(
     val knownPayBaseAnchor: KnownPayBaseAnchor?,
     val annualLeaveCalculationInput: AnnualLeaveCalculationInput?,
     val annualLeaveLastCalculatedDays: Int,
-    val records: List<DayRecord>
+    val records: List<DayRecord>,
+    /**
+     * Meseci koje je korisnik izričito obrisao (tombstone). Bez ovoga bi
+     * spajanje sa arhivom u oblaku vratilo obrisani najstariji mesec —
+     * granica merge-a se pomeri naviše pa ga arhiva ponovo isporuči.
+     */
+    val deletedMonths: List<MonthKey> = emptyList()
 )

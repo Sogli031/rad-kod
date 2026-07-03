@@ -97,6 +97,10 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     private var bloodDonationCountState = 0
     private var bloodDonationHistoryState: List<LocalDate> = emptyList()
     private var bloodDonationLeaveStates: List<BloodDonationLeaveState> = emptyList()
+
+    // Meseci koje je korisnik izričito obrisao — čuva se u snapshot-u da ih
+    // merge sa cloud arhivom ne bi vaskrsao (vidi CloudArchiveMerger).
+    private var deletedMonthTombstones: MutableSet<MonthKey> = linkedSetOf()
     private val jsonCodec = ShiftRepositoryJsonCodec(config)
     private val localStorage = LocalShiftStorage()
 
@@ -177,7 +181,9 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             knownPayBaseAnchor = payState.knownPayBaseAnchor,
             annualLeaveCalculationInput = vacationTracker.snapshotAnnualLeaveCalculationInput(),
             annualLeaveLastCalculatedDays = vacationTracker.snapshotAnnualLeaveLastCalculatedDays(),
-            records = recordStore.allRecords.toList()
+            records = recordStore.allRecords.toList(),
+            // Tombstone se automatski neutrališe ako mesec ponovo dobije zapise.
+            deletedMonths = deletedMonthTombstones.filter { recordStore.getMonthRecords(it).isEmpty() }
         )
     }
 
@@ -509,6 +515,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
                 payState.defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
             }
 
+            deletedMonthTombstones = snapshot.deletedMonths.toMutableSet()
+
             for (record in snapshot.records) {
                 recordStore.set(record)
             }
@@ -641,7 +649,13 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
 
     fun deleteMonth(year: Int, month: Int): Int {
         val outcome = synchronized(lock) {
-            bulkOperations.deleteMonth(MonthKey(year, month))
+            val result = bulkOperations.deleteMonth(MonthKey(year, month))
+            if (result.recordsDeletedCount > 0) {
+                // Zapamti izričito brisanje da ga merge sa cloud arhivom
+                // ne bi vaskrsao (posebno za najstariji mesec).
+                deletedMonthTombstones += MonthKey(year, month)
+            }
+            result
         }
         if (outcome.shouldNotify) {
             notifyChange()

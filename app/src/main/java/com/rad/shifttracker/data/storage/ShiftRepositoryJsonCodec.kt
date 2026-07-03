@@ -76,6 +76,11 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         if (snapshot.bloodDonationLeaves.isNotEmpty()) {
             data[BLOOD_DONATION_LEAVE_KEY] = BloodDonationLeaveJsonCodec.build(snapshot.bloodDonationLeaves)
         }
+        if (snapshot.deletedMonths.isNotEmpty()) {
+            data[DELETED_MONTHS_KEY] = snapshot.deletedMonths
+                .sorted()
+                .map { "%04d-%02d".format(it.year, it.month) }
+        }
         data[INITIAL_COMP_BALANCE_KEY] = snapshot.initialCompBalance
         data[INITIAL_COMP_BALANCE_MINUTES_KEY] = snapshot.initialCompBalanceMinutes
         data[MINULI_RAD_START_YEAR_KEY] = snapshot.minuliRadStartYear
@@ -207,6 +212,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val parsedMonthlyNetAdjustments = parseMonthlyNetAdjustments(json.optJSONObject(MONTHLY_NET_ADJUSTMENTS_KEY))
         val parsedHourlyValueChanges = parseHourlyValueChanges(json.optJSONObject(HOURLY_VALUE_CHANGES_KEY))
 
+        val parsedDeletedMonths = parseDeletedMonths(json.optJSONArray(DELETED_MONTHS_KEY))
+
         val parsedRecords = parseDayRecords(json)
         val representativeImportMonth = parsedRecords
             .minWithOrNull(compareBy<DayRecord> { it.year }.thenBy { it.month })
@@ -260,8 +267,24 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             monthlyGrossAdditions = parsedMonthlyGrossAdditions,
             monthlyNetAdjustments = parsedMonthlyNetAdjustments,
             knownPayBaseAnchor = parsedKnownPayBaseAnchor,
-            records = parsedRecords
+            records = parsedRecords,
+            deletedMonths = parsedDeletedMonths
         )
+    }
+
+    private fun parseDeletedMonths(root: JSONArray?): List<MonthKey> {
+        if (root == null) return emptyList()
+        val months = mutableListOf<MonthKey>()
+        for (index in 0 until root.length()) {
+            val raw = root.optString(index) ?: continue
+            val parts = raw.split("-")
+            val year = parts.getOrNull(0)?.toIntOrNull() ?: continue
+            val month = parts.getOrNull(1)?.toIntOrNull() ?: continue
+            if (year in 1900..2200 && month in 1..12) {
+                months += MonthKey(year, month)
+            }
+        }
+        return months.distinct()
     }
 
     private fun parseDayRecords(json: JSONObject): List<DayRecord> {
@@ -684,6 +707,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val BLOOD_DONATION_COUNT_KEY = "blood_donation_count"
         const val BLOOD_DONATION_HISTORY_KEY = "blood_donation_history"
         const val BLOOD_DONATION_LEAVE_KEY = "blood_donation_leave"
+        const val DELETED_MONTHS_KEY = "deleted_months"
         const val INITIAL_VACATION_BALANCE_KEY = "initial_vacation_balance"
         const val VACATION_YEAR_BALANCES_KEY = "vacation_year_balances"
         const val ANNUAL_LEAVE_CALCULATION_KEY = "annual_leave_calculation"
@@ -739,6 +763,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             BLOOD_DONATION_LAST_DATE_KEY,
             BLOOD_DONATION_COUNT_KEY,
             BLOOD_DONATION_LEAVE_KEY,
+            DELETED_MONTHS_KEY,
             INITIAL_VACATION_BALANCE_KEY,
             VACATION_YEAR_BALANCES_KEY,
             ANNUAL_LEAVE_CALCULATION_KEY,

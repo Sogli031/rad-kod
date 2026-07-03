@@ -21,18 +21,37 @@ internal object CloudArchiveMerger {
         archive: ShiftRepositorySnapshot,
         current: ShiftRepositorySnapshot
     ): ShiftRepositorySnapshot {
-        val boundary = current.records.minOfOrNull { it.monthKey }
-            ?: return mergeWithoutCurrentRecords(archive, current)
+        // Izričito obrisani meseci (tombstone) se ne vraćaju iz arhive —
+        // bez ovoga bi brisanje najstarijeg meseca pomerilo granicu naviše
+        // pa bi ga arhiva ponovo isporučila pri sledećem merge-u/restore-u.
+        val deletedMonths = (archive.deletedMonths + current.deletedMonths).distinct()
+        val tombstones = deletedMonths.toSet()
 
-        val keptArchiveRecords = archive.records.filter { it.monthKey < boundary }
+        val boundary = current.records.minOfOrNull { it.monthKey }
+            ?: return mergeWithoutCurrentRecords(archive, current, tombstones, deletedMonths)
+
+        val keptArchiveRecords = archive.records.filter { it.monthKey < boundary && it.monthKey !in tombstones }
         val hasOlderArchiveData = keptArchiveRecords.isNotEmpty()
 
         return current.copy(
             records = keptArchiveRecords + current.records,
+            deletedMonths = deletedMonths,
             hourlyValueChanges = mergeOlderThan(archive.hourlyValueChanges, current.hourlyValueChanges, boundary),
-            monthlyPayBases = mergeOlderThan(archive.monthlyPayBases, current.monthlyPayBases, boundary),
-            monthlyGrossAdditions = mergeOlderThan(archive.monthlyGrossAdditions, current.monthlyGrossAdditions, boundary),
-            monthlyNetAdjustments = mergeOlderThan(archive.monthlyNetAdjustments, current.monthlyNetAdjustments, boundary),
+            monthlyPayBases = mergeOlderThan(
+                archive.monthlyPayBases.minus(tombstones),
+                current.monthlyPayBases,
+                boundary
+            ),
+            monthlyGrossAdditions = mergeOlderThan(
+                archive.monthlyGrossAdditions.minus(tombstones),
+                current.monthlyGrossAdditions,
+                boundary
+            ),
+            monthlyNetAdjustments = mergeOlderThan(
+                archive.monthlyNetAdjustments.minus(tombstones),
+                current.monthlyNetAdjustments,
+                boundary
+            ),
             vacationYearBalances = archive.vacationYearBalances + current.vacationYearBalances,
             // Kad arhiva donosi zapise pre prozora, početni saldo mora biti
             // ORIGINALNI iz arhive (pre svih tih zapisa), a ne lokalno preračunati
@@ -57,14 +76,17 @@ internal object CloudArchiveMerger {
      */
     private fun mergeWithoutCurrentRecords(
         archive: ShiftRepositorySnapshot,
-        current: ShiftRepositorySnapshot
+        current: ShiftRepositorySnapshot,
+        tombstones: Set<MonthKey>,
+        deletedMonths: List<MonthKey>
     ): ShiftRepositorySnapshot {
         return current.copy(
-            records = archive.records,
+            records = archive.records.filter { it.monthKey !in tombstones },
+            deletedMonths = deletedMonths,
             hourlyValueChanges = archive.hourlyValueChanges + current.hourlyValueChanges,
-            monthlyPayBases = archive.monthlyPayBases + current.monthlyPayBases,
-            monthlyGrossAdditions = archive.monthlyGrossAdditions + current.monthlyGrossAdditions,
-            monthlyNetAdjustments = archive.monthlyNetAdjustments + current.monthlyNetAdjustments,
+            monthlyPayBases = archive.monthlyPayBases.minus(tombstones) + current.monthlyPayBases,
+            monthlyGrossAdditions = archive.monthlyGrossAdditions.minus(tombstones) + current.monthlyGrossAdditions,
+            monthlyNetAdjustments = archive.monthlyNetAdjustments.minus(tombstones) + current.monthlyNetAdjustments,
             vacationYearBalances = archive.vacationYearBalances + current.vacationYearBalances,
             initialCompBalance = archive.initialCompBalance,
             initialCompBalanceMinutes = archive.initialCompBalanceMinutes,
