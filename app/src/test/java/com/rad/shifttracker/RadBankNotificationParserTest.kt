@@ -179,6 +179,39 @@ class RadBankNotificationParserTest {
     }
 
     @Test
+    fun `stvarni nlb format sa iznosom u redu tipa se parsira`() {
+        // Format potvrđen u aplikaciji "pare" koja radi u produkciji:
+        // tip i iznos u istom redu, datum sa sekundama, "Mesto:" labela.
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            NLB mKlik
+            Priliv: 54.321,00 RSD
+            Datum: 05.08.2026 09:00:00
+            Mesto: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertNotNull(candidate)
+        assertEquals(54_321.0, candidate?.amount ?: 0.0, 0.001)
+        assertEquals(MonthKey(2026, 8), candidate?.month)
+        assertEquals(LocalDateTime.of(2026, 8, 5, 9, 0, 0), candidate?.dateTime)
+    }
+
+    @Test
+    fun `stvarni nlb format za odliv se ne uvozi kao akontacija`() {
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            NLB mKlik
+            Odliv: 5.000,00 RSD
+            Datum: 05.08.2026 13:15:00
+            Mesto: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertNull(candidate)
+    }
+
+    @Test
     fun `bank package filter follows nlb notification imports`() {
         assertEquals(true, isRadBankNotificationPackage("com.nlb.mklik"))
         assertEquals(true, isRadBankNotificationPackage("rs.nlbklik.mobile"))
