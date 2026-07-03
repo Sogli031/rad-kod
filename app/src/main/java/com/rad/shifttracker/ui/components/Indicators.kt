@@ -45,11 +45,13 @@ fun BoxScope.StatusIndicator(
         IndicatorPosition.BOTTOM_CENTER -> Alignment.BottomCenter
     }
 
+    // Padding MORA pre size: obrnut redosled ostavlja 0×0 dp za crtanje
+    // pa se tačkica nikad ne vidi.
     Box(
         modifier = modifier
-            .size(UI.indicatorDotSize.dp)
             .align(alignment)
             .padding(4.dp)
+            .size(UI.indicatorDotSize.dp)
             .background(color, CircleShape)
     )
 }
