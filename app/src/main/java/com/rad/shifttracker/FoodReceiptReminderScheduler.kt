@@ -38,6 +38,7 @@ internal object FoodReceiptReminderScheduler {
     private const val ALARM_REQUEST_CODE = 240501
     private const val OPEN_REQUEST_CODE = 240502
     private const val FALLBACK_WINDOW_MILLIS = 10 * 60 * 1000L
+    private const val MISSED_REMINDER_MAX_AGE_MILLIS = 7L * 24 * 60 * 60 * 1000
 
     fun reschedule(context: Context, repo: ShiftRepository): FoodReceiptReminderScheduleStatus {
         cancelAlarm(context)
@@ -61,6 +62,20 @@ internal object FoodReceiptReminderScheduler {
     fun cancel(context: Context) {
         cancelAlarm(context)
         FoodReceiptReminderPreferences(context).clearScheduled()
+    }
+
+    /**
+     * Alarm ne preživljava restart telefona. Ako je zakazani (mesečni)
+     * podsetnik prošao dok je telefon bio ugašen, bez ovoga bi tiho propao
+     * do sledećeg meseca — zato se posle restarta prikaže odmah, ako nije
+     * stariji od nedelju dana.
+     */
+    fun showMissedNotificationIfAny(context: Context) {
+        val stored = FoodReceiptReminderPreferences(context).readScheduled() ?: return
+        val age = System.currentTimeMillis() - stored.triggerAtMillis
+        if (age in 0..MISSED_REMINDER_MAX_AGE_MILLIS) {
+            showNotification(context)
+        }
     }
 
     fun currentStatus(context: Context): FoodReceiptReminderScheduleStatus {

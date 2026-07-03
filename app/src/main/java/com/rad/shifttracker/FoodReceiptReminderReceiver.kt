@@ -15,6 +15,10 @@ class FoodReceiptReminderReceiver : BroadcastReceiver() {
 
         if (intent.action == FoodReceiptReminderScheduler.ACTION_SHOW_FOOD_RECEIPT_REMINDER) {
             FoodReceiptReminderScheduler.showNotification(context)
+        } else {
+            // BOOT_COMPLETED: prikaži podsetnik propušten dok je telefon
+            // bio ugašen pre nego što reschedule pregazi sačuvani plan.
+            FoodReceiptReminderScheduler.showMissedNotificationIfAny(context)
         }
         FoodReceiptReminderScheduler.reschedule(context, repo)
     }
