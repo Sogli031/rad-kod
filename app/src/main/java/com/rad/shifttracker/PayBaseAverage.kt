@@ -52,6 +52,7 @@ fun calculatePayBaseMonthForAverage(
             includedRegress +
             includedOtherWage,
         hoursForAverage = details.paidWorkHours.coerceAtLeast(0),
+        minutesForAverage = details.paidWorkMinutes.coerceAtLeast(0),
         source = source,
         excludedCompensationGross = excludedGross,
         excludedCompensationHours = excludedHours.coerceAtLeast(0),

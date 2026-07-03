@@ -7,6 +7,7 @@ import java.time.YearMonth
 private const val PAYROLL_FINAL_CUTOFF_DAY = 20
 private const val RECENT_NET_PAY_MONTH_COUNT = 3
 private const val MIN_TRANSPORT_WORK_HOURS = 4
+private const val MINUTES_PER_HOUR = 60
 
 data class MonthlyNetPayBreakdown(
     val grossHourlyRate: Double,
@@ -189,6 +190,9 @@ data class RollingPayBaseMonth(
     val month: Int,
     val grossForAverage: Double,
     val hoursForAverage: Int,
+    // Minutna preciznost za prosek: gross pokriva i minute preko celih sati,
+    // pa i imenilac mora u minutima — inače se osnovica sistematski naduvava.
+    val minutesForAverage: Int = hoursForAverage * MINUTES_PER_HOUR,
     val source: PayBaseMonthSource = PayBaseMonthSource.REAL,
     val excludedCompensationGross: Double = 0.0,
     val excludedCompensationHours: Int = 0,
@@ -431,14 +435,15 @@ private fun calculatePayBaseCalculation(
     if (requireKnownAnchor && months.first().source != PayBaseMonthSource.KNOWN_BASE) return null
     if (months.any { it.year <= 0 || it.month !in 1..12 }) return null
     if (months.any { !it.grossForAverage.isFinite() || it.grossForAverage < 0.0 }) return null
-    if (months.any { it.hoursForAverage < 0 }) return null
+    if (months.any { it.hoursForAverage < 0 || it.minutesForAverage < 0 }) return null
 
     val grossTotal = months.sumOf { it.grossForAverage }
     val hoursTotal = months.sumOf { it.hoursForAverage }
-    if (grossTotal <= 0.0 || hoursTotal <= 0) return null
+    val minutesTotal = months.sumOf { it.minutesForAverage }
+    if (grossTotal <= 0.0 || minutesTotal <= 0) return null
 
     return RollingPayBaseCalculation(
-        hourlyBase = grossTotal / hoursTotal.toDouble(),
+        hourlyBase = grossTotal / (minutesTotal.toDouble() / MINUTES_PER_HOUR),
         grossTotal = grossTotal,
         hoursTotal = hoursTotal,
         months = months
