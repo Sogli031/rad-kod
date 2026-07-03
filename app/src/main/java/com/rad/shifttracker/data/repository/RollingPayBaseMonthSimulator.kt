@@ -118,7 +118,7 @@ internal class RollingPayBaseMonthSimulator(
 
         for (day in 1..lengthOfMonth) {
             val date = LocalDate.of(monthKey.year, monthKey.month, day)
-            val shift = if (isWorkdayHoliday(date)) {
+            val shift = if (isFourBrigadeHolidayOff(date)) {
                 Shift.OFF
             } else {
                 scheduler.calculateFourBrigadeShiftForDate(
@@ -190,7 +190,7 @@ internal class RollingPayBaseMonthSimulator(
             )
             val recordMatches = when {
                 record.shift in Shift.workShifts() -> expectedShift == record.shift
-                isWorkdayHoliday(record.date) -> true
+                isFourBrigadeHolidayOff(record.date) -> true
                 else -> expectedShift == Shift.OFF
             }
             if (recordMatches) matches += 1
@@ -285,5 +285,16 @@ internal class RollingPayBaseMonthSimulator(
 
     private fun isWorkdayHoliday(date: LocalDate): Boolean {
         return Weekday.from(date).isWorkday && isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
+    }
+
+    /**
+     * U četvorobrigadi je i subota cikličan radni dan, pa auto-fill subotnji
+     * praznik upisuje kao OFF — simulacija i prepoznavanje obrasca moraju
+     * da koriste isto pravilo, inače se obrazac ne poklapa.
+     */
+    private fun isFourBrigadeHolidayOff(date: LocalDate): Boolean {
+        val weekday = Weekday.from(date)
+        return (weekday.isWorkday || weekday == Weekday.SATURDAY) &&
+            isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
     }
 }

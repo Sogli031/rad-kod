@@ -427,6 +427,56 @@ class ShiftSchedulerTest {
     }
 
     @Test
+    fun `populateMonthsAhead ne gazi rucne unose`() {
+        val repo = ShiftRepository()
+        val referenceDate = LocalDate.of(2026, 5, 4) // ponedeljak
+        repo.set(2026, 5, 6, Shift.VACATION, 8)
+        repo.set(
+            year = 2026,
+            month = 5,
+            day = 7,
+            shift = Shift.FIRST,
+            hours = 8,
+            shift2 = Shift.SECOND,
+            hours2 = 4
+        )
+
+        scheduler.populateMonthsAhead(repo, referenceDate, Shift.THIRD, monthsAhead = 0)
+
+        // Ručni unosi ostaju netaknuti, ostali dani su popunjeni.
+        assertEquals(Shift.VACATION, repo.get(2026, 5, 6)?.shift)
+        assertEquals(Shift.SECOND, repo.get(2026, 5, 7)?.shift2)
+        assertEquals(4, repo.get(2026, 5, 7)?.hours2)
+        assertEquals(Shift.THIRD, repo.get(2026, 5, 4)?.shift)
+    }
+
+    @Test
+    fun `populateMonthsAhead cetvorobrigada subotnji praznik upisuje kao OFF bez minusa`() {
+        val repo = ShiftRepository()
+        val referenceDate = LocalDate.of(2026, 5, 1)
+
+        scheduler.populateMonthsAhead(
+            repo = repo,
+            referenceDate = referenceDate,
+            settings = ShiftFillSettings(
+                mode = ShiftFillMode.FOUR_BRIGADE,
+                anchorDate = referenceDate,
+                selectedShift = Shift.FIRST,
+                cycleDayIndex = 0
+            ),
+            monthsAhead = 0
+        )
+
+        // 02.05.2026. (subota) je drugi dan Praznika rada — u četvorobrigadi
+        // je subota cikličan radni dan pa praznik važi kao i za petak.
+        val saturdayHoliday = repo.get(2026, 5, 2)
+        assertNotNull(saturdayHoliday)
+        assertEquals(Shift.OFF, saturdayHoliday!!.shift)
+        assertEquals(0, saturdayHoliday.hours)
+        assertEquals(0, saturdayHoliday.hoursDeficitFor(BrigadeType.CETVOROBRIGADA))
+    }
+
+    @Test
     fun `populateMonthsAhead ne upisuje nista za smenu koja nije u starom ciklusu`() {
         val repo = ShiftRepository()
         val referenceDate = LocalDate.of(2026, 5, 4)

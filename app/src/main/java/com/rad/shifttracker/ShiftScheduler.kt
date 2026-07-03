@@ -244,10 +244,23 @@ class ShiftScheduler(
 
         var date = startDate
         while (!date.isAfter(endDate)) {
-            val record = if (
-                date.dayOfWeek.value <= DayOfWeek.FRIDAY.value &&
-                isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
-            ) {
+            val existing = repo.get(date.year, date.monthValue, date.dayOfMonth)
+            // Automatsko popunjavanje ne sme da pregazi ručne unose
+            // (godišnji, bolovanje, dupla smena...) ni krvodavalaštvo —
+            // zamenjuje samo prazne dane i ranije auto-popunjene zapise.
+            if (existing != null && existing.source != DayRecordSource.AUTO_FILL) {
+                date = date.plusDays(1)
+                continue
+            }
+            // Praznik važi za pon–pet; u četvorobrigadi je i subota cikličan
+            // radni dan pa se subotnji praznik tretira isto kao petak.
+            val holidayDayApplies = date.dayOfWeek.value <= DayOfWeek.FRIDAY.value ||
+                (normalizedSettings.mode == ShiftFillMode.FOUR_BRIGADE && date.dayOfWeek == DayOfWeek.SATURDAY)
+            // Ručno isključen/uključen praznik (holidayOverride) ima prednost
+            // nad kalendarom — isto kao u previewVacationRange.
+            val isHolidayDate = existing?.holidayOverride
+                ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
+            val record = if (holidayDayApplies && isHolidayDate) {
                 BatchRecord(
                     year = date.year,
                     month = date.monthValue,
