@@ -2088,7 +2088,10 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         if (imported) {
             Log.d(TAG, "Loaded from local storage")
         } else {
-            Log.e(TAG, "Failed to import local backup data")
+            // Fajl postoji ali se ne može parsirati — sačuvaj ga u karantin
+            // pre nego što ga prvi autosave pregazi praznim stanjem.
+            val quarantined = localStorage.quarantineCorrupt(context)
+            Log.e(TAG, "Failed to import local backup data (quarantined: $quarantined)")
         }
         return imported
     }

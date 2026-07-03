@@ -33,7 +33,21 @@ internal class LocalShiftStorage(
         return load(context)?.isNotEmpty() == true
     }
 
+    /**
+     * Kopira neispravan (neparsiv) fajl u karantin pre nego što ga prvi
+     * sledeći autosave pregazi skoro praznim stanjem — da podaci ostanu
+     * dostupni za ručni oporavak.
+     */
+    fun quarantineCorrupt(context: Context): Boolean {
+        val source = File(context.filesDir, fileName)
+        if (!source.exists()) return false
+        return runCatching {
+            source.copyTo(File(context.filesDir, "$fileName$CORRUPT_SUFFIX"), overwrite = true)
+        }.isSuccess
+    }
+
     companion object {
         const val LOCAL_BACKUP_FILE = "rad_local_data.json"
+        const val CORRUPT_SUFFIX = ".corrupt"
     }
 }
