@@ -1118,6 +1118,26 @@ class PayCalculatorTest {
     }
 
     @Test
+    fun `nedeljni minuti trece smene se dele hronoloski na redovni i prekovremeni deo`() {
+        // Subotnja treća smena (22-06): prvih 120 min je subota, ostatak nedelja.
+        // 8h sa 120 min prekovremenih na kraju: redovnih 360 min sadrži 240
+        // nedeljnih, prekovremenih 120 min je celo u nedelji.
+        val (satRegular, satOvertime) = splitSundayMinutes(
+            Weekday.SATURDAY, Shift.THIRD, 360, 120, BrigadeType.CETVOROBRIGADA
+        )
+        assertEquals(240, satRegular)
+        assertEquals(120, satOvertime)
+
+        // Nedeljna treća smena: samo prvih 120 min (do ponoći) je nedelja —
+        // prekovremeni deo na kraju smene pada u ponedeljak, bez dodatka.
+        val (sunRegular, sunOvertime) = splitSundayMinutes(
+            Weekday.SUNDAY, Shift.THIRD, 420, 60, BrigadeType.CETVOROBRIGADA
+        )
+        assertEquals(120, sunRegular)
+        assertEquals(0, sunOvertime)
+    }
+
+    @Test
     fun `cetvorobrigada prekovremeni ne zavisi od polozaja praznika u mesecu`() {
         // Mart 2026: fond 176h. 23 dana × 8h = 184h → 8h prekovremeno.
         // Radni praznik ne nosi prekovremene (plaća se kroz prazničnu premiju),

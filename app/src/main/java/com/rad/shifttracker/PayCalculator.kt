@@ -286,23 +286,28 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                 val overtimeMinutes = shiftMinutes - regularMinutes
                 regularMinutesRemaining -= regularMinutes
 
-                var pay = calculatePayForSegmentMinutes(
-                    weekday,
-                    shift,
-                    regularMinutes,
-                    baseRate,
-                    brigadeType,
-                    regularBonuses,
-                    config.sundayBonus
+                // Nedeljni minuti se računaju za celu smenu pa dele hronološki
+                // na redovni/prekovremeni deo (vidi splitSundayMinutes).
+                val (sundayRegular, sundayOvertime) = splitSundayMinutes(
+                    weekday = weekday,
+                    shift = shift,
+                    regularMinutes = regularMinutes,
+                    overtimeMinutes = overtimeMinutes,
+                    brigadeType = brigadeType
                 )
-                pay += calculatePayForSegmentMinutes(
-                    weekday,
-                    shift,
-                    overtimeMinutes,
-                    baseRate,
-                    brigadeType,
-                    overtimeBonuses,
-                    config.sundayBonus
+                var pay = calculatePayForSegmentMinutesWithSunday(
+                    minutes = regularMinutes,
+                    sundayMinutes = sundayRegular,
+                    baseRate = baseRate,
+                    bonuses = regularBonuses,
+                    sundayBonus = config.sundayBonus
+                )
+                pay += calculatePayForSegmentMinutesWithSunday(
+                    minutes = overtimeMinutes,
+                    sundayMinutes = sundayOvertime,
+                    baseRate = baseRate,
+                    bonuses = overtimeBonuses,
+                    sundayBonus = config.sundayBonus
                 )
                 pay += calculateDifficultWorkConditionsBonusMinutes(
                     shiftMinutes,
@@ -526,6 +531,15 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                 val overtimeMinutes = shiftMinutes - regularMinutes
                 regularMinutesRemaining -= regularMinutes
 
+                // Nedeljni minuti za celu smenu, pa hronološka podela na
+                // redovni/prekovremeni deo — isto kao u calculateDailyPay.
+                val (sundayRegular, sundayOvertime) = splitSundayMinutes(
+                    weekday = weekday,
+                    shift = shift,
+                    regularMinutes = regularMinutes,
+                    overtimeMinutes = overtimeMinutes,
+                    brigadeType = brigadeType
+                )
                 accumulateWorkSegment(
                     weekday = weekday,
                     shift = shift,
@@ -534,7 +548,8 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     isOvertime = false,
                     isHoliday = record.isHoliday,
                     brigadeType = brigadeType,
-                    details = details
+                    details = details,
+                    sundayMinutes = sundayRegular
                 )
                 accumulateWorkSegment(
                     weekday = weekday,
@@ -544,7 +559,8 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     isOvertime = true,
                     isHoliday = record.isHoliday,
                     brigadeType = brigadeType,
-                    details = details
+                    details = details,
+                    sundayMinutes = sundayOvertime
                 )
             }
         }
@@ -558,10 +574,13 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         isOvertime: Boolean,
         isHoliday: Boolean,
         brigadeType: BrigadeType,
-        details: MutablePayDetails
+        details: MutablePayDetails,
+        // Default (cela smena kao jedan segment) važi za automatski vikend-
+        // prekovremeni put; podeljeni segmenti prosleđuju splitSundayMinutes.
+        sundayMinutes: Int = getSundayMinutesForShift(weekday, shift, minutes, brigadeType)
     ) {
         if (minutes <= 0) return
-        val safeSundayMinutes = getSundayMinutesForShift(weekday, shift, minutes, brigadeType).coerceIn(0, minutes)
+        val safeSundayMinutes = sundayMinutes.coerceIn(0, minutes)
         val paidHours = minutes.toDouble() / MINUTES_PER_HOUR
         val basePay = paidHours * baseRate
         details.basePaidMinutes += minutes

@@ -29,6 +29,44 @@ internal fun getSundayMinutesForShift(
     return 0
 }
 
+/**
+ * Deli nedeljne minute smene na redovni i prekovremeni deo hronološki.
+ *
+ * getSundayMinutesForShift(m) vraća nedeljne minute u PRVIH m minuta smene
+ * (za treću smenu nije aditivna: subota max(0, m−120), nedelja min(m, 120)),
+ * pa se ne sme zvati posebno za redovni i prekovremeni pod-segment. Redovni
+ * deo je početak smene, prekovremeni kraj: nedeljni minuti prekovremenog =
+ * ukupno − prefiks redovnog.
+ */
+internal fun splitSundayMinutes(
+    weekday: Weekday,
+    shift: Shift,
+    regularMinutes: Int,
+    overtimeMinutes: Int,
+    brigadeType: BrigadeType
+): Pair<Int, Int> {
+    val totalMinutes = regularMinutes + overtimeMinutes
+    val sundayTotal = getSundayMinutesForShift(weekday, shift, totalMinutes, brigadeType)
+        .coerceIn(0, totalMinutes)
+    val sundayRegular = getSundayMinutesForShift(weekday, shift, regularMinutes, brigadeType)
+        .coerceIn(0, minOf(regularMinutes, sundayTotal))
+    val sundayOvertime = (sundayTotal - sundayRegular).coerceIn(0, overtimeMinutes)
+    return sundayRegular to sundayOvertime
+}
+
+internal fun calculatePayForSegmentMinutesWithSunday(
+    minutes: Int,
+    sundayMinutes: Int,
+    baseRate: Double,
+    bonuses: List<Double>,
+    sundayBonus: Double
+): Double {
+    if (minutes <= 0) return 0.0
+    val sunday = sundayMinutes.coerceIn(0, minutes)
+    return calculatePayForMinutes(minutes - sunday, baseRate, bonuses) +
+        calculatePayForMinutes(sunday, baseRate, bonuses + sundayBonus)
+}
+
 internal fun calculatePayForSegmentMinutes(
     weekday: Weekday,
     shift: Shift,
