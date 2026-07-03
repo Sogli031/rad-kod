@@ -17,10 +17,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,30 +63,42 @@ fun DayEditDialog(
         else -> CONFIG.pay.sickPayRate
     }
 
-    var shift1 by remember(year, month, day, record) { mutableStateOf(record?.shift ?: Shift.OFF) }
-    var workHours1 by remember(year, month, day, record) {
-        mutableIntStateOf(record?.workHours ?: CONFIG.pay.defaultHours)
+    // rememberSaveable: uneto stanje preživljava rotaciju/ubijanje procesa.
+    // Ključ je SADRŽAJ zapisa (toMap), ne instanca — DayRecord nema strukturni
+    // equals pa bi nova instanca posle rotacije obrisala uneto.
+    val recordContentKey = record?.toMap()
+    var shift1 by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.shift ?: Shift.OFF)
     }
-    var shift2 by remember(year, month, day, record) {
+    var workHours1 by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.workHours ?: CONFIG.pay.defaultHours)
+    }
+    var shift2 by rememberSaveable(year, month, day, recordContentKey) {
         mutableStateOf(record?.shift2 ?: defaultOvertimeShiftAfter(record?.shift ?: Shift.OFF))
     }
-    var workHours2 by remember(year, month, day, record) {
-        mutableIntStateOf(
+    var workHours2 by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(
             (record?.workHours2 ?: 0).takeIf { it > 0 } ?: defaultOvertimeHours(record?.shift ?: Shift.OFF)
         )
     }
-    var hasDouble by remember(year, month, day, record) { mutableStateOf(record?.isDoubleShift ?: false) }
-    var overtimeType by remember(year, month, day, record) {
+    var hasDouble by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.isDoubleShift ?: false)
+    }
+    var overtimeType by rememberSaveable(year, month, day, recordContentKey) {
         mutableStateOf(record?.overtimeType ?: OvertimeType.PAID)
     }
-    var weekendOvertimeType by remember(year, month, day, record) {
+    var weekendOvertimeType by rememberSaveable(year, month, day, recordContentKey) {
         mutableStateOf(record?.weekendOvertimeType ?: OvertimeType.PAID)
     }
-    var compHoursUsed by remember(year, month, day, record) { mutableIntStateOf(record?.compHoursUsed ?: 0) }
-    var regularShortageMinutes by remember(year, month, day, record) {
-        mutableIntStateOf(record?.regularShortageMinutes ?: 0)
+    var compHoursUsed by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.compHoursUsed ?: 0)
     }
-    var sickPayRate by remember(year, month, day, record) { mutableDoubleStateOf(initialSickRate) }
+    var regularShortageMinutes by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.regularShortageMinutes ?: 0)
+    }
+    var sickPayRate by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(initialSickRate)
+    }
     val holidayOverride = record?.holidayOverride
     val holidayWorkOverride = record?.holidayWorkOverride
     val preserveBalanceExempt = record?.balanceExempt == true && shift1 == Shift.OFF

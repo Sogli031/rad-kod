@@ -20,6 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +33,34 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.launch
 
+// MonthKey nije Bundle-kompatibilan, pa se mape/skupovi za rememberSaveable
+// pakuju u liste stringova "yyyy-MM[:vrednost]".
+private val hourlyValueChangesSaver = Saver<Map<MonthKey, Double>, ArrayList<String>>(
+    save = { map ->
+        ArrayList(map.map { (key, value) -> "%04d-%02d:%s".format(key.year, key.month, value.toString()) })
+    },
+    restore = { saved ->
+        saved.mapNotNull { entry ->
+            val parts = entry.split(":")
+            val month = parseMonthKeyOrNull(parts.getOrNull(0)) ?: return@mapNotNull null
+            val value = parts.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
+            month to value
+        }.toMap()
+    }
+)
+
+private val monthKeySetSaver = Saver<Set<MonthKey>, ArrayList<String>>(
+    save = { keys -> ArrayList(keys.map { "%04d-%02d".format(it.year, it.month) }) },
+    restore = { saved -> saved.mapNotNull(::parseMonthKeyOrNull).toSet() }
+)
+
+private fun parseMonthKeyOrNull(raw: String?): MonthKey? {
+    val parts = raw?.split("-") ?: return null
+    val year = parts.getOrNull(0)?.toIntOrNull() ?: return null
+    val month = parts.getOrNull(1)?.toIntOrNull() ?: return null
+    return MonthKey(year, month)
+}
+
 // Existing pay settings dialog is intentionally grouped; detekt stays active for newly added methods.
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
@@ -40,19 +70,24 @@ fun BasePayDialog(
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
-    var coefficientInput by remember { mutableStateOf(formatRateInput(repo.payCoefficientValue)) }
-    var hourlyChangeYearInput by remember { mutableStateOf(year.toString()) }
-    var hourlyChangeMonthInput by remember { mutableStateOf(month.toString()) }
-    var hourlyChangeValueInput by remember { mutableStateOf(formatRateInput(repo.getHourlyValueForMonth(year, month))) }
-    var hourlyChangeDirty by remember { mutableStateOf(false) }
-    var pendingHourlyValueChanges by remember {
+    // rememberSaveable: uneta polja preživljavaju rotaciju/ubijanje procesa.
+    var coefficientInput by rememberSaveable { mutableStateOf(formatRateInput(repo.payCoefficientValue)) }
+    var hourlyChangeYearInput by rememberSaveable { mutableStateOf(year.toString()) }
+    var hourlyChangeMonthInput by rememberSaveable { mutableStateOf(month.toString()) }
+    var hourlyChangeValueInput by rememberSaveable {
+        mutableStateOf(formatRateInput(repo.getHourlyValueForMonth(year, month)))
+    }
+    var hourlyChangeDirty by rememberSaveable { mutableStateOf(false) }
+    var pendingHourlyValueChanges by rememberSaveable(stateSaver = hourlyValueChangesSaver) {
         mutableStateOf(
             repo.getHourlyValueChanges().associate { change ->
                 MonthKey(change.year, change.month) to change.value
             }
         )
     }
-    var removedHourlyValueChangeKeys by remember { mutableStateOf(emptySet<MonthKey>()) }
+    var removedHourlyValueChangeKeys by rememberSaveable(stateSaver = monthKeySetSaver) {
+        mutableStateOf(emptySet<MonthKey>())
+    }
     val payBaseSourceMonth = remember(year, month) { repo.getPayBaseSourceMonthForWorkMonth(year, month) }
     val monthlyBases = remember(year, month) {
         repo.getMonthlyPayBases(payBaseSourceMonth.year, payBaseSourceMonth.month)
@@ -66,7 +101,7 @@ fun BasePayDialog(
             ?.calculation
     }
     val defaultKnownMonth = remember(year, month) { MonthKey(year, month) }
-    var payBaseSelectionMode by remember {
+    var payBaseSelectionMode by rememberSaveable {
         mutableStateOf(
             effectivePayBaseSelectionMode(monthlyBases, defaultPayBaseSelectionMode)
                 .toVisiblePayBaseSelectionMode(knownPayBaseAnchor)
@@ -79,24 +114,24 @@ fun BasePayDialog(
             null
         }
     }
-    var knownBaseYearInput by remember {
+    var knownBaseYearInput by rememberSaveable {
         mutableStateOf((knownPayBaseAnchor?.month ?: defaultKnownMonth).year.toString())
     }
-    var knownBaseMonthInput by remember {
+    var knownBaseMonthInput by rememberSaveable {
         mutableStateOf((knownPayBaseAnchor?.month ?: defaultKnownMonth).month.toString())
     }
-    var knownBaseInput by remember {
+    var knownBaseInput by rememberSaveable {
         mutableStateOf(formatRateInput(knownPayBaseAnchor?.grossHourlyBase ?: resolvedBases.sickHourlyBase.value))
     }
-    var contributionsInput by remember {
+    var contributionsInput by rememberSaveable {
         mutableStateOf(formatRateInput(repo.employeeContributionsPercentValue))
     }
-    var taxReliefInput by remember { mutableStateOf(formatRateInput(repo.taxReliefValue)) }
-    var taxInput by remember { mutableStateOf(formatRateInput(repo.taxPercentValue)) }
-    var difficultWorkConditionsInput by remember {
+    var taxReliefInput by rememberSaveable { mutableStateOf(formatRateInput(repo.taxReliefValue)) }
+    var taxInput by rememberSaveable { mutableStateOf(formatRateInput(repo.taxPercentValue)) }
+    var difficultWorkConditionsInput by rememberSaveable {
         mutableStateOf(formatRateInput(repo.difficultWorkConditionsPercentValue))
     }
-    var transportDailyAmountInput by remember {
+    var transportDailyAmountInput by rememberSaveable {
         mutableStateOf(formatRateInput(repo.transportDailyAmountValue))
     }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -129,12 +164,16 @@ fun BasePayDialog(
             )
             val coefficientPreview = coefficientInput.toDoubleOrNull() ?: repo.payCoefficientValue
             val hourlyValuePreview = resolveHourlyValueForMonth(year, month, pendingHourlyValueChanges).value
-            val netDifferencePreview = repo.previewPayCoefficientNetDifference(
-                year = year,
-                month = month,
-                coefficient = coefficientPreview,
-                hourlyValue = hourlyValuePreview
-            )
+            // Puna simulacija meseca — memoizovano da se ne izvršava na svaki
+            // pritisak tastera u bilo kom drugom polju dijaloga.
+            val netDifferencePreview = remember(year, month, coefficientPreview, hourlyValuePreview) {
+                repo.previewPayCoefficientNetDifference(
+                    year = year,
+                    month = month,
+                    coefficient = coefficientPreview,
+                    hourlyValue = hourlyValuePreview
+                )
+            }
             BasePayPreviewStrip(
                 coefficientPreview = coefficientPreview,
                 hourlyValuePreview = hourlyValuePreview,

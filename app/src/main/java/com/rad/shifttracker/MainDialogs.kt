@@ -242,7 +242,6 @@ internal data class MainDialogData(
     val monthlyReceipt: MonthlyReceipt,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
-    val payrollOvertimeNetImpact: MonthlyOvertimeNetImpact,
     val payDetails: MonthlyPayDetails,
     val annualNetPayAverages: AnnualNetPayAverages,
     val recentNetPayAverage: RecentNetPayAverage,

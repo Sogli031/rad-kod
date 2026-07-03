@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +70,63 @@ internal sealed class DialogState {
     object BloodDonation : DialogState()
     data class DayEdit(val day: Int, val record: DayRecord?) : DialogState()
 }
+
+/**
+ * Saver za [DialogState]: objekat-stanja se čuvaju po imenu, DayEdit po danu
+ * (zapis se pri obnovi ponovo čita iz repozitorijuma — snimljeni snapshot bi
+ * mogao biti zastareo). Bez ovoga rotacija/ubijanje procesa zatvara dijalog.
+ */
+private fun dialogStateSaver(recordForDay: (Int) -> DayRecord?): Saver<DialogState, String> = Saver(
+    save = { state ->
+        when (state) {
+            DialogState.None -> "None"
+            DialogState.AutoFill -> "AutoFill"
+            DialogState.SickVacation -> "SickVacation"
+            DialogState.BasePay -> "BasePay"
+            DialogState.PayDetails -> "PayDetails"
+            DialogState.WorkHours -> "WorkHours"
+            DialogState.OvertimeNetImpact -> "OvertimeNetImpact"
+            DialogState.Food -> "Food"
+            DialogState.Minuli -> "Minuli"
+            DialogState.Options -> "Options"
+            DialogState.CloudBackup -> "CloudBackup"
+            DialogState.AdvancePayment -> "AdvancePayment"
+            DialogState.InitialCompBalance -> "InitialCompBalance"
+            DialogState.DeleteMonth -> "DeleteMonth"
+            DialogState.VacationSettings -> "VacationSettings"
+            DialogState.Holidays -> "Holidays"
+            DialogState.BloodDonation -> "BloodDonation"
+            is DialogState.DayEdit -> "DayEdit:${state.day}"
+        }
+    },
+    restore = { saved ->
+        if (saved.startsWith("DayEdit:")) {
+            saved.removePrefix("DayEdit:").toIntOrNull()
+                ?.let { day -> DialogState.DayEdit(day, recordForDay(day)) }
+                ?: DialogState.None
+        } else {
+            when (saved) {
+                "AutoFill" -> DialogState.AutoFill
+                "SickVacation" -> DialogState.SickVacation
+                "BasePay" -> DialogState.BasePay
+                "PayDetails" -> DialogState.PayDetails
+                "WorkHours" -> DialogState.WorkHours
+                "OvertimeNetImpact" -> DialogState.OvertimeNetImpact
+                "Food" -> DialogState.Food
+                "Minuli" -> DialogState.Minuli
+                "Options" -> DialogState.Options
+                "CloudBackup" -> DialogState.CloudBackup
+                "AdvancePayment" -> DialogState.AdvancePayment
+                "InitialCompBalance" -> DialogState.InitialCompBalance
+                "DeleteMonth" -> DialogState.DeleteMonth
+                "VacationSettings" -> DialogState.VacationSettings
+                "Holidays" -> DialogState.Holidays
+                "BloodDonation" -> DialogState.BloodDonation
+                else -> DialogState.None
+            }
+        }
+    }
+)
 
 internal fun vacationCardAsOfDate(year: Int, month: Int, today: LocalDate): LocalDate {
     val displayedMonth = YearMonth.of(year, month)
@@ -196,8 +254,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         onUpdated = { message -> monthlyTaxUpdateMessage = message }
     )
 
-    var currentYear by remember { mutableIntStateOf(today.year) }
-    var currentMonth by remember { mutableIntStateOf(today.monthValue) }
+    // rememberSaveable: rotacija/ubijanje procesa ne sme da vrati kalendar
+    // sa pregledanog meseca na tekući.
+    var currentYear by rememberSaveable { mutableIntStateOf(today.year) }
+    var currentMonth by rememberSaveable { mutableIntStateOf(today.monthValue) }
     val launchSelectedMonthExport = rememberMonthlyWorkAndPayExportLauncher(repo, currentYear, currentMonth)
     val vacationAsOfDate = remember(currentYear, currentMonth, today) {
         vacationCardAsOfDate(currentYear, currentMonth, today)
@@ -226,9 +286,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     }
     val payDetails = remember(repoTick.intValue, payrollMonthKey) {
         repo.getMonthlyPayDetails(payrollMonthKey.year, payrollMonthKey.month)
-    }
-    val payrollOvertimeNetImpact = remember(repoTick.intValue, payrollMonthKey) {
-        repo.getMonthlyOvertimeNetImpact(payrollMonthKey.year, payrollMonthKey.month)
     }
     val selectedMonthPayDetails = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyPayDetails(currentYear, currentMonth)
@@ -261,7 +318,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         BloodDonationReminderScheduler.currentStatus(context, repo)
     }
 
-    var dialogState by remember { mutableStateOf<DialogState>(DialogState.None) }
+    // Otvoren dijalog preživljava rotaciju; DayEdit obnavlja zapis iz repo-a.
+    var dialogState by rememberSaveable(
+        stateSaver = dialogStateSaver { day -> repo.get(currentYear, currentMonth, day) }
+    ) { mutableStateOf<DialogState>(DialogState.None) }
     val dismissDialog = { dialogState = DialogState.None }
     val completeOnboarding = {
         showOnboarding = false
@@ -385,7 +445,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             monthlyReceipt = monthlyReceipt,
             monthlyFinalPaymentBreakdown = monthlyFinalPaymentBreakdown,
             overtimeNetImpact = overtimeNetImpact,
-            payrollOvertimeNetImpact = payrollOvertimeNetImpact,
             payDetails = payDetails,
             annualNetPayAverages = annualNetPayAverages,
             recentNetPayAverage = recentNetPayAverage,
