@@ -1118,6 +1118,39 @@ class PayCalculatorTest {
     }
 
     @Test
+    fun `cetvorobrigada prekovremeni ne zavisi od polozaja praznika u mesecu`() {
+        // Mart 2026: fond 176h. 23 dana × 8h = 184h → 8h prekovremeno.
+        // Radni praznik ne nosi prekovremene (plaća se kroz prazničnu premiju),
+        // pa se višak preliva na običan dan — bez obzira gde praznik pada.
+        fun records(holidayDay: Int) = (2..24).map { day ->
+            DayRecord(
+                2026, 3, day, Shift.FIRST, 8,
+                holidayOverride = if (day == holidayDay) true else null,
+                holidayWorkOverride = if (day == holidayDay) true else null
+            )
+        }
+
+        val holidayAtStart = calculator.calculateMonthSummary(
+            records = records(2),
+            baseRate = 300.0,
+            brigadeType = BrigadeType.CETVOROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 3
+        )
+        val holidayAtEnd = calculator.calculateMonthSummary(
+            records = records(24),
+            baseRate = 300.0,
+            brigadeType = BrigadeType.CETVOROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 3
+        )
+
+        assertEquals(8, holidayAtStart.overtimeHours)
+        assertEquals(8, holidayAtEnd.overtimeHours)
+        assertEquals(holidayAtStart.totalPay, holidayAtEnd.totalPay, 0.01)
+    }
+
+    @Test
     fun `calculateMonthSummary cetvorobrigada placa nepun sat prekovremenog preko fonda`() {
         // Cetvorobrigada, mart 2026, fond = 176h (10560 min).
         // 20 punih 8h dana = 9600 min, + jedan 7h30 dan = 450 min -> kumulativ 10050 min (sve redovno).

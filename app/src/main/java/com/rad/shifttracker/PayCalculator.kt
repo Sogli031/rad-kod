@@ -161,8 +161,22 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         var regularMinutesRemaining = calculateMonthlyFundHours(year, month, config.defaultHours) * MINUTES_PER_HOUR
         if (regularMinutesRemaining <= 0) return emptyMap()
 
+        val sorted = records.sortedWith(compareBy<DayRecord> { it.year }.thenBy { it.month }.thenBy { it.day })
+
+        // Radni praznici prvo troše fond i nikad ne nose prekovremene —
+        // njihovi sati se plaćaju kroz prazničnu premiju
+        // (monthlyOvertimeMinutesForRecord za njih vraća 0). Da im se višak
+        // dodeli pa nulira, ti minuti bi propali, a ukupna plata bi zavisila
+        // od toga gde u mesecu praznik pada.
+        for (record in sorted) {
+            if (!record.workedOnHoliday) continue
+            val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
+            regularMinutesRemaining -= min(recordPaidMinutes, regularMinutesRemaining)
+        }
+
         val overtimeByDay = mutableMapOf<DayKey, Int>()
-        for (record in records.sortedWith(compareBy<DayRecord> { it.year }.thenBy { it.month }.thenBy { it.day })) {
+        for (record in sorted) {
+            if (record.workedOnHoliday) continue
             val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
             if (recordPaidMinutes <= 0) continue
 
