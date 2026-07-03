@@ -527,6 +527,24 @@ class PayCalculatorTest {
     }
 
     @Test
+    fun `iskorisceni sati na danu sa manjkom se ne skidaju duplo sa balansa`() {
+        // OFF radni dan (ponedeljak) sa "iskoristi 8h": manjak i iskorišćeni
+        // sati istog dana se preklapaju — balans pada 8h, ne 16h.
+        val result = calculator.calculateMonthSummary(
+            records = listOf(DayRecord(2025, 3, 3, Shift.OFF, 0, compHoursUsed = 8)),
+            baseRate = 300.0,
+            startingCompBalance = 20,
+            summaryYear = 2025,
+            summaryMonth = 3
+        )
+
+        assertEquals(-480, result.compTimeNetMinutes)
+        assertEquals(20 * 60 - 480, result.compTimeEndingMinutes)
+        // Pokriven manjak se plaća jednom: 8h × 300
+        assertEquals(2_400.0, result.totalPay, 0.01)
+    }
+
+    @Test
     fun `full regular day minutes are ignored with paid overtime shift`() {
         val result = calculator.calculateMonthSummary(
             records = listOf(

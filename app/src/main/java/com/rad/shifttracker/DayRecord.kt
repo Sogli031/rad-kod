@@ -170,9 +170,18 @@ class DayRecord(
         }
     }
 
+    /**
+     * Koliko se minuta skida sa balansa za ovaj dan. Manjak i "iskoristi
+     * sate" na istom danu se preklapaju: iskorišćeni sati pokrivaju manjak
+     * istog dana, pa se sa balansa skida veći od ta dva iznosa, a ne zbir —
+     * inače OFF radni dan sa "iskoristi 8h" skine 16h za 8h plate.
+     */
+    fun balanceDebitMinutesFor(brigadeType: BrigadeType): Int {
+        return maxOf(hoursDeficitMinutesFor(brigadeType), compHoursUsed * MINUTES_PER_HOUR)
+    }
+
     fun netCompChangeMinutesFor(brigadeType: BrigadeType): Int {
-        return compTimeEarnedMinutes - hoursDeficitMinutesFor(brigadeType) -
-            compHoursUsed * MINUTES_PER_HOUR
+        return compTimeEarnedMinutes - balanceDebitMinutesFor(brigadeType)
     }
 
     val isHoliday: Boolean by lazy {

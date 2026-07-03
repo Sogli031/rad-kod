@@ -35,10 +35,7 @@ internal class RepositoryCompBalanceCalculator(
 
         for (i in startIndex until priorMonths.size) {
             val monthRecords = recordStore.getMonthRecords(priorMonths[i])
-            val earned = monthRecords.sumOf { it.compTimeEarnedMinutes }
-            val deficit = monthRecords.sumOf { it.hoursDeficitMinutesFor(payState.brigadeType) }
-            val used = monthRecords.sumOf { it.compHoursUsed * MINUTES_PER_HOUR }
-            balance += earned - deficit - used
+            balance += monthRecords.sumOf { it.netCompChangeMinutesFor(payState.brigadeType) }
             if (balance < 0) balance = 0
         }
 
@@ -56,10 +53,7 @@ internal class RepositoryCompBalanceCalculator(
         var balance = payState.initialCompBalanceMinutes
         for (priorMonth in priorMonths) {
             val monthRecords = recordStore.getMonthRecords(priorMonth)
-            val earned = monthRecords.sumOf { it.compTimeEarnedMinutes }
-            val deficit = monthRecords.sumOf { it.hoursDeficitMinutesFor(payState.brigadeType) }
-            val used = monthRecords.sumOf { it.compHoursUsed * MINUTES_PER_HOUR }
-            balance += earned - deficit - used
+            balance += monthRecords.sumOf { it.netCompChangeMinutesFor(payState.brigadeType) }
             if (balance < 0) balance = 0
         }
         return balance

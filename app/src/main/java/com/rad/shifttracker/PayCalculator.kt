@@ -724,9 +724,9 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             summary.totalPay += calculateUnrecordedHolidayPay(year, month, recordedDays, baseRate, brigadeType, payBases)
         }
 
-        summary.compTimeNetMinutes = summary.compTimeEarnedMinutes -
-            summary.compTimeDeficitMinutes -
-            summary.compTimeUsedMinutes
+        // Net se računa po danu (manjak i iskorišćeni sati istog dana se
+        // preklapaju — vidi DayRecord.balanceDebitMinutesFor), ne iz mesečnih suma.
+        summary.compTimeNetMinutes = records.sumOf { it.netCompChangeMinutesFor(brigadeType) }
         summary.compTimeEndingMinutes = summary.compTimeStartingMinutes + summary.compTimeNetMinutes
         summary.compTimeNet = summary.compTimeNetMinutes / MINUTES_PER_HOUR
         summary.compTimeEnding = summary.compTimeEndingMinutes / MINUTES_PER_HOUR
