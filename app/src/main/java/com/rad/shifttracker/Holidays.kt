@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import android.util.Log
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 
@@ -121,7 +122,10 @@ fun getHolidayName(year: Int, month: Int, day: Int): String? {
 private fun cachedHolidayData(year: Int): YearHolidayData {
     holidayCache[year]?.let { return it }
 
-    val holidays = embeddedHolidayMap[year].orEmpty()
+    // Ugrađeni CSV je primaran (ručno proveren); van njegovog prozora se
+    // praznici računaju algoritamski — inače bi 2036+ tiho ostala bez
+    // praznika i auto-fill bi na njih upisivao pune radne smene.
+    val holidays = embeddedHolidayMap[year] ?: computeSerbianHolidays(year)
     if (holidays.isEmpty() && loggedEmptyHolidayYears.add(year)) {
         Log.w(TAG, "Nema kalendara praznika za godinu $year (ugrađeni CSV pokriva 2025–2035).")
     }
@@ -137,6 +141,81 @@ private fun cachedHolidayData(year: Int): YearHolidayData {
     }
     holidayCache[year] = data
     return data
+}
+
+/**
+ * Algoritamski obračun srpskih praznika za godine van ugrađenog CSV-a
+ * (Zakon o državnim i drugim praznicima): fiksni državni praznici, verski
+ * na osnovu pravoslavnog Uskrsa (Meeus), i pravilo prenosa — ako državni
+ * praznik padne u nedelju, ne radi se prvog narednog radnog dana.
+ * Za 2025–2035 daje identičan rezultat kao CSV (pokriveno testom).
+ */
+internal fun computeSerbianHolidays(year: Int): List<Holiday> {
+    if (year < 1919) return emptyList()
+
+    data class Entry(val date: LocalDate, val name: String, val category: HolidayCategory)
+
+    val easter = orthodoxEasterSunday(year)
+    val stateHolidays = listOf(
+        LocalDate.of(year, 1, 1) to "Nova godina",
+        LocalDate.of(year, 1, 2) to "Nova godina",
+        LocalDate.of(year, 2, 15) to "Sretenje / Dan državnosti",
+        LocalDate.of(year, 2, 16) to "Sretenje / Dan državnosti",
+        LocalDate.of(year, 5, 1) to "Praznik rada",
+        LocalDate.of(year, 5, 2) to "Praznik rada",
+        LocalDate.of(year, 11, 11) to "Dan primirja u Prvom svetskom ratu"
+    )
+    val religiousHolidays = listOf(
+        LocalDate.of(year, 1, 7) to "Božić (pravoslavni)",
+        easter.minusDays(2) to "Veliki petak",
+        easter.minusDays(1) to "Velika subota",
+        easter to "Vaskrs",
+        easter.plusDays(1) to "Vaskršnji ponedeljak"
+    )
+
+    val byDate = linkedMapOf<LocalDate, Entry>()
+    for ((date, name) in stateHolidays) {
+        byDate[date] = Entry(date, name, HolidayCategory.STATE)
+    }
+    for ((date, name) in religiousHolidays) {
+        val existing = byDate[date]
+        byDate[date] = if (existing != null) {
+            Entry(date, "${existing.name} + $name", HolidayCategory.STATE_AND_RELIGIOUS)
+        } else {
+            Entry(date, name, HolidayCategory.RELIGIOUS)
+        }
+    }
+
+    // Prenos važi samo za državne praznike; naredni radni dan preskače
+    // datume koji su već neradni (npr. 2027: Praznik rada u nedelju uz
+    // Vaskrs → preneti dan je utorak 4. maj, posle Vaskršnjeg ponedeljka).
+    val nonWorkingDates = byDate.keys.toMutableSet()
+    val substitutes = mutableListOf<Entry>()
+    for ((date, name) in stateHolidays) {
+        if (date.dayOfWeek != DayOfWeek.SUNDAY) continue
+        var candidate = date.plusDays(1)
+        while (candidate in nonWorkingDates) {
+            candidate = candidate.plusDays(1)
+        }
+        nonWorkingDates += candidate
+        substitutes += Entry(
+            date = candidate,
+            name = "$name (preneti neradni dan)",
+            category = HolidayCategory.STATE_SUBSTITUTE
+        )
+    }
+
+    return (byDate.values + substitutes)
+        .sortedBy { it.date }
+        .map { entry ->
+            Holiday(
+                month = entry.date.monthValue,
+                day = entry.date.dayOfMonth,
+                name = entry.name,
+                category = entry.category,
+                isSubstitute = entry.category == HolidayCategory.STATE_SUBSTITUTE
+            )
+        }
 }
 
 private fun parseEmbeddedHolidayCsvLine(line: String): EmbeddedHolidayRow {

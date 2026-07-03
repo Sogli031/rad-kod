@@ -262,6 +262,34 @@ class HolidaysTest {
         assertFalse(isSerbianHoliday(2026, 5, 9))
     }
 
+    // ============= Algoritamski fallback van CSV prozora =============
+
+    @Test
+    fun `computeSerbianHolidays reprodukuje ugradjeni CSV za sve pokrivene godine`() {
+        // Algoritam mora da daje identičan kalendar kao ručno proveren CSV
+        // (2025–2035) — to garantuje da je fallback za 2036+ pouzdan.
+        for (year in 2025..2035) {
+            assertEquals(
+                "Algoritamski praznici se razlikuju od CSV-a za godinu $year",
+                getSerbianHolidays(year),
+                computeSerbianHolidays(year)
+            )
+        }
+    }
+
+    @Test
+    fun `godine posle 2035 imaju praznike preko algoritamskog obracuna`() {
+        // Fiksni državni praznici
+        assertTrue(isSerbianHoliday(2036, 1, 1))
+        assertTrue(isSerbianHoliday(2036, 5, 1))
+        assertTrue(isSerbianHoliday(2036, 11, 11))
+        // Pravoslavni Vaskrs 2036. je 20. april (julijanski 7. april + 13 dana)
+        assertTrue(isSerbianHoliday(2036, 4, 20))
+        assertEquals("Vaskrs", getHolidayName(2036, 4, 20))
+        // Običan dan nije praznik
+        assertFalse(isSerbianHoliday(2036, 3, 3))
+    }
+
     // ============= Merge praznika koji se poklapaju =============
 
     @Test
