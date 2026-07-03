@@ -204,6 +204,78 @@ private fun RestoreConfirmCard(
     }
 }
 
+/**
+ * Potvrda pre "Vrati najnovije" iz oblaka: jedan tap ne sme nepovratno da
+ * pregazi lokalne izmene nastale posle poslednjeg backup-a.
+ */
+@Composable
+fun RestoreLatestConfirmDialog(
+    isBusy: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    PopupDialog(
+        title = "Vraćanje iz oblaka",
+        onDismiss = onDismiss,
+        widthRatio = 0.9f,
+        accent = THEME.warning
+    ) {
+        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+            Text(
+                text = "Trenutno stanje će biti zamenjeno najnovijom verzijom iz oblaka. " +
+                    "Izmene od poslednjeg backup-a bi bile izgubljene, pa se pre vraćanja " +
+                    "automatski pravi sigurnosna kopija trenutnog stanja.",
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+            if (isBusy) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(18.dp),
+                        color = THEME.info,
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "Vraćanje u toku…",
+                        color = THEME.info,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    RoundedButton(
+                        text = "Otkaži",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        bgColor = THEME.bgCard,
+                        textColor = THEME.textPrimary,
+                        radius = 12.dp,
+                        onClick = onDismiss
+                    )
+                    RoundedButton(
+                        text = "Vrati",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        bgColor = THEME.warning,
+                        textColor = THEME.textDark,
+                        radius = 12.dp,
+                        bold = true,
+                        onClick = onConfirm
+                    )
+                }
+            }
+        }
+    }
+}
+
 internal fun backupVersionSummary(version: BackupVersion): String {
     val stats = version.stats ?: return "starija verzija (sadržaj nepoznat)"
     val hours = stats.totalWorkMinutes / 60

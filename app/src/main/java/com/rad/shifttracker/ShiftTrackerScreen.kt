@@ -131,6 +131,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     var showBackupVersionsDialog by rememberSaveable { mutableStateOf(false) }
     var backupVersions by remember { mutableStateOf<List<BackupVersion>?>(null) }
     var restoringVersion by remember { mutableStateOf(false) }
+    var showRestoreLatestConfirm by rememberSaveable { mutableStateOf(false) }
+    var restoringLatest by remember { mutableStateOf(false) }
     LaunchedEffect(showBackupVersionsDialog) {
         if (showBackupVersionsDialog) {
             backupVersions = null
@@ -435,14 +437,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     }
                 }
             },
-            onRestore = {
-                scope.launch {
-                    val message = restoreLatestMessage(backup.restoreLatest(), repo)
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
+            // Jedan tap ne sme nepovratno da pregazi lokalne izmene —
+            // prvo potvrda, pa sigurnosna kopija, pa restore.
+            onRestore = { showRestoreLatestConfirm = true },
             onShowVersions = { showBackupVersionsDialog = true },
             onSignOut = {
                 scope.launch { backup.signOut() }
@@ -458,11 +455,17 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onRestoreVersion = { version ->
                 scope.launch {
                     restoringVersion = true
-                    // Sigurnosna kopija trenutnog stanja pre vraćanja — i restore je poništiv.
-                    backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+                    // Sigurnosna kopija trenutnog stanja pre vraćanja — i restore je
+                    // poništiv. Ako kopija ne uspe, vraćanje se prekida (UI obećava
+                    // da je poništivo, pa ne sme da nastavi bez kopije).
+                    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
                         repo.buildCloudBackup(existing)
                     }
-                    val message = restoreVersionMessage(backup.restoreVersion(version.fileId), repo)
+                    val message = if (safetyOutcome is BackupOutcome.Failure) {
+                        "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
+                    } else {
+                        restoreVersionMessage(backup.restoreVersion(version.fileId), repo)
+                    }
                     withContext(Dispatchers.Main) {
                         restoringVersion = false
                         showBackupVersionsDialog = false
@@ -471,6 +474,31 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 }
             },
             onDismiss = { showBackupVersionsDialog = false }
+        )
+    }
+
+    if (showRestoreLatestConfirm) {
+        RestoreLatestConfirmDialog(
+            isBusy = restoringLatest,
+            onConfirm = {
+                scope.launch {
+                    restoringLatest = true
+                    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+                        repo.buildCloudBackup(existing)
+                    }
+                    val message = if (safetyOutcome is BackupOutcome.Failure) {
+                        "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
+                    } else {
+                        restoreLatestMessage(backup.restoreLatest(), repo)
+                    }
+                    withContext(Dispatchers.Main) {
+                        restoringLatest = false
+                        showRestoreLatestConfirm = false
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            onDismiss = { if (!restoringLatest) showRestoreLatestConfirm = false }
         )
     }
 
