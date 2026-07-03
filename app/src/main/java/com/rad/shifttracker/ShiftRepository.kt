@@ -1735,7 +1735,9 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             } else {
                 bloodDonationHistoryState = bloodDonationHistoryState.filterNot { it == date }
                 lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull()
-                bloodDonationCountState = bloodDonationHistoryState.size
+                // Ručno unet ukupan brojač (veći od praćene istorije) se ne resetuje
+                // na history.size — samo se umanji za obrisano davanje.
+                bloodDonationCountState = (bloodDonationCountState - 1).coerceAtLeast(bloodDonationHistoryState.size)
                 true
             }
         }
@@ -1761,13 +1763,13 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     fun applyBloodDonationLeave(firstDay: LocalDate): Boolean {
         synchronized(lock) {
             clearBloodDonationLeaveEntryForDateUnsafe(firstDay)
-            val backups = bloodDonationLeaveDates(firstDay).map { date ->
+            val backups = bloodDonationLeaveWorkdayDates(firstDay).map { date ->
                 BloodDonationLeaveBackup(
                     date = date,
                     record = recordStore.get(date.year, date.monthValue, date.dayOfMonth)
                 )
             }
-            for (date in bloodDonationLeaveDates(firstDay)) {
+            for (date in bloodDonationLeaveWorkdayDates(firstDay)) {
                 recordStore.set(bloodDonationLeaveRecord(date))
             }
             bloodDonationLeaveStates = normalizeBloodDonationLeaveStates(

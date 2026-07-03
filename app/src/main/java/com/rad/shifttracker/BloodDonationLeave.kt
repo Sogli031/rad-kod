@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 internal const val BLOOD_DONATION_BOTTOM_BAR_LABEL = "Krv"
@@ -16,6 +17,15 @@ internal data class BloodDonationLeaveState(
 
 internal fun bloodDonationLeaveDates(firstDay: LocalDate): List<LocalDate> {
     return listOf(firstDay, firstDay.plusDays(1))
+}
+
+/**
+ * Datumi para na koje se upisuje plaćeno odsustvo — vikend se preskače,
+ * isto kao kod bolovanja i godišnjeg (applySickRange/previewVacationRange).
+ * Bez ovoga odsustvo od petka pravi subotu kao plaćen SICK dan 100%.
+ */
+internal fun bloodDonationLeaveWorkdayDates(firstDay: LocalDate): List<LocalDate> {
+    return bloodDonationLeaveDates(firstDay).filter { it.dayOfWeek.value <= DayOfWeek.FRIDAY.value }
 }
 
 internal fun calculateNextBloodDonationLeaveDate(firstDay: LocalDate): LocalDate {

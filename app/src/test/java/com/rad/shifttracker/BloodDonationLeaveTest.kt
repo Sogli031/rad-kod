@@ -136,8 +136,35 @@ class BloodDonationLeaveTest {
         assertEquals(LocalDate.of(2026, 8, 23), repo.bloodDonationLeaveStartDate)
         assertTrue(repo.get(2026, 5, 21)?.isBloodDonationLeave == true)
         assertTrue(repo.get(2026, 5, 22)?.isBloodDonationLeave == true)
-        assertTrue(repo.get(2026, 8, 23)?.isBloodDonationLeave == true)
+        // 23.08.2026. je nedelja — na vikend se ne upisuje plaćeno odsustvo
+        assertNull(repo.get(2026, 8, 23))
         assertTrue(repo.get(2026, 8, 24)?.isBloodDonationLeave == true)
+    }
+
+    @Test
+    fun `krvni dani preskacu vikend pri upisu odsustva`() {
+        val repo = ShiftRepository()
+
+        // 08.05.2026. je petak — drugi dan (subota) se ne upisuje
+        assertTrue(repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 8)))
+
+        assertTrue(repo.get(2026, 5, 8)?.isBloodDonationLeave == true)
+        assertNull(repo.get(2026, 5, 9))
+        assertEquals(LocalDate.of(2026, 5, 8), repo.bloodDonationLeaveStartDate)
+    }
+
+    @Test
+    fun `brisanje davanja krvi cuva rucno unet veci brojac`() {
+        val repo = ShiftRepository()
+        assertTrue(
+            repo.importFromJson(
+                """{"blood_donation_count":30,"blood_donation_history":["2026-04-12","2026-01-10"]}"""
+            )
+        )
+
+        assertTrue(repo.deleteBloodDonation(LocalDate.of(2026, 4, 12)))
+
+        assertEquals(29, repo.bloodDonationCount)
     }
 
     @Test
@@ -167,7 +194,8 @@ class BloodDonationLeaveTest {
         assertEquals(LocalDate.of(2026, 8, 23), restored.bloodDonationLeaveStartDate)
         assertTrue(restored.get(2026, 5, 21)?.isBloodDonationLeave == true)
         assertTrue(restored.get(2026, 5, 22)?.isBloodDonationLeave == true)
-        assertTrue(restored.get(2026, 8, 23)?.isBloodDonationLeave == true)
+        // 23.08.2026. je nedelja — nema zapisa ni posle import-a
+        assertNull(restored.get(2026, 8, 23))
         assertTrue(restored.get(2026, 8, 24)?.isBloodDonationLeave == true)
     }
 

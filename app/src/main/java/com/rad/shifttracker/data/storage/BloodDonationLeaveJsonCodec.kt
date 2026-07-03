@@ -3,7 +3,7 @@ package com.rad.shifttracker.data.storage
 import com.rad.shifttracker.BloodDonationLeaveBackup
 import com.rad.shifttracker.BloodDonationLeaveState
 import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.bloodDonationLeaveDates
+import com.rad.shifttracker.bloodDonationLeaveWorkdayDates
 import org.json.JSONObject
 import java.time.LocalDate
 import java.util.TreeMap
@@ -61,7 +61,9 @@ internal object BloodDonationLeaveJsonCodec {
                 }
             }
         }
-        return bloodDonationLeaveDates(firstDay).map { date ->
+        // Backup postoji samo za dane na koje je odsustvo zaista upisano
+        // (radni dani); vikend dan para se ne dira pa se ni ne vraća.
+        return bloodDonationLeaveWorkdayDates(firstDay).map { date ->
             BloodDonationLeaveBackup(date = date, record = parsed[date])
         }
     }
