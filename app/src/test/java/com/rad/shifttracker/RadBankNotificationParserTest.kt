@@ -106,6 +106,79 @@ class RadBankNotificationParserTest {
     }
 
     @Test
+    fun `iznos samo sa tackom hiljada se cita kao hiljade`() {
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            Priliv
+            Iznos: 54.321 RSD
+            Datum: 05.08.2026 09:14
+            Opis: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertEquals(54_321.0, candidate?.amount ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun `iznos sa zarezom kao separatorom hiljada se cita kao hiljade`() {
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            Priliv
+            Iznos: 54,321.00 RSD
+            Datum: 05.08.2026 09:14
+            Opis: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertEquals(54_321.0, candidate?.amount ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun `decimalni iznos sa zarezom se i dalje cita kao decimala`() {
+        val parsed = parseRadBankNotificationText(
+            """
+            Odliv
+            Iznos: 123,45 RSD
+            Datum: 05.08.2026 09:14
+            Opis: PRODAVNICA
+            """.trimIndent()
+        )
+
+        assertEquals(123.45, parsed?.amount ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun `jednocifren dan i mesec u datumu se parsira`() {
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            Priliv
+            Iznos: 54.321,00 RSD
+            Datum: 5.8.2026 9:14
+            Opis: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertNotNull(candidate)
+        assertEquals(LocalDateTime.of(2026, 8, 5, 9, 14), candidate?.dateTime)
+    }
+
+    @Test
+    fun `datum stanja na racunu ne otima datum transakcije`() {
+        val candidate = parseRadAdvancePaymentNotification(
+            """
+            Priliv
+            Raspolozivo stanje na dan 01.08.2026
+            Iznos: 54.321,00 RSD
+            Datum: 05.08.2026 09:14
+            Opis: VALJAONICA BAKRA SEVOJNO
+            """.trimIndent()
+        )
+
+        assertNotNull(candidate)
+        assertEquals(LocalDateTime.of(2026, 8, 5, 9, 14), candidate?.dateTime)
+    }
+
+    @Test
     fun `bank package filter follows nlb notification imports`() {
         assertEquals(true, isRadBankNotificationPackage("com.nlb.mklik"))
         assertEquals(true, isRadBankNotificationPackage("rs.nlbklik.mobile"))

@@ -17,13 +17,15 @@ private val radBankPackageCandidates = setOf(
     "hr.asseco.android.jimba.kombank"
 )
 
+// Jednoslovni obrasci (d, M, H) prihvataju i jednocifrene i dvocifrene
+// vrednosti — "5.8.2026 9:14" i "05.08.2026 09:14" oba prolaze.
 private val radBankDateTimeFormatters = listOf(
-    DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"),
-    DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+    DateTimeFormatter.ofPattern("d.M.yyyy H:mm:ss"),
+    DateTimeFormatter.ofPattern("d.M.yyyy H:mm")
 )
 
 private val radBankDateFormatters = listOf(
-    DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    DateTimeFormatter.ofPattern("d.M.yyyy")
 )
 
 private val radBankAmountRegex =
@@ -201,9 +203,20 @@ private fun normalizeRadBankCurrency(raw: String?): String {
     }
 }
 
+// Datum uz "stanje na dan"/"raspoloživo" je datum salda, ne transakcije —
+// takav kandidat se preskače ako postoji drugi datum u tekstu.
+private val radBankBalanceDateContextRegex = Regex("(?i)(stanje|raspoloz|saldo|na dan)")
+
 private fun extractRadBankDateTime(normalizedText: String): LocalDateTime? {
-    val match = radBankDateRegex.find(normalizedText)?.value ?: return null
-    return parseRadBankDateTime(match)
+    val matches = radBankDateRegex.findAll(normalizedText).toList()
+    if (matches.isEmpty()) return null
+    val preferred = matches.firstOrNull { match ->
+        val prefixStart = (match.range.first - 40).coerceAtLeast(0)
+        val prefix = normalizedText.substring(prefixStart, match.range.first)
+            .substringAfterLast('\n')
+        !radBankBalanceDateContextRegex.containsMatchIn(prefix)
+    } ?: matches.first()
+    return parseRadBankDateTime(preferred.value)
 }
 
 private fun parseRadBankAmount(raw: String): Double? {
@@ -212,14 +225,38 @@ private fun parseRadBankAmount(raw: String): Double? {
         .trim()
     val noSpaces = cleaned.replace(" ", "")
     if (noSpaces.isEmpty()) return null
-    val hasComma = noSpaces.contains(',')
-    val hasDot = noSpaces.contains('.')
+    val lastComma = noSpaces.lastIndexOf(',')
+    val lastDot = noSpaces.lastIndexOf('.')
     val normalized = when {
-        hasComma && hasDot -> noSpaces.replace(".", "").replace(",", ".")
-        hasComma -> noSpaces.replace(",", ".")
+        // Oba separatora: poslednji je decimalni ("54.321,00" i "54,321.00").
+        lastComma >= 0 && lastDot >= 0 -> if (lastComma > lastDot) {
+            noSpaces.replace(".", "").replace(",", ".")
+        } else {
+            noSpaces.replace(",", "")
+        }
+        lastComma >= 0 -> normalizeRadBankSingleSeparator(noSpaces, ',')
+        lastDot >= 0 -> normalizeRadBankSingleSeparator(noSpaces, '.')
         else -> noSpaces
     }
     return normalized.toDoubleOrNull()
+}
+
+/**
+ * Jedan tip separatora: grupe od tačno 3 cifre iza njega su hiljade
+ * ("54.321" → 54321, "1.234.567" → 1234567, "1,000" → 1000); u suprotnom
+ * je decimalni separator ("123,45" → 123.45). Banke ne šalju iznose sa
+ * tri decimale, pa je "X.YYY" praktično uvek hiljada.
+ */
+private fun normalizeRadBankSingleSeparator(value: String, separator: Char): String {
+    val parts = value.split(separator)
+    val isThousandsFormat = parts.size >= 2 &&
+        parts.first().trimStart('-').isNotEmpty() &&
+        parts.drop(1).all { it.length == 3 }
+    return when {
+        isThousandsFormat -> parts.joinToString("")
+        separator == ',' -> value.replace(',', '.')
+        else -> value
+    }
 }
 
 private fun parseRadBankDateTime(raw: String): LocalDateTime? {
