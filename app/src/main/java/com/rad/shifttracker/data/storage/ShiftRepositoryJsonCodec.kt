@@ -219,14 +219,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             .minWithOrNull(compareBy<DayRecord> { it.year }.thenBy { it.month })
             ?.let { MonthKey(it.year, it.month) }
             ?: MonthKey(2026, 1)
-        val parsedCoefficient = when {
-            json.has(PAY_COEFFICIENT_KEY) -> json.optDouble(PAY_COEFFICIENT_KEY, config.pay.defaultCoefficient)
-            json.has(GROSS_HOURLY_RATE_KEY) -> coefficientFromLegacyGrossHourlyRate(
-                json.optDouble(GROSS_HOURLY_RATE_KEY, config.pay.defaultBasePay),
-                representativeImportMonth
-            )
-            else -> config.pay.defaultCoefficient
-        }
+        val parsedCoefficient = parseCoefficient(json, representativeImportMonth)
 
         return ShiftRepositorySnapshot(
             payCoefficient = parsedCoefficient,
@@ -270,6 +263,15 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             records = parsedRecords,
             deletedMonths = parsedDeletedMonths
         )
+    }
+
+    private fun parseCoefficient(json: JSONObject, representativeImportMonth: MonthKey): Double = when {
+        json.has(PAY_COEFFICIENT_KEY) -> json.optDouble(PAY_COEFFICIENT_KEY, config.pay.defaultCoefficient)
+        json.has(GROSS_HOURLY_RATE_KEY) -> coefficientFromLegacyGrossHourlyRate(
+            json.optDouble(GROSS_HOURLY_RATE_KEY, config.pay.defaultBasePay),
+            representativeImportMonth
+        )
+        else -> config.pay.defaultCoefficient
     }
 
     private fun parseDeletedMonths(root: JSONArray?): List<MonthKey> {

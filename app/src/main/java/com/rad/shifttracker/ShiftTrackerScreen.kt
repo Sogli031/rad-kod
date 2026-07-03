@@ -77,56 +77,59 @@ internal sealed class DialogState {
  * mogao biti zastareo). Bez ovoga rotacija/ubijanje procesa zatvara dijalog.
  */
 private fun dialogStateSaver(recordForDay: (Int) -> DayRecord?): Saver<DialogState, String> = Saver(
-    save = { state ->
-        when (state) {
-            DialogState.None -> "None"
-            DialogState.AutoFill -> "AutoFill"
-            DialogState.SickVacation -> "SickVacation"
-            DialogState.BasePay -> "BasePay"
-            DialogState.PayDetails -> "PayDetails"
-            DialogState.WorkHours -> "WorkHours"
-            DialogState.OvertimeNetImpact -> "OvertimeNetImpact"
-            DialogState.Food -> "Food"
-            DialogState.Minuli -> "Minuli"
-            DialogState.Options -> "Options"
-            DialogState.CloudBackup -> "CloudBackup"
-            DialogState.AdvancePayment -> "AdvancePayment"
-            DialogState.InitialCompBalance -> "InitialCompBalance"
-            DialogState.DeleteMonth -> "DeleteMonth"
-            DialogState.VacationSettings -> "VacationSettings"
-            DialogState.Holidays -> "Holidays"
-            DialogState.BloodDonation -> "BloodDonation"
-            is DialogState.DayEdit -> "DayEdit:${state.day}"
-        }
-    },
-    restore = { saved ->
-        if (saved.startsWith("DayEdit:")) {
-            saved.removePrefix("DayEdit:").toIntOrNull()
-                ?.let { day -> DialogState.DayEdit(day, recordForDay(day)) }
-                ?: DialogState.None
-        } else {
-            when (saved) {
-                "AutoFill" -> DialogState.AutoFill
-                "SickVacation" -> DialogState.SickVacation
-                "BasePay" -> DialogState.BasePay
-                "PayDetails" -> DialogState.PayDetails
-                "WorkHours" -> DialogState.WorkHours
-                "OvertimeNetImpact" -> DialogState.OvertimeNetImpact
-                "Food" -> DialogState.Food
-                "Minuli" -> DialogState.Minuli
-                "Options" -> DialogState.Options
-                "CloudBackup" -> DialogState.CloudBackup
-                "AdvancePayment" -> DialogState.AdvancePayment
-                "InitialCompBalance" -> DialogState.InitialCompBalance
-                "DeleteMonth" -> DialogState.DeleteMonth
-                "VacationSettings" -> DialogState.VacationSettings
-                "Holidays" -> DialogState.Holidays
-                "BloodDonation" -> DialogState.BloodDonation
-                else -> DialogState.None
-            }
-        }
-    }
+    save = { state -> dialogStateToKey(state) },
+    restore = { saved -> dialogStateFromKey(saved, recordForDay) }
 )
+
+private fun dialogStateToKey(state: DialogState): String = when (state) {
+    DialogState.None -> "None"
+    DialogState.AutoFill -> "AutoFill"
+    DialogState.SickVacation -> "SickVacation"
+    DialogState.BasePay -> "BasePay"
+    DialogState.PayDetails -> "PayDetails"
+    DialogState.WorkHours -> "WorkHours"
+    DialogState.OvertimeNetImpact -> "OvertimeNetImpact"
+    DialogState.Food -> "Food"
+    DialogState.Minuli -> "Minuli"
+    DialogState.Options -> "Options"
+    DialogState.CloudBackup -> "CloudBackup"
+    DialogState.AdvancePayment -> "AdvancePayment"
+    DialogState.InitialCompBalance -> "InitialCompBalance"
+    DialogState.DeleteMonth -> "DeleteMonth"
+    DialogState.VacationSettings -> "VacationSettings"
+    DialogState.Holidays -> "Holidays"
+    DialogState.BloodDonation -> "BloodDonation"
+    is DialogState.DayEdit -> "DayEdit:${state.day}"
+}
+
+private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
+    DialogState.None,
+    DialogState.AutoFill,
+    DialogState.SickVacation,
+    DialogState.BasePay,
+    DialogState.PayDetails,
+    DialogState.WorkHours,
+    DialogState.OvertimeNetImpact,
+    DialogState.Food,
+    DialogState.Minuli,
+    DialogState.Options,
+    DialogState.CloudBackup,
+    DialogState.AdvancePayment,
+    DialogState.InitialCompBalance,
+    DialogState.DeleteMonth,
+    DialogState.VacationSettings,
+    DialogState.Holidays,
+    DialogState.BloodDonation
+).associateBy { dialogStateToKey(it) }
+
+private fun dialogStateFromKey(saved: String, recordForDay: (Int) -> DayRecord?): DialogState {
+    if (saved.startsWith("DayEdit:")) {
+        return saved.removePrefix("DayEdit:").toIntOrNull()
+            ?.let { day -> DialogState.DayEdit(day, recordForDay(day)) }
+            ?: DialogState.None
+    }
+    return simpleDialogStatesByKey[saved] ?: DialogState.None
+}
 
 internal fun vacationCardAsOfDate(year: Int, month: Int, today: LocalDate): LocalDate {
     val displayedMonth = YearMonth.of(year, month)
