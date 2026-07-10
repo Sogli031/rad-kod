@@ -5,6 +5,7 @@ import com.rad.shifttracker.data.backup.BackupScheduler
 import com.rad.shifttracker.data.backup.GoogleDriveBackup
 import com.rad.shifttracker.data.backup.GoogleDriveBackupProvider
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class RadApplication : Application() {
@@ -15,6 +16,11 @@ class RadApplication : Application() {
     @Volatile
     lateinit var googleDriveBackup: GoogleDriveBackup
         private set
+
+    @Volatile
+    private var persistenceScheduler: RepositoryPersistenceScheduler? = null
+
+    private val persistenceFailure = AtomicBoolean(false)
 
     val shiftRepositoryOrNull: ShiftRepository?
         get() = if (::shiftRepository.isInitialized) shiftRepository else null
@@ -56,12 +62,23 @@ class RadApplication : Application() {
         // svakoj izmeni je predugačak za main nit, a jedna nit garantuje da se
         // dva upisa u isti fajl nikad ne preklapaju. Callback hvata lokalnu
         // referencu, ne property, da nikad ne snimi stanje druge instance.
-        val persistence = RepositoryPersistenceScheduler {
-            repository.saveToLocal(this@RadApplication)
-            FoodReceiptReminderScheduler.reschedule(this@RadApplication, repository)
-            BloodDonationReminderScheduler.reschedule(this@RadApplication, repository)
-            BackupScheduler.scheduleDebounced(this@RadApplication)
-        }
+        val persistence = RepositoryPersistenceScheduler(
+            work = {
+                val saved = repository.saveToLocal(this@RadApplication)
+                persistenceFailure.set(!saved)
+                if (!saved) {
+                    android.util.Log.e("RadApplication", "Lokalno čuvanje podataka nije uspelo")
+                }
+                FoodReceiptReminderScheduler.reschedule(this@RadApplication, repository)
+                BloodDonationReminderScheduler.reschedule(this@RadApplication, repository)
+                BackupScheduler.scheduleDebounced(this@RadApplication)
+            },
+            onFailure = { error ->
+                persistenceFailure.set(true)
+                android.util.Log.e("RadApplication", "Pozadinsko čuvanje podataka nije uspelo", error)
+            }
+        )
+        persistenceScheduler = persistence
         repository.onChange {
             persistence.schedule()
         }
@@ -72,6 +89,13 @@ class RadApplication : Application() {
         // Dnevni safety-net backup ako korisnik dugo ne menja podatke.
         BackupScheduler.schedulePeriodic(this)
     }
+
+    fun flushPendingPersistence(): Boolean {
+        val flushed = persistenceScheduler?.flush() ?: true
+        return flushed && !persistenceFailure.get()
+    }
+
+    fun consumePersistenceFailure(): Boolean = persistenceFailure.getAndSet(false)
 }
 
 /**
@@ -80,7 +104,10 @@ class RadApplication : Application() {
  * snimanja zakaže novo snimanje — ništa se ne gubi, a niz brzih izmena
  * (npr. batch popuna meseca) ne pravi po jedan upis na disk za svaku.
  */
-internal class RepositoryPersistenceScheduler(private val work: () -> Unit) {
+internal class RepositoryPersistenceScheduler(
+    private val work: () -> Unit,
+    private val onFailure: (Throwable) -> Unit = {}
+) {
     private val executor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "rad-persistence")
     }
@@ -90,7 +117,31 @@ internal class RepositoryPersistenceScheduler(private val work: () -> Unit) {
         if (!pending.compareAndSet(false, true)) return
         executor.execute {
             pending.set(false)
-            work()
+            runWork()
         }
+    }
+
+    fun flush(timeoutMillis: Long = FLUSH_TIMEOUT_MILLIS): Boolean {
+        return try {
+            executor.submit(java.util.concurrent.Callable { runWork() })
+                .get(timeoutMillis, TimeUnit.MILLISECONDS)
+        } catch (error: Exception) {
+            onFailure(error)
+            false
+        }
+    }
+
+    private fun runWork(): Boolean {
+        return try {
+            work()
+            true
+        } catch (error: Exception) {
+            onFailure(error)
+            false
+        }
+    }
+
+    private companion object {
+        const val FLUSH_TIMEOUT_MILLIS = 2_000L
     }
 }

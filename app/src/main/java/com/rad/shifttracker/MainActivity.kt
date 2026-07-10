@@ -2,6 +2,7 @@ package com.rad.shifttracker
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -99,12 +100,27 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        val app = application as? RadApplication
+        if (app?.consumePersistenceFailure() == true) {
+            Toast.makeText(
+                this,
+                "Poslednja izmena nije mogla da se sačuva. Proveri slobodan prostor i pokušaj ponovo.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
         if (::repo.isInitialized) {
             FoodReceiptReminderScheduler.reschedule(this, repo)
             BloodDonationReminderScheduler.reschedule(this, repo)
             requestNotificationAccessIfNeeded()
             requestExactAlarmPermissionIfNeeded()
         }
+    }
+
+    override fun onStop() {
+        if (::repo.isInitialized) {
+            (application as? RadApplication)?.flushPendingPersistence()
+        }
+        super.onStop()
     }
 
     private fun requestNotificationAccessIfNeeded() {
@@ -117,7 +133,15 @@ class MainActivity : ComponentActivity() {
 
     private fun requestExactAlarmPermissionIfNeeded() {
         if (exactAlarmWarningShownThisForeground) return
-        FoodReceiptReminderScheduler.exactAlarmSettingsIntent(this) ?: return
+        val settingsIntent = FoodReceiptReminderScheduler.exactAlarmSettingsIntent(this)
+        if (!shouldRequestExactAlarmPermission(
+                foodReceiptReminderEnabled = repo.foodReceiptReminderEnabled,
+                bloodDonationReminderEnabled = repo.lastBloodDonationDate != null,
+                exactAlarmPermissionMissing = settingsIntent != null
+            )
+        ) {
+            return
+        }
 
         exactAlarmWarningShownThisForeground = true
         showExactAlarmPermissionDialog = true
@@ -133,6 +157,14 @@ class MainActivity : ComponentActivity() {
         showNotificationAccessDialog = false
         runCatching { startActivity(notificationListenerSettingsIntent()) }
     }
+}
+
+internal fun shouldRequestExactAlarmPermission(
+    foodReceiptReminderEnabled: Boolean,
+    bloodDonationReminderEnabled: Boolean,
+    exactAlarmPermissionMissing: Boolean
+): Boolean {
+    return exactAlarmPermissionMissing && (foodReceiptReminderEnabled || bloodDonationReminderEnabled)
 }
 
 @Composable

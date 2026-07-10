@@ -456,14 +456,15 @@ fun BasePayDialog(
                     scope.launch {
                         val updateDate = LocalDate.now()
                         runCatching { fetchAndApplyLatestTaxParameters(repo, taxParameterUpdater, updateDate) }
-                            .onSuccess { parameters ->
+                            .onSuccess { result ->
+                                val parameters = result.parameters
                                 val contributions = parameters.employeeContributionsPercent
                                 contributionsInput = formatRateInput(contributions)
                                 taxReliefInput = formatRateInput(parameters.salaryTaxAllowanceRsd)
                                 taxInput = formatRateInput(parameters.salaryTaxRatePercent)
                                 monthlyTaxUpdateStore.markProcessed(YearMonth.from(updateDate))
                                 updateSucceeded = true
-                                updateMessage = taxUpdateSuccessMessage(parameters)
+                                updateMessage = taxUpdateResultMessage(result)
                             }
                             .onFailure { error ->
                                 updateSucceeded = false
@@ -893,4 +894,3 @@ private fun PayBaseSelectionMode.toVisiblePayBaseSelectionMode(anchor: KnownPayB
         PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS -> this
     }
 }
-

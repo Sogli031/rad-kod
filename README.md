@@ -25,6 +25,14 @@ Namenjena radnicima u industriji/proizvodnji.
    ```
 3. Sync Gradle i pokreni na uređaju/emulatoru (minSdk 26).
 
+## Release potpis
+
+Za postojeći lokalni tok i direktnu nadogradnju telefona release APK se
+podrazumevano potpisuje istim debug ključem kao ranije. Za pravi javni release
+kopiraj `keystore.properties.example` kao `keystore.properties` i upiši putanju
+i lozinke svog release keystore-a; tada Gradle automatski koristi taj ključ.
+`keystore.properties` i keystore fajlovi su ignorisani u Git-u.
+
 ## Struktura
 
 - `app/src/main/java/com/rad/shifttracker/` — izvorni kod

@@ -136,10 +136,10 @@ private fun OnboardingTaxUpdateStep(
         message = "Skidam najnovije poreske parametre..."
         val updateDate = LocalDate.now()
         runCatching { fetchAndApplyLatestTaxParameters(repo, updater, updateDate) }
-            .onSuccess { parameters ->
+            .onSuccess { result ->
                 monthlyTaxUpdateStore.markProcessed(YearMonth.from(updateDate))
                 updateSucceeded = true
-                message = taxUpdateSuccessMessage(parameters)
+                message = taxUpdateResultMessage(result)
             }
             .onFailure { error ->
                 updateSucceeded = false

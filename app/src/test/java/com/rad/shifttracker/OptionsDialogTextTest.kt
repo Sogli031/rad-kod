@@ -45,7 +45,7 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `main activity warns about exact alarm permission on every startup`() {
+    fun `main activity warns about exact alarm permission only for active reminders`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/MainActivity.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/MainActivity.kt")
@@ -53,11 +53,44 @@ class OptionsDialogTextTest {
 
         assertTrue(source.contains("override fun onResume()"))
         assertTrue(source.contains("requestExactAlarmPermissionIfNeeded()"))
+        assertTrue(source.contains("shouldRequestExactAlarmPermission("))
         assertTrue(source.contains("ExactAlarmPermissionDialog("))
         assertTrue(source.contains("mutableStateOf(false)"))
         assertTrue(source.contains("FoodReceiptReminderScheduler.exactAlarmSettingsIntent(this)"))
         assertFalse(source.contains("AlertDialog.Builder(this)"))
         assertFalse(source.contains("exact_alarm_permission_asked"))
+    }
+
+    @Test
+    fun `exact alarm permission is not requested when reminders are inactive`() {
+        assertFalse(
+            shouldRequestExactAlarmPermission(
+                foodReceiptReminderEnabled = false,
+                bloodDonationReminderEnabled = false,
+                exactAlarmPermissionMissing = true
+            )
+        )
+        assertTrue(
+            shouldRequestExactAlarmPermission(
+                foodReceiptReminderEnabled = true,
+                bloodDonationReminderEnabled = false,
+                exactAlarmPermissionMissing = true
+            )
+        )
+        assertTrue(
+            shouldRequestExactAlarmPermission(
+                foodReceiptReminderEnabled = false,
+                bloodDonationReminderEnabled = true,
+                exactAlarmPermissionMissing = true
+            )
+        )
+        assertFalse(
+            shouldRequestExactAlarmPermission(
+                foodReceiptReminderEnabled = true,
+                bloodDonationReminderEnabled = true,
+                exactAlarmPermissionMissing = false
+            )
+        )
     }
 
     @Test

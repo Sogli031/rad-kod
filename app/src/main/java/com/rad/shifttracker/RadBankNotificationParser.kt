@@ -93,7 +93,7 @@ fun collectRadNotificationText(notification: Notification): String? {
 }
 
 fun isRadBankNotificationPackage(packageName: String): Boolean =
-    packageName.lowercase() in radBankPackageCandidates || packageName.contains("nlb", ignoreCase = true)
+    packageName.lowercase() in radBankPackageCandidates
 
 fun parseRadBankNotificationText(text: String): ParsedRadBankNotification? {
     if (text.length > MAX_NOTIFICATION_TEXT_LENGTH) return null

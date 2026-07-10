@@ -62,8 +62,10 @@ class TaxParameterCache(context: Context) {
             .apply()
     }
 
-    fun load(): TaxParameters? {
+    fun load(asOf: LocalDate): TaxParameters? {
         if (!prefs.contains(KEY_CACHED_TAX_RATE)) return null
+        val cachedAsOfEpochDay = prefs.getLong(KEY_CACHED_AS_OF, Long.MIN_VALUE)
+        if (!isTaxParameterCacheUsable(cachedAsOfEpochDay, asOf)) return null
         return TaxParameters(
             salaryTaxRatePercent = prefs.getFloat(KEY_CACHED_TAX_RATE, 0f).toDouble(),
             salaryTaxAllowanceRsd = prefs.getFloat(KEY_CACHED_TAX_ALLOWANCE, 0f).toDouble(),
@@ -74,27 +76,46 @@ class TaxParameterCache(context: Context) {
     }
 }
 
+enum class TaxParameterUpdateSource {
+    NETWORK,
+    CACHE
+}
+
+data class TaxParameterUpdateResult(
+    val parameters: TaxParameters,
+    val source: TaxParameterUpdateSource
+)
+
+fun isTaxParameterCacheUsable(cachedAsOfEpochDay: Long, requestedAsOf: LocalDate): Boolean {
+    if (cachedAsOfEpochDay == Long.MIN_VALUE) return false
+    val cachedAsOf = runCatching { LocalDate.ofEpochDay(cachedAsOfEpochDay) }.getOrNull() ?: return false
+    return YearMonth.from(cachedAsOf) == YearMonth.from(requestedAsOf)
+}
+
 suspend fun fetchAndApplyLatestTaxParameters(
     repo: ShiftRepository,
     updater: TaxParameterUpdater = TaxParameterUpdater(),
     asOf: LocalDate = LocalDate.now(),
     cache: TaxParameterCache? = null
-): TaxParameters {
-    val parameters = try {
-        updater.fetchLatest(asOf).also { fresh ->
-            cache?.save(fresh, asOf)
-        }
+): TaxParameterUpdateResult {
+    val result = try {
+        TaxParameterUpdateResult(
+            parameters = updater.fetchLatest(asOf).also { fresh ->
+                cache?.save(fresh, asOf)
+            },
+            source = TaxParameterUpdateSource.NETWORK
+        )
     } catch (e: Exception) {
-        val cached = cache?.load()
+        val cached = cache?.load(asOf)
         if (cached != null) {
             Log.w(TAX_CACHE_TAG, "Skidanje poreskih parametara nije uspelo, koristim keširane vrednosti.", e)
-            cached
+            TaxParameterUpdateResult(cached, TaxParameterUpdateSource.CACHE)
         } else {
             throw e
         }
     }
-    applyTaxParameters(repo, parameters)
-    return parameters
+    applyTaxParameters(repo, result.parameters)
+    return result
 }
 
 fun applyTaxParameters(repo: ShiftRepository, parameters: TaxParameters) {
@@ -107,4 +128,13 @@ fun taxUpdateSuccessMessage(parameters: TaxParameters): String {
     return "Uspešno ažurirano: doprinosi ${formatRateInput(parameters.employeeContributionsPercent)}%, " +
         "olakšica ${formatNumber(parameters.salaryTaxAllowanceRsd)} ${CONFIG.pay.currency}, " +
         "porez ${formatRateInput(parameters.salaryTaxRatePercent)}%."
+}
+
+fun taxUpdateResultMessage(result: TaxParameterUpdateResult): String {
+    val message = taxUpdateSuccessMessage(result.parameters)
+    return if (result.source == TaxParameterUpdateSource.CACHE) {
+        "Internet ažuriranje nije uspelo; primenjene su proverene vrednosti iz keša za ovaj mesec. $message"
+    } else {
+        message
+    }
 }

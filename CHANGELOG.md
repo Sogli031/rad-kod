@@ -3,6 +3,20 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Naredna verzija] - 2026-07-10
+
+### Ispravljeno
+- Poreski parametri iz keša koriste se samo u istom kalendarskom mesecu i
+  aplikacija jasno označava kada mrežno ažuriranje nije uspelo.
+- Poslednje lokalno snimanje se prazni pri izlasku aplikacije, a neuspešan upis
+  se prijavljuje korisniku pri sledećem ulasku.
+- Dozvola za tačne alarme traži se samo kada je bar jedan podsetnik aktivan.
+- Automatski uvoz akontacije prihvata samo poznate NLB/mKlik pakete, bez
+  preširokog poklapanja svakog naziva koji sadrži `nlb`.
+- Lokalni release ostaje potpisan postojećim debug ključem radi direktne
+  nadogradnje telefona, dok lokalni `keystore.properties` automatski prebacuje
+  build na pravi release ključ kada se on konfiguriše.
+
 ## [1.3] - 2026-06-26
 
 ### Dodato

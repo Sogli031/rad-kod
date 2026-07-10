@@ -761,9 +761,9 @@ private fun MonthlyTaxUpdateEffect(
 
         runCatching {
             fetchAndApplyLatestTaxParameters(repo, taxParameterUpdater, today, taxParameterCache)
-        }.onSuccess { parameters ->
+        }.onSuccess { result ->
             monthlyTaxUpdateStore.markProcessed(updateMonth)
-            onUpdated(taxUpdateSuccessMessage(parameters))
+            onUpdated(taxUpdateResultMessage(result))
         }
     }
 }

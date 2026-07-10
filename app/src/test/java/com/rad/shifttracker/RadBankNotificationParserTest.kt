@@ -215,7 +215,9 @@ class RadBankNotificationParserTest {
     fun `bank package filter follows nlb notification imports`() {
         assertEquals(true, isRadBankNotificationPackage("com.nlb.mklik"))
         assertEquals(true, isRadBankNotificationPackage("rs.nlbklik.mobile"))
-        assertEquals(true, isRadBankNotificationPackage("com.some.nlb.notifications"))
+        assertEquals(true, isRadBankNotificationPackage("HR.ASSECO.ANDROID.JIMBA.KOMBANK"))
+        assertEquals(false, isRadBankNotificationPackage("com.some.nlb.notifications"))
+        assertEquals(false, isRadBankNotificationPackage("com.evil.nlb.fake"))
         assertEquals(false, isRadBankNotificationPackage("com.android.systemui"))
     }
 }
