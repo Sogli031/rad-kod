@@ -274,6 +274,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val monthlyReceipt = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyReceipt(currentYear, currentMonth)
     }
+    val nextMonthReceipt = remember(repoTick.intValue, currentYear, currentMonth) {
+        val nextMonth = YearMonth.of(currentYear, currentMonth).plusMonths(1)
+        repo.getMonthlyReceipt(nextMonth.year, nextMonth.monthValue)
+    }
     val monthlyFinalPaymentBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyFinalPaymentBreakdown(currentYear, currentMonth)
     }
@@ -410,10 +414,13 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 onFoodClick = { dialogState = DialogState.Food },
                 onMinuliClick = { dialogState = DialogState.Minuli }
             )
-            TotalCard(
-                receipt = monthlyReceipt,
-                onClick = { dialogState = DialogState.PayDetails }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
+                SalaryCard(month = currentMonth, nextMonthReceipt = nextMonthReceipt)
+                TotalCard(
+                    receipt = monthlyReceipt,
+                    onClick = { dialogState = DialogState.PayDetails }
+                )
+            }
         }
 
         BottomBar(

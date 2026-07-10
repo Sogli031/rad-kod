@@ -34,9 +34,16 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AppIcons
 import com.rad.shifttracker.ui.components.AutoSizeText
 
-internal const val TOTAL_CARD_LABEL = "U ovom mesecu ćeš primiti"
+internal const val TOTAL_CARD_LABEL = "Primanja u ovom mesecu"
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
+internal const val COMPACT_PAY_CARD_HEIGHT = 38
+internal const val PAY_CARDS_SPACING = 6
+
+internal fun salaryCardLabel(month: Int): String {
+    val monthName = MONTH_NAMES.getOrElse(month) { "Mesec" }
+    return "Plata za $monthName"
+}
 
 @Composable
 internal fun StatsSection(
@@ -100,24 +107,47 @@ internal fun StatsSection(
 
 @Composable
 internal fun TotalCard(receipt: MonthlyReceipt, onClick: () -> Unit) {
-    val totalText = if (receipt.isSalaryAvailable) {
-        "${formatCurrency(receipt.totalReceivedThisMonth)} ${CONFIG.pay.currency}"
-    } else {
-        TOTAL_CARD_UNAVAILABLE_TEXT
-    }
-    val totalColor = if (receipt.isSalaryAvailable) THEME.accentPrimary else THEME.warning
+    PayAmountCard(
+        label = TOTAL_CARD_LABEL,
+        amount = receipt.totalReceivedThisMonth,
+        isAvailable = receipt.isSalaryAvailable,
+        onClick = onClick
+    )
+}
+
+@Composable
+internal fun SalaryCard(month: Int, nextMonthReceipt: MonthlyReceipt) {
+    PayAmountCard(
+        label = salaryCardLabel(month),
+        amount = nextMonthReceipt.salaryNetPay,
+        isAvailable = nextMonthReceipt.isSalaryAvailable
+    )
+}
+
+@Composable
+private fun PayAmountCard(
+    label: String,
+    amount: Double,
+    isAvailable: Boolean,
+    onClick: (() -> Unit)? = null
+) {
+    val totalText = if (isAvailable) {
+        "${formatCurrency(amount)} ${CONFIG.pay.currency}"
+    } else TOTAL_CARD_UNAVAILABLE_TEXT
+    val totalColor = if (isAvailable) THEME.accentPrimary else THEME.warning
+    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(UI.totalCardHeight.dp)
-            .clickable(onClick = onClick),
+            .height(COMPACT_PAY_CARD_HEIGHT.dp)
+            .then(clickModifier),
         bgColor = THEME.bgCardElevated,
         borderColor = THEME.accentPrimary
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(UI.cardPadding.dp)
+                .padding(horizontal = UI.cardPadding.dp, vertical = 4.dp)
         ) {
             val compactLayout = useCompactTotalCardLayout(maxWidth.value)
             if (compactLayout) {
@@ -127,7 +157,7 @@ internal fun TotalCard(receipt: MonthlyReceipt, onClick: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     AutoSizeText(
-                        text = TOTAL_CARD_LABEL,
+                        text = label,
                         color = THEME.textMuted,
                         style = MaterialTheme.typography.labelMedium.copy(
                             textAlign = TextAlign.Center
@@ -156,7 +186,7 @@ internal fun TotalCard(receipt: MonthlyReceipt, onClick: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AutoSizeText(
-                        text = TOTAL_CARD_LABEL,
+                        text = label,
                         color = THEME.textMuted,
                         style = MaterialTheme.typography.titleMedium.copy(
                             textAlign = TextAlign.Start

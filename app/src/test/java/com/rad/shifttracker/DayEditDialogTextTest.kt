@@ -437,7 +437,17 @@ class DayEditDialogTextTest {
 
     @Test
     fun totalCardUsesMonthlyReceiptLabel() {
-        assertEquals("U ovom mesecu ćeš primiti", TOTAL_CARD_LABEL)
+        assertEquals("Primanja u ovom mesecu", TOTAL_CARD_LABEL)
+    }
+
+    @Test
+    fun salaryCardUsesSelectedMonthName() {
+        assertEquals("Plata za Jul", salaryCardLabel(7))
+    }
+
+    @Test
+    fun twoPayCardsKeepTheOldTotalCardFootprint() {
+        assertEquals(UI.totalCardHeight, COMPACT_PAY_CARD_HEIGHT * 2 + PAY_CARDS_SPACING)
     }
 
     @Test
