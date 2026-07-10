@@ -3,7 +3,7 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [Naredna verzija] - 2026-07-10
+## [1.3] - 2026-07-10
 
 ### Ispravljeno
 - Poreski parametri iz keša koriste se samo u istom kalendarskom mesecu i
@@ -16,8 +16,6 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
 - Lokalni release ostaje potpisan postojećim debug ključem radi direktne
   nadogradnje telefona, dok lokalni `keystore.properties` automatski prebacuje
   build na pravi release ključ kada se on konfiguriše.
-
-## [1.3] - 2026-06-26
 
 ### Dodato
 - **Automatski backup u pozadini.** Posle svake izmene podataka zakazuje se
