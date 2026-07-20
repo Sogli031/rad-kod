@@ -841,35 +841,274 @@ class PayBreakdownTest {
     }
 
     @Test
-    fun `explicit topli obrok bruto sa listica menja bruto TO dodatak`() {
+    fun `stari bruto topli obrok 5478 se ignorise i koristi rucna neto potrosnja`() {
         val summary = MonthSummary(
             year = 2026,
-            month = 1,
+            month = 6,
             totalPay = 100_000.0,
-            foodAllowance = 6_160.0
+            foodAllowance = 5_880.0
         )
 
         val breakdown = calculateMonthlyNetPayBreakdown(
             summary = summary,
             grossHourlyRate = 637.32,
-            monthlyFundHours = 168,
+            monthlyFundHours = 176,
             contributionsPercent = 19.9,
             taxRelief = 34_221.0,
             taxPercent = 10.0,
             grossAdditions = MonthlyGrossAdditions(
                 year = 2026,
-                month = 1,
-                mealGross = 5_320.97
+                month = 6,
+                mealGross = 5_478.0,
+                mealSpentNet = 3_620.0,
+                mealSettlementAdjustmentNet = 220.0
             )
         )
 
-        assertEquals(5_320.97, breakdown.grossMealAddition, 0.01)
-        assertEquals(6_160.0, breakdown.mealAllowanceNet, 0.01)
-        assertEquals(6_160.0, breakdown.mealSpentNet, 0.01)
+        assertEquals(3_620.0 / 0.701, breakdown.grossMealAddition, 0.0001)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
+        assertEquals(5_880.0, breakdown.mealAllowanceNet, 0.01)
+        assertEquals(3_620.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0, breakdown.mealNetDeduction, 0.01)
+        assertEquals(3_620.0, breakdown.netDeductionsTotal, 0.01)
+        assertEquals(breakdown.netPayBeforeDeductions - 3_620.0, breakdown.displayPay, 0.01)
     }
 
     @Test
-    fun `topli obrok se automatski dodaje kao pokriveni TO2 bruto i odbija iz neta`() {
+    fun `explicitna nula potrosnje hrane ne pada nazad na pravo`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(
+                year = 2026,
+                month = 6,
+                totalPay = 100_000.0,
+                foodAllowance = 5_880.0
+            ),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                mealGross = 5_478.0,
+                mealSpentNet = 0.0
+            )
+        )
+
+        assertEquals(0.0, breakdown.grossMealAddition, 0.01)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
+        assertEquals(5_880.0, breakdown.mealAllowanceNet, 0.01)
+        assertEquals(0.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(0.0, breakdown.mealNetDeduction, 0.01)
+        assertEquals(0.0, breakdown.netDeductionsTotal, 0.01)
+        assertEquals(breakdown.netPayBeforeDeductions, breakdown.displayPay, 0.01)
+    }
+
+    @Test
+    fun `bez bruto override koristi potrosnju kao osnovu za gross up`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(
+                year = 2026,
+                month = 6,
+                totalPay = 100_000.0,
+                foodAllowance = 5_880.0
+            ),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                mealSpentNet = 4_240.0
+            )
+        )
+
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
+        assertEquals(4_240.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(4_240.0 / 0.701, breakdown.grossMealAddition, 0.0001)
+        assertEquals(4_240.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(4_240.0, breakdown.netDeductionsTotal, 0.01)
+    }
+
+    @Test
+    fun `stara pozitivna korekcija preseka se potpuno ignorise`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                mealSpentNet = 3_620.0,
+                mealSettlementAdjustmentNet = 220.0
+            )
+        )
+
+        assertEquals(3_620.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(3_620.0 / 0.701, breakdown.grossMealAddition, 0.0001)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0, breakdown.netDeductionsTotal, 0.01)
+    }
+
+    @Test
+    fun `stara negativna korekcija preseka se potpuno ignorise`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 2, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 160,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 2,
+                mealSpentNet = 5_530.0,
+                mealSettlementAdjustmentNet = -210.0
+            ),
+            includeRegress = false
+        )
+
+        assertEquals(5_530.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(5_530.0 / 0.701, breakdown.grossMealAddition, 0.0001)
+        assertEquals(5_530.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(5_530.0, breakdown.netDeductionsTotal, 0.01)
+    }
+
+    @Test
+    fun `explicitna nula potrosnje bez bruto override ne pada na pravo`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(2026, 6, mealSpentNet = 0.0)
+        )
+
+        assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
+        assertEquals(0.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(0.0, breakdown.grossMealAddition, 0.01)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(0.0, breakdown.netDeductionsTotal, 0.01)
+    }
+
+    @Test
+    fun `korekcija preseka ne ulazi ni u jedan deo obracuna`() {
+        fun calculate(adjustment: Double): MonthlyNetPayBreakdown {
+            return calculateMonthlyNetPayBreakdown(
+                summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+                grossHourlyRate = 637.32,
+                monthlyFundHours = 176,
+                contributionsPercent = 19.9,
+                taxRelief = 34_221.0,
+                taxPercent = 10.0,
+                grossAdditions = MonthlyGrossAdditions(
+                    2026,
+                    6,
+                    mealSpentNet = 3_620.0,
+                    mealSettlementAdjustmentNet = adjustment
+                )
+            )
+        }
+
+        val withoutAdjustment = calculate(0.0)
+        val withAdjustment = calculate(220.0)
+        assertEquals(withoutAdjustment.mealSpentNetApplied, withAdjustment.mealSpentNetApplied, 0.01)
+        assertEquals(withoutAdjustment.netDeductionsTotal, withAdjustment.netDeductionsTotal, 0.01)
+        assertEquals(withoutAdjustment.mealCoveredNet, withAdjustment.mealCoveredNet, 0.01)
+        assertEquals(withoutAdjustment.grossMealAddition, withAdjustment.grossMealAddition, 0.01)
+    }
+
+    @Test
+    fun `pravo ne menja bruto TO2 kada postoji potrosnja`() {
+        fun calculate(entitlement: Double): MonthlyNetPayBreakdown {
+            return calculateMonthlyNetPayBreakdown(
+                summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = entitlement),
+                grossHourlyRate = 637.32,
+                monthlyFundHours = 176,
+                contributionsPercent = 19.9,
+                taxRelief = 34_221.0,
+                taxPercent = 10.0,
+                grossAdditions = MonthlyGrossAdditions(2026, 6, mealSpentNet = 4_240.0)
+            )
+        }
+
+        val lowerEntitlement = calculate(5_000.0)
+        val higherEntitlement = calculate(6_000.0)
+        assertEquals(lowerEntitlement.grossMealAddition, higherEntitlement.grossMealAddition, 0.01)
+        assertEquals(4_240.0, lowerEntitlement.mealCoveredNet, 0.01)
+        assertEquals(5_000.0, lowerEntitlement.mealAllowanceNet, 0.01)
+        assertEquals(6_000.0, higherEntitlement.mealAllowanceNet, 0.01)
+    }
+
+    @Test
+    fun `stari bruto nula se ignorise i koristi automatski gross up`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(
+                year = 2026,
+                month = 6,
+                totalPay = 100_000.0,
+                foodAllowance = 5_880.0
+            ),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                mealGross = 0.0,
+                mealSpentNet = 3_620.0,
+                mealSettlementAdjustmentNet = 220.0
+            )
+        )
+
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(3_620.0 / 0.701, breakdown.grossMealAddition, 0.0001)
+        assertEquals(3_620.0, breakdown.mealCoveredNet, 0.01)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0, breakdown.netDeductionsTotal, 0.01)
+    }
+
+    @Test
+    fun `stari bruto override nema uticaja na obracun iz neto potrosnje`() {
+        fun calculate(mealGross: Double?, mealSpentNet: Double): MonthlyNetPayBreakdown {
+            return calculateMonthlyNetPayBreakdown(
+                summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+                grossHourlyRate = 637.32,
+                monthlyFundHours = 176,
+                contributionsPercent = 19.9,
+                taxRelief = 34_221.0,
+                taxPercent = 10.0,
+                grossAdditions = MonthlyGrossAdditions(2026, 6, mealGross, mealSpentNet = mealSpentNet)
+            )
+        }
+
+        val lowerSpending = calculate(mealGross = 5_478.0, mealSpentNet = 1_000.0)
+        val higherSpending = calculate(mealGross = 5_478.0, mealSpentNet = 3_620.0)
+        val otherGross = calculate(mealGross = 4_000.0, mealSpentNet = 3_620.0)
+
+        assertTrue(lowerSpending.grossMealAddition != higherSpending.grossMealAddition)
+        assertEquals(higherSpending.mealSpentNetApplied, otherGross.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0 / 0.701, higherSpending.grossMealAddition, 0.0001)
+        assertEquals(higherSpending.grossMealAddition, otherGross.grossMealAddition, 0.0001)
+    }
+
+    @Test
+    fun `prazno polje koristi celo pravo i za bruto i za neto obustavu`() {
         val summary = MonthSummary(
             year = 2026,
             month = 5,
@@ -887,15 +1126,87 @@ class PayBreakdownTest {
         )
 
         assertEquals(6_160.0, breakdown.mealAllowanceNet, 0.01)
-        assertEquals(6_160.0, breakdown.mealSpentNet, 0.01)
+        assertEquals(6_160.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, breakdown.mealSpentSource)
         assertEquals(6_160.0, breakdown.mealCoveredNet, 0.01)
         assertEquals(8_787.45, breakdown.grossMealAddition, 0.01)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(6_160.0, breakdown.mealNetDeduction, 0.01)
         assertEquals(6_160.0, breakdown.netDeductionsTotal, 0.01)
         assertEquals(breakdown.netPayBeforeDeductions - 6_160.0, breakdown.displayPay, 0.01)
     }
 
     @Test
-    fun `topli obrok preko prava se ignorise i racuna kao pravo`() {
+    fun `prazno polje i pravo 5880 koriste pravo kao primenjenu potrosnju`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0
+        )
+
+        assertEquals(5_880.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, breakdown.mealSpentSource)
+        assertEquals(5_880.0 / 0.701, breakdown.mealGrossApplied, 0.0001)
+        assertEquals(5_880.0, breakdown.mealNetDeduction, 0.01)
+    }
+
+    @Test
+    fun `poznata automatska potrosnja ima prednost nad pravom`() {
+        val breakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                automaticMealSpentNet = 2_240.0
+            )
+        )
+
+        assertEquals(2_240.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(MealSpentSource.AUTOMATIC, breakdown.mealSpentSource)
+        assertEquals(2_240.0 / 0.701, breakdown.mealGrossApplied, 0.0001)
+        assertEquals(2_240.0, breakdown.mealNetDeduction, 0.01)
+    }
+
+    @Test
+    fun `rucna potrosnja ima prednost nad automatskom a poznata automatska nula je validna`() {
+        fun calculate(manual: Double?): MonthlyNetPayBreakdown = calculateMonthlyNetPayBreakdown(
+            summary = MonthSummary(2026, 6, totalPay = 100_000.0, foodAllowance = 5_880.0),
+            grossHourlyRate = 637.32,
+            monthlyFundHours = 176,
+            contributionsPercent = 19.9,
+            taxRelief = 34_221.0,
+            taxPercent = 10.0,
+            grossAdditions = MonthlyGrossAdditions(
+                year = 2026,
+                month = 6,
+                mealSpentNet = manual,
+                automaticMealSpentNet = 0.0
+            )
+        )
+
+        val automaticZero = calculate(null)
+        assertEquals(MealSpentSource.AUTOMATIC, automaticZero.mealSpentSource)
+        assertEquals(0.0, automaticZero.mealSpentNetApplied, 0.01)
+        assertEquals(0.0, automaticZero.mealGrossApplied, 0.01)
+        assertEquals(0.0, automaticZero.mealNetDeduction, 0.01)
+
+        val manual = calculate(3_620.0)
+        assertEquals(MealSpentSource.MANUAL, manual.mealSpentSource)
+        assertEquals(3_620.0, manual.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0 / 0.701, manual.mealGrossApplied, 0.0001)
+        assertEquals(3_620.0, manual.mealNetDeduction, 0.01)
+    }
+
+    @Test
+    fun `potrosnja toplog obroka preko prava ostaje stvarna neto obustava`() {
         val summary = MonthSummary(
             year = 2026,
             month = 5,
@@ -903,14 +1214,6 @@ class PayBreakdownTest {
             foodAllowance = 6_160.0
         )
 
-        val defaultSpending = calculateMonthlyNetPayBreakdown(
-            summary = summary,
-            grossHourlyRate = 637.32,
-            monthlyFundHours = 168,
-            contributionsPercent = 19.9,
-            taxRelief = 34_221.0,
-            taxPercent = 10.0
-        )
         val overSpending = calculateMonthlyNetPayBreakdown(
             summary = summary,
             grossHourlyRate = 637.32,
@@ -925,14 +1228,15 @@ class PayBreakdownTest {
             )
         )
 
-        assertEquals(6_160.0, overSpending.mealCoveredNet, 0.01)
-        assertEquals(6_160.0, overSpending.mealSpentNet, 0.01)
-        assertEquals(8_787.45, overSpending.grossMealAddition, 0.01)
-        assertEquals(defaultSpending.displayPay, overSpending.displayPay, 0.01)
+        assertEquals(7_160.0, overSpending.mealCoveredNet, 0.01)
+        assertEquals(7_160.0, overSpending.mealSpentNetApplied, 0.01)
+        assertEquals(7_160.0 / 0.701, overSpending.grossMealAddition, 0.0001)
+        assertEquals(7_160.0, overSpending.netDeductionsTotal, 0.01)
+        assertEquals(overSpending.netPayBeforeDeductions - 7_160.0, overSpending.displayPay, 0.01)
     }
 
     @Test
-    fun `topli obrok ispod prava se ignorise i racuna kao pravo`() {
+    fun `potrosnja toplog obroka ispod prava ostaje stvarna neto obustava`() {
         val summary = MonthSummary(
             year = 2026,
             month = 5,
@@ -940,14 +1244,6 @@ class PayBreakdownTest {
             foodAllowance = 6_160.0
         )
 
-        val defaultSpending = calculateMonthlyNetPayBreakdown(
-            summary = summary,
-            grossHourlyRate = 637.32,
-            monthlyFundHours = 168,
-            contributionsPercent = 19.9,
-            taxRelief = 34_221.0,
-            taxPercent = 10.0
-        )
         val lowerSpending = calculateMonthlyNetPayBreakdown(
             summary = summary,
             grossHourlyRate = 637.32,
@@ -962,10 +1258,11 @@ class PayBreakdownTest {
             )
         )
 
-        assertEquals(6_160.0, lowerSpending.mealCoveredNet, 0.01)
-        assertEquals(6_160.0, lowerSpending.mealSpentNet, 0.01)
-        assertEquals(8_787.45, lowerSpending.grossMealAddition, 0.01)
-        assertEquals(defaultSpending.displayPay, lowerSpending.displayPay, 0.01)
+        assertEquals(5_160.0, lowerSpending.mealCoveredNet, 0.01)
+        assertEquals(5_160.0, lowerSpending.mealSpentNetApplied, 0.01)
+        assertEquals(5_160.0 / 0.701, lowerSpending.grossMealAddition, 0.0001)
+        assertEquals(5_160.0, lowerSpending.netDeductionsTotal, 0.01)
+        assertEquals(lowerSpending.netPayBeforeDeductions - 5_160.0, lowerSpending.displayPay, 0.01)
     }
 
     @Test

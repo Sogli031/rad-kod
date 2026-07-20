@@ -63,6 +63,7 @@ internal fun buildMonthlyWorkAndPayExportMap(
         "monthlySummary" to monthlySummaryMap(summary, payBreakdown, payDetails),
         "exportedMonthAuditStatus" to exportedMonthAuditStatusMap(target, summary),
         "grossAdditionsBreakdown" to grossAdditionsBreakdown,
+        "mealBreakdown" to mealBreakdownMap(payBreakdown),
         "netDeductionsBreakdown" to netDeductionsBreakdown,
         "auditFormulas" to auditFormulasMap(repo, target),
         "auditChecks" to auditChecksMap(
@@ -300,8 +301,6 @@ private fun monthlySummaryMap(
         "tax" to payBreakdown.tax,
         "netPayBeforeDeductions" to payBreakdown.netPayBeforeDeductions,
         "netSeniorityBonus" to payBreakdown.netSeniorityBonus,
-        "mealAllowanceNet" to payBreakdown.mealAllowanceNet,
-        "mealSpentNet" to payBreakdown.mealSpentNet,
         "netDeductionsTotal" to payBreakdown.netDeductionsTotal,
         "displayPay" to payBreakdown.displayPay,
         "payDetails" to monthlyPayDetailsMap(payDetails)
@@ -501,10 +500,8 @@ private fun monthlyGrossAdditionsMap(additions: MonthlyGrossAdditions): Map<Stri
     return linkedMapOf(
         "year" to additions.year,
         "month" to additions.month,
-        "mealGross" to additions.mealGross,
         "regressGross" to additions.regressGross,
         "bonusGross" to additions.bonusGross,
-        "mealSpentNet" to additions.mealSpentNet,
         "bonusNet" to additions.bonusNet
     )
 }

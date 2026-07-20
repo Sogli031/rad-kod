@@ -16,6 +16,7 @@ data class MonthlyNetPayBreakdown(
     val grossBaseBeforeSeniority: Double,
     val grossSeniorityBonus: Double,
     val grossMealAddition: Double,
+    val mealGrossSource: MealGrossSource,
     val grossRegressAddition: Double,
     val grossBonusAddition: Double,
     val grossAdditionsTotal: Double,
@@ -27,15 +28,52 @@ data class MonthlyNetPayBreakdown(
     val netPayBeforeDeductions: Double,
     val netSeniorityBonus: Double,
     val mealAllowanceNet: Double,
-    val mealSpentNet: Double,
+    val manualMealSpentNet: Double?,
+    val automaticMealSpentNet: Double?,
+    val mealSpentNetApplied: Double,
+    val mealSpentSource: MealSpentSource,
     val mealCoveredNet: Double,
+    val mealNetDeduction: Double,
     val netRegressAddition: Double,
     val netBonusAddition: Double,
     val unionDuesNet: Double,
     val netDeductionsTotal: Double,
     val displayPay: Double,
     val hourlyValue: Double? = null
-)
+) {
+    val mealGrossApplied: Double
+        get() = grossMealAddition
+
+    @Deprecated("Use mealSpentNetApplied; this compatibility alias is the applied amount.")
+    val mealSpentNet: Double
+        get() = mealSpentNetApplied
+
+    @Deprecated("Use mealSpentSource to distinguish manual, automatic, and assumed entitlement.")
+    val mealSpentNetPresent: Boolean
+        get() = mealSpentSource != MealSpentSource.ENTITLEMENT_ASSUMED
+}
+
+enum class MealGrossSource {
+    AUTO_FROM_NET,
+
+    @Deprecated("Legacy value; explicit gross meal overrides are no longer active.")
+    EXPLICIT,
+
+    @Deprecated("Legacy value; gross is now always derived from applied net spending.")
+    SPENT_WITH_SETTLEMENT,
+
+    @Deprecated("Legacy value; gross source is now always AUTO_FROM_NET.")
+    ENTITLEMENT_FALLBACK,
+
+    @Deprecated("Legacy value; gross source is now always AUTO_FROM_NET.")
+    NONE
+}
+
+enum class MealSpentSource {
+    MANUAL,
+    AUTOMATIC,
+    ENTITLEMENT_ASSUMED
+}
 
 data class MonthlyReceipt(
     val year: Int,
@@ -74,29 +112,41 @@ data class MonthlyReceipt(
 data class MonthlyGrossAdditions(
     val year: Int,
     val month: Int,
-    val mealGross: Double = 0.0,
+    @Deprecated("Legacy mealGrossOverride; retained only for old backup compatibility.")
+    val mealGross: Double? = null,
     val regressGross: Double = 0.0,
     val bonusGross: Double = 0.0,
     val mealSpentNet: Double? = null,
-    val bonusNet: Double = 0.0
+    val bonusNet: Double = 0.0,
+    @Deprecated("Legacy settlement adjustment; retained only for old backup compatibility.")
+    val mealSettlementAdjustmentNet: Double = 0.0,
+    val automaticMealSpentNet: Double? = null
 ) {
     val totalGross: Double
-        get() = mealGross.sanitizeMoney() + regressGross.sanitizeMoney() + bonusGross.sanitizeMoney()
+        get() = regressGross.sanitizeMoney() +
+            bonusGross.sanitizeMoney()
 
+    @Suppress("DEPRECATION")
     val hasAny: Boolean
-        get() = totalGross > 0.0 ||
+        get() = mealGross != null ||
+            totalGross > 0.0 ||
             mealSpentNet != null ||
-            bonusNet.sanitizeMoney() > 0.0
+            bonusNet.sanitizeMoney() > 0.0 ||
+            mealSettlementAdjustmentNet != 0.0 ||
+            automaticMealSpentNet != null
 
+    @Suppress("DEPRECATION")
     fun sanitizedFor(year: Int = this.year, month: Int = this.month): MonthlyGrossAdditions {
         return MonthlyGrossAdditions(
             year = year,
             month = month,
-            mealGross = mealGross.sanitizeMoney(),
+            mealGross = mealGross.sanitizeMonthlyGrossOverrideOrNull(),
             regressGross = regressGross.sanitizeMoney(),
             bonusGross = bonusGross.sanitizeMoney(),
             mealSpentNet = mealSpentNet?.sanitizeMoney(),
-            bonusNet = bonusNet.sanitizeMoney()
+            bonusNet = bonusNet.sanitizeMoney(),
+            mealSettlementAdjustmentNet = mealSettlementAdjustmentNet.sanitizeMonthlySignedAdjustment(),
+            automaticMealSpentNet = automaticMealSpentNet?.sanitizeMoney()
         )
     }
 }

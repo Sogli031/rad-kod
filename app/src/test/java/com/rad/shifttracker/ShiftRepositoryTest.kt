@@ -385,7 +385,7 @@ class ShiftRepositoryTest {
         assertEquals(true, restored.creditDeductionEnabledValue)
         assertEquals(48_839.50, restored.monthlyCreditDeductionAmountValue, 0.001)
         assertEquals(PayBaseSelectionMode.MANUAL, restored.getMonthlyPayBases(2026, 2)?.selectionMode)
-        assertEquals(1200.0, restored.getMonthlyGrossAdditions(2026, 2).mealGross, 0.001)
+        assertEquals(1200.0, restored.getMonthlyGrossAdditions(2026, 2).mealGross ?: Double.NaN, 0.001)
         assertEquals(50_000.0, restored.getMonthlyNetAdjustments(2026, 2).advancePaymentNet, 0.001)
         assertEquals(5.0, restored.getVacationYearBalance(2026)?.carryoverDaysInitial ?: 0.0, 0.001)
         assertEquals(Shift.THIRD, restored.get(2026, 2, 3)?.shift)
@@ -460,9 +460,111 @@ class ShiftRepositoryTest {
         assertTrue(repo.importFromJson("{}"))
 
         assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 5).advancePaymentNet, 0.001)
+        assertEquals(null, repo.getMonthlyGrossAdditions(2026, 5).mealGross)
         assertEquals(null, repo.getMonthlyGrossAdditions(2026, 5).mealSpentNet)
+        assertEquals(0.0, repo.getMonthlyGrossAdditions(2026, 5).mealSettlementAdjustmentNet, 0.001)
         assertEquals(false, repo.creditDeductionEnabledValue)
         assertEquals(0.0, repo.monthlyCreditDeductionAmountValue, 0.001)
+    }
+
+    @Test
+    fun `eksplicitna nula potrosnje hrane ostaje sacuvana i posle importa`() {
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 0.0)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val additions = restored.getMonthlyGrossAdditions(2026, 6)
+        assertEquals(0.0, additions.mealSpentNet ?: Double.NaN, 0.001)
+        assertEquals(0.0, restored.getNetPayBreakdown(2026, 6).mealSpentNetApplied, 0.001)
+    }
+
+    @Test
+    fun `poznata automatska nula ostaje razlicita od nepostojeceg podatka kroz backup`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyAutomaticFoodSpentNet(2026, 6, 0.0)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val additions = restored.getMonthlyGrossAdditions(2026, 6)
+        val automaticZero = restored.getNetPayBreakdown(2026, 6)
+        assertEquals(0.0, additions.automaticMealSpentNet ?: Double.NaN, 0.001)
+        assertEquals(MealSpentSource.AUTOMATIC, automaticZero.mealSpentSource)
+        assertEquals(0.0, automaticZero.mealSpentNetApplied, 0.001)
+
+        restored.setMonthlyAutomaticFoodSpentNet(2026, 6, null)
+        val absent = restored.getNetPayBreakdown(2026, 6)
+        assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, absent.mealSpentSource)
+        assertTrue(absent.mealSpentNetApplied > 0.0)
+    }
+
+    @Test
+    fun `stari bruto nula ostaje u backupu ali se ignorise u obracunu`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyMealGrossOverride(2026, 6, 0.0)
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val additions = restored.getMonthlyGrossAdditions(2026, 6)
+        val breakdown = restored.getNetPayBreakdown(2026, 6)
+        assertEquals(0.0, additions.mealGross ?: Double.NaN, 0.001)
+        assertEquals(3_620.0, additions.mealSpentNet ?: Double.NaN, 0.001)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertTrue(breakdown.grossMealAddition > 0.0)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.001)
+    }
+
+    @Test
+    fun `brisanje starog bruto override cuva neto potrosnju`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
+        repo.setMonthlyMealGrossOverride(2026, 6, 5_478.0)
+
+        repo.setMonthlyMealGrossOverride(2026, 6, null)
+
+        val additions = repo.getMonthlyGrossAdditions(2026, 6)
+        val breakdown = repo.getNetPayBreakdown(2026, 6)
+        assertEquals(null, additions.mealGross)
+        assertEquals(3_620.0, additions.mealSpentNet ?: Double.NaN, 0.001)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertTrue(breakdown.grossMealAddition > 0.0)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.001)
+    }
+
+    @Test
+    fun `negativna korekcija preseka se cuva u backupu ali se ignorise u obracunu`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 2, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyActualFoodSpentNet(2026, 2, 5_530.0)
+        repo.setMonthlyMealSettlementAdjustmentNet(2026, 2, -210.0)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val additions = restored.getMonthlyGrossAdditions(2026, 2)
+        val breakdown = restored.getNetPayBreakdown(2026, 2)
+        assertEquals(-210.0, additions.mealSettlementAdjustmentNet, 0.001)
+        assertEquals(5_530.0, breakdown.mealCoveredNet, 0.001)
+        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
+        assertEquals(5_530.0, breakdown.mealSpentNetApplied, 0.001)
+    }
+
+    @Test
+    fun `nulta korekcija preseka je validna i ne brise ostale podatke hrane`() {
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
+        repo.setMonthlyMealSettlementAdjustmentNet(2026, 6, 220.0)
+
+        repo.setMonthlyMealSettlementAdjustmentNet(2026, 6, 0.0)
+
+        val additions = repo.getMonthlyGrossAdditions(2026, 6)
+        assertEquals(0.0, additions.mealSettlementAdjustmentNet, 0.001)
+        assertEquals(3_620.0, additions.mealSpentNet ?: Double.NaN, 0.001)
     }
 
     @Test
@@ -493,6 +595,34 @@ class ShiftRepositoryTest {
         assertEquals(48_839.50, finalPayment.loanDeductionNet, 0.01)
         assertEquals(48_839.50, finalPayment.deductionsNet, 0.01)
         assertEquals((receipt.salaryNetPay - 48_839.50).coerceAtLeast(0.0), finalPayment.finalRemainingNetPay, 0.01)
+    }
+
+    @Test
+    fun `potrosena hrana akontacija i kredit se svako odbijaju tacno jednom`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyActualFoodSpentNet(2026, 5, 3_620.0)
+        repo.setMonthlyAdvancePaymentNet(2026, 6, 10_000.0)
+        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 5_000.0)
+
+        val payroll = repo.getNetPayBreakdown(2026, 5)
+        val receipt = repo.getMonthlyReceipt(2026, 6)
+        val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 6)
+
+        assertEquals(3_620.0, payroll.mealSpentNet, 0.01)
+        assertEquals(
+            payroll.netPayBeforeDeductions - payroll.mealSpentNet - payroll.unionDuesNet,
+            payroll.displayPay,
+            0.01
+        )
+        assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
+        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
+        assertEquals(5_000.0, finalPayment.loanDeductionNet, 0.01)
+        assertEquals(
+            (receipt.salaryNetPay - 10_000.0 - 5_000.0).coerceAtLeast(0.0),
+            finalPayment.finalRemainingNetPay,
+            0.01
+        )
     }
 
     @Test
@@ -549,7 +679,7 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `konacna isplata odbija samo prekoracenje hrane iz obracunskog meseca`() {
+    fun `konacna isplata ne odbija ponovo hranu vec uracunatu u neto platu`() {
         repo.foodPerDayValue = 300.0
         repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
         repo.setMonthlyGrossAdditions(
@@ -564,9 +694,10 @@ class ShiftRepositoryTest {
 
         assertEquals(300.0, repo.getSummary(2026, 5).foodAllowance, 0.01)
         assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
-        assertEquals(150.0, finalPayment.deductionsNet, 0.01)
+        assertEquals(0.0, finalPayment.deductionsNet, 0.01)
+        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
         assertEquals(
-            (receipt.salaryNetPay - 1_000.0 - 150.0).coerceAtLeast(0.0),
+            (receipt.salaryNetPay - 1_000.0).coerceAtLeast(0.0),
             finalPayment.finalRemainingNetPay,
             0.01
         )
@@ -592,7 +723,7 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `stvarna potrosena hrana se cuva po obracunskom mesecu i racuna prekoracenje`() {
+    fun `stvarna potrosena hrana se cuva po obracunskom mesecu bez duple obustave`() {
         repo.foodPerDayValue = 300.0
         repo.set(2026, 4, 6, Shift.FIRST, 8, holidayOverride = false)
         repo.setMonthlyActualFoodSpentNet(2026, 4, 450.0)
@@ -604,9 +735,9 @@ class ShiftRepositoryTest {
         assertEquals(450.0, food.actualFoodSpentNet ?: 0.0, 0.01)
         assertEquals(150.0, food.foodOverageNet, 0.01)
         assertEquals(0.0, food.unusedFoodNet, 0.01)
-        assertEquals(150.0, finalPayment.deductionsNet, 0.01)
+        assertEquals(0.0, finalPayment.deductionsNet, 0.01)
         assertEquals(0.0, finalPayment.loanDeductionNet, 0.01)
-        assertEquals(150.0, finalPayment.foodOverageDeductionNet, 0.01)
+        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
     }
 
     @Test
@@ -1747,7 +1878,7 @@ class ShiftRepositoryTest {
             additions = MonthlyGrossAdditions(
                 year = 2026,
                 month = 5,
-                mealGross = 10_000.0,
+                mealSpentNet = 10_000.0,
                 regressGross = 20_000.0,
                 bonusGross = 30_000.0
             )
@@ -1844,7 +1975,7 @@ class ShiftRepositoryTest {
             additions = MonthlyGrossAdditions(
                 year = 2026,
                 month = 5,
-                mealGross = 10_000.0,
+                mealSpentNet = 10_000.0,
                 regressGross = 20_000.0
             )
         )
@@ -3357,7 +3488,7 @@ class ShiftRepositoryTest {
         assertEquals(10, repo2.initialCompBalanceValue)
         assertEquals(BrigadeType.TROBRIGADA, repo2.brigadeTypeValue)
         val additions = repo2.getMonthlyGrossAdditions(2025, 1)
-        assertEquals(5_320.97, additions.mealGross, 0.01)
+        assertEquals(5_320.97, additions.mealGross ?: Double.NaN, 0.01)
         assertEquals(28_530.67, additions.regressGross, 0.01)
         assertEquals(28_531.0, additions.bonusGross, 0.01)
 
@@ -3487,8 +3618,8 @@ class ShiftRepositoryTest {
         val mayAdditions = repo.getMonthlyGrossAdditions(2026, 5)
         val juneAdditions = repo.getMonthlyGrossAdditions(2026, 6)
 
-        assertEquals(65_848.79, mayAdditions.totalGross, 0.01)
-        assertEquals(0.0, juneAdditions.mealGross, 0.01)
+        assertEquals(57_061.34, mayAdditions.totalGross, 0.01)
+        assertEquals(null, juneAdditions.mealGross)
         assertEquals(0.0, juneAdditions.regressGross, 0.01)
         assertEquals(0.0, juneAdditions.bonusGross, 0.01)
         assertEquals(0.0, juneAdditions.totalGross, 0.01)
@@ -3960,8 +4091,8 @@ class ShiftRepositoryTest {
         assertNotNull(repo.get(2025, 12, 1))
         assertNotNull(repo.get(2027, 12, 1))
         assertEquals(emptyList<MonthKey>(), repo.getAllMonthsSorted().filter { it < MonthKey(2025, 12) })
-        assertEquals(0.0, repo.getMonthlyGrossAdditions(2025, 11).mealGross, 0.001)
-        assertEquals(2_000.0, repo.getMonthlyGrossAdditions(2025, 12).mealGross, 0.001)
+        assertEquals(null, repo.getMonthlyGrossAdditions(2025, 11).mealGross)
+        assertEquals(2_000.0, repo.getMonthlyGrossAdditions(2025, 12).mealGross ?: Double.NaN, 0.001)
         assertEquals(0.0, repo.getMonthlyNetAdjustments(2025, 11).advancePaymentNet, 0.001)
         assertEquals(6_000.0, repo.getMonthlyNetAdjustments(2026, 1).advancePaymentNet, 0.001)
     }

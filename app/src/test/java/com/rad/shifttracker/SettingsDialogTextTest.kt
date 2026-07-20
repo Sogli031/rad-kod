@@ -55,6 +55,9 @@ class SettingsDialogTextTest {
     @Test
     fun `decimal input accepts comma and normalizes it for parsing`() {
         assertEquals("917.81", filterDecimalInput("917,81"))
+        assertEquals("-210.50", filterSignedDecimalInput("-210,50"))
+        assertEquals("220", filterSignedDecimalInput("220"))
+        assertEquals("0", filterSignedDecimalInput("0"))
     }
 
     @Test

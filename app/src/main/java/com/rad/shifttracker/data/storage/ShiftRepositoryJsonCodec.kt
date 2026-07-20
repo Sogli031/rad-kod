@@ -22,6 +22,8 @@ import com.rad.shifttracker.currentYearVacationAvailableFrom
 import com.rad.shifttracker.sanitizeAnnualLeaveYears
 import com.rad.shifttracker.sanitizeMonthlyGrossAddition
 import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
+import com.rad.shifttracker.sanitizeMonthlyGrossOverrideOrNull
+import com.rad.shifttracker.sanitizeMonthlySignedAdjustment
 import com.rad.shifttracker.sanitizeMonthlyNetAdjustment
 import com.rad.shifttracker.sanitizePayBaseOrNull
 import com.rad.shifttracker.sanitizeUnionDuesRate
@@ -32,6 +34,13 @@ import java.time.YearMonth
 import java.util.TreeMap
 
 private const val TAG = "ShiftRepositoryJsonCodec"
+private const val MEAL_GROSS_KEY = "meal_gross"
+private const val REGRESS_GROSS_KEY = "regress_gross"
+private const val BONUS_GROSS_KEY = "bonus_gross"
+private const val MEAL_SPENT_NET_KEY = "meal_spent_net"
+private const val AUTOMATIC_MEAL_SPENT_NET_KEY = "automatic_meal_spent_net"
+private const val MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY = "meal_settlement_adjustment_net"
+private const val BONUS_NET_KEY = "bonus_net"
 
 internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
 
@@ -539,57 +548,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             selectionMode != null
     }
 
-    private fun buildMonthlyGrossAdditionsMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, TreeMap<String, Any>>()
-        for ((key, additions) in snapshot.monthlyGrossAdditions.toSortedMap()) {
-            val sanitized = additions.sanitizeMonthlyGrossAdditions(key.year, key.month)
-            if (!sanitized.hasAny) continue
-            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            val monthData = TreeMap<String, Any>()
-            if (sanitized.mealGross > 0.0) monthData[MEAL_GROSS_KEY] = sanitized.mealGross
-            if (sanitized.regressGross > 0.0) monthData[REGRESS_GROSS_KEY] = sanitized.regressGross
-            if (sanitized.bonusGross > 0.0) monthData[BONUS_GROSS_KEY] = sanitized.bonusGross
-            sanitized.mealSpentNet?.let { monthData[MEAL_SPENT_NET_KEY] = it }
-            if (sanitized.bonusNet > 0.0) monthData[BONUS_NET_KEY] = sanitized.bonusNet
-            if (monthData.isNotEmpty()) {
-                yearMap["%02d".format(key.month)] = monthData
-            }
-        }
-        return TreeMap(root)
-    }
-
-    private fun parseMonthlyGrossAdditions(root: JSONObject?): Map<MonthKey, MonthlyGrossAdditions> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<MonthKey, MonthlyGrossAdditions>()
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val monthsObj = root.optJSONObject(yearKey) ?: continue
-            val monthKeys = monthsObj.keys()
-            while (monthKeys.hasNext()) {
-                val monthKey = monthKeys.next()
-                val month = monthKey.toIntOrNull() ?: continue
-                if (month !in 1..12) continue
-                val data = monthsObj.optJSONObject(monthKey) ?: continue
-                val additions = MonthlyGrossAdditions(
-                    year = year,
-                    month = month,
-                    mealGross = data.optMonthlyGrossAddition(MEAL_GROSS_KEY),
-                    regressGross = data.optMonthlyGrossAddition(REGRESS_GROSS_KEY),
-                    bonusGross = data.optMonthlyGrossAddition(BONUS_GROSS_KEY),
-                    mealSpentNet = data.optMonthlyNetDeductionOrNull(MEAL_SPENT_NET_KEY),
-                    bonusNet = data.optMonthlyGrossAddition(BONUS_NET_KEY)
-                ).sanitizeMonthlyGrossAdditions(year, month)
-                if (additions.hasAny) {
-                    parsed[MonthKey(year, month)] = additions
-                }
-            }
-        }
-        return parsed
-    }
-
     private fun buildMonthlyNetAdjustmentsMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
         val root = TreeMap<String, TreeMap<String, Any>>()
         for ((key, adjustments) in snapshot.monthlyNetAdjustments.toSortedMap()) {
@@ -738,11 +696,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val PAID_HOLIDAY_HOURLY_BASE_KEY = "paid_holiday_hourly_base"
         const val SICK_HOURLY_BASE_KEY = "sick_hourly_base"
         const val SELECTION_MODE_KEY = "selection_mode"
-        const val MEAL_GROSS_KEY = "meal_gross"
-        const val REGRESS_GROSS_KEY = "regress_gross"
-        const val BONUS_GROSS_KEY = "bonus_gross"
-        const val MEAL_SPENT_NET_KEY = "meal_spent_net"
-        const val BONUS_NET_KEY = "bonus_net"
         const val ADVANCE_PAYMENT_NET_KEY = "advance_payment_net"
         val METADATA_KEYS = setOf(
             BASE_PAY_KEY,
@@ -788,6 +741,63 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
     }
 }
 
+@Suppress("DEPRECATION")
+private fun buildMonthlyGrossAdditionsMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
+    val root = TreeMap<String, TreeMap<String, Any>>()
+    for ((key, additions) in snapshot.monthlyGrossAdditions.toSortedMap()) {
+        val sanitized = additions.sanitizeMonthlyGrossAdditions(key.year, key.month)
+        if (!sanitized.hasAny) continue
+        val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
+        val monthData = TreeMap<String, Any>()
+        sanitized.mealGross?.let { monthData[MEAL_GROSS_KEY] = it }
+        if (sanitized.regressGross > 0.0) monthData[REGRESS_GROSS_KEY] = sanitized.regressGross
+        if (sanitized.bonusGross > 0.0) monthData[BONUS_GROSS_KEY] = sanitized.bonusGross
+        sanitized.mealSpentNet?.let { monthData[MEAL_SPENT_NET_KEY] = it }
+        sanitized.automaticMealSpentNet?.let { monthData[AUTOMATIC_MEAL_SPENT_NET_KEY] = it }
+        if (sanitized.bonusNet > 0.0) monthData[BONUS_NET_KEY] = sanitized.bonusNet
+        monthData.putIfNonZero(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY, sanitized.mealSettlementAdjustmentNet)
+        if (monthData.isNotEmpty()) {
+            yearMap["%02d".format(key.month)] = monthData
+        }
+    }
+    return TreeMap(root)
+}
+
+@Suppress("DEPRECATION")
+private fun parseMonthlyGrossAdditions(root: JSONObject?): Map<MonthKey, MonthlyGrossAdditions> {
+    if (root == null) return emptyMap()
+    val parsed = mutableMapOf<MonthKey, MonthlyGrossAdditions>()
+    val yearKeys = root.keys()
+    while (yearKeys.hasNext()) {
+        val yearKey = yearKeys.next()
+        val year = yearKey.toIntOrNull() ?: continue
+        if (year < 1900 || year > 2200) continue
+        val monthsObj = root.optJSONObject(yearKey) ?: continue
+        val monthKeys = monthsObj.keys()
+        while (monthKeys.hasNext()) {
+            val monthKey = monthKeys.next()
+            val month = monthKey.toIntOrNull() ?: continue
+            if (month !in 1..12) continue
+            val data = monthsObj.optJSONObject(monthKey) ?: continue
+            val additions = MonthlyGrossAdditions(
+                year = year,
+                month = month,
+                mealGross = data.optMonthlyGrossOverrideOrNull(MEAL_GROSS_KEY),
+                regressGross = data.optMonthlyGrossAddition(REGRESS_GROSS_KEY),
+                bonusGross = data.optMonthlyGrossAddition(BONUS_GROSS_KEY),
+                mealSpentNet = data.optMonthlyNetDeductionOrNull(MEAL_SPENT_NET_KEY),
+                bonusNet = data.optMonthlyGrossAddition(BONUS_NET_KEY),
+                mealSettlementAdjustmentNet = data.optMonthlySignedAdjustment(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY),
+                automaticMealSpentNet = data.optMonthlyNetDeductionOrNull(AUTOMATIC_MEAL_SPENT_NET_KEY)
+            ).sanitizeMonthlyGrossAdditions(year, month)
+            if (additions.hasAny) {
+                parsed[MonthKey(year, month)] = additions
+            }
+        }
+    }
+    return parsed
+}
+
 private fun JSONObject.optPositiveFiniteDoubleOrNull(key: String): Double? {
     if (!has(key)) return null
     val value = optDouble(key, Double.NaN)
@@ -800,10 +810,25 @@ private fun JSONObject.optMonthlyGrossAddition(key: String): Double {
     return value.sanitizeMonthlyGrossAddition()
 }
 
+private fun MutableMap<String, Any>.putIfNonZero(key: String, value: Double) {
+    if (value != 0.0) this[key] = value
+}
+
+private fun JSONObject.optMonthlyGrossOverrideOrNull(key: String): Double? {
+    if (!has(key)) return null
+    val value = optDouble(key, Double.NaN)
+    return value.sanitizeMonthlyGrossOverrideOrNull()
+}
+
 private fun JSONObject.optMonthlyNetDeductionOrNull(key: String): Double? {
     if (!has(key)) return null
     val value = optDouble(key, Double.NaN)
     return value.sanitizeMonthlyGrossAddition()
+}
+
+private fun JSONObject.optMonthlySignedAdjustment(key: String): Double {
+    if (!has(key)) return 0.0
+    return optDouble(key, Double.NaN).sanitizeMonthlySignedAdjustment()
 }
 
 private fun JSONObject.optMonthlyNetAdjustment(key: String): Double {

@@ -52,6 +52,11 @@ internal fun formatRateInput(value: Double): String {
     return formatted.trimEnd('0').trimEnd('.')
 }
 
+internal fun filterSignedDecimalInput(value: String): String {
+    val unsigned = filterDecimalInput(value)
+    return if (value.trimStart().startsWith("-")) "-$unsigned" else unsigned
+}
+
 internal fun absenceNetDifferenceColor(value: Double): Color {
     return when {
         value > 0.5 -> THEME.success

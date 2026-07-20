@@ -77,13 +77,13 @@ fun calculateMonthlyNetPayBreakdown(
     val grossBaseBeforeSeniority = summary.totalPay.sanitizeMoney()
     val grossSeniorityBonus = summary.minuliRadBonus.sanitizeMoney()
     val mealAllowanceNet = summary.foodAllowance.sanitizeMoney()
-    val mealSpentNet = mealAllowanceNet
-    val mealCoveredNet = mealAllowanceNet
-    val grossMealAddition = if (safeAdditions.mealGross > 0.0) {
-        safeAdditions.mealGross
-    } else {
-        calculateGrossFromNet(mealCoveredNet, netFactor)
-    }
+    val mealResolution = resolveMealCalculation(
+        manualMealSpentNet = safeAdditions.mealSpentNet,
+        automaticMealSpentNet = safeAdditions.automaticMealSpentNet,
+        mealNetEntitled = mealAllowanceNet,
+        netFactor = netFactor
+    )
+    val grossMealAddition = mealResolution.grossApplied
     val hasPayrollBase = grossBaseBeforeSeniority > 0.0 ||
         grossSeniorityBonus > 0.0 ||
         mealAllowanceNet > 0.0
@@ -116,38 +116,13 @@ fun calculateMonthlyNetPayBreakdown(
     val grossTotal = grossBaseBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal
 
     if (grossTotal <= 0.0) {
-        val netHourlyBase = calculateInformativeNetHourlyBase(
+        return emptyMonthlyNetPayBreakdown(
             grossHourlyRate = safeGrossHourlyRate,
-            monthlyFundHours = safeFundHours,
+            fundHours = safeFundHours,
             contributionsPercent = safeContributionsPercent,
             taxRelief = safeTaxRelief,
-            taxPercent = safeTaxPercent
-        )
-        return MonthlyNetPayBreakdown(
-            grossHourlyRate = safeGrossHourlyRate,
-            monthlyFundHours = safeFundHours,
-            informativeNetHourlyBase = netHourlyBase,
-            grossBaseBeforeSeniority = 0.0,
-            grossSeniorityBonus = 0.0,
-            grossMealAddition = 0.0,
-            grossRegressAddition = 0.0,
-            grossBonusAddition = 0.0,
-            grossAdditionsTotal = 0.0,
-            grossTotal = 0.0,
-            employeeContributions = 0.0,
-            taxRelief = safeTaxRelief,
-            taxableBase = 0.0,
-            tax = 0.0,
-            netPayBeforeDeductions = 0.0,
-            netSeniorityBonus = 0.0,
-            mealAllowanceNet = 0.0,
-            mealSpentNet = 0.0,
-            mealCoveredNet = 0.0,
-            netRegressAddition = 0.0,
-            netBonusAddition = 0.0,
-            unionDuesNet = 0.0,
-            netDeductionsTotal = 0.0,
-            displayPay = 0.0
+            taxPercent = safeTaxPercent,
+            resolution = mealResolution
         )
     }
 
@@ -156,7 +131,7 @@ fun calculateMonthlyNetPayBreakdown(
     val tax = taxableBase * safeTaxPercent / 100.0
     val netPayBeforeDeductions = max(0.0, grossTotal - employeeContributions - tax)
     val unionDuesNet = calculateUnionDuesNet(netPayBeforeDeductions, unionMember, unionDuesRate)
-    val netDeductionsTotal = mealSpentNet + unionDuesNet
+    val netDeductionsTotal = mealResolution.netDeduction + unionDuesNet
     val netWithoutSeniority = calculateNetFromGross(
         grossTotal = grossBaseBeforeSeniority + grossAdditionsTotal,
         contributionsPercent = safeContributionsPercent,
@@ -178,6 +153,7 @@ fun calculateMonthlyNetPayBreakdown(
         grossBaseBeforeSeniority = grossBaseBeforeSeniority,
         grossSeniorityBonus = grossSeniorityBonus,
         grossMealAddition = grossMealAddition,
+        mealGrossSource = MealGrossSource.AUTO_FROM_NET,
         grossRegressAddition = grossRegressAddition,
         grossBonusAddition = grossBonusAddition,
         grossAdditionsTotal = grossAdditionsTotal,
@@ -189,13 +165,101 @@ fun calculateMonthlyNetPayBreakdown(
         netPayBeforeDeductions = netPayBeforeDeductions,
         netSeniorityBonus = netSeniorityBonus,
         mealAllowanceNet = mealAllowanceNet,
-        mealSpentNet = mealSpentNet,
-        mealCoveredNet = mealCoveredNet,
+        manualMealSpentNet = mealResolution.manualSpentNet,
+        automaticMealSpentNet = mealResolution.automaticSpentNet,
+        mealSpentNetApplied = mealResolution.spentApplied,
+        mealSpentSource = mealResolution.spentSource,
+        mealCoveredNet = mealResolution.spentApplied,
+        mealNetDeduction = mealResolution.netDeduction,
         netRegressAddition = netRegressAddition,
         netBonusAddition = netBonusAddition,
         unionDuesNet = unionDuesNet,
         netDeductionsTotal = netDeductionsTotal,
         displayPay = max(0.0, netPayBeforeDeductions - netDeductionsTotal)
+    )
+}
+
+private data class MealCalculationResolution(
+    val entitlementNet: Double,
+    val manualSpentNet: Double?,
+    val automaticSpentNet: Double?,
+    val spentApplied: Double,
+    val spentSource: MealSpentSource,
+    val grossApplied: Double,
+    val netDeduction: Double
+)
+
+private fun resolveMealCalculation(
+    manualMealSpentNet: Double?,
+    automaticMealSpentNet: Double?,
+    mealNetEntitled: Double,
+    netFactor: Double
+): MealCalculationResolution {
+    val spentSource = when {
+        manualMealSpentNet != null -> MealSpentSource.MANUAL
+        automaticMealSpentNet != null -> MealSpentSource.AUTOMATIC
+        else -> MealSpentSource.ENTITLEMENT_ASSUMED
+    }
+    val spentApplied = when (spentSource) {
+        MealSpentSource.MANUAL -> manualMealSpentNet ?: 0.0
+        MealSpentSource.AUTOMATIC -> automaticMealSpentNet ?: 0.0
+        MealSpentSource.ENTITLEMENT_ASSUMED -> mealNetEntitled
+    }
+    return MealCalculationResolution(
+        entitlementNet = mealNetEntitled,
+        manualSpentNet = manualMealSpentNet,
+        automaticSpentNet = automaticMealSpentNet,
+        spentApplied = spentApplied,
+        spentSource = spentSource,
+        grossApplied = calculateGrossFromNet(spentApplied, netFactor),
+        netDeduction = spentApplied
+    )
+}
+
+private fun emptyMonthlyNetPayBreakdown(
+    grossHourlyRate: Double,
+    fundHours: Int,
+    contributionsPercent: Double,
+    taxRelief: Double,
+    taxPercent: Double,
+    resolution: MealCalculationResolution
+): MonthlyNetPayBreakdown {
+    return MonthlyNetPayBreakdown(
+        grossHourlyRate = grossHourlyRate,
+        monthlyFundHours = fundHours,
+        informativeNetHourlyBase = calculateInformativeNetHourlyBase(
+            grossHourlyRate,
+            fundHours,
+            contributionsPercent,
+            taxRelief,
+            taxPercent
+        ),
+        grossBaseBeforeSeniority = 0.0,
+        grossSeniorityBonus = 0.0,
+        grossMealAddition = 0.0,
+        mealGrossSource = MealGrossSource.AUTO_FROM_NET,
+        grossRegressAddition = 0.0,
+        grossBonusAddition = 0.0,
+        grossAdditionsTotal = 0.0,
+        grossTotal = 0.0,
+        employeeContributions = 0.0,
+        taxRelief = taxRelief,
+        taxableBase = 0.0,
+        tax = 0.0,
+        netPayBeforeDeductions = 0.0,
+        netSeniorityBonus = 0.0,
+        mealAllowanceNet = resolution.entitlementNet,
+        manualMealSpentNet = resolution.manualSpentNet,
+        automaticMealSpentNet = resolution.automaticSpentNet,
+        mealSpentNetApplied = resolution.spentApplied,
+        mealSpentSource = resolution.spentSource,
+        mealCoveredNet = resolution.spentApplied,
+        mealNetDeduction = resolution.netDeduction,
+        netRegressAddition = 0.0,
+        netBonusAddition = 0.0,
+        unionDuesNet = 0.0,
+        netDeductionsTotal = resolution.netDeduction,
+        displayPay = 0.0
     )
 }
 

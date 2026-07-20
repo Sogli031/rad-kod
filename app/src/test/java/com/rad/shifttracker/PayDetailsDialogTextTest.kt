@@ -285,17 +285,44 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `manual payout input labels use payroll month`() {
+    fun `standardni UI ima samo neto unos toplog obroka bez bruto i korekcije`() {
         val payrollMonth = MonthKey(2026, 4)
         val inputSource = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
         ).first { it.exists() }.readText()
 
-        assertEquals("Hrana potrošeno za April 2026", actualFoodSpentInputLabel(payrollMonth))
+        assertEquals(
+            "Potrošeni topli obrok — neto (April 2026)",
+            actualFoodSpentInputLabel(payrollMonth)
+        )
+        assertTrue(inputSource.contains("actualFoodSpentInputLabel(payrollMonth)"))
+        assertTrue(inputSource.contains("repo.setMonthlyActualFoodSpentNet"))
+        assertTrue(!inputSource.contains("repo.setMonthlyMealGrossOverride"))
+        assertTrue(!inputSource.contains("repo.setMonthlyMealSettlementAdjustmentNet"))
+        assertTrue(!inputSource.contains("mealGrossInputLabel"))
+        assertTrue(!inputSource.contains("mealSettlementInputLabel"))
+        assertTrue(!inputSource.contains("Topli obrok — bruto sa obračuna"))
+        assertTrue(!inputSource.contains("Ručno unet bruto iznos"))
+        assertTrue(!inputSource.contains("filterSignedDecimalInput"))
+        assertTrue(inputSource.contains("MEAL_SPENT_MANUAL_HELP_TEXT"))
+        assertTrue(inputSource.contains("mealSpentSupportingText(foodBreakdown)"))
+        assertTrue(!inputSource.contains("mealGross = value ?: food"))
         assertTrue(!inputSource.contains("Stvarni neto"))
         assertTrue(!inputSource.contains("actualSalaryNetInputLabel"))
         assertTrue(!inputSource.contains("setMonthlyActualSalaryNetPay"))
+    }
+
+    @Test
+    fun `meal spent helper razlikuje rucni automatski i pretpostavljeni izvor`() {
+        val month = MonthKey(2026, 4)
+        val assumed = calculateMonthlyFoodSpendingBreakdown(month, 5_880.0, null)
+        val automatic = calculateMonthlyFoodSpendingBreakdown(month, 5_880.0, null, 1_960.0)
+        val manual = calculateMonthlyFoodSpendingBreakdown(month, 5_880.0, 2_240.0, 1_960.0)
+
+        assertEquals(MEAL_SPENT_ASSUMED_HELP_TEXT, mealSpentSupportingText(assumed))
+        assertEquals("Automatski evidentirano: 1960.00 RSD", mealSpentSupportingText(automatic))
+        assertEquals(MEAL_SPENT_MANUAL_HELP_TEXT, mealSpentSupportingText(manual))
     }
 
     @Test

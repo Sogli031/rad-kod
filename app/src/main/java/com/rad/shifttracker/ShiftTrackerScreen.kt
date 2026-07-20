@@ -300,9 +300,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val selectedMonthOvertimeNetImpact = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyOvertimeNetImpact(currentYear, currentMonth)
     }
-    val selectedMonthFoodOverageDeductionNet = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyFoodSpendingBreakdown(currentYear, currentMonth).foodOverageNet
-    }
     val annualNetPayAverages = remember(repoTick.intValue, payrollMonthKey) {
         repo.getAnnualNetPayAverages(payrollMonthKey.year)
     }
@@ -451,7 +448,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             workHoursMonth = MonthKey(currentYear, currentMonth),
             workHoursPayDetails = selectedMonthPayDetails,
             workHoursOvertimeNetImpact = selectedMonthOvertimeNetImpact,
-            workHoursFoodOverageDeductionNet = selectedMonthFoodOverageDeductionNet,
             monthlyReceipt = monthlyReceipt,
             monthlyFinalPaymentBreakdown = monthlyFinalPaymentBreakdown,
             overtimeNetImpact = overtimeNetImpact,

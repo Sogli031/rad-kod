@@ -176,7 +176,6 @@ private fun MainPayrollDialog(
                 month = data.workHoursMonth,
                 payDetails = data.workHoursPayDetails,
                 deficitNetLoss = data.workHoursOvertimeNetImpact.deficitNetLoss,
-                foodOverageDeductionNet = data.workHoursFoodOverageDeductionNet,
                 onDismiss = onDismiss
             )
         }
@@ -238,7 +237,6 @@ internal data class MainDialogData(
     val workHoursMonth: MonthKey,
     val workHoursPayDetails: MonthlyPayDetails,
     val workHoursOvertimeNetImpact: MonthlyOvertimeNetImpact,
-    val workHoursFoodOverageDeductionNet: Double,
     val monthlyReceipt: MonthlyReceipt,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,

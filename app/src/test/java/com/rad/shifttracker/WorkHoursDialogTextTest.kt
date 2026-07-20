@@ -85,31 +85,21 @@ class WorkHoursDialogTextTest {
     }
 
     @Test
-    fun `work hours food overage uses selected work month while pay details keeps payment month`() {
+    fun `work hours deductions use monthly net breakdown without duplicate food overage`() {
         val screenSource = sourceText("ShiftTrackerScreen.kt")
         val mainDialogsSource = sourceText("MainDialogs.kt")
         val workHoursSource = sourceText("WorkHoursDialog.kt")
 
-        assertTrue(
-            screenSource.contains(
-                "val selectedMonthFoodOverageDeductionNet = remember(repoTick.intValue, currentYear, currentMonth)"
-            )
-        )
-        assertTrue(screenSource.contains("repo.getMonthlyFoodSpendingBreakdown(currentYear, currentMonth).foodOverageNet"))
-        assertTrue(screenSource.contains("workHoursFoodOverageDeductionNet = selectedMonthFoodOverageDeductionNet"))
-        assertTrue(!screenSource.contains("workHoursFoodOverageDeductionNet = monthlyFinalPaymentBreakdown.foodOverageDeductionNet"))
+        assertTrue(!screenSource.contains("selectedMonthFoodOverageDeductionNet"))
+        assertTrue(!screenSource.contains("workHoursFoodOverageDeductionNet"))
 
         assertTrue(screenSource.contains("monthlyFinalPaymentBreakdown = monthlyFinalPaymentBreakdown"))
         assertTrue(mainDialogsSource.contains("monthlyFinalPaymentBreakdown = data.monthlyFinalPaymentBreakdown"))
         assertTrue(mainDialogsSource.contains("PayDetailsDialog("))
 
-        assertTrue(mainDialogsSource.contains("foodOverageDeductionNet = data.workHoursFoodOverageDeductionNet"))
-        assertTrue(workHoursSource.contains("foodOverageDeductionNet: Double"))
-        assertTrue(
-            workHoursSource.contains(
-                "payBreakdown.netDeductionsTotal + foodOverageDeductionNet.sanitizeMonthlyNetAdjustment()"
-            )
-        )
+        assertTrue(!mainDialogsSource.contains("workHoursFoodOverageDeductionNet"))
+        assertTrue(!workHoursSource.contains("foodOverageDeductionNet: Double"))
+        assertTrue(workHoursSource.contains("val deductionsTotal = payBreakdown.netDeductionsTotal"))
     }
 
     private fun sourceText(fileName: String, required: Boolean = true): String {

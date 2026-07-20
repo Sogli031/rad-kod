@@ -1143,6 +1143,26 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         monthlyAdjustments.getMonthlyGrossAdditions(year, month)
     }
 
+    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from applied net spending.")
+    @Suppress("DEPRECATION")
+    fun setMonthlyMealGrossOverride(year: Int, month: Int, amount: Double?) {
+        if (year <= 0 || month !in 1..12) return
+        synchronized(lock) {
+            monthlyAdjustments.setMonthlyMealGrossOverride(year, month, amount)
+        }
+        notifyChange()
+    }
+
+    @Deprecated("Legacy backup compatibility only; settlement adjustment is ignored by payroll calculation.")
+    @Suppress("DEPRECATION")
+    fun setMonthlyMealSettlementAdjustmentNet(year: Int, month: Int, amount: Double) {
+        if (year <= 0 || month !in 1..12) return
+        synchronized(lock) {
+            monthlyAdjustments.setMonthlyMealSettlementAdjustmentNet(year, month, amount)
+        }
+        notifyChange()
+    }
+
     fun setMonthlyAdvancePaymentNet(year: Int, month: Int, amount: Double) {
         if (year <= 0 || month !in 1..12) return
         synchronized(lock) {
@@ -1186,6 +1206,15 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         if (amount != null && (!amount.isFinite() || amount < 0.0)) return
         synchronized(lock) {
             monthlyAdjustments.setMonthlyActualFoodSpentNet(year, month, amount)
+        }
+        notifyChange()
+    }
+
+    fun setMonthlyAutomaticFoodSpentNet(year: Int, month: Int, amount: Double?) {
+        if (year <= 0 || month !in 1..12) return
+        if (amount != null && (!amount.isFinite() || amount < 0.0)) return
+        synchronized(lock) {
+            monthlyAdjustments.setMonthlyAutomaticFoodSpentNet(year, month, amount)
         }
         notifyChange()
     }
@@ -1428,14 +1457,12 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val key = MonthKey(year, month)
         val receipt = payQueries.calculateMonthlyReceiptUnsafe(year, month)
         val adjustments = payState.monthlyNetAdjustments[key] ?: MonthlyNetAdjustments(year, month)
-        val foodOverageDeduction = calculateFoodOverageDeductionUnsafe(receipt)
         calculateMonthlyFinalPaymentBreakdown(
             month = key,
             isNetPayAvailable = receipt.isSalaryAvailable,
             netPayBeforeAdvance = receipt.salaryNetPay,
             advancePaymentNet = adjustments.advancePaymentNet,
             loanDeductionNet = currentCreditDeductionSettingsUnsafe().activeDeductionNet,
-            foodOverageDeductionNet = foodOverageDeduction,
             remainingRegressNetPay = receipt.regressNetPay
         )
     }
@@ -1454,20 +1481,20 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         ).sanitized()
     }
 
-    private fun calculateFoodOverageDeductionUnsafe(receipt: MonthlyReceipt): Double {
-        if (!receipt.isSalaryAvailable) return 0.0
-        return getMonthlyFoodSpendingBreakdownUnsafe(receipt.payrollMonth).foodOverageNet
-    }
-
     private fun getMonthlyFoodSpendingBreakdownUnsafe(month: MonthKey): MonthlyFoodSpendingBreakdown {
-        val actualFoodSpent = payState.monthlyGrossAdditions[month]
+        val additions = payState.monthlyGrossAdditions[month]
+        val manualFoodSpent = additions
             ?.mealSpentNet
+            .sanitizeMonthlyNetOverrideOrNull()
+        val automaticFoodSpent = additions
+            ?.automaticMealSpentNet
             .sanitizeMonthlyNetOverrideOrNull()
         val foodAllowance = getSummary(month.year, month.month).foodAllowance
         return calculateMonthlyFoodSpendingBreakdown(
             month = month,
             foodAllowanceNet = foodAllowance,
-            actualFoodSpentNet = actualFoodSpent
+            manualFoodSpentNet = manualFoodSpent,
+            automaticFoodSpentNet = automaticFoodSpent
         )
     }
 

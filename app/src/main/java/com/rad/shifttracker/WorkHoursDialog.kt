@@ -29,7 +29,6 @@ fun WorkHoursDialog(
     month: MonthKey,
     payDetails: MonthlyPayDetails,
     deficitNetLoss: Double,
-    foodOverageDeductionNet: Double,
     onDismiss: () -> Unit
 ) {
     PopupDialog(
@@ -46,7 +45,7 @@ fun WorkHoursDialog(
         WorkHoursSection("Pregled", overviewRows(summary, payBreakdown, payDetails))
         WorkHoursTableSection("Dodaci", addOnRows(payBreakdown, payDetails))
         WorkHoursTableSection("Izostanci i naknade", absenceAndLeaveRows(payBreakdown, payDetails, deficitNetLoss))
-        WorkHoursSection("Ostalo u obračunu", otherPayrollRows(payBreakdown, payDetails, foodOverageDeductionNet))
+        WorkHoursSection("Ostalo u obračunu", otherPayrollRows(payBreakdown, payDetails))
     }
 }
 
@@ -278,15 +277,14 @@ private fun absenceAndLeaveRows(
 
 private fun otherPayrollRows(
     payBreakdown: MonthlyNetPayBreakdown,
-    payDetails: MonthlyPayDetails,
-    foodOverageDeductionNet: Double
+    payDetails: MonthlyPayDetails
 ): List<WorkHoursBreakdownLine> {
     return buildList {
         addMoneyRowIf(payDetails.netSeniorityBonus > 0.0, "Minuli rad", payDetails.netSeniorityBonus)
         addMoneyRowIf(payBreakdown.mealAllowanceNet > 0.0, "Hrana pravo", payBreakdown.mealAllowanceNet)
         addMoneyRowIf(payBreakdown.netRegressAddition > 0.0, "Regres", payBreakdown.netRegressAddition)
         addMoneyRowIf(payBreakdown.netBonusAddition > 0.0, "Bonus", payBreakdown.netBonusAddition)
-        val deductionsTotal = payBreakdown.netDeductionsTotal + foodOverageDeductionNet.sanitizeMonthlyNetAdjustment()
+        val deductionsTotal = payBreakdown.netDeductionsTotal
         if (deductionsTotal > 0.0) {
             add(
                 WorkHoursBreakdownLine(

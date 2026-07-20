@@ -25,6 +25,36 @@ internal class RepositoryMonthlyAdjustments(
         return payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
     }
 
+    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from applied net spending.")
+    fun setMonthlyMealGrossOverride(year: Int, month: Int, amount: Double?) {
+        val key = MonthKey(year, month)
+        val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
+        val sanitized = current
+            .copy(year = year, month = month, mealGross = amount)
+            .sanitizeMonthlyGrossAdditions(year, month)
+        if (sanitized.hasAny) {
+            payState.monthlyGrossAdditions[key] = sanitized
+        } else {
+            payState.monthlyGrossAdditions.remove(key)
+        }
+        invalidateSummaryAndRollingDependents(key)
+    }
+
+    @Deprecated("Legacy backup compatibility only; settlement adjustment is ignored by payroll calculation.")
+    fun setMonthlyMealSettlementAdjustmentNet(year: Int, month: Int, amount: Double) {
+        val key = MonthKey(year, month)
+        val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
+        val sanitized = current
+            .copy(year = year, month = month, mealSettlementAdjustmentNet = amount)
+            .sanitizeMonthlyGrossAdditions(year, month)
+        if (sanitized.hasAny) {
+            payState.monthlyGrossAdditions[key] = sanitized
+        } else {
+            payState.monthlyGrossAdditions.remove(key)
+        }
+        invalidateSummaryAndRollingDependents(key)
+    }
+
     fun setMonthlyAdvancePaymentNet(year: Int, month: Int, amount: Double) {
         val key = MonthKey(year, month)
         val current = payState.monthlyNetAdjustments[key] ?: MonthlyNetAdjustments(year, month)
@@ -54,5 +84,19 @@ internal class RepositoryMonthlyAdjustments(
         } else {
             payState.monthlyGrossAdditions.remove(key)
         }
+    }
+
+    fun setMonthlyAutomaticFoodSpentNet(year: Int, month: Int, amount: Double?) {
+        val key = MonthKey(year, month)
+        val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
+        val sanitized = current
+            .copy(year = year, month = month, automaticMealSpentNet = amount)
+            .sanitizeMonthlyGrossAdditions(year, month)
+        if (sanitized.hasAny) {
+            payState.monthlyGrossAdditions[key] = sanitized
+        } else {
+            payState.monthlyGrossAdditions.remove(key)
+        }
+        invalidateSummaryAndRollingDependents(key)
     }
 }

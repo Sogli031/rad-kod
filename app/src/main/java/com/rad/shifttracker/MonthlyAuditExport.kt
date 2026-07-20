@@ -28,16 +28,25 @@ internal fun grossAdditionsBreakdownMap(
         payBreakdown.grossRegressAddition +
         payBreakdown.grossBonusAddition
     return linkedMapOf(
-        "mealNetEntitled" to payBreakdown.mealAllowanceNet,
-        "mealSpentNet" to payBreakdown.mealSpentNet,
-        "mealGrossEquivalent" to payBreakdown.grossMealAddition,
+        "mealGrossApplied" to payBreakdown.mealGrossApplied,
+        "mealGrossSource" to payBreakdown.mealGrossSource.name,
         "regressGross" to payBreakdown.grossRegressAddition,
         "bonusGross" to payBreakdown.grossBonusAddition,
         "otherGrossAdditions" to (payBreakdown.grossAdditionsTotal - knownGrossAdditions).zeroIfTiny(),
         "totalGrossAdditions" to payBreakdown.grossAdditionsTotal,
         "grossUpNetRetentionRate" to grossUpNetRetentionRate(contributionsPercent, taxPercent),
         "grossUpFormulaDescription" to
-            "net-derived gross addition = net amount / grossUpNetRetentionRate; explicit gross values stay unchanged"
+            "mealGrossApplied = mealSpentNetApplied / grossUpNetRetentionRate"
+    )
+}
+
+internal fun mealBreakdownMap(payBreakdown: MonthlyNetPayBreakdown): Map<String, Any?> {
+    return linkedMapOf(
+        "mealSpentNetApplied" to payBreakdown.mealSpentNetApplied,
+        "mealSpentSource" to payBreakdown.mealSpentSource.name,
+        "mealGrossApplied" to payBreakdown.mealGrossApplied,
+        "mealGrossSource" to payBreakdown.mealGrossSource.name,
+        "mealNetDeduction" to payBreakdown.mealNetDeduction
     )
 }
 
@@ -45,10 +54,10 @@ internal fun netDeductionsBreakdownMap(
     payBreakdown: MonthlyNetPayBreakdown
 ): Map<String, Any?> {
     val otherDeductions = payBreakdown.netDeductionsTotal -
-        payBreakdown.mealSpentNet -
+        payBreakdown.mealNetDeduction -
         payBreakdown.unionDuesNet
     return linkedMapOf(
-        "mealSpentNet" to payBreakdown.mealSpentNet,
+        "mealNetDeduction" to payBreakdown.mealNetDeduction,
         "advanceNet" to 0.0,
         "creditDeductionNet" to 0.0,
         "unionDuesNet" to payBreakdown.unionDuesNet,
@@ -107,7 +116,7 @@ internal fun auditChecksMap(
     netDeductionsBreakdown: Map<String, Any?>
 ): Map<String, Any?> {
     val warnings = mutableListOf<String>()
-    val grossAdditionsParts = grossAdditionsBreakdown.doubleValue("mealGrossEquivalent") +
+    val grossAdditionsParts = grossAdditionsBreakdown.doubleValue("mealGrossApplied") +
         grossAdditionsBreakdown.doubleValue("regressGross") +
         grossAdditionsBreakdown.doubleValue("bonusGross") +
         grossAdditionsBreakdown.doubleValue("otherGrossAdditions")
@@ -119,7 +128,7 @@ internal fun auditChecksMap(
         warnings += "Gross additions total does not match grossAdditionsBreakdown for ${monthYearText(target)}."
     }
 
-    val netDeductionsParts = netDeductionsBreakdown.doubleValue("mealSpentNet") +
+    val netDeductionsParts = netDeductionsBreakdown.doubleValue("mealNetDeduction") +
         netDeductionsBreakdown.doubleValue("advanceNet") +
         netDeductionsBreakdown.doubleValue("creditDeductionNet") +
         netDeductionsBreakdown.doubleValue("unionDuesNet") +

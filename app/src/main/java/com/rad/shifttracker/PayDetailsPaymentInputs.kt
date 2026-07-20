@@ -41,6 +41,9 @@ internal fun MonthlyPaymentInputRows(
     var foodSpentInput by remember(payrollMonth, payrollGrossAdditions.mealSpentNet) {
         mutableStateOf(formatOptionalMoneyInput(payrollGrossAdditions.mealSpentNet))
     }
+    var foodSpentPresent by remember(payrollMonth, payrollGrossAdditions.mealSpentNet) {
+        mutableStateOf(payrollGrossAdditions.mealSpentNet != null)
+    }
     var advanceError by remember(paymentMonth) { mutableStateOf<String?>(null) }
     var foodSpentError by remember(payrollMonth) { mutableStateOf<String?>(null) }
 
@@ -65,6 +68,11 @@ internal fun MonthlyPaymentInputRows(
         errorMessage = advanceError,
         accentColor = THEME.warning
     )
+    FoodSpendingStatusLine(
+        label = FOOD_ALLOWANCE_STATUS_LABEL,
+        value = paymentInputMoneyText(foodBreakdown.foodAllowanceNet),
+        valueColor = THEME.success
+    )
     PaymentAdjustmentInputRow(
         label = actualFoodSpentInputLabel(payrollMonth),
         value = foodSpentInput,
@@ -80,10 +88,16 @@ internal fun MonthlyPaymentInputRows(
             }
             repo.setMonthlyActualFoodSpentNet(payrollMonth.year, payrollMonth.month, value)
             foodSpentInput = formatOptionalMoneyInput(value)
+            foodSpentPresent = value != null
             foodSpentError = null
         },
         errorMessage = foodSpentError,
-        manualEntered = foodBreakdown.actualFoodSpentNet != null,
+        manualEntered = foodSpentPresent,
+        supportingText = if (foodSpentPresent) {
+            MEAL_SPENT_MANUAL_HELP_TEXT
+        } else {
+            mealSpentSupportingText(foodBreakdown)
+        },
         accentColor = THEME.success
     )
     FoodSpendingStatusRows(foodBreakdown)
@@ -97,6 +111,7 @@ private fun PaymentAdjustmentInputRow(
     onSave: () -> Unit,
     errorMessage: String?,
     manualEntered: Boolean = false,
+    supportingText: String? = null,
     accentColor: Color = THEME.accentPrimary
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -154,20 +169,23 @@ private fun PaymentAdjustmentInputRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
+        supportingText?.let { text ->
+            Text(
+                text = text,
+                color = THEME.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
 @Composable
 private fun FoodSpendingStatusRows(food: MonthlyFoodSpendingBreakdown) {
-    val actualSpent = food.actualFoodSpentNet ?: return
-
-    FoodSpendingStatusLine(
-        label = FOOD_ALLOWANCE_STATUS_LABEL,
-        value = paymentInputMoneyText(food.foodAllowanceNet)
-    )
     FoodSpendingStatusLine(
         label = FOOD_ACTUAL_SPENT_STATUS_LABEL,
-        value = paymentInputMoneyText(actualSpent)
+        value = paymentInputMoneyText(food.foodSpentNetApplied)
     )
 
     if (food.foodOverageNet > 0.0) {
@@ -191,7 +209,7 @@ private fun FoodSpendingStatusRows(food: MonthlyFoodSpendingBreakdown) {
                 valueColor = THEME.success
             )
             Text(
-                text = FOOD_UNUSED_NOT_PAID_TEXT,
+                text = FOOD_NET_DEDUCTION_EXPLANATION_TEXT,
                 color = THEME.textMuted,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
