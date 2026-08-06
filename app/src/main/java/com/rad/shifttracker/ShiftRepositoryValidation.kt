@@ -1,5 +1,7 @@
 package com.rad.shifttracker
 
+import java.math.BigDecimal
+
 internal const val MAX_BASE_PAY = 100_000.0
 
 private const val MAX_MONTHLY_GROSS_ADDITION = 10_000_000.0
@@ -14,17 +16,32 @@ internal fun Double?.sanitizePayBaseOrNull(): Double? {
 
 @Suppress("DEPRECATION")
 internal fun MonthlyGrossAdditions.sanitizeMonthlyGrossAdditions(year: Int, month: Int): MonthlyGrossAdditions {
+    val sanitizedMealSpent = mealSpentNet?.sanitizeMonthlyGrossAddition()
+    val historicalOverride = CONFIRMED_MONTHLY_MEAL_ENTITLEMENT_OVERRIDES[MonthKey(year, month)]
+        ?.takeIf { sanitizedMealSpent?.toMealMoney() == BigDecimal("3620.00") }
     return MonthlyGrossAdditions(
         year = year,
         month = month,
         mealGross = mealGross.sanitizeMonthlyGrossOverrideOrNull(),
         regressGross = regressGross.sanitizeMonthlyGrossAddition(),
         bonusGross = bonusGross.sanitizeMonthlyGrossAddition(),
-        mealSpentNet = mealSpentNet?.sanitizeMonthlyGrossAddition(),
+        mealSpentNet = sanitizedMealSpent,
         bonusNet = bonusNet.sanitizeMonthlyGrossAddition(),
         mealSettlementAdjustmentNet = mealSettlementAdjustmentNet.sanitizeMonthlySignedAdjustment(),
-        automaticMealSpentNet = automaticMealSpentNet?.sanitizeMonthlyGrossAddition()
+        absencePenaltyGross = absencePenaltyGross.sanitizeMonthlyGrossPenalty(),
+        mealEntitlementNetOverride = (mealEntitlementNetOverride ?: historicalOverride)
+            ?.sanitizeMonthlyMealOverride()
     )
+}
+
+internal fun BigDecimal.sanitizeMonthlyMealOverride(): BigDecimal {
+    if (signum() < 0) return BigDecimal.ZERO.setScale(2)
+    return min(BigDecimal.valueOf(MAX_MONTHLY_GROSS_ADDITION)).toMealMoney()
+}
+
+internal fun BigDecimal.sanitizeMonthlyGrossPenalty(): BigDecimal {
+    if (signum() <= 0) return BigDecimal.ZERO
+    return min(BigDecimal.valueOf(MAX_MONTHLY_GROSS_ADDITION))
 }
 
 internal fun Double.sanitizeMonthlyGrossAddition(): Double {

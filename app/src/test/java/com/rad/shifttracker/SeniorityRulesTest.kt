@@ -10,6 +10,21 @@ import java.nio.file.Path
 class SeniorityRulesTest {
 
     @Test
+    fun `februar 2019 do juna 2026 daje 7 navrsenih godina`() {
+        val preview = calculateKnownStartSeniorityPreview(
+            startYear = 2019,
+            startMonth = 2,
+            targetYear = 2026,
+            targetMonth = 6,
+            increaseFactor = SeniorityIncreaseFactor.NONE,
+            ratePerYear = 0.005
+        )
+
+        assertEquals(7, preview.fullAccountingYears)
+        assertEquals(3.5, preview.percent, 0.0001)
+    }
+
+    @Test
     fun `bez uvecanja 10 punih godina je 5 procenata`() {
         val preview = calculateKnownStartSeniorityPreview(
             startYear = 2016,

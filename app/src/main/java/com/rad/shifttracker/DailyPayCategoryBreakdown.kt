@@ -12,6 +12,7 @@ data class DailyPayCategoryBreakdown(
     val holidayWorkMinutes: Int = 0,
     val difficultConditionsMinutes: Int = 0,
     val sickLeaveMinutes: Int = 0,
+    val paidLeaveMinutes: Int = 0,
     val vacationMinutes: Int = 0,
     val paidHolidayMinutes: Int = 0,
     val absenceMinutes: Int = 0,
@@ -56,7 +57,11 @@ internal class DailyPayCategoryBreakdownCalculator(
         return when (record?.shift) {
             null -> emptyDay(date, hasAnyMonthRecord)
             Shift.OFF -> offDay(record, brigadeType)
-            Shift.SICK -> paidAbsenceDay(record, brigadeType, "sickLeave")
+            Shift.SICK -> if (record.isBloodDonationLeave) {
+                paidAbsenceDay(record, brigadeType, "paidLeave")
+            } else {
+                paidAbsenceDay(record, brigadeType, "sickLeave")
+            }
             Shift.VACATION -> paidAbsenceDay(record, brigadeType, "vacation")
             else -> workDay(record, brigadeType, monthlyOvertimeMinutes)
         }
@@ -100,7 +105,8 @@ internal class DailyPayCategoryBreakdownCalculator(
         addPositiveCategory(paidMinutes, category, categories)
         addWorkBalanceCategories(record, brigadeType, categories)
         return DailyPayCategoryBreakdown(
-            sickLeaveMinutes = if (record.shift == Shift.SICK) paidMinutes else 0,
+            sickLeaveMinutes = if (record.shift == Shift.SICK && !record.isBloodDonationLeave) paidMinutes else 0,
+            paidLeaveMinutes = if (record.isBloodDonationLeave) paidMinutes else 0,
             vacationMinutes = if (record.shift == Shift.VACATION) paidMinutes else 0,
             absenceMinutes = record.hoursDeficitMinutesFor(brigadeType),
             countsIntoWorkBalance = record.netCompChangeMinutesFor(brigadeType) != 0,

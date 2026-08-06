@@ -209,10 +209,10 @@ class PayCalculatorTest {
     }
 
     @Test
-    fun `getFoodAllowance returns foodPerDay for any worked day under 4 hours`() {
+    fun `getFoodAllowance returns zero for worked day under 4 hours`() {
         val record = DayRecord(2025, 1, 6, Shift.FIRST, 3)
         val result = calculator.getFoodAllowance(record)
-        assertEquals(280.0, result, 0.01)
+        assertEquals(0.0, result, 0.01)
     }
 
     @Test
@@ -623,7 +623,7 @@ class PayCalculatorTest {
 
         val result = calculator.calculateMonthSummary(records, 300.0)
 
-        assertEquals(1_680.0, result.foodAllowance, 0.01)
+        assertEquals(1_400.0, result.foodAllowance, 0.01)
     }
 
     @Test
@@ -738,7 +738,7 @@ class PayCalculatorTest {
     }
 
     @Test
-    fun `minuli rad za maj ukljucuje jedan sat pokrivenog manjka ali ne i sedam sati izostanka`() {
+    fun `minuli rad ukljucuje pokriveni manjak ali ne i nepokriveni izostanak`() {
         val regularFullDays = listOf(
             4, 5, 6, 7, 8,
             11, 12, 13, 14, 15,

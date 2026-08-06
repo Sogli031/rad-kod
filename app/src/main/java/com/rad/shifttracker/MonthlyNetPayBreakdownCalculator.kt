@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import java.math.BigDecimal
+import java.math.MathContext
 import java.math.RoundingMode
 import java.time.DateTimeException
 import java.time.LocalDate
@@ -10,6 +11,8 @@ import kotlin.math.max
 private const val DEFAULT_DAILY_FUND_HOURS = 8
 private const val DEFAULT_REGRESS_NET = 20_000.0
 private val REGRESS_MONTHS = setOf(2, 5, 8, 11)
+private val PAYROLL_MATH_CONTEXT = MathContext.DECIMAL128
+private val HUNDRED_DECIMAL = BigDecimal.valueOf(100L)
 
 fun calculateMonthlyFundHours(
     year: Int,
@@ -76,32 +79,20 @@ fun calculateMonthlyNetPayBreakdown(
 
     val grossBaseBeforeSeniority = summary.totalPay.sanitizeMoney()
     val grossSeniorityBonus = summary.minuliRadBonus.sanitizeMoney()
-    val mealAllowanceNet = summary.foodAllowance.sanitizeMoney()
-    val mealResolution = resolveMealCalculation(
-        manualMealSpentNet = safeAdditions.mealSpentNet,
-        automaticMealSpentNet = safeAdditions.automaticMealSpentNet,
-        mealNetEntitled = mealAllowanceNet,
-        netFactor = netFactor
-    )
-    val grossMealAddition = mealResolution.grossApplied
+    val resolvedMeal = resolveMonthlyMeal(summary, safeAdditions, netFactor)
+    val mealEntitlementCalculation = resolvedMeal.entitlementCalculation
+    val mealResolution = resolvedMeal.resolution
+    val grossMealAddition = mealResolution.grossApplied.toDouble()
     val hasPayrollBase = grossBaseBeforeSeniority > 0.0 ||
         grossSeniorityBonus > 0.0 ||
-        mealAllowanceNet > 0.0
-    val hasExplicitRegress = safeAdditions.regressGross > 0.0
-    val netRegressAddition = when {
-        !includeRegress -> 0.0
-        hasExplicitRegress -> safeAdditions.regressGross * netFactor
-        summary.month in REGRESS_MONTHS && hasPayrollBase -> DEFAULT_REGRESS_NET
-        summary.month in REGRESS_MONTHS -> 0.0
-        else -> safeAdditions.regressGross * netFactor
-    }
-    val grossRegressAddition = when {
-        !includeRegress -> 0.0
-        hasExplicitRegress -> safeAdditions.regressGross
-        summary.month in REGRESS_MONTHS && hasPayrollBase -> calculateGrossFromNet(DEFAULT_REGRESS_NET, netFactor)
-        summary.month in REGRESS_MONTHS -> 0.0
-        else -> safeAdditions.regressGross
-    }
+        mealResolution.entitlementNet.signum() > 0
+    val regress = calculateRegressAddition(
+        month = summary.month,
+        additions = safeAdditions,
+        netFactor = netFactor,
+        includeRegress = includeRegress,
+        hasPayrollBase = hasPayrollBase
+    )
     val netBonusAddition = if (safeAdditions.bonusNet > 0.0) {
         safeAdditions.bonusNet
     } else {
@@ -112,8 +103,15 @@ fun calculateMonthlyNetPayBreakdown(
     } else {
         safeAdditions.bonusGross
     }
-    val grossAdditionsTotal = grossMealAddition + grossRegressAddition + grossBonusAddition
-    val grossTotal = grossBaseBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal
+    val grossAdditionsTotal = grossMealAddition + regress.gross + grossBonusAddition
+    val absencePenaltyGross = safeAdditions.absencePenaltyGross
+    val grossTotalDecimal = (
+        grossBaseBeforeSeniority.toPayrollDecimal() +
+            grossSeniorityBonus.toPayrollDecimal() +
+            grossAdditionsTotal.toPayrollDecimal() -
+            absencePenaltyGross
+        ).max(BigDecimal.ZERO)
+    val grossTotal = grossTotalDecimal.toDouble()
 
     if (grossTotal <= 0.0) {
         return emptyMonthlyNetPayBreakdown(
@@ -122,23 +120,43 @@ fun calculateMonthlyNetPayBreakdown(
             contributionsPercent = safeContributionsPercent,
             taxRelief = safeTaxRelief,
             taxPercent = safeTaxPercent,
-            resolution = mealResolution
+            resolution = mealResolution,
+            mealEntitlementCalculation = mealEntitlementCalculation,
+            absencePenaltyGross = absencePenaltyGross
         )
     }
 
-    val employeeContributions = grossTotal * safeContributionsPercent / 100.0
-    val taxableBase = calculateTaxableBase(grossTotal, safeTaxRelief)
-    val tax = taxableBase * safeTaxPercent / 100.0
-    val netPayBeforeDeductions = max(0.0, grossTotal - employeeContributions - tax)
+    val employeeContributionsDecimal = grossTotalDecimal.multiply(
+        safeContributionsPercent.toPayrollDecimal().divide(HUNDRED_DECIMAL, PAYROLL_MATH_CONTEXT),
+        PAYROLL_MATH_CONTEXT
+    )
+    val taxableBaseDecimal = (grossTotalDecimal - safeTaxRelief.toPayrollDecimal()).max(BigDecimal.ZERO)
+    val taxDecimal = taxableBaseDecimal.multiply(
+        safeTaxPercent.toPayrollDecimal().divide(HUNDRED_DECIMAL, PAYROLL_MATH_CONTEXT),
+        PAYROLL_MATH_CONTEXT
+    )
+    val netPayBeforeDeductionsDecimal = (
+        grossTotalDecimal - employeeContributionsDecimal - taxDecimal
+        ).max(BigDecimal.ZERO)
+    val employeeContributions = employeeContributionsDecimal.toDouble()
+    val taxableBase = taxableBaseDecimal.toDouble()
+    val tax = taxDecimal.toDouble()
+    val netPayBeforeDeductions = netPayBeforeDeductionsDecimal.toDouble()
     val unionDuesNet = calculateUnionDuesNet(netPayBeforeDeductions, unionMember, unionDuesRate)
-    val netDeductionsTotal = mealResolution.netDeduction + unionDuesNet
+    val netDeductionsTotal = mealResolution.netDeduction.toDouble() + unionDuesNet
     val netWithoutSeniority = calculateNetFromGross(
-        grossTotal = grossBaseBeforeSeniority + grossAdditionsTotal,
+        grossTotal = (
+            grossBaseBeforeSeniority +
+                grossAdditionsTotal -
+                absencePenaltyGross.toDouble()
+            ).coerceAtLeast(0.0),
         contributionsPercent = safeContributionsPercent,
         taxRelief = safeTaxRelief,
         taxPercent = safeTaxPercent
     )
-    val netSeniorityBonus = max(0.0, netPayBeforeDeductions - netWithoutSeniority)
+    val netSeniorityBonus = roundMoneyHalfUp(
+        max(0.0, netPayBeforeDeductions - netWithoutSeniority)
+    )
 
     return MonthlyNetPayBreakdown(
         grossHourlyRate = safeGrossHourlyRate,
@@ -154,9 +172,10 @@ fun calculateMonthlyNetPayBreakdown(
         grossSeniorityBonus = grossSeniorityBonus,
         grossMealAddition = grossMealAddition,
         mealGrossSource = MealGrossSource.AUTO_FROM_NET,
-        grossRegressAddition = grossRegressAddition,
+        grossRegressAddition = regress.gross,
         grossBonusAddition = grossBonusAddition,
         grossAdditionsTotal = grossAdditionsTotal,
+        absencePenaltyGross = absencePenaltyGross,
         grossTotal = grossTotal,
         employeeContributions = employeeContributions,
         taxRelief = safeTaxRelief,
@@ -164,14 +183,18 @@ fun calculateMonthlyNetPayBreakdown(
         tax = tax,
         netPayBeforeDeductions = netPayBeforeDeductions,
         netSeniorityBonus = netSeniorityBonus,
-        mealAllowanceNet = mealAllowanceNet,
-        manualMealSpentNet = mealResolution.manualSpentNet,
-        automaticMealSpentNet = mealResolution.automaticSpentNet,
-        mealSpentNetApplied = mealResolution.spentApplied,
+        mealAllowanceNet = mealResolution.entitlementNet.toDouble(),
+        mealEntitlementNetOverride = mealResolution.entitlementNetOverride,
+        mealEntitlementSource = mealResolution.entitlementSource,
+        manualMealSpentNet = mealResolution.manualSpentNet?.toDouble(),
+        mealSpentNetApplied = mealResolution.spentApplied.toDouble(),
         mealSpentSource = mealResolution.spentSource,
-        mealCoveredNet = mealResolution.spentApplied,
-        mealNetDeduction = mealResolution.netDeduction,
-        netRegressAddition = netRegressAddition,
+        mealCoveredNet = mealResolution.spentApplied.toDouble(),
+        mealNetDeduction = mealResolution.netDeduction.toDouble(),
+        mealUnusedNet = mealResolution.unusedNet.toDouble(),
+        mealSpendingDefaultedToEntitlement = mealResolution.spendingDefaultedToEntitlement,
+        mealEntitlementCalculation = mealEntitlementCalculation,
+        netRegressAddition = regress.net,
         netBonusAddition = netBonusAddition,
         unionDuesNet = unionDuesNet,
         netDeductionsTotal = netDeductionsTotal,
@@ -180,39 +203,103 @@ fun calculateMonthlyNetPayBreakdown(
 }
 
 private data class MealCalculationResolution(
-    val entitlementNet: Double,
-    val manualSpentNet: Double?,
-    val automaticSpentNet: Double?,
-    val spentApplied: Double,
+    val entitlementNet: BigDecimal,
+    val entitlementNetOverride: BigDecimal?,
+    val entitlementSource: MealEntitlementSource,
+    val manualSpentNet: BigDecimal?,
+    val spentApplied: BigDecimal,
     val spentSource: MealSpentSource,
-    val grossApplied: Double,
-    val netDeduction: Double
+    val grossApplied: BigDecimal,
+    val netDeduction: BigDecimal,
+    val unusedNet: BigDecimal,
+    val spendingDefaultedToEntitlement: Boolean
 )
+
+/**
+ * Regres se knjiži tromesečno kao poznat neto iznos, pa se bruto dobija „grossup"-om.
+ * Ako je unet eksplicitan bruto, on ima prednost.
+ */
+private data class RegressAddition(val net: Double, val gross: Double)
+
+private fun calculateRegressAddition(
+    month: Int,
+    additions: MonthlyGrossAdditions,
+    netFactor: Double,
+    includeRegress: Boolean,
+    hasPayrollBase: Boolean
+): RegressAddition {
+    val explicitGross = additions.regressGross
+    val fromGross = RegressAddition(net = explicitGross * netFactor, gross = explicitGross)
+    return when {
+        !includeRegress -> RegressAddition(0.0, 0.0)
+        explicitGross > 0.0 -> fromGross
+        month !in REGRESS_MONTHS -> fromGross
+        hasPayrollBase -> RegressAddition(
+            net = DEFAULT_REGRESS_NET,
+            gross = calculateGrossFromNet(DEFAULT_REGRESS_NET, netFactor)
+        )
+        else -> RegressAddition(0.0, 0.0)
+    }
+}
+
+private data class ResolvedMonthlyMeal(
+    val entitlementCalculation: MealEntitlementCalculation,
+    val resolution: MealCalculationResolution
+)
+
+private fun resolveMonthlyMeal(
+    summary: MonthSummary,
+    additions: MonthlyGrossAdditions,
+    netFactor: Double
+): ResolvedMonthlyMeal {
+    val entitlement = summary.mealEntitlementCalculation
+        ?: MealEntitlementCalculation.fromNet(MonthKey(summary.year, summary.month), summary.foodAllowance)
+    return ResolvedMonthlyMeal(
+        entitlementCalculation = entitlement,
+        resolution = resolveMealCalculation(
+            manualMealSpentNet = additions.mealSpentNet,
+            entitlementNetOverride = additions.mealEntitlementNetOverride,
+            estimatedEntitlementNet = entitlement.mealEntitlementNet,
+            netFactor = netFactor
+        )
+    )
+}
 
 private fun resolveMealCalculation(
     manualMealSpentNet: Double?,
-    automaticMealSpentNet: Double?,
-    mealNetEntitled: Double,
+    entitlementNetOverride: BigDecimal?,
+    estimatedEntitlementNet: BigDecimal,
     netFactor: Double
 ): MealCalculationResolution {
-    val spentSource = when {
-        manualMealSpentNet != null -> MealSpentSource.MANUAL
-        automaticMealSpentNet != null -> MealSpentSource.AUTOMATIC
-        else -> MealSpentSource.ENTITLEMENT_ASSUMED
-    }
-    val spentApplied = when (spentSource) {
-        MealSpentSource.MANUAL -> manualMealSpentNet ?: 0.0
-        MealSpentSource.AUTOMATIC -> automaticMealSpentNet ?: 0.0
-        MealSpentSource.ENTITLEMENT_ASSUMED -> mealNetEntitled
+    val manualSpent = manualMealSpentNet?.toMealMoney()
+    val confirmedOverride = entitlementNetOverride?.toMealMoney()
+    val spendingDefaulted = manualSpent == null
+    val estimatedSpending = estimatedEntitlementNet.toMealMoney()
+    val spentApplied = manualSpent ?: confirmedOverride ?: estimatedSpending
+    val entitlementApplied = confirmedOverride ?: spentApplied
+    val entitlementSource = if (confirmedOverride != null) {
+        MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE
+    } else {
+        MealEntitlementSource.SAFE_DEFAULT_EQUALS_SPENDING
     }
     return MealCalculationResolution(
-        entitlementNet = mealNetEntitled,
-        manualSpentNet = manualMealSpentNet,
-        automaticSpentNet = automaticMealSpentNet,
+        entitlementNet = entitlementApplied,
+        entitlementNetOverride = confirmedOverride,
+        entitlementSource = entitlementSource,
+        manualSpentNet = manualSpent,
         spentApplied = spentApplied,
-        spentSource = spentSource,
-        grossApplied = calculateGrossFromNet(spentApplied, netFactor),
-        netDeduction = spentApplied
+        spentSource = if (spendingDefaulted) MealSpentSource.ENTITLEMENT_ASSUMED else MealSpentSource.MANUAL,
+        grossApplied = calculateMealGrossFromNet(
+            net = entitlementApplied,
+            netFactor = netFactor
+        ),
+        netDeduction = spentApplied,
+        unusedNet = if (confirmedOverride != null) {
+            (entitlementApplied - spentApplied).max(BigDecimal.ZERO).toMealMoney()
+        } else {
+            BigDecimal.ZERO.toMealMoney()
+        },
+        spendingDefaultedToEntitlement = spendingDefaulted
     )
 }
 
@@ -222,7 +309,9 @@ private fun emptyMonthlyNetPayBreakdown(
     contributionsPercent: Double,
     taxRelief: Double,
     taxPercent: Double,
-    resolution: MealCalculationResolution
+    resolution: MealCalculationResolution,
+    mealEntitlementCalculation: MealEntitlementCalculation,
+    absencePenaltyGross: BigDecimal
 ): MonthlyNetPayBreakdown {
     return MonthlyNetPayBreakdown(
         grossHourlyRate = grossHourlyRate,
@@ -241,6 +330,7 @@ private fun emptyMonthlyNetPayBreakdown(
         grossRegressAddition = 0.0,
         grossBonusAddition = 0.0,
         grossAdditionsTotal = 0.0,
+        absencePenaltyGross = absencePenaltyGross,
         grossTotal = 0.0,
         employeeContributions = 0.0,
         taxRelief = taxRelief,
@@ -248,17 +338,21 @@ private fun emptyMonthlyNetPayBreakdown(
         tax = 0.0,
         netPayBeforeDeductions = 0.0,
         netSeniorityBonus = 0.0,
-        mealAllowanceNet = resolution.entitlementNet,
-        manualMealSpentNet = resolution.manualSpentNet,
-        automaticMealSpentNet = resolution.automaticSpentNet,
-        mealSpentNetApplied = resolution.spentApplied,
+        mealAllowanceNet = resolution.entitlementNet.toDouble(),
+        mealEntitlementNetOverride = resolution.entitlementNetOverride,
+        mealEntitlementSource = resolution.entitlementSource,
+        manualMealSpentNet = resolution.manualSpentNet?.toDouble(),
+        mealSpentNetApplied = resolution.spentApplied.toDouble(),
         mealSpentSource = resolution.spentSource,
-        mealCoveredNet = resolution.spentApplied,
-        mealNetDeduction = resolution.netDeduction,
+        mealCoveredNet = resolution.spentApplied.toDouble(),
+        mealNetDeduction = resolution.netDeduction.toDouble(),
+        mealUnusedNet = resolution.unusedNet.toDouble(),
+        mealSpendingDefaultedToEntitlement = resolution.spendingDefaultedToEntitlement,
+        mealEntitlementCalculation = mealEntitlementCalculation,
         netRegressAddition = 0.0,
         netBonusAddition = 0.0,
         unionDuesNet = 0.0,
-        netDeductionsTotal = resolution.netDeduction,
+        netDeductionsTotal = resolution.netDeduction.toDouble(),
         displayPay = 0.0
     )
 }
@@ -275,7 +369,7 @@ fun calculateUnionDuesNet(
     return roundMoneyHalfUp(safeNet * safeRate)
 }
 
-private fun roundMoneyHalfUp(value: Double): Double {
+internal fun roundMoneyHalfUp(value: Double): Double {
     if (!value.isFinite()) return 0.0
     return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).toDouble()
 }
@@ -287,10 +381,17 @@ private fun calculateNetFromGross(
     taxPercent: Double
 ): Double {
     if (grossTotal <= 0.0) return 0.0
-    val employeeContributions = grossTotal * contributionsPercent / 100.0
-    val taxableBase = calculateTaxableBase(grossTotal, taxRelief)
-    val tax = taxableBase * taxPercent / 100.0
-    return max(0.0, grossTotal - employeeContributions - tax)
+    val gross = grossTotal.toPayrollDecimal()
+    val contributions = gross.multiply(
+        contributionsPercent.toPayrollDecimal().divide(HUNDRED_DECIMAL, PAYROLL_MATH_CONTEXT),
+        PAYROLL_MATH_CONTEXT
+    )
+    val taxableBase = (gross - taxRelief.toPayrollDecimal()).max(BigDecimal.ZERO)
+    val tax = taxableBase.multiply(
+        taxPercent.toPayrollDecimal().divide(HUNDRED_DECIMAL, PAYROLL_MATH_CONTEXT),
+        PAYROLL_MATH_CONTEXT
+    )
+    return (gross - contributions - tax).max(BigDecimal.ZERO).toDouble()
 }
 
 private fun calculateTaxableBase(grossTotal: Double, taxRelief: Double): Double {
@@ -299,7 +400,24 @@ private fun calculateTaxableBase(grossTotal: Double, taxRelief: Double): Double 
 
 private fun calculateGrossFromNet(net: Double, netFactor: Double): Double {
     if (net <= 0.0 || netFactor <= 0.0) return 0.0
-    return net / netFactor
+    return net.toPayrollDecimal()
+        .divide(netFactor.toPayrollDecimal(), PAYROLL_MATH_CONTEXT)
+        .toDouble()
+}
+
+private fun calculateMealGrossFromNet(
+    net: BigDecimal,
+    netFactor: Double
+): BigDecimal {
+    if (net.signum() <= 0 || netFactor <= 0.0) return BigDecimal.ZERO.setScale(2)
+    return net
+        .divide(netFactor.toPayrollDecimal(), PAYROLL_MATH_CONTEXT)
+        .setScale(0, RoundingMode.HALF_UP)
+        .setScale(2)
+}
+
+private fun Double.toPayrollDecimal(): BigDecimal {
+    return if (isFinite()) BigDecimal.valueOf(this) else BigDecimal.ZERO
 }
 
 private fun calculateMarginalNetFactor(

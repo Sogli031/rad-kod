@@ -55,6 +55,7 @@ internal data class ShiftRepositorySnapshot(
     val annualLeaveCalculationInput: AnnualLeaveCalculationInput?,
     val annualLeaveLastCalculatedDays: Int,
     val records: List<DayRecord>,
+    val foodPerDayChanges: Map<MonthKey, Double> = emptyMap(),
     /**
      * Meseci koje je korisnik izričito obrisao (tombstone). Bez ovoga bi
      * spajanje sa arhivom u oblaku vratilo obrisani najstariji mesec —

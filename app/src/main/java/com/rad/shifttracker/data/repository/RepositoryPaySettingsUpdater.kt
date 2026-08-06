@@ -59,7 +59,15 @@ internal class RepositoryPaySettingsUpdater(
 
     fun setFoodPerDay(value: Double) {
         payState.foodPerDay = value
+        payState.foodPerDayChanges.clear()
+        payState.foodPerDayChanges[MonthKey(1900, 1)] = value
         payState.invalidateSummariesAndRolling()
+    }
+
+    fun setFoodPerDayFromMonth(key: MonthKey, value: Double) {
+        payState.foodPerDayChanges[key] = value
+        payState.foodPerDay = payState.foodPerDayChanges.maxByOrNull { (month, _) -> month }?.value ?: value
+        invalidateAllPayrollMonths()
     }
 
     fun setTransportDailyAmount(value: Double) {

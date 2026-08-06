@@ -212,6 +212,8 @@ class DayRecord(
         if (isDoubleShift && s2 != null) {
             data["shift2"] = s2.value
             data["hours2"] = hours2
+        }
+        if (isDoubleShift || overtimeType != OvertimeType.PAID || primaryAdditionalWorkMinutes > 0) {
             data["overtime_type"] = overtimeType.value
         }
         if (weekendOvertimeType != OvertimeType.PAID) {

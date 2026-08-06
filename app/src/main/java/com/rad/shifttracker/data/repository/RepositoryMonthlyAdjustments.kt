@@ -4,6 +4,7 @@ import com.rad.shifttracker.MonthKey
 import com.rad.shifttracker.MonthlyGrossAdditions
 import com.rad.shifttracker.MonthlyNetAdjustments
 import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
+import java.math.BigDecimal
 
 internal class RepositoryMonthlyAdjustments(
     private val payState: RepositoryPayState,
@@ -25,7 +26,7 @@ internal class RepositoryMonthlyAdjustments(
         return payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
     }
 
-    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from applied net spending.")
+    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from the applied meal net.")
     fun setMonthlyMealGrossOverride(year: Int, month: Int, amount: Double?) {
         val key = MonthKey(year, month)
         val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
@@ -84,13 +85,28 @@ internal class RepositoryMonthlyAdjustments(
         } else {
             payState.monthlyGrossAdditions.remove(key)
         }
+        invalidateSummaryAndRollingDependents(key)
     }
 
-    fun setMonthlyAutomaticFoodSpentNet(year: Int, month: Int, amount: Double?) {
+    fun setMonthlyMealEntitlementNetOverride(year: Int, month: Int, amount: BigDecimal?) {
         val key = MonthKey(year, month)
         val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
         val sanitized = current
-            .copy(year = year, month = month, automaticMealSpentNet = amount)
+            .copy(year = year, month = month, mealEntitlementNetOverride = amount)
+            .sanitizeMonthlyGrossAdditions(year, month)
+        if (sanitized.hasAny) {
+            payState.monthlyGrossAdditions[key] = sanitized
+        } else {
+            payState.monthlyGrossAdditions.remove(key)
+        }
+        invalidateSummaryAndRollingDependents(key)
+    }
+
+    fun setMonthlyAbsencePenaltyGross(year: Int, month: Int, amount: BigDecimal) {
+        val key = MonthKey(year, month)
+        val current = payState.monthlyGrossAdditions[key] ?: MonthlyGrossAdditions(year, month)
+        val sanitized = current
+            .copy(year = year, month = month, absencePenaltyGross = amount)
             .sanitizeMonthlyGrossAdditions(year, month)
         if (sanitized.hasAny) {
             payState.monthlyGrossAdditions[key] = sanitized

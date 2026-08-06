@@ -253,6 +253,12 @@ private fun absenceAndLeaveRows(
 ): List<WorkHoursTableLine> {
     return buildList {
         addGrossRow("Bolovanje", payDetails.sickMinutes, payDetails.grossSickPay, payDetails)
+        addGrossRow(
+            "Plaćeno odsustvo – dobrovoljno davanje krvi",
+            payDetails.paidLeaveMinutes,
+            payDetails.grossPaidLeave,
+            payDetails
+        )
         addGrossRow("Godišnji odmor", payDetails.vacationMinutes, payDetails.grossVacationPay, payDetails)
         addGrossRow("Plaćen praznik", payDetails.paidHolidayMinutes, payDetails.grossPaidHoliday, payDetails)
         addGrossRow(
@@ -281,9 +287,17 @@ private fun otherPayrollRows(
 ): List<WorkHoursBreakdownLine> {
     return buildList {
         addMoneyRowIf(payDetails.netSeniorityBonus > 0.0, "Minuli rad", payDetails.netSeniorityBonus)
-        addMoneyRowIf(payBreakdown.mealAllowanceNet > 0.0, "Hrana pravo", payBreakdown.mealAllowanceNet)
         addMoneyRowIf(payBreakdown.netRegressAddition > 0.0, "Regres", payBreakdown.netRegressAddition)
         addMoneyRowIf(payBreakdown.netBonusAddition > 0.0, "Bonus", payBreakdown.netBonusAddition)
+        if (payBreakdown.absencePenaltyGross.signum() > 0) {
+            add(
+                WorkHoursBreakdownLine(
+                    "Izostanci 1",
+                    deductionMoneyText(payBreakdown.absencePenaltyGross.toDouble()),
+                    WorkHoursTone.Danger
+                )
+            )
+        }
         val deductionsTotal = payBreakdown.netDeductionsTotal
         if (deductionsTotal > 0.0) {
             add(

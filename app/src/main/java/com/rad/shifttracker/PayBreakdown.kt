@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import java.math.BigDecimal
 import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.YearMonth
@@ -20,6 +21,7 @@ data class MonthlyNetPayBreakdown(
     val grossRegressAddition: Double,
     val grossBonusAddition: Double,
     val grossAdditionsTotal: Double,
+    val absencePenaltyGross: BigDecimal,
     val grossTotal: Double,
     val employeeContributions: Double,
     val taxRelief: Double,
@@ -28,12 +30,16 @@ data class MonthlyNetPayBreakdown(
     val netPayBeforeDeductions: Double,
     val netSeniorityBonus: Double,
     val mealAllowanceNet: Double,
+    val mealEntitlementNetOverride: BigDecimal?,
+    val mealEntitlementSource: MealEntitlementSource,
     val manualMealSpentNet: Double?,
-    val automaticMealSpentNet: Double?,
     val mealSpentNetApplied: Double,
     val mealSpentSource: MealSpentSource,
     val mealCoveredNet: Double,
     val mealNetDeduction: Double,
+    val mealUnusedNet: Double,
+    val mealSpendingDefaultedToEntitlement: Boolean,
+    val mealEntitlementCalculation: MealEntitlementCalculation,
     val netRegressAddition: Double,
     val netBonusAddition: Double,
     val unionDuesNet: Double,
@@ -41,6 +47,37 @@ data class MonthlyNetPayBreakdown(
     val displayPay: Double,
     val hourlyValue: Double? = null
 ) {
+    val grossEarningsBeforeSeniority: Double
+        get() = grossBaseBeforeSeniority
+
+    val mealCalculationMode: String
+        get() = MANUAL_SPENDING_SAFE_DEFAULT_MODE
+
+    val mealEntitlementNetApplied: Double
+        get() = mealAllowanceNet
+
+    val mealEntitlementNet: Double
+        get() = mealEntitlementNetApplied
+
+    val estimatedRecognizedMealCount: Int
+        get() = mealEntitlementCalculation.recognizedMealCount
+
+    val estimatedMealEntitlementNet: Double
+        get() = mealEntitlementCalculation.mealEntitlementNet.toDouble()
+
+    val estimateAffectsPayroll: Boolean
+        get() = false
+
+    val canDisplayMealUnused: Boolean
+        get() = mealEntitlementSource == MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE ||
+            mealEntitlementSource == MealEntitlementSource.VERIFIED_COMPANY_RULE
+
+    val mealEntitlementGross: Double
+        get() = grossMealAddition
+
+    val grossNegativeAdjustmentsTotal: BigDecimal
+        get() = absencePenaltyGross
+
     val mealGrossApplied: Double
         get() = grossMealAddition
 
@@ -48,7 +85,7 @@ data class MonthlyNetPayBreakdown(
     val mealSpentNet: Double
         get() = mealSpentNetApplied
 
-    @Deprecated("Use mealSpentSource to distinguish manual, automatic, and assumed entitlement.")
+    @Deprecated("Use mealSpentSource to distinguish manual and automatic estimates.")
     val mealSpentNetPresent: Boolean
         get() = mealSpentSource != MealSpentSource.ENTITLEMENT_ASSUMED
 }
@@ -59,7 +96,7 @@ enum class MealGrossSource {
     @Deprecated("Legacy value; explicit gross meal overrides are no longer active.")
     EXPLICIT,
 
-    @Deprecated("Legacy value; gross is now always derived from applied net spending.")
+    @Deprecated("Legacy value; gross is now always derived from the applied meal net.")
     SPENT_WITH_SETTLEMENT,
 
     @Deprecated("Legacy value; gross source is now always AUTO_FROM_NET.")
@@ -71,7 +108,6 @@ enum class MealGrossSource {
 
 enum class MealSpentSource {
     MANUAL,
-    AUTOMATIC,
     ENTITLEMENT_ASSUMED
 }
 
@@ -120,7 +156,8 @@ data class MonthlyGrossAdditions(
     val bonusNet: Double = 0.0,
     @Deprecated("Legacy settlement adjustment; retained only for old backup compatibility.")
     val mealSettlementAdjustmentNet: Double = 0.0,
-    val automaticMealSpentNet: Double? = null
+    val absencePenaltyGross: BigDecimal = BigDecimal.ZERO,
+    val mealEntitlementNetOverride: BigDecimal? = null
 ) {
     val totalGross: Double
         get() = regressGross.sanitizeMoney() +
@@ -131,9 +168,10 @@ data class MonthlyGrossAdditions(
         get() = mealGross != null ||
             totalGross > 0.0 ||
             mealSpentNet != null ||
+            mealEntitlementNetOverride != null ||
             bonusNet.sanitizeMoney() > 0.0 ||
             mealSettlementAdjustmentNet != 0.0 ||
-            automaticMealSpentNet != null
+            absencePenaltyGross.signum() > 0
 
     @Suppress("DEPRECATION")
     fun sanitizedFor(year: Int = this.year, month: Int = this.month): MonthlyGrossAdditions {
@@ -146,7 +184,8 @@ data class MonthlyGrossAdditions(
             mealSpentNet = mealSpentNet?.sanitizeMoney(),
             bonusNet = bonusNet.sanitizeMoney(),
             mealSettlementAdjustmentNet = mealSettlementAdjustmentNet.sanitizeMonthlySignedAdjustment(),
-            automaticMealSpentNet = automaticMealSpentNet?.sanitizeMoney()
+            absencePenaltyGross = absencePenaltyGross.sanitizeMonthlyGrossPenalty(),
+            mealEntitlementNetOverride = mealEntitlementNetOverride?.sanitizeMonthlyMealOverride()
         )
     }
 }
@@ -230,9 +269,21 @@ enum class PayBaseCalculationSource {
     MIXED_REAL_AND_SIMULATED
 }
 
+/**
+ * Obračun osnovicu za naknade računa kao ukupnu bruto zaradu podeljenu ukupnim
+ * plaćenim časovima, gde u bruto ulaze i topli obrok i regres, a u časove i
+ * naknade (GO, praznik, bolovanje, plaćeno odsustvo). Provereno na listićima
+ * 01–06/2026: 880.281,79 / 931 = 945,52 din/h, uz osnovice sa listića
+ * 912,87 (jan), 953,18 (apr) i 950,58 (maj).
+ *
+ * Ako se topli obrok i regres izostave, a deli se samo časovima rada, isti
+ * period daje 755,65 din/h — zbog toga je osnovica u projekciji padala sa
+ * 950,58 na 790,35 din/h.
+ */
 data class PayBaseAverageOptions(
-    val includeMealAllowanceInAverage: Boolean = false,
-    val includeRegressInAverage: Boolean = false
+    val includeMealAllowanceInAverage: Boolean = true,
+    val includeRegressInAverage: Boolean = true,
+    val includeCompensationsInAverage: Boolean = true
 )
 
 data class RollingPayBaseMonth(
@@ -255,8 +306,11 @@ data class RollingPayBaseMonth(
     val includedMealAllowanceGross: Double = 0.0,
     val includedRegressGross: Double = 0.0,
     val includedOtherWageGross: Double = 0.0,
-    val includeMealAllowanceInAverage: Boolean = false,
-    val includeRegressInAverage: Boolean = false
+    val includedCompensationGross: Double = 0.0,
+    val includedCompensationHours: Int = 0,
+    val includeMealAllowanceInAverage: Boolean = true,
+    val includeRegressInAverage: Boolean = true,
+    val includeCompensationsInAverage: Boolean = true
 )
 
 data class RollingPayBaseCalculation(
@@ -525,10 +579,40 @@ fun resolvePayBasesForMonth(
     monthlyBases: Map<MonthKey, MonthlyPayBases>,
     defaults: PayBaseDefaults = PayBaseDefaults(),
     calculatedBase: RollingPayBaseCalculation? = null,
-    defaultSelectionMode: PayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+    defaultSelectionMode: PayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
+    sickBaseOverride: Double? = null
 ): ResolvedPayBases {
     val target = MonthKey(year, month)
-    return when (effectivePayBaseSelectionMode(monthlyBases[target], defaultSelectionMode)) {
+    val selectedMode = effectivePayBaseSelectionMode(monthlyBases[target], defaultSelectionMode)
+    val resolved = resolvePayBasesForMode(
+        selectedMode = selectedMode,
+        year = year,
+        month = month,
+        monthlyBases = monthlyBases,
+        defaults = defaults,
+        calculatedBase = calculatedBase
+    )
+    // Osnovica za bolovanje je zasebna kategorija na listiću i ne prati prosek za
+    // GO/praznik. Listić 03/2026: 23.888,93 / 40 h = 597,22 = 65% × 918,81, dok je
+    // istovremeno osnovica za GO 950,58. Zato podešena osnovica bolovanja ima
+    // prednost nad izračunatim prosekom; u ručnom režimu ionako već važi.
+    val override = sickBaseOverride.takeIf { it.isPositiveFinite() }
+    return if (selectedMode != PayBaseSelectionMode.MANUAL && override != null) {
+        resolved.copy(sickHourlyBase = ResolvedPayBase(override, PayBaseSource.DEFAULT))
+    } else {
+        resolved
+    }
+}
+
+private fun resolvePayBasesForMode(
+    selectedMode: PayBaseSelectionMode,
+    year: Int,
+    month: Int,
+    monthlyBases: Map<MonthKey, MonthlyPayBases>,
+    defaults: PayBaseDefaults,
+    calculatedBase: RollingPayBaseCalculation?
+): ResolvedPayBases {
+    return when (selectedMode) {
         PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS -> {
             calculatedBase?.let(ResolvedPayBases::fromCalculation)
                 ?: ResolvedPayBases.fromDefaults(defaults)

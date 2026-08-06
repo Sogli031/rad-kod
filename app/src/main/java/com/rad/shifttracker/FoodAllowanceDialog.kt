@@ -17,10 +17,14 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun FoodAllowanceDialog(
+    year: Int,
+    month: Int,
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
-    var foodInput by remember { mutableStateOf(formatRateInput(repo.foodPerDayValue)) }
+    val selectedMonth = MonthKey(year, month)
+    val selectedPrice = repo.getFoodPerDayForMonth(year, month)
+    var foodInput by remember(selectedMonth) { mutableStateOf(formatRateInput(selectedPrice)) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     PopupDialog(
@@ -31,9 +35,9 @@ fun FoodAllowanceDialog(
         accent = THEME.accentSecondary
     ) {
         PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentSecondary) {
-            SectionLabel(text = "Globalni dnevni iznos")
+            SectionLabel(text = "Dnevni iznos od ${monthYearText(selectedMonth)}")
             Text(
-                text = "Trenutno po danu: ${formatRateInput(repo.foodPerDayValue)} ${CONFIG.pay.currency}",
+                text = "Za izabrani mesec: ${formatRateInput(selectedPrice)} ${CONFIG.pay.currency}",
                 color = THEME.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
@@ -74,7 +78,7 @@ fun FoodAllowanceDialog(
                     errorMessage = "Unesi ispravan iznos."
                     return@GlowButton
                 }
-                repo.foodPerDayValue = newValue
+                repo.setFoodPerDayFromMonth(year, month, newValue)
                 onDismiss()
             }
         )

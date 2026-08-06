@@ -74,14 +74,12 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     }
 
     fun getFoodAllowance(record: DayRecord): Double {
-        if (record.shift == Shift.SICK || record.shift == Shift.OFF || record.shift == Shift.VACATION) {
-            return 0.0
-        }
-
-        if (record.totalHours <= 0) return 0.0
-        if (record.totalHours > config.defaultHours + 2) return config.foodPerDay * 2
-
-        return config.foodPerDay
+        if (record.shift !in Shift.workShifts()) return 0.0
+        if (record.totalWorkMinutes < 4 * MINUTES_PER_HOUR) return 0.0
+        val additionalWorkMinutes =
+            (record.totalWorkMinutes - config.defaultHours * MINUTES_PER_HOUR).coerceAtLeast(0)
+        val mealCount = if (additionalWorkMinutes > 2 * MINUTES_PER_HOUR) 2 else 1
+        return config.foodPerDay * mealCount
     }
 
     fun getFoodAllowanceForAccountingMonth(record: DayRecord, month: MonthKey): Double {
@@ -204,6 +202,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         }
     }
 
+    @Suppress("CyclomaticComplexMethod")
     fun calculateDailyPay(
         record: DayRecord,
         baseRate: Double,
@@ -221,6 +220,14 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         }
 
         if (record.workHours <= 0) return 0.0
+
+        if (record.isBloodDonationLeave) {
+            return if (weekday.isWorkday) {
+                record.workHours.toDouble() * payBases.vacationHourlyBase.value
+            } else {
+                0.0
+            }
+        }
 
         if (record.shift == Shift.SICK) {
             if (weekday.isWorkday) {
@@ -327,18 +334,37 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         yearsOfService: Int,
         brigadeType: BrigadeType = BrigadeType.TROBRIGADA
     ): Double {
-        val safeYears = yearsOfService.coerceAtLeast(0)
-        if (safeYears == 0) return 0.0
-
-        val eligibleMinutes = seniorityEligibleWorkMinutes(
+        val categories = workBaseMinuteCategories(
             record = record,
             brigadeType = brigadeType,
             monthlyOvertimeMinutes = null
         )
-        return eligibleMinutes.toDouble() / MINUTES_PER_HOUR *
-            baseRate *
-            safeYears *
-            config.minuliRadPerYear
+        return calculateSeniorityBreakdown(
+            baseHourlyGross = baseRate,
+            regularWorkedBaseMinutes = categories.regularWorkedBaseMinutes,
+            publicHolidayWorkedBaseMinutes = categories.publicHolidayWorkedBaseMinutes,
+            overtimeBaseMinutes = categories.overtimeBaseMinutes,
+            completedYearsOfService = yearsOfService
+        ).grossSeniorityBonus
+    }
+
+    fun calculateSeniorityBreakdown(
+        baseHourlyGross: Double,
+        regularWorkedBaseMinutes: Int,
+        publicHolidayWorkedBaseMinutes: Int,
+        overtimeBaseMinutes: Int,
+        completedYearsOfService: Int,
+        publicHolidayBaseIncludedInRegular: Boolean = false
+    ): SeniorityBreakdown {
+        return calculateSeniorityBreakdownForCategories(
+            baseHourlyGross = baseHourlyGross,
+            regularWorkedBaseMinutes = regularWorkedBaseMinutes,
+            publicHolidayWorkedBaseMinutes = publicHolidayWorkedBaseMinutes,
+            overtimeBaseMinutes = overtimeBaseMinutes,
+            completedYearsOfService = completedYearsOfService,
+            seniorityRatePerYear = config.minuliRadPerYear,
+            publicHolidayBaseIncludedInRegular = publicHolidayBaseIncludedInRegular
+        )
     }
 
     fun calculateMonthlyPayDetails(
@@ -394,6 +420,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             if (coveredDeficitMin > 0) {
                 details.coveredDeficitMinutes += coveredDeficitMin
                 details.grossCoveredDeficitPay += coveredDeficitMin.toDouble() / MINUTES_PER_HOUR * baseRate
+                details.regularWorkedBaseMinutes += coveredDeficitMin
             }
             val uncoveredDeficitMin = min(
                 summary.compTimeDeficitMinutes,
@@ -405,8 +432,19 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             }
         }
 
+        val baseComponents = calculateSeniorityBreakdown(
+            baseHourlyGross = baseRate,
+            regularWorkedBaseMinutes = details.regularWorkedBaseMinutes,
+            publicHolidayWorkedBaseMinutes = details.publicHolidayWorkedBaseMinutes,
+            overtimeBaseMinutes = details.overtimeBaseMinutes,
+            completedYearsOfService = summary.completedYearsOfService
+        )
         val grossWorkBeforeSeniority = details.grossTotalBeforeSeniority
-        val grossBeforeSeniority = grossWorkBeforeSeniority + netBreakdown.grossAdditionsTotal
+        val grossBeforeSeniority = (
+            grossWorkBeforeSeniority +
+                netBreakdown.grossAdditionsTotal -
+                netBreakdown.absencePenaltyGross.toDouble()
+            ).coerceAtLeast(0.0)
         val netBeforeSeniority = max(0.0, netBreakdown.netPayBeforeDeductions - netBreakdown.netSeniorityBonus)
 
         return MonthlyPayDetails(
@@ -416,17 +454,31 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             overtimeHours = details.overtimeHours,
             sundayHours = details.sundayHours,
             sickHours = details.sickHours,
+            paidLeaveHours = details.paidLeaveHours,
             vacationHours = details.vacationHours,
             paidHolidayHours = details.paidHolidayHours,
             coveredDeficitHours = details.coveredDeficitHours,
             uncoveredDeficitHours = details.uncoveredDeficitHours,
             grossBaseRegular = details.grossBaseRegular,
+            baseHourlyGross = baseComponents.baseHourlyGross,
+            regularWorkedBaseMinutes = baseComponents.regularWorkedBaseMinutes,
+            regularWorkedBaseGross = baseComponents.regularWorkedBaseGross,
+            publicHolidayWorkedBaseMinutes = baseComponents.publicHolidayWorkedBaseMinutes,
+            publicHolidayWorkedBaseGross = baseComponents.publicHolidayWorkedBaseGross,
+            overtimeBaseMinutes = baseComponents.overtimeBaseMinutes,
+            overtimeBaseGross = baseComponents.overtimeBaseGross,
+            seniorityEligibleMinutes = baseComponents.seniorityEligibleMinutes,
+            seniorityEligibleBaseGross = baseComponents.seniorityEligibleBaseGross,
+            completedYearsOfService = baseComponents.completedYearsOfService,
+            seniorityRatePerYear = baseComponents.seniorityRatePerYear,
+            seniorityTotalRate = baseComponents.seniorityTotalRate,
             grossNightPremium = details.grossNightPremium,
             grossOvertimePremium = details.grossOvertimePremium,
             grossSundayPremium = details.grossSundayPremium,
             grossHolidayPremium = details.grossHolidayPremium,
             grossDifficultWorkConditions = details.grossDifficultWorkConditions,
             grossSickPay = details.grossSickPay,
+            grossPaidLeave = details.grossPaidLeave,
             grossVacationPay = details.grossVacationPay,
             grossPaidHoliday = details.grossPaidHoliday,
             grossCoveredDeficitPay = details.grossCoveredDeficitPay,
@@ -434,12 +486,14 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             grossOvertimeFull = details.grossOvertimeFull,
             grossSeniorityBonus = netBreakdown.grossSeniorityBonus,
             sickPayBaseHourly = payBases.sickHourlyBase.value,
+            paidLeavePayBase = payBases.vacationHourlyBase,
             vacationPayBase = payBases.vacationHourlyBase,
             paidHolidayPayBase = payBases.paidHolidayHourlyBase,
             sickPayBase = payBases.sickHourlyBase,
             grossMealAddition = netBreakdown.grossMealAddition,
             grossRegressAddition = netBreakdown.grossRegressAddition,
             grossBonusAddition = netBreakdown.grossBonusAddition,
+            absencePenaltyGross = netBreakdown.absencePenaltyGross,
             grossTotalBeforeSeniority = grossBeforeSeniority,
             grossTotalWithSeniority = grossBeforeSeniority + netBreakdown.grossSeniorityBonus,
             netTotalBeforeSeniority = netBeforeSeniority,
@@ -453,6 +507,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             overtimeMinutes = details.overtimeMinutes,
             sundayMinutes = details.sundayMinutes,
             sickMinutes = details.sickMinutes,
+            paidLeaveMinutes = details.paidLeaveMinutes,
             vacationMinutes = details.vacationMinutes,
             paidHolidayMinutes = details.paidHolidayMinutes,
             coveredDeficitMinutes = details.coveredDeficitMinutes,
@@ -480,6 +535,14 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
 
         if (record.workHours <= 0) return
 
+        if (record.isBloodDonationLeave) {
+            if (weekday.isWorkday) {
+                details.paidLeaveMinutes += record.workHours * MINUTES_PER_HOUR
+                details.grossPaidLeave += record.workHours.toDouble() * payBases.vacationHourlyBase.value
+            }
+            return
+        }
+
         if (record.shift == Shift.SICK) {
             if (weekday.isWorkday) {
                 val sickRate = record.sickPayRate ?: config.sickPayRate
@@ -499,70 +562,19 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             return
         }
 
-        val shiftsData = paidWorkMinuteSegments(record)
-
-        if (isAutomaticWeekendOvertime(record, brigadeType)) {
-            for ((shift, shiftMinutes) in shiftsData) {
-                accumulateWorkSegment(
-                    weekday = weekday,
-                    shift = shift,
-                    minutes = shiftMinutes,
-                    baseRate = baseRate,
-                    isOvertime = true,
-                    isHoliday = record.isHoliday,
-                    brigadeType = brigadeType,
-                    details = details
-                )
-            }
-        } else {
-            val paidWorkMinutes = shiftsData.sumOf { (_, shiftMinutes) -> shiftMinutes }
-            val forcedOvertimeMinutes = if (record.workedOnHoliday) {
-                0
-            } else {
-                monthlyOvertimeMinutes?.coerceIn(0, paidWorkMinutes)
-            }
-            var regularMinutesRemaining = when {
-                forcedOvertimeMinutes != null -> paidWorkMinutes - forcedOvertimeMinutes
-                brigadeType == BrigadeType.CETVOROBRIGADA -> paidWorkMinutes
-                else -> config.defaultHours * MINUTES_PER_HOUR
-            }
-            for ((shift, shiftMinutes) in shiftsData) {
-                val regularMinutes = min(shiftMinutes, regularMinutesRemaining)
-                val overtimeMinutes = shiftMinutes - regularMinutes
-                regularMinutesRemaining -= regularMinutes
-
-                // Nedeljni minuti za celu smenu, pa hronološka podela na
-                // redovni/prekovremeni deo — isto kao u calculateDailyPay.
-                val (sundayRegular, sundayOvertime) = splitSundayMinutes(
-                    weekday = weekday,
-                    shift = shift,
-                    regularMinutes = regularMinutes,
-                    overtimeMinutes = overtimeMinutes,
-                    brigadeType = brigadeType
-                )
-                accumulateWorkSegment(
-                    weekday = weekday,
-                    shift = shift,
-                    minutes = regularMinutes,
-                    baseRate = baseRate,
-                    isOvertime = false,
-                    isHoliday = record.isHoliday,
-                    brigadeType = brigadeType,
-                    details = details,
-                    sundayMinutes = sundayRegular
-                )
-                accumulateWorkSegment(
-                    weekday = weekday,
-                    shift = shift,
-                    minutes = overtimeMinutes,
-                    baseRate = baseRate,
-                    isOvertime = true,
-                    isHoliday = record.isHoliday,
-                    brigadeType = brigadeType,
-                    details = details,
-                    sundayMinutes = sundayOvertime
-                )
-            }
+        for (segment in classifiedWorkSegments(record, brigadeType, monthlyOvertimeMinutes)) {
+            accumulateWorkSegment(
+                weekday = weekday,
+                shift = segment.shift,
+                minutes = segment.minutes,
+                baseRate = baseRate,
+                isOvertime = segment.isOvertime,
+                isHoliday = record.isHoliday,
+                isPublicHolidayWork = record.workedOnHoliday,
+                brigadeType = brigadeType,
+                details = details,
+                sundayMinutes = segment.sundayMinutes
+            )
         }
     }
 
@@ -573,6 +585,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         baseRate: Double,
         isOvertime: Boolean,
         isHoliday: Boolean,
+        isPublicHolidayWork: Boolean,
         brigadeType: BrigadeType,
         details: MutablePayDetails,
         // Default (cela smena kao jedan segment) važi za automatski vikend-
@@ -585,6 +598,11 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         val basePay = paidHours * baseRate
         details.basePaidMinutes += minutes
         details.grossBaseRegular += basePay
+        when {
+            isOvertime -> details.overtimeBaseMinutes += minutes
+            isPublicHolidayWork -> details.publicHolidayWorkedBaseMinutes += minutes
+            else -> details.regularWorkedBaseMinutes += minutes
+        }
         // Pun bruto pripisan prekovremenim minutima (osnovica + svi dodaci na njih);
         // koristi se za neto efekat prekovremenog (kartica "Prekovremeno") minutno precizno.
         var overtimeSegmentGross = if (isOvertime) basePay else 0.0
@@ -625,10 +643,14 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
 
     private class MutablePayDetails {
         var basePaidMinutes = 0
+        var regularWorkedBaseMinutes = 0
+        var publicHolidayWorkedBaseMinutes = 0
+        var overtimeBaseMinutes = 0
         var nightMinutes = 0
         var overtimeMinutes = 0
         var sundayMinutes = 0
         var sickMinutes = 0
+        var paidLeaveMinutes = 0
         var vacationMinutes = 0
         var paidHolidayMinutes = 0
         var coveredDeficitMinutes = 0
@@ -640,6 +662,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         var grossHolidayPremium = 0.0
         var grossDifficultWorkConditions = 0.0
         var grossSickPay = 0.0
+        var grossPaidLeave = 0.0
         var grossVacationPay = 0.0
         var grossPaidHoliday = 0.0
         var grossCoveredDeficitPay = 0.0
@@ -647,7 +670,8 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         var grossOvertimeFull = 0.0
 
         val totalPaidMinutes: Int
-            get() = basePaidMinutes + sickMinutes + vacationMinutes + paidHolidayMinutes + coveredDeficitMinutes
+            get() = basePaidMinutes + sickMinutes + paidLeaveMinutes + vacationMinutes +
+                paidHolidayMinutes + coveredDeficitMinutes
         val basePaidHours: Int
             get() = basePaidMinutes / MINUTES_PER_HOUR
         val nightHours: Int
@@ -658,6 +682,8 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
             get() = sundayMinutes / MINUTES_PER_HOUR
         val sickHours: Int
             get() = sickMinutes / MINUTES_PER_HOUR
+        val paidLeaveHours: Int
+            get() = paidLeaveMinutes / MINUTES_PER_HOUR
         val vacationHours: Int
             get() = vacationMinutes / MINUTES_PER_HOUR
         val paidHolidayHours: Int
@@ -670,7 +696,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         val grossTotalBeforeSeniority: Double
             get() = grossBaseRegular + grossNightPremium + grossOvertimePremium + grossSundayPremium +
                 grossHolidayPremium + grossDifficultWorkConditions + grossSickPay + grossVacationPay +
-                grossPaidHoliday + grossCoveredDeficitPay
+                grossPaidHoliday + grossPaidLeave + grossCoveredDeficitPay
     }
 
     // Existing payroll calculation is kept centralized so the stricter rule catches new complex methods.
@@ -707,7 +733,13 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         )
 
         for (record in records) {
-            if (record.shift == Shift.SICK) {
+            if (record.isBloodDonationLeave) {
+                if (record.weekday.isWorkday) {
+                    summary.paidLeaveMinutes += record.workHours * MINUTES_PER_HOUR
+                    summary.paidLeaveHours = summary.paidLeaveMinutes / MINUTES_PER_HOUR
+                    summary.totalPay += calculateDailyPay(record, baseRate, brigadeType, payBases)
+                }
+            } else if (record.shift == Shift.SICK) {
                 if (record.weekday.isWorkday) {
                     summary.sickHours += record.workHours
                     summary.totalPay += calculateDailyPay(record, baseRate, brigadeType, payBases)
@@ -773,34 +805,38 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         } else {
             0
         }
+        summary.coveredDeficitMinutes = coveredDeficitMinutes
+        summary.uncoveredDeficitMinutes = (summary.compTimeDeficitMinutes - coveredDeficitMinutes).coerceAtLeast(0)
         if (coveredDeficitMinutes > 0) {
             summary.totalPay += coveredDeficitMinutes.toDouble() / MINUTES_PER_HOUR * baseRate
         }
 
-        summary.yearsOfService = yearsOfService.coerceAtLeast(0)
-        summary.seniorityEligibleWorkMinutes = calculateSeniorityEligibleWorkMinutes(
+        val workBaseMinutes = calculateMonthlyWorkBaseMinutes(
             records = records,
             brigadeType = brigadeType,
             overtimeByDay = overtimeByDay
-        ) + coveredDeficitMinutes
-        if (summary.yearsOfService > 0) {
-            val minuliRate = summary.yearsOfService * config.minuliRadPerYear
-            val seniorityBase = summary.seniorityEligibleWorkMinutes.toDouble() /
-                MINUTES_PER_HOUR *
-                baseRate
-            summary.minuliRadBonus = seniorityBase * minuliRate
-        }
+        )
+        summary.seniorityBreakdown = calculateSeniorityBreakdown(
+            baseHourlyGross = baseRate,
+            regularWorkedBaseMinutes = workBaseMinutes.regularWorkedBaseMinutes + coveredDeficitMinutes,
+            publicHolidayWorkedBaseMinutes = workBaseMinutes.publicHolidayWorkedBaseMinutes,
+            overtimeBaseMinutes = workBaseMinutes.overtimeBaseMinutes,
+            completedYearsOfService = yearsOfService
+        )
+        summary.yearsOfService = summary.completedYearsOfService
+        summary.seniorityEligibleWorkMinutes = summary.seniorityEligibleMinutes
+        summary.minuliRadBonus = summary.seniorityBreakdown.grossSeniorityBonus
 
         return summary
     }
 
-    private fun calculateSeniorityEligibleWorkMinutes(
+    private fun calculateMonthlyWorkBaseMinutes(
         records: List<DayRecord>,
         brigadeType: BrigadeType,
         overtimeByDay: Map<DayKey, Int>
-    ): Int {
-        return records.sumOf { record ->
-            seniorityEligibleWorkMinutes(
+    ): WorkBaseMinuteCategories {
+        return records.fold(WorkBaseMinuteCategories()) { total, record ->
+            total + workBaseMinuteCategories(
                 record = record,
                 brigadeType = brigadeType,
                 monthlyOvertimeMinutes = monthlyOvertimeMinutesForRecord(
@@ -812,23 +848,98 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         }
     }
 
-    private fun seniorityEligibleWorkMinutes(
+    private fun workBaseMinuteCategories(
         record: DayRecord,
         brigadeType: BrigadeType,
         monthlyOvertimeMinutes: Int?
-    ): Int {
-        if (record.shift !in Shift.workShifts()) return 0
-        val paidWorkMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
-        if (paidWorkMinutes <= 0) return 0
+    ): WorkBaseMinuteCategories {
+        return classifiedWorkSegments(record, brigadeType, monthlyOvertimeMinutes)
+            .fold(WorkBaseMinuteCategories()) { total, segment ->
+                when {
+                    segment.isOvertime -> total.copy(
+                        overtimeBaseMinutes = total.overtimeBaseMinutes + segment.minutes
+                    )
+                    record.workedOnHoliday -> total.copy(
+                        publicHolidayWorkedBaseMinutes =
+                            total.publicHolidayWorkedBaseMinutes + segment.minutes
+                    )
+                    else -> total.copy(
+                        regularWorkedBaseMinutes = total.regularWorkedBaseMinutes + segment.minutes
+                    )
+                }
+            }
+    }
 
-        val overtimeMinutes = when {
-            record.workedOnHoliday -> 0
-            monthlyOvertimeMinutes != null -> monthlyOvertimeMinutes.coerceIn(0, paidWorkMinutes)
-            brigadeType == BrigadeType.CETVOROBRIGADA -> 0
-            isAutomaticWeekendOvertime(record, brigadeType) -> paidWorkMinutes
-            else -> (paidWorkMinutes - config.defaultHours * MINUTES_PER_HOUR).coerceAtLeast(0)
+    private fun classifiedWorkSegments(
+        record: DayRecord,
+        brigadeType: BrigadeType,
+        monthlyOvertimeMinutes: Int?
+    ): List<ClassifiedWorkSegment> {
+        val shiftsData = paidWorkMinuteSegments(record)
+        if (shiftsData.isEmpty()) return emptyList()
+        if (isAutomaticWeekendOvertime(record, brigadeType)) {
+            return shiftsData.map { (shift, minutes) ->
+                ClassifiedWorkSegment(
+                    shift = shift,
+                    minutes = minutes,
+                    isOvertime = true,
+                    sundayMinutes = getSundayMinutesForShift(record.weekday, shift, minutes, brigadeType)
+                )
+            }
         }
-        return (paidWorkMinutes - overtimeMinutes).coerceAtLeast(0)
+
+        val paidWorkMinutes = shiftsData.sumOf { (_, minutes) -> minutes }
+        val forcedOvertimeMinutes = if (record.workedOnHoliday) {
+            0
+        } else {
+            monthlyOvertimeMinutes?.coerceIn(0, paidWorkMinutes)
+        }
+        var regularMinutesRemaining = when {
+            forcedOvertimeMinutes != null -> paidWorkMinutes - forcedOvertimeMinutes
+            brigadeType == BrigadeType.CETVOROBRIGADA -> paidWorkMinutes
+            else -> config.defaultHours * MINUTES_PER_HOUR
+        }
+        return buildList {
+            for ((shift, shiftMinutes) in shiftsData) {
+                val regularMinutes = min(shiftMinutes, regularMinutesRemaining)
+                val overtimeMinutes = shiftMinutes - regularMinutes
+                regularMinutesRemaining -= regularMinutes
+                val (sundayRegular, sundayOvertime) = splitSundayMinutes(
+                    weekday = record.weekday,
+                    shift = shift,
+                    regularMinutes = regularMinutes,
+                    overtimeMinutes = overtimeMinutes,
+                    brigadeType = brigadeType
+                )
+                if (regularMinutes > 0) {
+                    add(ClassifiedWorkSegment(shift, regularMinutes, false, sundayRegular))
+                }
+                if (overtimeMinutes > 0) {
+                    add(ClassifiedWorkSegment(shift, overtimeMinutes, true, sundayOvertime))
+                }
+            }
+        }
+    }
+
+    private data class ClassifiedWorkSegment(
+        val shift: Shift,
+        val minutes: Int,
+        val isOvertime: Boolean,
+        val sundayMinutes: Int
+    )
+
+    private data class WorkBaseMinuteCategories(
+        val regularWorkedBaseMinutes: Int = 0,
+        val publicHolidayWorkedBaseMinutes: Int = 0,
+        val overtimeBaseMinutes: Int = 0
+    ) {
+        operator fun plus(other: WorkBaseMinuteCategories): WorkBaseMinuteCategories {
+            return WorkBaseMinuteCategories(
+                regularWorkedBaseMinutes + other.regularWorkedBaseMinutes,
+                publicHolidayWorkedBaseMinutes + other.publicHolidayWorkedBaseMinutes,
+                overtimeBaseMinutes + other.overtimeBaseMinutes
+            )
+        }
     }
 
     /**

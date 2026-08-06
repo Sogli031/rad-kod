@@ -23,12 +23,15 @@ import com.rad.shifttracker.sanitizeAnnualLeaveYears
 import com.rad.shifttracker.sanitizeMonthlyGrossAddition
 import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
 import com.rad.shifttracker.sanitizeMonthlyGrossOverrideOrNull
+import com.rad.shifttracker.sanitizeMonthlyGrossPenalty
 import com.rad.shifttracker.sanitizeMonthlySignedAdjustment
 import com.rad.shifttracker.sanitizeMonthlyNetAdjustment
 import com.rad.shifttracker.sanitizePayBaseOrNull
 import com.rad.shifttracker.sanitizeUnionDuesRate
+import com.rad.shifttracker.toMealMoney
 import org.json.JSONArray
 import org.json.JSONObject
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.TreeMap
@@ -38,9 +41,10 @@ private const val MEAL_GROSS_KEY = "meal_gross"
 private const val REGRESS_GROSS_KEY = "regress_gross"
 private const val BONUS_GROSS_KEY = "bonus_gross"
 private const val MEAL_SPENT_NET_KEY = "meal_spent_net"
-private const val AUTOMATIC_MEAL_SPENT_NET_KEY = "automatic_meal_spent_net"
+private const val MEAL_ENTITLEMENT_NET_OVERRIDE_KEY = "meal_entitlement_net_override"
 private const val MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY = "meal_settlement_adjustment_net"
 private const val BONUS_NET_KEY = "bonus_net"
+private const val ABSENCE_PENALTY_GROSS_KEY = "absence_penalty_gross"
 
 internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
 
@@ -57,6 +61,9 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         data[PAY_COEFFICIENT_KEY] = snapshot.payCoefficient
         if (snapshot.hourlyValueChanges.isNotEmpty()) {
             data[HOURLY_VALUE_CHANGES_KEY] = buildHourlyValueChangesMapUnsafe(snapshot)
+        }
+        if (snapshot.foodPerDayChanges.isNotEmpty()) {
+            data[FOOD_PER_DAY_CHANGES_KEY] = buildFoodPerDayChangesMapUnsafe(snapshot)
         }
         data[SICK_PAY_BASE_HOURLY_KEY] = snapshot.sickPayBaseHourly
         data[DEFAULT_PAY_BASE_SELECTION_MODE_KEY] = snapshot.defaultPayBaseSelectionMode.name
@@ -220,6 +227,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         )
         val parsedMonthlyNetAdjustments = parseMonthlyNetAdjustments(json.optJSONObject(MONTHLY_NET_ADJUSTMENTS_KEY))
         val parsedHourlyValueChanges = parseHourlyValueChanges(json.optJSONObject(HOURLY_VALUE_CHANGES_KEY))
+        val parsedFoodPerDayChanges = parseFoodPerDayChanges(json.optJSONObject(FOOD_PER_DAY_CHANGES_KEY))
 
         val parsedDeletedMonths = parseDeletedMonths(json.optJSONArray(DELETED_MONTHS_KEY))
 
@@ -258,6 +266,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             sickPayBaseHourly = parsedSickPayBaseHourly,
             defaultPayBaseSelectionMode = parsedDefaultPayBaseSelectionMode,
             hourlyValueChanges = parsedHourlyValueChanges,
+            foodPerDayChanges = parsedFoodPerDayChanges,
             employeeContributionsPercent = parsedEmployeeContributionsPercent,
             taxRelief = parsedTaxRelief,
             taxPercent = parsedTaxPercent,
@@ -625,6 +634,42 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         return parsed
     }
 
+    private fun buildFoodPerDayChangesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
+        val root = TreeMap<String, TreeMap<String, Any>>()
+        for ((key, value) in snapshot.foodPerDayChanges.toSortedMap()) {
+            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
+            yearMap["%02d".format(key.month)] = TreeMap<String, Any>().apply {
+                put(FOOD_PER_DAY_VALUE_KEY, value)
+            }
+        }
+        return TreeMap(root)
+    }
+
+    private fun parseFoodPerDayChanges(root: JSONObject?): Map<MonthKey, Double> {
+        if (root == null) return emptyMap()
+        val parsed = mutableMapOf<MonthKey, Double>()
+        val yearKeys = root.keys()
+        while (yearKeys.hasNext()) {
+            val yearKey = yearKeys.next()
+            val year = yearKey.toIntOrNull() ?: continue
+            if (year < 1900 || year > 2200) continue
+            val monthsObj = root.optJSONObject(yearKey) ?: continue
+            val monthKeys = monthsObj.keys()
+            while (monthKeys.hasNext()) {
+                val monthKey = monthKeys.next()
+                val month = monthKey.toIntOrNull() ?: continue
+                if (month !in 1..12) continue
+                val value = monthsObj.optJSONObject(monthKey)
+                    ?.optDouble(FOOD_PER_DAY_VALUE_KEY, Double.NaN)
+                    ?: continue
+                if (value.isFinite() && value >= 0.0) {
+                    parsed[MonthKey(year, month)] = value.coerceAtMost(10_000.0)
+                }
+            }
+        }
+        return parsed
+    }
+
     private data class ParsedAnnualLeaveCalculation(
         val input: AnnualLeaveCalculationInput?,
         val lastCalculatedDays: Int
@@ -636,6 +681,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val PAY_COEFFICIENT_KEY = "pay_coefficient"
         const val HOURLY_VALUE_CHANGES_KEY = "hourly_value_changes"
         const val HOURLY_VALUE_KEY = "hourly_value"
+        const val FOOD_PER_DAY_CHANGES_KEY = "food_per_day_changes"
+        const val FOOD_PER_DAY_VALUE_KEY = "food_per_day"
         const val SICK_PAY_BASE_HOURLY_KEY = "config_sick_pay_base_hourly"
         const val DEFAULT_PAY_BASE_SELECTION_MODE_KEY = "default_pay_base_selection_mode"
         const val KNOWN_PAY_BASE_MONTH_KEY = "known_pay_base_month"
@@ -753,8 +800,11 @@ private fun buildMonthlyGrossAdditionsMapUnsafe(snapshot: ShiftRepositorySnapsho
         if (sanitized.regressGross > 0.0) monthData[REGRESS_GROSS_KEY] = sanitized.regressGross
         if (sanitized.bonusGross > 0.0) monthData[BONUS_GROSS_KEY] = sanitized.bonusGross
         sanitized.mealSpentNet?.let { monthData[MEAL_SPENT_NET_KEY] = it }
-        sanitized.automaticMealSpentNet?.let { monthData[AUTOMATIC_MEAL_SPENT_NET_KEY] = it }
+        sanitized.mealEntitlementNetOverride?.let { monthData[MEAL_ENTITLEMENT_NET_OVERRIDE_KEY] = it }
         if (sanitized.bonusNet > 0.0) monthData[BONUS_NET_KEY] = sanitized.bonusNet
+        if (sanitized.absencePenaltyGross.signum() > 0) {
+            monthData[ABSENCE_PENALTY_GROSS_KEY] = sanitized.absencePenaltyGross
+        }
         monthData.putIfNonZero(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY, sanitized.mealSettlementAdjustmentNet)
         if (monthData.isNotEmpty()) {
             yearMap["%02d".format(key.month)] = monthData
@@ -788,7 +838,8 @@ private fun parseMonthlyGrossAdditions(root: JSONObject?): Map<MonthKey, Monthly
                 mealSpentNet = data.optMonthlyNetDeductionOrNull(MEAL_SPENT_NET_KEY),
                 bonusNet = data.optMonthlyGrossAddition(BONUS_NET_KEY),
                 mealSettlementAdjustmentNet = data.optMonthlySignedAdjustment(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY),
-                automaticMealSpentNet = data.optMonthlyNetDeductionOrNull(AUTOMATIC_MEAL_SPENT_NET_KEY)
+                absencePenaltyGross = data.optMonthlyGrossPenalty(ABSENCE_PENALTY_GROSS_KEY),
+                mealEntitlementNetOverride = data.optMonthlyMoneyOrNull(MEAL_ENTITLEMENT_NET_OVERRIDE_KEY)
             ).sanitizeMonthlyGrossAdditions(year, month)
             if (additions.hasAny) {
                 parsed[MonthKey(year, month)] = additions
@@ -796,6 +847,16 @@ private fun parseMonthlyGrossAdditions(root: JSONObject?): Map<MonthKey, Monthly
         }
     }
     return parsed
+}
+
+private fun JSONObject.optMonthlyGrossPenalty(key: String): BigDecimal {
+    if (!has(key)) return BigDecimal.ZERO
+    return optString(key).toBigDecimalOrNull()?.sanitizeMonthlyGrossPenalty() ?: BigDecimal.ZERO
+}
+
+private fun JSONObject.optMonthlyMoneyOrNull(key: String): BigDecimal? {
+    if (!has(key) || isNull(key)) return null
+    return optString(key).toBigDecimalOrNull()?.takeIf { it.signum() >= 0 }?.toMealMoney()
 }
 
 private fun JSONObject.optPositiveFiniteDoubleOrNull(key: String): Double? {

@@ -122,7 +122,6 @@ fun PayDetailsDialog(
                         formatHoursAndMinutes(payDetails.totalPaidMinutes)
                     )
                     CompactInfoRowIf(summary.workDays > 0, "Radni dani", summary.workDays.toString())
-                    CompactMoneyRowIf(payBreakdown.mealAllowanceNet > 0.0, "Hrana pravo", payBreakdown.mealAllowanceNet, THEME.success)
                     if (payBreakdown.unionDuesNet > 0.0) {
                         CompactInfoRow(
                             UNION_DUES_SECTION_LABEL,

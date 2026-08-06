@@ -36,17 +36,66 @@ internal fun grossAdditionsBreakdownMap(
         "totalGrossAdditions" to payBreakdown.grossAdditionsTotal,
         "grossUpNetRetentionRate" to grossUpNetRetentionRate(contributionsPercent, taxPercent),
         "grossUpFormulaDescription" to
-            "mealGrossApplied = mealSpentNetApplied / grossUpNetRetentionRate"
+            "mealEntitlementGross = payrollRound(mealEntitlementNet / grossUpNetRetentionRate)"
     )
 }
 
 internal fun mealBreakdownMap(payBreakdown: MonthlyNetPayBreakdown): Map<String, Any?> {
+    val entitlement = payBreakdown.mealEntitlementCalculation
     return linkedMapOf(
+        "mealCalculationMode" to payBreakdown.mealCalculationMode,
+        "mealEntitlementSource" to payBreakdown.mealEntitlementSource.name,
+        "mealEntitlementNetOverride" to payBreakdown.mealEntitlementNetOverride,
+        "mealEntitlementNetApplied" to payBreakdown.mealEntitlementNetApplied,
+        "mealPricePeriods" to entitlement.pricePeriods.map(::mealPricePeriodMap),
+        "recognizedMealCount" to entitlement.recognizedMealCount,
+        "recognizedMealDates" to entitlement.recognizedMeals.map(::recognizedMealMap),
+        "estimatedRecognizedMealCount" to payBreakdown.estimatedRecognizedMealCount,
+        "estimatedMealEntitlementNet" to payBreakdown.estimatedMealEntitlementNet,
+        "estimateAffectsPayroll" to payBreakdown.estimateAffectsPayroll,
+        "rejectedMealDatesAndReasons" to entitlement.rejectedMeals.map(::rejectedMealMap),
+        "mealPriceNetPerMeal" to entitlement.mealPriceNetPerMeal,
+        "mealEntitlementNet" to payBreakdown.mealEntitlementNet,
+        "mealEntitlementGross" to payBreakdown.mealEntitlementGross,
+        "mealSpentNetEntered" to payBreakdown.manualMealSpentNet,
         "mealSpentNetApplied" to payBreakdown.mealSpentNetApplied,
-        "mealSpentSource" to payBreakdown.mealSpentSource.name,
-        "mealGrossApplied" to payBreakdown.mealGrossApplied,
-        "mealGrossSource" to payBreakdown.mealGrossSource.name,
-        "mealNetDeduction" to payBreakdown.mealNetDeduction
+        "mealNetDeduction" to payBreakdown.mealNetDeduction,
+        "mealUnusedNet" to payBreakdown.mealUnusedNet,
+        "mealSpendingDefaultedToEntitlement" to payBreakdown.mealSpendingDefaultedToEntitlement,
+        "mealGrossSource" to payBreakdown.mealGrossSource.name
+    )
+}
+
+internal fun mealPricePeriodMap(period: MealPricePeriod): Map<String, Any?> = linkedMapOf(
+    "validFrom" to period.validFrom.toString(),
+    "netAmountPerMeal" to period.netAmountPerMeal
+)
+
+private fun recognizedMealMap(decision: RecognizedMealDecision): Map<String, Any?> = linkedMapOf(
+    "date" to decision.accountingDate.toString(),
+    "workDate" to decision.workDate.toString(),
+    "mealCount" to decision.mealCount,
+    "reasons" to decision.reasons,
+    "netAmountPerMeal" to decision.netAmountPerMeal,
+    "entitlementNet" to decision.entitlementNet
+)
+
+private fun rejectedMealMap(decision: RejectedMealDecision): Map<String, Any?> = linkedMapOf(
+    "date" to decision.accountingDate.toString(),
+    "workDate" to decision.workDate?.toString(),
+    "reason" to decision.reason
+)
+
+internal fun grossNegativeAdjustmentsBreakdownMap(
+    payBreakdown: MonthlyNetPayBreakdown
+): Map<String, Any?> {
+    return linkedMapOf(
+        "absencePenaltyGross" to payBreakdown.absencePenaltyGross,
+        "absencePenaltyLabel" to "Izostanci 1",
+        "totalGrossNegativeAdjustments" to payBreakdown.grossNegativeAdjustmentsTotal,
+        "formulaDescription" to
+            "grossTotal = grossEarningsBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal - " +
+                "absencePenaltyGross"
     )
 }
 
@@ -68,23 +117,65 @@ internal fun netDeductionsBreakdownMap(
     )
 }
 
+internal fun seniorityBreakdownMap(
+    summary: MonthSummary,
+    payBreakdown: MonthlyNetPayBreakdown
+): Map<String, Any?> {
+    val breakdown = summary.seniorityBreakdown
+    return linkedMapOf(
+        "baseHourlyGross" to breakdown.baseHourlyGross,
+        "regularWorkedBaseMinutes" to breakdown.regularWorkedBaseMinutes,
+        "regularWorkedBaseGross" to breakdown.regularWorkedBaseGross,
+        "publicHolidayWorkedBaseMinutes" to breakdown.publicHolidayWorkedBaseMinutes,
+        "publicHolidayWorkedBaseGross" to breakdown.publicHolidayWorkedBaseGross,
+        "overtimeBaseMinutes" to breakdown.overtimeBaseMinutes,
+        "overtimeBaseGross" to breakdown.overtimeBaseGross,
+        "seniorityEligibleMinutes" to breakdown.seniorityEligibleMinutes,
+        "seniorityEligibleBaseGross" to breakdown.seniorityEligibleBaseGross,
+        "completedYearsOfService" to breakdown.completedYearsOfService,
+        "seniorityRatePerYear" to breakdown.seniorityRatePerYear,
+        "seniorityTotalRate" to breakdown.seniorityTotalRate,
+        "grossSeniorityBonus" to breakdown.grossSeniorityBonus,
+        "netSeniorityBonus" to payBreakdown.netSeniorityBonus,
+        "publicHolidayBaseIncludedInRegular" to breakdown.publicHolidayBaseIncludedInRegular,
+        "includedCategories" to breakdown.includedCategories,
+        "excludedCategories" to breakdown.excludedCategories
+    )
+}
+
 internal fun auditFormulasMap(
     repo: ShiftRepository,
     target: MonthKey
 ): Map<String, Any?> {
     return linkedMapOf(
         "baseHourlyGrossFormula" to "baseHourlyGross = hourlyValue * payCoefficient",
-        "regularWorkGrossFormula" to "grossBaseRegular = paidWorkMinutes / 60 * baseHourlyGross",
+        "regularWorkGrossFormula" to
+            "regularWorkedBaseGross = regularWorkedBaseMinutes / 60 * baseHourlyGross",
+        "publicHolidayWorkedBaseGrossFormula" to
+            "publicHolidayWorkedBaseGross = publicHolidayWorkedBaseMinutes / 60 * baseHourlyGross",
+        "overtimeBaseGrossFormula" to
+            "overtimeBaseGross = overtimeBaseMinutes / 60 * baseHourlyGross",
         "nightWorkBonusFormula" to "grossNightPremium = nightMinutes / 60 * baseHourlyGross * (shift3Premium - 1)",
         "overtimeBonusFormula" to "grossOvertimePremium = overtimeMinutes / 60 * baseHourlyGross * (overtimePremium - 1)",
         "holidayWorkBonusFormula" to "grossHolidayPremium = holidayWorkMinutes / 60 * baseHourlyGross * holidayBonus",
-        "seniorityEligibleMinutesFormula" to
-            "seniorityEligibleWorkMinutes = paidWorkMinutes - overtimeMinutes + coveredDeficitMinutes",
+        "paidLeaveFormula" to
+            "grossPaidLeave = paidLeaveMinutes / 60 * paidLeaveHourlyAverageBase * 1.00",
+        "seniorityEligibleBaseGrossFormula" to
+            "seniorityEligibleBaseGross = sum(base gross amounts of seniority-eligible actual work categories)",
         "seniorityBonusFormula" to
-            "grossSeniorityBonus = seniorityEligibleWorkMinutes / 60 * baseHourlyGross * " +
-                "yearsOfService * minuliRadPerYear",
+            "grossSeniorityBonus = seniorityEligibleBaseGross * completedYearsOfService * " +
+                "seniorityRatePerYear",
         "grossTotalFormula" to
-            "grossTotal = grossBaseBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal",
+            "grossTotal = grossEarningsBeforeSeniority + grossSeniorityBonus + grossAdditionsTotal - " +
+                "absencePenaltyGross",
+        "mealAppliedFormula" to
+            "mealSpentNetApplied = mealSpentNetEntered when entered, otherwise maximum automatic estimate; " +
+                "without a confirmed override mealEntitlementNetApplied equals mealSpentNetApplied",
+        "mealGrossFormula" to
+            "mealEntitlementGross = grossUp(mealEntitlementNetApplied)",
+        "mealDeductionFormula" to "mealNetDeduction = mealSpentNetApplied",
+        "absencePenaltyFormula" to
+            "absencePenaltyGross is subtracted before employee contributions and tax; it changes no minutes",
         "employeeContributionsFormula" to "employeeContributions = grossTotal * employeeContributionsRate",
         "taxableBaseFormula" to "taxableBase = max(0, grossTotal - taxRelief)",
         "taxFormula" to "tax = taxableBase * taxRate",
@@ -141,9 +232,10 @@ internal fun auditChecksMap(
         warnings += "Net deductions total does not match netDeductionsBreakdown for ${monthYearText(target)}."
     }
 
-    val grossTotalParts = payBreakdown.grossBaseBeforeSeniority +
+    val grossTotalParts = payBreakdown.grossEarningsBeforeSeniority +
         payBreakdown.grossSeniorityBonus +
-        payBreakdown.grossAdditionsTotal
+        payBreakdown.grossAdditionsTotal -
+        payBreakdown.absencePenaltyGross.toDouble()
     val grossTotalMatchesParts = moneyMatches(payBreakdown.grossTotal, grossTotalParts)
     if (!grossTotalMatchesParts) {
         warnings += "Gross total does not match base, seniority, and additions for ${monthYearText(target)}."

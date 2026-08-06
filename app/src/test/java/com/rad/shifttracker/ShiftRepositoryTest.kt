@@ -108,8 +108,10 @@ class ShiftRepositoryTest {
 
     private fun resolvedKnownCalculation(year: Int, month: Int): RollingPayBaseCalculation {
         val resolved = repo.getResolvedPayBases(year, month)
-        assertEquals(PayBaseSource.KNOWN_BASE, resolved.sickHourlyBase.source)
-        return resolved.sickHourlyBase.calculation!!
+        assertEquals(PayBaseSource.KNOWN_BASE, resolved.vacationHourlyBase.source)
+        // Osnovica bolovanja se namerno ne vezuje za poznatu osnovicu.
+        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        return resolved.vacationHourlyBase.calculation!!
     }
 
     // ============= Osnovne CRUD operacije =============
@@ -480,21 +482,17 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `poznata automatska nula ostaje razlicita od nepostojeceg podatka kroz backup`() {
+    fun `prazan unos potrosnje kroz backup ostaje podrazumevano celo pravo`() {
         repo.foodPerDayValue = 280.0
         repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyAutomaticFoodSpentNet(2026, 6, 0.0)
 
         val restored = ShiftRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
-        val additions = restored.getMonthlyGrossAdditions(2026, 6)
         val automaticZero = restored.getNetPayBreakdown(2026, 6)
-        assertEquals(0.0, additions.automaticMealSpentNet ?: Double.NaN, 0.001)
-        assertEquals(MealSpentSource.AUTOMATIC, automaticZero.mealSpentSource)
-        assertEquals(0.0, automaticZero.mealSpentNetApplied, 0.001)
+        assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, automaticZero.mealSpentSource)
+        assertEquals(280.0, automaticZero.mealSpentNetApplied, 0.001)
 
-        restored.setMonthlyAutomaticFoodSpentNet(2026, 6, null)
         val absent = restored.getNetPayBreakdown(2026, 6)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, absent.mealSpentSource)
         assertTrue(absent.mealSpentNetApplied > 0.0)
@@ -731,9 +729,9 @@ class ShiftRepositoryTest {
         val food = repo.getMonthlyFoodSpendingBreakdown(2026, 4)
         val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 5)
 
-        assertEquals(300.0, food.foodAllowanceNet, 0.01)
+        assertEquals(450.0, food.foodAllowanceNet, 0.01)
         assertEquals(450.0, food.actualFoodSpentNet ?: 0.0, 0.01)
-        assertEquals(150.0, food.foodOverageNet, 0.01)
+        assertEquals(0.0, food.foodOverageNet, 0.01)
         assertEquals(0.0, food.unusedFoodNet, 0.01)
         assertEquals(0.0, finalPayment.deductionsNet, 0.01)
         assertEquals(0.0, finalPayment.loanDeductionNet, 0.01)
@@ -751,7 +749,7 @@ class ShiftRepositoryTest {
         val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 5)
 
         assertEquals(0.0, food.foodOverageNet, 0.01)
-        assertEquals(50.0, food.unusedFoodNet, 0.01)
+        assertEquals(0.0, food.unusedFoodNet, 0.01)
         assertEquals(0.0, finalPayment.deductionsNet, 0.01)
         assertEquals(receipt.salaryNetPay, finalPayment.finalRemainingNetPay, 0.01)
     }
@@ -767,10 +765,72 @@ class ShiftRepositoryTest {
         val juneFood = repo.getMonthlyFoodSpendingBreakdown(2026, 6)
 
         assertEquals(MonthKey(2026, 6), juneFood.month)
-        assertEquals(300.0, juneFood.foodAllowanceNet, 0.01)
+        assertEquals(450.0, juneFood.foodAllowanceNet, 0.01)
         assertEquals(450.0, juneFood.actualFoodSpentNet ?: 0.0, 0.01)
-        assertEquals(150.0, juneFood.foodOverageNet, 0.01)
+        assertEquals(0.0, juneFood.foodOverageNet, 0.01)
         assertEquals(0.0, juneFood.unusedFoodNet, 0.01)
+    }
+
+    @Test
+    fun `junski neto unos se cuva sa potvrđenim istorijskim pravom`() {
+        repo.foodPerDayValue = 280.0
+        repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+
+        val additions = restored.getMonthlyGrossAdditions(2026, 6)
+        val breakdown = restored.getNetPayBreakdown(2026, 6)
+        assertEquals(3_620.0, additions.mealSpentNet ?: 0.0, 0.01)
+        assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, breakdown.mealCalculationMode)
+        assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
+        assertEquals(3_840.0, breakdown.mealEntitlementNet, 0.01)
+        assertEquals(5_478.0, breakdown.mealGrossApplied, 0.01)
+        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(3_620.0, breakdown.mealNetDeduction, 0.01)
+    }
+
+    @Test
+    fun `cuvanje neto toplog obroka odmah osvezava obracun isplatu i konacni iznos`() {
+        repo.foodPerDayValue = 5_880.0
+        repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
+        val automatic = repo.getNetPayBreakdown(2026, 6)
+        assertEquals(8_388.0, automatic.mealGrossApplied, 0.01)
+
+        var changeCount = 0
+        val token = repo.onChange { changeCount += 1 }
+        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
+        repo.removeOnChange(token)
+
+        val recalculated = repo.getNetPayBreakdown(2026, 6)
+        val julyReceipt = repo.getMonthlyReceipt(2026, 7)
+        val julyFinalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 7)
+        assertEquals(1, changeCount)
+        assertEquals(3_840.0, recalculated.mealEntitlementNet, 0.01)
+        assertEquals(5_478.0, recalculated.mealGrossApplied, 0.01)
+        assertEquals(3_620.0, recalculated.mealNetDeduction, 0.01)
+        assertEquals(220.0, recalculated.mealUnusedNet, 0.01)
+        assertEquals(recalculated.displayPay, julyReceipt.salaryNetPay, 0.01)
+        assertEquals(julyReceipt.salaryNetPay, julyFinalPayment.netPayBeforeAdvance, 0.01)
+        assertEquals(julyReceipt.salaryNetPay, julyFinalPayment.finalRemainingNetPay, 0.01)
+    }
+
+    @Test
+    fun `nova dnevna cena toplog obroka ne menja prethodne mesece`() {
+        repo.foodPerDayValue = 200.0
+        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
+
+        repo.setFoodPerDayFromMonth(2026, 6, 280.0)
+
+        assertEquals(200.0, repo.getSummary(2026, 5).foodAllowance, 0.01)
+        assertEquals(280.0, repo.getSummary(2026, 6).foodAllowance, 0.01)
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(repo.exportJson()))
+        assertEquals(200.0, restored.getSummary(2026, 5).foodAllowance, 0.01)
+        assertEquals(280.0, restored.getSummary(2026, 6).foodAllowance, 0.01)
     }
 
     @Test
@@ -1565,7 +1625,8 @@ class ShiftRepositoryTest {
         assertNull(repo.getMonthlyPayBases(2026, 5))
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
     }
 
     @Test
@@ -1751,11 +1812,11 @@ class ShiftRepositoryTest {
     @Test
     fun `promena poznate osnovice odmah menja naredni obracun`() {
         prepareKnownBaseMayScenario()
-        val before = repo.getResolvedPayBases(2026, 5).sickHourlyBase.value
+        val before = repo.getResolvedPayBases(2026, 5).vacationHourlyBase.value
 
         repo.setKnownPayBaseAnchor(2026, 1, 1_050.0)
 
-        val after = repo.getResolvedPayBases(2026, 5).sickHourlyBase.value
+        val after = repo.getResolvedPayBases(2026, 5).vacationHourlyBase.value
         assertTrue(after > before)
     }
 
@@ -1862,7 +1923,7 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `rolling pay base month excludes compensation hours and configurable meal regress by default`() {
+    fun `rolling pay base month includes compensation hours meal and regress by default`() {
         repo.basePayValue = 1_000.0
         repo.foodPerDayValue = 0.0
         repo.employeeContributionsPercentValue = 0.0
@@ -1899,10 +1960,29 @@ class ShiftRepositoryTest {
         assertTrue(details.grossPaidHoliday > 0.0)
         assertTrue(details.grossVacationPay > 0.0)
         assertTrue(details.grossSickPay > 0.0)
-        assertTrue(details.grossMealAddition > 0.0)
+        assertEquals(10_000.0, details.grossMealAddition, 0.01)
         assertTrue(details.grossRegressAddition > 0.0)
-        assertEquals(details.paidWorkHours, may.hoursForAverage)
-        assertEquals(expectedGross, may.grossForAverage, 0.01)
+        // Prosek prati listić: i naknade i obrok i regres ulaze u bruto, a
+        // časovi naknada u imenilac (05/2026: 950,58 din/h).
+        val expectedCompensationHours = details.sickHours +
+            details.paidLeaveHours +
+            details.vacationHours +
+            details.paidHolidayHours +
+            details.coveredDeficitHours
+        assertEquals(details.paidWorkHours + expectedCompensationHours, may.hoursForAverage)
+        assertTrue(may.includedCompensationGross > 0.0)
+        assertEquals(details.grossMealAddition, may.includedMealAllowanceGross, 0.01)
+        assertEquals(20_000.0, may.includedRegressGross, 0.01)
+        assertEquals(
+            expectedGross +
+                may.includedCompensationGross +
+                may.includedMealAllowanceGross +
+                may.includedRegressGross,
+            may.grossForAverage,
+            0.01
+        )
+        assertEquals(0.0, may.excludedCompensationGross, 0.01)
+        assertEquals(0, may.excludedCompensationHours)
     }
 
     @Test
@@ -1964,7 +2044,7 @@ class ShiftRepositoryTest {
     @Test
     fun `meal allowance and regress are explicit pay base average options`() {
         repo.basePayValue = 1_000.0
-        repo.foodPerDayValue = 0.0
+        repo.foodPerDayValue = 280.0
         repo.employeeContributionsPercentValue = 0.0
         repo.taxReliefValue = 0.0
         repo.taxPercentValue = 0.0
@@ -1982,21 +2062,26 @@ class ShiftRepositoryTest {
         val details = repo.getMonthlyPayDetails(2026, 5)
 
         val defaultMonth = calculatePayBaseMonthForAverage(2026, 5, details)
-        val includedMonth = calculatePayBaseMonthForAverage(
+        val excludedMonth = calculatePayBaseMonthForAverage(
             year = 2026,
             month = 5,
             details = details,
             options = PayBaseAverageOptions(
-                includeMealAllowanceInAverage = true,
-                includeRegressInAverage = true
+                includeMealAllowanceInAverage = false,
+                includeRegressInAverage = false
             )
         )
 
-        assertEquals(0.0, defaultMonth.includedMealAllowanceGross, 0.01)
-        assertEquals(0.0, defaultMonth.includedRegressGross, 0.01)
-        assertEquals(10_000.0, includedMonth.includedMealAllowanceGross, 0.01)
-        assertEquals(20_000.0, includedMonth.includedRegressGross, 0.01)
-        assertEquals(defaultMonth.grossForAverage + 30_000.0, includedMonth.grossForAverage, 0.01)
+        assertTrue(details.grossMealAddition > 0.0)
+        assertEquals(details.grossMealAddition, defaultMonth.includedMealAllowanceGross, 0.01)
+        assertEquals(20_000.0, defaultMonth.includedRegressGross, 0.01)
+        assertEquals(0.0, excludedMonth.includedMealAllowanceGross, 0.01)
+        assertEquals(0.0, excludedMonth.includedRegressGross, 0.01)
+        assertEquals(
+            excludedMonth.grossForAverage + details.grossMealAddition + 20_000.0,
+            defaultMonth.grossForAverage,
+            0.01
+        )
     }
 
     @Test
@@ -2333,7 +2418,7 @@ class ShiftRepositoryTest {
         assertEquals(PayBaseSource.DEFAULT, resolved.vacationHourlyBase.source)
         assertEquals(918.81, resolved.paidHolidayHourlyBase.value, 0.01)
         assertEquals(PayBaseSource.DEFAULT, resolved.paidHolidayHourlyBase.source)
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(950.75, resolved.sickHourlyBase.value, 0.01)
         assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
         assertTrue(imported)
         assertEquals(PayBaseSelectionMode.DEFAULT_VALUES, repo2.getMonthlyPayBases(2026, 5)!!.selectionMode)
@@ -2357,7 +2442,8 @@ class ShiftRepositoryTest {
 
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
         assertNotNull(resolved.vacationHourlyBase.calculation)
         assertEquals(12, resolved.vacationHourlyBase.calculation!!.months.size)
     }
@@ -2372,7 +2458,8 @@ class ShiftRepositoryTest {
         assertNull(repo.getMonthlyPayBases(2026, 5))
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
+        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
         assertNotNull(resolved.vacationHourlyBase.calculation)
     }
 
@@ -2428,11 +2515,6 @@ class ShiftRepositoryTest {
     fun `cached calculated summary ignores previous twelve month net addition for gross pay base`() {
         repo.basePayValue = 1_000.0
         populateCompletePreviousTwelveMonths(2026, 5)
-        repo.setMonthlyGrossAdditions(
-            year = 2026,
-            month = 4,
-            additions = MonthlyGrossAdditions(year = 2026, month = 4, bonusNet = 1_000.0)
-        )
         repo.set(2026, 5, 11, Shift.VACATION, 8, holidayOverride = false)
         repo.setMonthlyPayBases(
             year = 2026,
@@ -2445,7 +2527,12 @@ class ShiftRepositoryTest {
         )
         val before = repo.getSummary(2026, 5).totalPay
 
-        repo.taxPercentValue = 20.0
+        // Neto dodatak ne sme da uđe u bruto osnovicu proseka.
+        repo.setMonthlyGrossAdditions(
+            year = 2026,
+            month = 4,
+            additions = MonthlyGrossAdditions(year = 2026, month = 4, bonusNet = 1_000.0)
+        )
 
         val after = repo.getSummary(2026, 5).totalPay
         assertEquals(before, after, 0.01)
@@ -2568,7 +2655,7 @@ class ShiftRepositoryTest {
         val grossDailyPay = repo.calculateDailyPay(record)
 
         assertEquals(8_000.0, grossDailyPay, 0.01)
-        assertEquals(5_608.0, repo.calculateEstimatedDailyNetPay(record), 0.01)
+        assertEquals(5_607.74, repo.calculateEstimatedDailyNetPay(record), 0.01)
     }
 
     @Test
@@ -2869,8 +2956,8 @@ class ShiftRepositoryTest {
         val record = repo.get(2026, 6, 4)!!
 
         assertEquals(280.0, repo.getSummary(2026, 6).minuliRadBonus, 0.01)
-        assertEquals(8_679.43, repo.calculateEstimatedDailyGrossPay(record), 0.01)
-        assertEquals(5_804.28, repo.calculateEstimatedDailyNetPay(record), 0.01)
+        assertEquals(8_622.0, repo.calculateEstimatedDailyGrossPay(record), 0.01)
+        assertEquals(5_804.02, repo.calculateEstimatedDailyNetPay(record), 0.01)
     }
 
     @Test
@@ -3644,8 +3731,8 @@ class ShiftRepositoryTest {
         val offRecord = repo.get(2026, 6, 6)
 
         assertNotNull(paidRecord)
-        assertEquals(8_400.0, repo.calculateEstimatedDailyGrossPay(paidRecord!!), 0.01)
-        assertEquals(5_600.0, repo.calculateEstimatedDailyNetPay(paidRecord), 0.01)
+        assertEquals(8_343.0, repo.calculateEstimatedDailyGrossPay(paidRecord!!), 0.01)
+        assertEquals(5_600.10, repo.calculateEstimatedDailyNetPay(paidRecord), 0.01)
         assertNull(offRecord)
     }
 

@@ -56,10 +56,13 @@ internal fun MainDialogs(
         }
 
         DialogState.PayDetails,
+        DialogState.SalaryDetails,
         DialogState.WorkHours -> MainPayrollDialog(state, data, onDismiss)
 
         DialogState.Food -> {
             FoodAllowanceDialog(
+                year = data.currentYear,
+                month = data.currentMonth,
                 repo = data.repo,
                 onDismiss = onDismiss
             )
@@ -169,6 +172,20 @@ private fun MainPayrollDialog(
             )
         }
 
+        DialogState.SalaryDetails -> {
+            PayDetailsDialog(
+                summary = data.workHoursSummary,
+                payBreakdown = data.workHoursPayBreakdown,
+                monthlyReceipt = data.salaryDetailsReceipt,
+                monthlyFinalPaymentBreakdown = data.salaryDetailsFinalPaymentBreakdown,
+                payDetails = data.workHoursPayDetails,
+                annualNetPayAverages = data.salaryDetailsAnnualNetPayAverages,
+                recentNetPayAverage = data.salaryDetailsRecentNetPayAverage,
+                repo = data.repo,
+                onDismiss = onDismiss
+            )
+        }
+
         DialogState.WorkHours -> {
             WorkHoursDialog(
                 summary = data.workHoursSummary,
@@ -194,6 +211,10 @@ private fun MainOptionsDialog(
         onCloudClick = { data.onDialogChange(DialogState.CloudBackup) },
         onMonthlyExportClick = {
             data.onMonthlyExportClick()
+            data.onDialogChange(DialogState.None)
+        },
+        onDebugExportClick = {
+            data.onDebugExportClick()
             data.onDialogChange(DialogState.None)
         },
         onHolidaysClick = { data.onDialogChange(DialogState.Holidays) },
@@ -237,6 +258,10 @@ internal data class MainDialogData(
     val workHoursMonth: MonthKey,
     val workHoursPayDetails: MonthlyPayDetails,
     val workHoursOvertimeNetImpact: MonthlyOvertimeNetImpact,
+    val salaryDetailsReceipt: MonthlyReceipt,
+    val salaryDetailsFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
+    val salaryDetailsAnnualNetPayAverages: AnnualNetPayAverages,
+    val salaryDetailsRecentNetPayAverage: RecentNetPayAverage,
     val monthlyReceipt: MonthlyReceipt,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
@@ -247,6 +272,7 @@ internal data class MainDialogData(
     val foodReceiptReminderStatus: FoodReceiptReminderScheduleStatus,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
     val onMonthlyExportClick: () -> Unit,
+    val onDebugExportClick: () -> Unit,
     val onFoodReceiptReminderToggle: (Boolean) -> Unit,
     val onBloodDonationDateSaved: () -> Unit,
     val onBloodDonationHistoryChanged: () -> Unit,

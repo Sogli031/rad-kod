@@ -48,6 +48,15 @@ internal class RepositoryPayBaseResolver(
     private val getCompBalanceMinutesAtMonthStartReadOnly: (Int, Int) -> Int,
     private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int
 ) {
+    /**
+     * Podešena osnovica za bolovanje. Na listiću je to zasebna kategorija koja ne
+     * prati prosek za GO/praznik, pa se primenjuje i kada su ostale osnovice
+     * izračunate iz proseka ili poznate osnovice.
+     */
+    private val configuredSickHourlyBase: Double
+        get() = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
+            ?: config.pay.sickPayBaseHourly
+
     fun payBaseResolutionMonthForWorkMonth(year: Int, month: Int): MonthKey {
         val workMonth = MonthKey(year, month)
         val exactKnownAnchorApplies = payState.defaultPayBaseSelectionMode == PayBaseSelectionMode.KNOWN_BASE &&
@@ -77,8 +86,6 @@ internal class RepositoryPayBaseResolver(
             PayBaseSelectionMode.MANUAL,
             PayBaseSelectionMode.DEFAULT_VALUES -> null
         }
-        val manualDefault = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
-            ?: config.pay.sickPayBaseHourly
         val payBaseDefaults = when (selectedMode) {
             PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
             PayBaseSelectionMode.KNOWN_BASE,
@@ -88,9 +95,9 @@ internal class RepositoryPayBaseResolver(
                 sickHourlyBase = config.pay.sickPayBaseHourly
             )
             PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                vacationHourlyBase = manualDefault,
-                paidHolidayHourlyBase = manualDefault,
-                sickHourlyBase = manualDefault
+                vacationHourlyBase = configuredSickHourlyBase,
+                paidHolidayHourlyBase = configuredSickHourlyBase,
+                sickHourlyBase = configuredSickHourlyBase
             )
         }
         return resolvePayBasesForMonth(
@@ -99,7 +106,8 @@ internal class RepositoryPayBaseResolver(
             monthlyBases = payState.monthlyPayBases,
             defaults = payBaseDefaults,
             calculatedBase = calculatedBase,
-            defaultSelectionMode = payState.defaultPayBaseSelectionMode
+            defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+            sickBaseOverride = configuredSickHourlyBase
         )
     }
 
@@ -121,8 +129,6 @@ internal class RepositoryPayBaseResolver(
             PayBaseSelectionMode.MANUAL,
             PayBaseSelectionMode.DEFAULT_VALUES -> null
         }
-        val manualDefault = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
-            ?: config.pay.sickPayBaseHourly
         val payBaseDefaults = when (selectedMode) {
             PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
             PayBaseSelectionMode.KNOWN_BASE,
@@ -132,9 +138,9 @@ internal class RepositoryPayBaseResolver(
                 sickHourlyBase = config.pay.sickPayBaseHourly
             )
             PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                vacationHourlyBase = manualDefault,
-                paidHolidayHourlyBase = manualDefault,
-                sickHourlyBase = manualDefault
+                vacationHourlyBase = configuredSickHourlyBase,
+                paidHolidayHourlyBase = configuredSickHourlyBase,
+                sickHourlyBase = configuredSickHourlyBase
             )
         }
         return resolvePayBasesForMonth(
@@ -143,7 +149,8 @@ internal class RepositoryPayBaseResolver(
             monthlyBases = payState.monthlyPayBases,
             defaults = payBaseDefaults,
             calculatedBase = calculatedBase,
-            defaultSelectionMode = payState.defaultPayBaseSelectionMode
+            defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+            sickBaseOverride = configuredSickHourlyBase
         )
     }
 
@@ -210,8 +217,6 @@ internal class RepositoryPayBaseResolver(
                 payState.monthlyPayBases[payBaseSourceMonth],
                 payState.defaultPayBaseSelectionMode
             )
-            val manualDefault = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
-                ?: config.pay.sickPayBaseHourly
             val payBaseDefaults = when (selectedMode) {
                 PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
                 PayBaseSelectionMode.KNOWN_BASE,
@@ -221,9 +226,9 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 )
                 PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                    vacationHourlyBase = manualDefault,
-                    paidHolidayHourlyBase = manualDefault,
-                    sickHourlyBase = manualDefault
+                    vacationHourlyBase = configuredSickHourlyBase,
+                    paidHolidayHourlyBase = configuredSickHourlyBase,
+                    sickHourlyBase = configuredSickHourlyBase
                 )
             }
             val payBases = resolvePayBasesForMonth(
@@ -232,7 +237,8 @@ internal class RepositoryPayBaseResolver(
                 monthlyBases = payState.monthlyPayBases,
                 defaults = payBaseDefaults,
                 calculatedBase = null,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+                sickBaseOverride = configuredSickHourlyBase
             )
             rollingMonths += calculatePayBaseMonthUnsafe(
                 monthKey = monthKey,
@@ -265,8 +271,6 @@ internal class RepositoryPayBaseResolver(
                 payState.monthlyPayBases[payBaseSourceMonth],
                 payState.defaultPayBaseSelectionMode
             )
-            val manualDefault = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
-                ?: config.pay.sickPayBaseHourly
             val payBaseDefaults = when (selectedMode) {
                 PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
                 PayBaseSelectionMode.KNOWN_BASE,
@@ -276,9 +280,9 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 )
                 PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                    vacationHourlyBase = manualDefault,
-                    paidHolidayHourlyBase = manualDefault,
-                    sickHourlyBase = manualDefault
+                    vacationHourlyBase = configuredSickHourlyBase,
+                    paidHolidayHourlyBase = configuredSickHourlyBase,
+                    sickHourlyBase = configuredSickHourlyBase
                 )
             }
             val payBases = resolvePayBasesForMonth(
@@ -287,7 +291,8 @@ internal class RepositoryPayBaseResolver(
                 monthlyBases = payState.monthlyPayBases,
                 defaults = payBaseDefaults,
                 calculatedBase = null,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+                sickBaseOverride = configuredSickHourlyBase
             )
             rollingMonths += calculatePayBaseMonthReadOnly(
                 monthKey = monthKey,
@@ -342,7 +347,8 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 ),
                 calculatedBase = previousCalculation,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+                sickBaseOverride = configuredSickHourlyBase
             )
             followingMonths += calculatePayBaseMonthUnsafe(
                 monthKey = monthKey,
@@ -402,7 +408,8 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 ),
                 calculatedBase = previousCalculation,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
+                sickBaseOverride = configuredSickHourlyBase
             )
             followingMonths += calculatePayBaseMonthReadOnly(
                 monthKey = monthKey,

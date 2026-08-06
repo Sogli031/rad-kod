@@ -1,10 +1,12 @@
 package com.rad.shifttracker
 
 import org.json.JSONObject
+import org.json.JSONTokener
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -14,6 +16,33 @@ class MonthlyWorkAndPayExportTest {
     fun `file name follows selected work month`() {
         assertEquals("rad_obracun_2026_02.json", monthlyWorkAndPayExportFileName(2026, 2))
         assertEquals("rad_obracun_2026_05.json", monthlyWorkAndPayExportFileName(2026, 5))
+    }
+
+    @Test
+    fun `export is exactly one JSON object with no trailing data`() {
+        val json = ShiftRepository().exportSelectedMonthWorkAndPayJson(
+            selectedYear = 2026,
+            selectedMonth = 5,
+            appName = "Rad",
+            appVersion = "1.4",
+            exportTimestamp = "2026-07-20T20:00:00Z"
+        )
+        val tokener = JSONTokener(json)
+
+        assertTrue(tokener.nextValue() is JSONObject)
+        assertEquals(0.toChar(), tokener.nextClean())
+    }
+
+    @Test
+    fun `document export explicitly truncates an existing file`() {
+        val screenSource = listOf(
+            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt")
+        ).first { it.exists() }.readText()
+
+        assertEquals("wt", MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE)
+        assertTrue(screenSource.contains("MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE"))
+        assertTrue(!screenSource.contains("openOutputStream(uri)"))
     }
 
     @Test
@@ -62,10 +91,11 @@ class MonthlyWorkAndPayExportTest {
         repo.set(2026, 5, 5, Shift.SICK, 8, sickPayRate = 1.0, holidayOverride = false)
 
         val resolved = repo.getResolvedPayBasesForWorkMonth(2026, 5)
-        assertEquals(950.58, resolved.sickHourlyBase.value, 0.001)
-        assertEquals(PayBaseSource.KNOWN_BASE, resolved.sickHourlyBase.source)
-        assertEquals(2026, resolved.sickHourlyBase.sourceYear)
-        assertEquals(5, resolved.sickHourlyBase.sourceMonth)
+        // Bolovanje ima svoju osnovicu i ne prati poznatu osnovicu za GO/praznik.
+        assertEquals(918.81, resolved.sickHourlyBase.value, 0.001)
+        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        assertEquals(2026, resolved.vacationHourlyBase.sourceYear)
+        assertEquals(5, resolved.vacationHourlyBase.sourceMonth)
         assertEquals(950.58, resolved.vacationHourlyBase.value, 0.001)
         assertEquals(PayBaseSource.KNOWN_BASE, resolved.vacationHourlyBase.source)
         assertEquals(950.58, resolved.paidHolidayHourlyBase.value, 0.001)
@@ -77,13 +107,13 @@ class MonthlyWorkAndPayExportTest {
         val settingsSickBase = settingsResolved.getJSONObject("sickHourlyBase")
         assertEquals(2026, settings.getInt("payBaseSourceYear"))
         assertEquals(5, settings.getInt("payBaseSourceMonth"))
-        assertEquals(950.58, settingsSickBase.getDouble("value"), 0.001)
-        assertEquals("KNOWN_BASE", settingsSickBase.getString("source"))
+        assertEquals(918.81, settingsSickBase.getDouble("value"), 0.001)
+        assertEquals("DEFAULT", settingsSickBase.getString("source"))
 
         val raw = json.getJSONObject("rawCalculationDebug")
         assertEquals(2026, raw.getInt("selectedYear"))
         assertEquals(5, raw.getInt("selectedMonth"))
-        assertEquals(950.58, raw.getDouble("sickPayBaseHourly"), 0.001)
+        assertEquals(918.81, raw.getDouble("sickPayBaseHourly"), 0.001)
         val resolution = raw.getJSONObject("payBaseResolution")
         assertEquals("KNOWN_BASE", resolution.getString("sourceUsed"))
         assertTrue(resolution.getBoolean("knownPayBaseAnchorFound"))
@@ -99,7 +129,7 @@ class MonthlyWorkAndPayExportTest {
 
         val payDetails = json.getJSONObject("monthlySummary").getJSONObject("payDetails")
         assertEquals(16, payDetails.getInt("sickHours"))
-        assertEquals(15_209.28, payDetails.getDouble("grossSickPay"), 0.01)
+        assertEquals(14_700.96, payDetails.getDouble("grossSickPay"), 0.01)
     }
 
     @Test
@@ -188,12 +218,24 @@ class MonthlyWorkAndPayExportTest {
         assertTrue(
             json.getJSONObject("auditFormulas")
                 .getString("seniorityBonusFormula")
-                .contains("seniorityEligibleWorkMinutes")
+                .contains("seniorityEligibleBaseGross")
         )
         assertTrue(
             json.getJSONObject("auditFormulas")
-                .getString("seniorityEligibleMinutesFormula")
-                .contains("coveredDeficitMinutes")
+                .getString("seniorityEligibleBaseGrossFormula")
+                .contains("seniority-eligible actual work categories")
+        )
+        assertFalse(json.getJSONObject("auditFormulas").has("seniorityEligibleMinutesFormula"))
+        val seniority = json.getJSONObject("seniorityBreakdown")
+        assertEquals(780, seniority.getInt("publicHolidayWorkedBaseMinutes"))
+        assertEquals(360, seniority.getInt("regularWorkedBaseMinutes"))
+        assertEquals(360, seniority.getInt("overtimeBaseMinutes"))
+        assertEquals(1_140, seniority.getInt("seniorityEligibleMinutes"))
+        assertEquals(
+            seniority.getDouble("regularWorkedBaseGross") +
+                seniority.getDouble("publicHolidayWorkedBaseGross"),
+            seniority.getDouble("seniorityEligibleBaseGross"),
+            0.001
         )
     }
 
@@ -269,11 +311,11 @@ class MonthlyWorkAndPayExportTest {
         val monthlySummary = json.getJSONObject("monthlySummary")
         val breakdown = json.getJSONObject("grossAdditionsBreakdown")
         assertEquals("AUTO_FROM_NET", breakdown.getString("mealGrossSource"))
-        assertEquals(8_388.02, breakdown.getDouble("mealGrossApplied"), 0.01)
+        assertEquals(8_388.0, breakdown.getDouble("mealGrossApplied"), 0.01)
         assertEquals(28_530.67, breakdown.getDouble("regressGross"), 0.01)
         assertEquals(0.0, breakdown.getDouble("bonusGross"), 0.01)
         assertEquals(0.0, breakdown.getDouble("otherGrossAdditions"), 0.01)
-        assertEquals(36_918.69, breakdown.getDouble("totalGrossAdditions"), 0.01)
+        assertEquals(36_918.67, breakdown.getDouble("totalGrossAdditions"), 0.01)
         assertEquals(monthlySummary.getDouble("grossAdditionsTotal"), breakdown.getDouble("totalGrossAdditions"), 0.01)
         assertEquals(0.701, breakdown.getDouble("grossUpNetRetentionRate"), 0.0001)
         assertTrue(breakdown.getString("grossUpFormulaDescription").contains("grossUpNetRetentionRate"))
@@ -320,14 +362,18 @@ class MonthlyWorkAndPayExportTest {
     }
 
     @Test
-    fun `junski eksport cuva samo aktivne audit vrednosti toplog obroka`() {
-        val repo = auditRepo(foodPerDay = 280.0)
+    fun `junski eksport cuva automatsko pravo i rucnu potrosnju odvojeno`() {
+        val repo = ShiftRepository().apply {
+            employeeContributionsPercentValue = 19.9
+            taxReliefValue = 34_221.0
+            taxPercentValue = 10.0
+        }
         val workDays = (1..YearMonth.of(2026, 6).lengthOfMonth())
             .filter { day ->
                 val dayOfWeek = LocalDate.of(2026, 6, day).dayOfWeek
                 dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY
             }
-            .take(21)
+            .take(16)
         workDays.forEach { day ->
             repo.set(2026, 6, day, Shift.FIRST, 8, holidayOverride = false)
         }
@@ -339,7 +385,8 @@ class MonthlyWorkAndPayExportTest {
                 month = 6,
                 mealGross = 5_478.0,
                 mealSpentNet = 3_620.0,
-                mealSettlementAdjustmentNet = 220.0
+                mealSettlementAdjustmentNet = 220.0,
+                mealEntitlementNetOverride = BigDecimal("3840.00")
             )
         )
 
@@ -350,23 +397,41 @@ class MonthlyWorkAndPayExportTest {
         val grossBreakdown = json.getJSONObject("grossAdditionsBreakdown")
         val mealBreakdown = json.getJSONObject("mealBreakdown")
         val netBreakdown = json.getJSONObject("netDeductionsBreakdown")
+        val rawDebug = json.getJSONObject("rawCalculationDebug")
 
-        assertEquals(5_880.0, monthlySummary.getDouble("foodAllowance"), 0.01)
+        assertEquals(3_840.0, monthlySummary.getDouble("foodAllowance"), 0.01)
         assertFalse(settingsAdditions.has("mealGross"))
         assertFalse(settingsAdditions.has("mealGrossPresent"))
-        assertFalse(settingsAdditions.has("mealSpentNet"))
+        assertEquals(3_840.0, settingsAdditions.getDouble("mealEntitlementNetOverride"), 0.01)
+        assertEquals(3_620.0, settingsAdditions.getDouble("mealSpentNet"), 0.01)
         assertFalse(settingsAdditions.has("mealSettlementAdjustmentNet"))
         assertEquals("AUTO_FROM_NET", grossBreakdown.getString("mealGrossSource"))
-        assertEquals(3_620.0 / 0.701, grossBreakdown.getDouble("mealGrossApplied"), 0.0001)
+        assertEquals(5_478.0, grossBreakdown.getDouble("mealGrossApplied"), 0.01)
         assertEquals(3_620.0, netBreakdown.getDouble("mealNetDeduction"), 0.01)
         assertEquals(3_620.0, monthlySummary.getDouble("netDeductionsTotal"), 0.01)
         assertEquals(3_620.0, netBreakdown.getDouble("totalNetDeductions"), 0.01)
-        assertEquals(5, mealBreakdown.length())
+        assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, mealBreakdown.getString("mealCalculationMode"))
+        assertEquals("CONFIRMED_MONTHLY_OVERRIDE", mealBreakdown.getString("mealEntitlementSource"))
+        assertEquals(3_840.0, mealBreakdown.getDouble("mealEntitlementNetOverride"), 0.01)
+        assertEquals(3_840.0, mealBreakdown.getDouble("mealEntitlementNetApplied"), 0.01)
+        assertEquals(16, mealBreakdown.getInt("recognizedMealCount"))
+        assertEquals(16, mealBreakdown.getInt("estimatedRecognizedMealCount"))
+        assertEquals(3_840.0, mealBreakdown.getDouble("estimatedMealEntitlementNet"), 0.01)
+        assertFalse(mealBreakdown.getBoolean("estimateAffectsPayroll"))
+        assertEquals(240.0, mealBreakdown.getDouble("mealPriceNetPerMeal"), 0.01)
+        assertEquals(3_840.0, mealBreakdown.getDouble("mealEntitlementNet"), 0.01)
         assertEquals(3_620.0, mealBreakdown.getDouble("mealSpentNetApplied"), 0.01)
-        assertEquals("MANUAL", mealBreakdown.getString("mealSpentSource"))
-        assertEquals(3_620.0 / 0.701, mealBreakdown.getDouble("mealGrossApplied"), 0.0001)
+        assertEquals(5_478.0, mealBreakdown.getDouble("mealEntitlementGross"), 0.01)
         assertEquals("AUTO_FROM_NET", mealBreakdown.getString("mealGrossSource"))
         assertEquals(3_620.0, mealBreakdown.getDouble("mealNetDeduction"), 0.01)
+        assertEquals(220.0, mealBreakdown.getDouble("mealUnusedNet"), 0.01)
+        assertFalse(mealBreakdown.getBoolean("mealSpendingDefaultedToEntitlement"))
+        assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, rawDebug.getString("mealCalculationMode"))
+        assertEquals("CONFIRMED_MONTHLY_OVERRIDE", rawDebug.getString("mealEntitlementSource"))
+        assertEquals(3_840.0, rawDebug.getDouble("mealEntitlementNet"), 0.01)
+        assertEquals(5_478.0, rawDebug.getDouble("mealEntitlementGross"), 0.01)
+        assertEquals(3_620.0, rawDebug.getDouble("mealNetDeduction"), 0.01)
+        assertEquals(220.0, rawDebug.getDouble("mealUnusedNet"), 0.01)
         assertFalse(mealBreakdown.has("mealGrossOverride"))
         assertFalse(mealBreakdown.has("mealGrossOverridePresent"))
         assertFalse(mealBreakdown.has("mealSettlementAdjustmentNet"))

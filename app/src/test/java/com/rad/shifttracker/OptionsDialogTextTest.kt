@@ -14,6 +14,7 @@ class OptionsDialogTextTest {
             listOf(
                 "Google cloud",
                 "Export rada i obračuna za izabrani mesec",
+                "Debug export za ChatGPT – svi meseci",
                 "Praznici",
                 "Pristup obaveštenjima"
             ),

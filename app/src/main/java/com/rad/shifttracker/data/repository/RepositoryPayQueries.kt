@@ -19,6 +19,7 @@ import com.rad.shifttracker.RollingPayBaseCalculation
 import com.rad.shifttracker.Shift
 import com.rad.shifttracker.calculateAnnualNetPayAverages
 import com.rad.shifttracker.calculateMonthlyFundHours
+import com.rad.shifttracker.calculateMealEntitlementForAccountingMonth
 import com.rad.shifttracker.calculateMonthlyNetPayBreakdown
 import com.rad.shifttracker.calculateMonthlyReceipt
 import com.rad.shifttracker.calculateRecentNetPayAverage
@@ -85,6 +86,21 @@ internal class RepositoryPayQueries(
         return calc
     }
 
+    private fun getSummaryCalculatorForMonth(month: MonthKey): PayCalculator {
+        val historicalFoodPerDay = payState.foodPerDayForMonth(month)
+        return if (historicalFoodPerDay == payState.foodPerDay) {
+            getSummaryCalculator()
+        } else {
+            PayCalculator(
+                config.pay.copy(
+                    foodPerDay = historicalFoodPerDay,
+                    sickPayBaseHourly = payState.sickPayBaseHourly,
+                    difficultWorkConditionsPercent = payState.difficultWorkConditionsPercent
+                )
+            )
+        }
+    }
+
     fun grossHourlyRateUnsafe(year: Int, month: Int): Double {
         return grossHourlyRateForMonth(payState.payCoefficient, year, month, payState.hourlyValueChanges)
     }
@@ -125,7 +141,7 @@ internal class RepositoryPayQueries(
         grossHourlyRate: Double
     ): MonthSummary {
         val monthKey = MonthKey(year, month)
-        val calculator = getSummaryCalculator()
+        val calculator = getSummaryCalculatorForMonth(monthKey)
         val summary = calculator.calculateMonthSummary(
             records = monthRecords,
             baseRate = grossHourlyRate,
@@ -137,10 +153,14 @@ internal class RepositoryPayQueries(
             summaryMonth = month,
             payBases = payBaseResolver.resolvedPayBasesForWorkMonth(year, month)
         )
-        summary.foodAllowance = calculator.calculateFoodAllowanceForAccountingMonth(
+        val mealEntitlement = calculateMealEntitlementForAccountingMonth(
             records = foodAccountingCandidateRecords(year, month, monthRecords),
-            month = monthKey
+            month = monthKey,
+            pricePeriods = payState.mealPricePeriods(),
+            defaultWorkHours = config.pay.defaultHours
         )
+        summary.mealEntitlementCalculation = mealEntitlement
+        summary.foodAllowance = mealEntitlement.mealEntitlementNet.toDouble()
         return summary
     }
 
@@ -234,7 +254,12 @@ internal class RepositoryPayQueries(
         includeGrossAdditions: Boolean
     ): MonthlyNetPayBreakdown {
         val summary = calculateMonthSummaryUnsafe(record.year, record.month, monthRecords)
-            .let { if (includeFoodAllowance) it else it.copy(foodAllowance = 0.0) }
+            .let {
+                if (includeFoodAllowance) it else it.copy(
+                    foodAllowance = 0.0,
+                    mealEntitlementCalculation = null
+                )
+            }
         return calculateMonthlyNetPayBreakdownUnsafe(
             year = record.year,
             month = record.month,
@@ -279,7 +304,7 @@ internal class RepositoryPayQueries(
         taxRelief: Double,
         taxPercent: Double
     ): MonthlyNetPayBreakdown {
-        val summary = getSummaryCalculator().calculateMonthSummary(
+        val summary = getSummaryCalculatorForMonth(MonthKey(year, month)).calculateMonthSummary(
             monthRecords,
             grossHourlyRate,
             getCompBalanceAtMonthStartUnsafe(year, month),

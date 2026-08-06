@@ -7,6 +7,8 @@ data class MonthSummary(
     var workMinutes: Int = 0,
     var overtimeHours: Int = 0,
     var sickHours: Int = 0,
+    var paidLeaveHours: Int = 0,
+    var paidLeaveMinutes: Int = 0,
     var vacationHours: Int = 0,
     var sundayHours: Int = 0,
     var nightHours: Int = 0,
@@ -14,6 +16,7 @@ data class MonthSummary(
     var workDays: Int = 0,
     var doubleShiftDays: Int = 0,
     var foodAllowance: Double = 0.0,
+    var mealEntitlementCalculation: MealEntitlementCalculation? = null,
     var compTimeEarned: Int = 0,
     var compTimeDeficit: Int = 0,
     var compTimeUsed: Int = 0,
@@ -26,10 +29,13 @@ data class MonthSummary(
     var compTimeNetMinutes: Int = 0,
     var compTimeStartingMinutes: Int = 0,
     var compTimeEndingMinutes: Int = 0,
+    var coveredDeficitMinutes: Int = 0,
+    var uncoveredDeficitMinutes: Int = 0,
     var yearsOfService: Int = 0,
     var seniorityEligibleWorkMinutes: Int = 0,
     var minuliRadBonus: Double = 0.0,
-    var difficultWorkConditionsBonus: Double = 0.0
+    var difficultWorkConditionsBonus: Double = 0.0,
+    var seniorityBreakdown: SeniorityBreakdown = SeniorityBreakdown.empty()
 ) {
     val totalWithMinuli: Double
         get() = totalPay + minuliRadBonus
@@ -40,4 +46,39 @@ data class MonthSummary(
         } else {
             "Mesec $month $year"
         }
+
+    val baseHourlyGross: Double
+        get() = seniorityBreakdown.baseHourlyGross
+    val regularWorkedBaseMinutes: Int
+        get() = seniorityBreakdown.regularWorkedBaseMinutes
+    val regularWorkedBaseGross: Double
+        get() = seniorityBreakdown.regularWorkedBaseGross
+    val publicHolidayWorkedBaseMinutes: Int
+        get() = seniorityBreakdown.publicHolidayWorkedBaseMinutes
+    val publicHolidayWorkedBaseGross: Double
+        get() = seniorityBreakdown.publicHolidayWorkedBaseGross
+    val overtimeBaseMinutes: Int
+        get() = seniorityBreakdown.overtimeBaseMinutes
+    val overtimeBaseGross: Double
+        get() = seniorityBreakdown.overtimeBaseGross
+    val seniorityEligibleMinutes: Int
+        get() = seniorityBreakdown.seniorityEligibleMinutes
+    val seniorityEligibleBaseGross: Double
+        get() = seniorityBreakdown.seniorityEligibleBaseGross
+    val completedYearsOfService: Int
+        get() = seniorityBreakdown.completedYearsOfService
+    val seniorityRatePerYear: Double
+        get() = seniorityBreakdown.seniorityRatePerYear
+    val seniorityTotalRate: Double
+        get() = seniorityBreakdown.seniorityTotalRate
+    val paidOvertimeHours: Int
+        get() = overtimeHours
+    val paidOvertimeMinutes: Int
+        get() = overtimeHours * 60
+    val compTimeEarnedHours: Int
+        get() = compTimeEarnedMinutes / 60
+    val regularOrCoveredPaidMinutes: Int
+        get() = regularWorkedBaseMinutes
+    val regularOrCoveredPaidHours: Int
+        get() = regularOrCoveredPaidMinutes / 60
 }

@@ -21,13 +21,14 @@ internal const val FINAL_PAYMENT_LOAN_DEDUCTION_LABEL = "Kredit"
 internal const val FINAL_PAYMENT_FOOD_OVERAGE_LABEL = "Hrana prekoračeno"
 internal const val MANUAL_ENTRY_BADGE_TEXT = "ručno uneto"
 internal const val FOOD_NOT_OVERAGE_TEXT = "Hrana nije prekoračena"
-internal const val FOOD_ALLOWANCE_STATUS_LABEL = "Pravo na topli obrok"
 internal const val FOOD_ACTUAL_SPENT_STATUS_LABEL = "Potrošeno"
-internal const val FOOD_UNUSED_LABEL = "Neiskorišćeno"
+internal const val ACTUAL_FOOD_SPENT_INPUT_LABEL = "Potrošeni topli obrok — neto"
 internal const val FOOD_NET_DEDUCTION_EXPLANATION_TEXT = "Od neto plate se odbija primenjena potrošnja"
 internal const val MEAL_SPENT_ASSUMED_HELP_TEXT =
-    "Nije uneta stvarna potrošnja — procena računa da je iskorišćeno celo pravo."
+    "Nije unet iznos — maksimalna automatska procena koristi se kao potrošnja, bez viška u plati."
 internal const val MEAL_SPENT_MANUAL_HELP_TEXT = "Koristi se ručno uneta stvarna potrošnja."
+internal const val MEAL_SAFE_DEFAULT_STATUS_TEXT =
+    "Pravo je izjednačeno sa unetom potrošnjom."
 internal const val FINAL_PAYMENT_UNAVAILABLE_TEXT =
     "Nije moguće izračunati konačnu isplatu jer mesečna plata nije izračunata."
 internal const val FINAL_PAYMENT_ADVANCE_WARNING_TEXT = "Akontacija je veća od obračunate neto plate."
@@ -97,7 +98,6 @@ data class MonthlyFoodSpendingBreakdown(
     val month: MonthKey,
     val foodAllowanceNet: Double,
     val manualFoodSpentNet: Double?,
-    val automaticFoodSpentNet: Double?,
     val foodSpentNetApplied: Double,
     val foodSpentSource: MealSpentSource,
     val foodDifferenceNet: Double,
@@ -210,27 +210,19 @@ internal fun calculateMonthlyFoodSpendingBreakdown(
     month: MonthKey,
     foodAllowanceNet: Double,
     manualFoodSpentNet: Double?,
-    automaticFoodSpentNet: Double? = null
+    confirmedEntitlementNetOverride: Double? = null
 ): MonthlyFoodSpendingBreakdown {
-    val safeAllowance = foodAllowanceNet.sanitizeMonthlyNetAdjustment()
+    val estimatedAllowance = foodAllowanceNet.sanitizeMonthlyNetAdjustment()
     val safeManual = manualFoodSpentNet.sanitizeMonthlyNetOverrideOrNull()
-    val safeAutomatic = automaticFoodSpentNet.sanitizeMonthlyNetOverrideOrNull()
-    val source = when {
-        safeManual != null -> MealSpentSource.MANUAL
-        safeAutomatic != null -> MealSpentSource.AUTOMATIC
-        else -> MealSpentSource.ENTITLEMENT_ASSUMED
-    }
-    val applied = when (source) {
-        MealSpentSource.MANUAL -> safeManual ?: 0.0
-        MealSpentSource.AUTOMATIC -> safeAutomatic ?: 0.0
-        MealSpentSource.ENTITLEMENT_ASSUMED -> safeAllowance
-    }
-    val difference = safeAllowance - applied
+    val confirmedEntitlement = confirmedEntitlementNetOverride.sanitizeMonthlyNetOverrideOrNull()
+    val source = if (safeManual != null) MealSpentSource.MANUAL else MealSpentSource.ENTITLEMENT_ASSUMED
+    val applied = safeManual ?: confirmedEntitlement ?: estimatedAllowance
+    val appliedEntitlement = confirmedEntitlement ?: applied
+    val difference = appliedEntitlement - applied
     return MonthlyFoodSpendingBreakdown(
         month = month,
-        foodAllowanceNet = safeAllowance,
+        foodAllowanceNet = appliedEntitlement,
         manualFoodSpentNet = safeManual,
-        automaticFoodSpentNet = safeAutomatic,
         foodSpentNetApplied = applied,
         foodSpentSource = source,
         foodDifferenceNet = difference,
@@ -239,15 +231,9 @@ internal fun calculateMonthlyFoodSpendingBreakdown(
     )
 }
 
-internal fun actualFoodSpentInputLabel(month: MonthKey): String {
-    return "Potrošeni topli obrok — neto (${monthYearText(month)})"
-}
-
 internal fun mealSpentSupportingText(food: MonthlyFoodSpendingBreakdown): String {
     return when (food.foodSpentSource) {
         MealSpentSource.MANUAL -> MEAL_SPENT_MANUAL_HELP_TEXT
-        MealSpentSource.AUTOMATIC ->
-            "Automatski evidentirano: ${formatMoney2(food.foodSpentNetApplied)} ${CONFIG.pay.currency}"
         MealSpentSource.ENTITLEMENT_ASSUMED -> MEAL_SPENT_ASSUMED_HELP_TEXT
     }
 }

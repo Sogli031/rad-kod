@@ -26,6 +26,7 @@ internal fun OptionsDialog(
     repo: ShiftRepository,
     onCloudClick: () -> Unit,
     onMonthlyExportClick: () -> Unit,
+    onDebugExportClick: () -> Unit,
     onHolidaysClick: () -> Unit,
     onNotificationAccessClick: () -> Unit,
     foodReceiptReminderEnabled: Boolean,
@@ -71,6 +72,18 @@ internal fun OptionsDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
+                bgColor = THEME.accentSecondary,
+                textColor = THEME.textDark,
+                radius = 14.dp,
+                textStyle = MaterialTheme.typography.labelLarge,
+                bold = true,
+                onClick = onDebugExportClick
+            )
+            RoundedButton(
+                text = actions[3],
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
                 bgColor = THEME.danger,
                 textColor = THEME.textPrimary,
                 radius = 14.dp,
@@ -79,7 +92,7 @@ internal fun OptionsDialog(
                 onClick = onHolidaysClick
             )
             RoundedButton(
-                text = actions[3],
+                text = actions[4],
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -374,6 +387,7 @@ private fun FoodReceiptReminderSwitch(
 internal fun optionsDialogActionLabels(): List<String> = listOf(
     "Google cloud",
     "Export rada i obračuna za izabrani mesec",
+    "Debug export za ChatGPT – svi meseci",
     "Praznici",
     "Pristup obaveštenjima"
 )

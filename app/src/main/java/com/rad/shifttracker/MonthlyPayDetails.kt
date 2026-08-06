@@ -1,5 +1,7 @@
 package com.rad.shifttracker
 
+import java.math.BigDecimal
+
 data class MonthlyPayDetails(
     val totalPaidHours: Int,
     val paidWorkHours: Int,
@@ -7,17 +9,31 @@ data class MonthlyPayDetails(
     val overtimeHours: Int,
     val sundayHours: Int,
     val sickHours: Int,
+    val paidLeaveHours: Int,
     val vacationHours: Int,
     val paidHolidayHours: Int,
     val coveredDeficitHours: Int,
     val uncoveredDeficitHours: Int,
     val grossBaseRegular: Double,
+    val baseHourlyGross: Double,
+    val regularWorkedBaseMinutes: Int,
+    val regularWorkedBaseGross: Double,
+    val publicHolidayWorkedBaseMinutes: Int,
+    val publicHolidayWorkedBaseGross: Double,
+    val overtimeBaseMinutes: Int,
+    val overtimeBaseGross: Double,
+    val seniorityEligibleMinutes: Int,
+    val seniorityEligibleBaseGross: Double,
+    val completedYearsOfService: Int,
+    val seniorityRatePerYear: Double,
+    val seniorityTotalRate: Double,
     val grossNightPremium: Double,
     val grossOvertimePremium: Double,
     val grossSundayPremium: Double,
     val grossHolidayPremium: Double,
     val grossDifficultWorkConditions: Double,
     val grossSickPay: Double,
+    val grossPaidLeave: Double,
     val grossVacationPay: Double,
     val grossPaidHoliday: Double,
     val grossCoveredDeficitPay: Double,
@@ -25,12 +41,14 @@ data class MonthlyPayDetails(
     val grossOvertimeFull: Double,
     val grossSeniorityBonus: Double,
     val sickPayBaseHourly: Double,
+    val paidLeavePayBase: ResolvedPayBase,
     val vacationPayBase: ResolvedPayBase,
     val paidHolidayPayBase: ResolvedPayBase,
     val sickPayBase: ResolvedPayBase,
     val grossMealAddition: Double,
     val grossRegressAddition: Double,
     val grossBonusAddition: Double,
+    val absencePenaltyGross: BigDecimal,
     val grossTotalBeforeSeniority: Double,
     val grossTotalWithSeniority: Double,
     val netTotalBeforeSeniority: Double,
@@ -43,11 +61,33 @@ data class MonthlyPayDetails(
     val overtimeMinutes: Int = overtimeHours * 60,
     val sundayMinutes: Int = sundayHours * 60,
     val sickMinutes: Int = sickHours * 60,
+    val paidLeaveMinutes: Int = paidLeaveHours * 60,
     val vacationMinutes: Int = vacationHours * 60,
     val paidHolidayMinutes: Int = paidHolidayHours * 60,
     val coveredDeficitMinutes: Int = coveredDeficitHours * 60,
     val uncoveredDeficitMinutes: Int = uncoveredDeficitHours * 60
 ) {
+    val grossEarningsBeforeSeniority: Double
+        get() = grossTotalBeforeSeniority
+    val nightPremiumGross: Double
+        get() = roundMoneyHalfUp(grossNightPremium)
+    val overtimePremiumGross: Double
+        get() = roundMoneyHalfUp(grossOvertimePremium)
+    val sundayPremiumGross: Double
+        get() = roundMoneyHalfUp(grossSundayPremium)
+    val holidayPremiumGross: Double
+        get() = roundMoneyHalfUp(grossHolidayPremium)
+    val difficultConditionsPremiumGross: Double
+        get() = roundMoneyHalfUp(grossDifficultWorkConditions)
+    val paidOvertimeHours: Int
+        get() = overtimeHours
+    val paidOvertimeMinutes: Int
+        get() = overtimeMinutes
+    val regularOrCoveredPaidMinutes: Int
+        get() = regularWorkedBaseMinutes
+    val regularOrCoveredPaidHours: Int
+        get() = regularOrCoveredPaidMinutes / 60
+
     val netRatioBeforeSeniority: Double
         get() = if (grossTotalBeforeSeniority > 0.0) netTotalBeforeSeniority / grossTotalBeforeSeniority else 0.0
 }

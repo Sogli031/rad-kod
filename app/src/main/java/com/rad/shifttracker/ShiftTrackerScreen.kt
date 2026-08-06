@@ -56,6 +56,7 @@ internal sealed class DialogState {
     object SickVacation : DialogState()
     object BasePay : DialogState()
     object PayDetails : DialogState()
+    object SalaryDetails : DialogState()
     object WorkHours : DialogState()
     object OvertimeNetImpact : DialogState()
     object Food : DialogState()
@@ -81,12 +82,15 @@ private fun dialogStateSaver(recordForDay: (Int) -> DayRecord?): Saver<DialogSta
     restore = { saved -> dialogStateFromKey(saved, recordForDay) }
 )
 
+// Exhaustive one-to-one saver mapping intentionally has one branch per dialog state.
+@Suppress("CyclomaticComplexMethod")
 private fun dialogStateToKey(state: DialogState): String = when (state) {
     DialogState.None -> "None"
     DialogState.AutoFill -> "AutoFill"
     DialogState.SickVacation -> "SickVacation"
     DialogState.BasePay -> "BasePay"
     DialogState.PayDetails -> "PayDetails"
+    DialogState.SalaryDetails -> "SalaryDetails"
     DialogState.WorkHours -> "WorkHours"
     DialogState.OvertimeNetImpact -> "OvertimeNetImpact"
     DialogState.Food -> "Food"
@@ -108,6 +112,7 @@ private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.SickVacation,
     DialogState.BasePay,
     DialogState.PayDetails,
+    DialogState.SalaryDetails,
     DialogState.WorkHours,
     DialogState.OvertimeNetImpact,
     DialogState.Food,
@@ -262,6 +267,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     var currentYear by rememberSaveable { mutableIntStateOf(today.year) }
     var currentMonth by rememberSaveable { mutableIntStateOf(today.monthValue) }
     val launchSelectedMonthExport = rememberMonthlyWorkAndPayExportLauncher(repo, currentYear, currentMonth)
+    val launchAllMonthsDebugExport = rememberAllMonthsCalculationDebugExportLauncher(repo)
     val vacationAsOfDate = remember(currentYear, currentMonth, today) {
         vacationCardAsOfDate(currentYear, currentMonth, today)
     }
@@ -280,6 +286,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     }
     val monthlyFinalPaymentBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyFinalPaymentBreakdown(currentYear, currentMonth)
+    }
+    val nextMonthFinalPaymentBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
+        val nextMonth = YearMonth.of(currentYear, currentMonth).plusMonths(1)
+        repo.getMonthlyFinalPaymentBreakdown(nextMonth.year, nextMonth.monthValue)
     }
     val overtimeNetImpact = remember(repoTick.intValue, currentYear, currentMonth) {
         repo.getMonthlyOvertimeNetImpact(currentYear, currentMonth)
@@ -313,6 +323,25 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     }
     val recentNetPayAverage = remember(repoTick.intValue, payrollMonthKey, recentNetPayAverageAsOfDate) {
         repo.getRecentNetPayAverage(payrollMonthKey.year, payrollMonthKey.month, recentNetPayAverageAsOfDate)
+    }
+    val selectedMonthKey = MonthKey(currentYear, currentMonth)
+    val selectedMonthAnnualNetPayAverages = remember(repoTick.intValue, selectedMonthKey) {
+        repo.getAnnualNetPayAverages(selectedMonthKey.year)
+    }
+    val selectedMonthRecentNetPayAverageAsOfDate = remember(selectedMonthKey, today) {
+        val displayedMonth = YearMonth.of(selectedMonthKey.year, selectedMonthKey.month)
+        if (displayedMonth == YearMonth.from(today)) today else displayedMonth.atEndOfMonth()
+    }
+    val selectedMonthRecentNetPayAverage = remember(
+        repoTick.intValue,
+        selectedMonthKey,
+        selectedMonthRecentNetPayAverageAsOfDate
+    ) {
+        repo.getRecentNetPayAverage(
+            selectedMonthKey.year,
+            selectedMonthKey.month,
+            selectedMonthRecentNetPayAverageAsOfDate
+        )
     }
     val scheduler = remember { ShiftScheduler() }
     val foodReceiptReminderStatus = remember(repoTick.intValue, currentYear, currentMonth) {
@@ -412,7 +441,11 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 onMinuliClick = { dialogState = DialogState.Minuli }
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-                SalaryCard(month = currentMonth, nextMonthReceipt = nextMonthReceipt)
+                SalaryCard(
+                    month = currentMonth,
+                    nextMonthReceipt = nextMonthReceipt,
+                    onClick = { dialogState = DialogState.SalaryDetails }
+                )
                 TotalCard(
                     receipt = monthlyReceipt,
                     onClick = { dialogState = DialogState.PayDetails }
@@ -448,6 +481,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             workHoursMonth = MonthKey(currentYear, currentMonth),
             workHoursPayDetails = selectedMonthPayDetails,
             workHoursOvertimeNetImpact = selectedMonthOvertimeNetImpact,
+            salaryDetailsReceipt = nextMonthReceipt,
+            salaryDetailsFinalPaymentBreakdown = nextMonthFinalPaymentBreakdown,
+            salaryDetailsAnnualNetPayAverages = selectedMonthAnnualNetPayAverages,
+            salaryDetailsRecentNetPayAverage = selectedMonthRecentNetPayAverage,
             monthlyReceipt = monthlyReceipt,
             monthlyFinalPaymentBreakdown = monthlyFinalPaymentBreakdown,
             overtimeNetImpact = overtimeNetImpact,
@@ -458,6 +495,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             foodReceiptReminderStatus = foodReceiptReminderStatus,
             bloodDonationReminderStatus = bloodDonationReminderStatus,
             onMonthlyExportClick = launchSelectedMonthExport,
+            onDebugExportClick = launchAllMonthsDebugExport,
             onFoodReceiptReminderToggle = { enabled ->
                 handleFoodReceiptReminderToggle(
                     enabled = enabled,
@@ -629,8 +667,33 @@ private suspend fun saveSelectedMonthWorkAndPayExport(
             appName = context.getString(R.string.app_name),
             appVersion = BuildConfig.VERSION_NAME
         )
-        val output = context.contentResolver.openOutputStream(uri)
+        // SAF providers do not have to truncate for plain "w". Explicit "wt"
+        // prevents stale bytes from an older, longer export trailing the new JSON.
+        val output = context.contentResolver.openOutputStream(
+            uri,
+            MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE
+        )
             ?: error("Nije moguće otvoriti fajl.")
+        output.use { stream ->
+            stream.write(json.toByteArray(Charsets.UTF_8))
+        }
+    }
+}
+
+private suspend fun saveAllMonthsCalculationDebugExport(
+    context: Context,
+    repo: ShiftRepository,
+    uri: Uri
+) {
+    withContext(Dispatchers.IO) {
+        val json = repo.exportAllSavedMonthsCalculationDebugJson(
+            appName = context.getString(R.string.app_name),
+            appVersion = BuildConfig.VERSION_NAME
+        )
+        val output = context.contentResolver.openOutputStream(
+            uri,
+            MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE
+        ) ?: error("Nije moguće otvoriti fajl.")
         output.use { stream ->
             stream.write(json.toByteArray(Charsets.UTF_8))
         }
@@ -666,6 +729,31 @@ private fun rememberMonthlyWorkAndPayExportLauncher(
     }
 }
 
+@Composable
+private fun rememberAllMonthsCalculationDebugExportLauncher(
+    repo: ShiftRepository
+): () -> Unit {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val debugExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        handleAllMonthsDebugExportDocumentResult(
+            uri = uri,
+            context = context,
+            repo = repo,
+            scope = scope
+        )
+    }
+    return {
+        if (repo.getAllMonthsSorted().isEmpty()) {
+            Toast.makeText(context, "Nema sačuvanih meseci za debug export.", Toast.LENGTH_LONG).show()
+        } else {
+            debugExportLauncher.launch(ALL_MONTHS_CALCULATION_DEBUG_EXPORT_FILE_NAME)
+        }
+    }
+}
+
 private fun handleMonthlyExportDocumentResult(
     uri: Uri?,
     target: MonthKey?,
@@ -689,10 +777,35 @@ private fun handleMonthlyExportDocumentResult(
     }
 }
 
+private fun handleAllMonthsDebugExportDocumentResult(
+    uri: Uri?,
+    context: Context,
+    repo: ShiftRepository,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    if (uri == null) {
+        Toast.makeText(context, "Debug export otkazan.", Toast.LENGTH_SHORT).show()
+        return
+    }
+    scope.launch {
+        val result = runCatching {
+            saveAllMonthsCalculationDebugExport(context, repo, uri)
+        }
+        Toast.makeText(context, allMonthsDebugExportResultMessage(result), Toast.LENGTH_LONG).show()
+    }
+}
+
 private fun monthlyExportResultMessage(result: Result<Unit>): String {
     return result.fold(
         onSuccess = { "Export sačuvan." },
         onFailure = { error -> "Export nije uspeo: ${error.message ?: "nepoznata greška"}" }
+    )
+}
+
+private fun allMonthsDebugExportResultMessage(result: Result<Unit>): String {
+    return result.fold(
+        onSuccess = { "Debug export svih sačuvanih meseci je sačuvan." },
+        onFailure = { error -> "Debug export nije uspeo: ${error.message ?: "nepoznata greška"}" }
     )
 }
 

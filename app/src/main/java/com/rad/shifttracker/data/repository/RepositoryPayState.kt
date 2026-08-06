@@ -2,7 +2,9 @@ package com.rad.shifttracker.data.repository
 
 import com.rad.shifttracker.AppConfig
 import com.rad.shifttracker.BrigadeType
+import com.rad.shifttracker.DEFAULT_MEAL_PRICE_PERIODS
 import com.rad.shifttracker.KnownPayBaseAnchor
+import com.rad.shifttracker.MealPricePeriod
 import com.rad.shifttracker.MonthKey
 import com.rad.shifttracker.MonthSummary
 import com.rad.shifttracker.MonthlyGrossAdditions
@@ -13,6 +15,8 @@ import com.rad.shifttracker.PayBaseSelectionMode
 import com.rad.shifttracker.RollingPayBaseCalculation
 import com.rad.shifttracker.SeniorityIncreaseFactor
 import com.rad.shifttracker.SeniorityInputMode
+import java.math.BigDecimal
+import java.time.LocalDate
 
 internal class RepositoryPayState(config: AppConfig) {
     var payCoefficient = config.pay.defaultCoefficient
@@ -20,6 +24,9 @@ internal class RepositoryPayState(config: AppConfig) {
     var sickPayBaseHourly = config.pay.sickPayBaseHourly
     var defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
     var foodPerDay = config.pay.foodPerDay
+    val foodPerDayChanges = DEFAULT_MEAL_PRICE_PERIODS.associateTo(mutableMapOf()) { period ->
+        MonthKey(period.validFrom.year, period.validFrom.monthValue) to period.netAmountPerMeal.toDouble()
+    }
     var transportDailyAmount = config.pay.transportPerWorkDay
     var creditDeductionEnabled = false
     var monthlyCreditDeductionAmount = 0.0
@@ -52,6 +59,27 @@ internal class RepositoryPayState(config: AppConfig) {
     var cachedSummaryCalcFoodPerDay: Double = Double.NaN
     var cachedSummaryCalcSickPayBaseHourly: Double = Double.NaN
     var cachedSummaryCalcDifficultWorkConditionsPercent: Double = Double.NaN
+
+    fun foodPerDayForMonth(month: MonthKey): Double {
+        val effectiveEntry = foodPerDayChanges.entries
+            .asSequence()
+            .filter { (effectiveMonth, _) -> effectiveMonth <= month }
+            .maxByOrNull { (effectiveMonth, _) -> effectiveMonth }
+        return effectiveEntry?.value
+            ?: foodPerDayChanges.minByOrNull { (effectiveMonth, _) -> effectiveMonth }?.value
+            ?: foodPerDay
+    }
+
+    fun mealPricePeriods(): List<MealPricePeriod> {
+        return foodPerDayChanges
+            .map { (month, amount) ->
+                MealPricePeriod(
+                    validFrom = LocalDate.of(month.year, month.month, 1),
+                    netAmountPerMeal = BigDecimal.valueOf(amount)
+                ).sanitized()
+            }
+            .sortedBy { it.validFrom }
+    }
 
     fun invalidateSummariesAndRolling() {
         summaries.clear()

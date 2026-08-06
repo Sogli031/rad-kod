@@ -7,6 +7,7 @@ import java.time.YearMonth
 import java.util.Locale
 
 private const val MINUTES_PER_HOUR = 60
+internal const val MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE = "wt"
 
 internal fun monthlyWorkAndPayExportFileName(year: Int, month: Int): String {
     return String.format(Locale.US, "rad_obracun_%04d_%02d.json", year, month)
@@ -61,8 +62,10 @@ internal fun buildMonthlyWorkAndPayExportMap(
         "monthWorkEntries" to monthWorkEntries,
         "dailyCalculationBreakdown" to monthWorkEntries.map { it["dailyCalculationBreakdown"] },
         "monthlySummary" to monthlySummaryMap(summary, payBreakdown, payDetails),
+        "seniorityBreakdown" to seniorityBreakdownMap(summary, payBreakdown),
         "exportedMonthAuditStatus" to exportedMonthAuditStatusMap(target, summary),
         "grossAdditionsBreakdown" to grossAdditionsBreakdown,
+        "grossNegativeAdjustmentsBreakdown" to grossNegativeAdjustmentsBreakdownMap(payBreakdown),
         "mealBreakdown" to mealBreakdownMap(payBreakdown),
         "netDeductionsBreakdown" to netDeductionsBreakdown,
         "auditFormulas" to auditFormulasMap(repo, target),
@@ -141,7 +144,7 @@ private fun monthWorkDayMap(
         "publicHolidayName" to dayFlags["publicHolidayName"],
         "hasEntry" to (record != null),
         "shiftType" to record?.shift?.name,
-        "shiftName" to record?.shift?.fullName,
+        "shiftName" to record?.let(::payrollShiftDisplayName),
         "plannedStart" to null,
         "plannedEnd" to null,
         "actualStart" to null,
@@ -163,6 +166,7 @@ private fun monthWorkDayMap(
         "holidayWorkMinutes" to categories.holidayWorkMinutes,
         "difficultConditionsMinutes" to categories.difficultConditionsMinutes,
         "sickLeaveMinutes" to categories.sickLeaveMinutes,
+        "paidLeaveMinutes" to categories.paidLeaveMinutes,
         "vacationMinutes" to categories.vacationMinutes,
         "paidHolidayMinutes" to categories.paidHolidayMinutes,
         "note" to null,
@@ -174,6 +178,7 @@ private fun monthWorkDayMap(
         "holidayOverride" to record?.holidayOverride,
         "balanceExempt" to (record?.balanceExempt ?: false),
         "sickPayRate" to record?.sickPayRate,
+        "source" to record?.source?.jsonValue,
         "regularShortageMinutes" to (record?.regularShortageMinutes ?: 0),
         "rawRecord" to record?.toMap(),
         "dailyCalculationBreakdown" to dailyCalculationBreakdownMap(date, record, categories, plannedMinutes)
@@ -197,7 +202,7 @@ private fun dailyCalculationBreakdownMap(
         "publicHolidayName" to dayFlags["publicHolidayName"],
         "isWorkingDay" to dayFlags["isWorkingDay"],
         "hasEntry" to (record != null),
-        "enteredShift" to record?.shift?.fullName,
+        "enteredShift" to record?.let(::payrollShiftDisplayName),
         "enteredHours" to hoursPart(enteredMinutes),
         "enteredMinutes" to minutesPart(enteredMinutes),
         "enteredTotalMinutes" to enteredMinutes,
@@ -222,6 +227,9 @@ private fun dailyCalculationBreakdownMap(
         "difficultConditionsHours" to hoursPart(categories.difficultConditionsMinutes),
         "difficultConditionsMinutes" to categories.difficultConditionsMinutes,
         "sickLeaveHours" to hoursPart(categories.sickLeaveMinutes),
+        "sickLeaveMinutes" to categories.sickLeaveMinutes,
+        "paidLeaveHours" to hoursPart(categories.paidLeaveMinutes),
+        "paidLeaveMinutes" to categories.paidLeaveMinutes,
         "vacationHours" to hoursPart(categories.vacationMinutes),
         "paidHolidayHours" to hoursPart(categories.paidHolidayMinutes),
         "paidHolidayMinutes" to categories.paidHolidayMinutes,
@@ -270,7 +278,11 @@ private fun monthlySummaryMap(
         "workHours" to summary.workHours,
         "workMinutes" to summary.workMinutes,
         "overtimeHours" to summary.overtimeHours,
+        "paidOvertimeHours" to summary.paidOvertimeHours,
+        "paidOvertimeMinutes" to summary.paidOvertimeMinutes,
         "sickHours" to summary.sickHours,
+        "paidLeaveHours" to summary.paidLeaveHours,
+        "paidLeaveMinutes" to summary.paidLeaveMinutes,
         "vacationHours" to summary.vacationHours,
         "sundayHours" to summary.sundayHours,
         "nightHours" to summary.nightHours,
@@ -284,16 +296,26 @@ private fun monthlySummaryMap(
         "compTimeStarting" to summary.compTimeStarting,
         "compTimeEnding" to summary.compTimeEnding,
         "compTimeEarnedMinutes" to summary.compTimeEarnedMinutes,
+        "compTimeEarnedHours" to summary.compTimeEarnedHours,
         "compTimeDeficitMinutes" to summary.compTimeDeficitMinutes,
         "compTimeUsedMinutes" to summary.compTimeUsedMinutes,
         "compTimeNetMinutes" to summary.compTimeNetMinutes,
         "compTimeStartingMinutes" to summary.compTimeStartingMinutes,
         "compTimeEndingMinutes" to summary.compTimeEndingMinutes,
+        "coveredDeficitMinutes" to summary.coveredDeficitMinutes,
+        "uncoveredDeficitMinutes" to summary.uncoveredDeficitMinutes,
+        "regularOrCoveredPaidHours" to summary.regularOrCoveredPaidHours,
+        "regularOrCoveredPaidMinutes" to summary.regularOrCoveredPaidMinutes,
         "yearsOfService" to summary.yearsOfService,
+        "completedYearsOfService" to summary.completedYearsOfService,
         "seniorityEligibleWorkMinutes" to summary.seniorityEligibleWorkMinutes,
+        "seniorityEligibleMinutes" to summary.seniorityEligibleMinutes,
+        "seniorityEligibleBaseGross" to summary.seniorityEligibleBaseGross,
         "grossBaseBeforeSeniority" to payBreakdown.grossBaseBeforeSeniority,
+        "grossEarningsBeforeSeniority" to payBreakdown.grossEarningsBeforeSeniority,
         "grossSeniorityBonus" to payBreakdown.grossSeniorityBonus,
         "grossAdditionsTotal" to payBreakdown.grossAdditionsTotal,
+        "absencePenaltyGross" to payBreakdown.absencePenaltyGross,
         "grossTotal" to payBreakdown.grossTotal,
         "employeeContributions" to payBreakdown.employeeContributions,
         "taxRelief" to payBreakdown.taxRelief,
@@ -303,7 +325,8 @@ private fun monthlySummaryMap(
         "netSeniorityBonus" to payBreakdown.netSeniorityBonus,
         "netDeductionsTotal" to payBreakdown.netDeductionsTotal,
         "displayPay" to payBreakdown.displayPay,
-        "payDetails" to monthlyPayDetailsMap(payDetails)
+        "payDetails" to monthlyPayDetailsMap(payDetails),
+        "seniorityBreakdown" to seniorityBreakdownMap(summary, payBreakdown)
     )
 }
 
@@ -317,7 +340,9 @@ private fun settingsSnapshotMap(repo: ShiftRepository, target: MonthKey): Map<St
         "hourlyValueChanges" to repo.getHourlyValueChanges().map { hourlyValueChangeMap(it) },
         "sickPayBaseHourly" to repo.sickPayBaseHourlyValue,
         "defaultPayBaseSelectionMode" to repo.defaultPayBaseSelectionModeValue.name,
-        "foodPerDay" to repo.foodPerDayValue,
+        "foodPerDay" to repo.getFoodPerDayForMonth(target.year, target.month),
+        "currentFoodPerDay" to repo.foodPerDayValue,
+        "mealPricePeriods" to repo.getMealPricePeriods().map(::mealPricePeriodMap),
         "transportDailyAmount" to repo.transportDailyAmountValue,
         "employeeContributionsPercent" to repo.employeeContributionsPercentValue,
         "taxRelief" to repo.taxReliefValue,
@@ -359,16 +384,53 @@ private fun rawCalculationDebugMap(
         "selectedYear" to target.year,
         "selectedMonth" to target.month,
         "grossBeforeSeniority" to payBreakdown.grossBaseBeforeSeniority,
+        "grossEarningsBeforeSeniority" to payBreakdown.grossEarningsBeforeSeniority,
         "seniorityBonusGross" to payBreakdown.grossSeniorityBonus,
+        "absencePenaltyGross" to payBreakdown.absencePenaltyGross,
         "grossTotal" to payBreakdown.grossTotal,
         "employeeContributions" to payBreakdown.employeeContributions,
         "taxableBase" to payBreakdown.taxableBase,
         "tax" to payBreakdown.tax,
         "netBeforeDeductions" to payBreakdown.netPayBeforeDeductions,
         "netAfterDeductions" to payBreakdown.displayPay,
+        "mealCalculationMode" to payBreakdown.mealCalculationMode,
+        "mealEntitlementSource" to payBreakdown.mealEntitlementSource.name,
+        "mealEntitlementNetOverride" to payBreakdown.mealEntitlementNetOverride,
+        "mealEntitlementNetApplied" to payBreakdown.mealEntitlementNetApplied,
+        "mealPricePeriods" to payBreakdown.mealEntitlementCalculation.pricePeriods.map(::mealPricePeriodMap),
+        "recognizedMealCount" to payBreakdown.mealEntitlementCalculation.recognizedMealCount,
+        "recognizedMealDates" to payBreakdown.mealEntitlementCalculation.recognizedMeals.map { decision ->
+            linkedMapOf(
+                "date" to decision.accountingDate.toString(),
+                "workDate" to decision.workDate.toString(),
+                "mealCount" to decision.mealCount,
+                "reasons" to decision.reasons,
+                "netAmountPerMeal" to decision.netAmountPerMeal,
+                "entitlementNet" to decision.entitlementNet
+            )
+        },
+        "rejectedMealDatesAndReasons" to payBreakdown.mealEntitlementCalculation.rejectedMeals.map { decision ->
+            linkedMapOf(
+                "date" to decision.accountingDate.toString(),
+                "workDate" to decision.workDate?.toString(),
+                "reason" to decision.reason
+            )
+        },
+        "mealPriceNetPerMeal" to payBreakdown.mealEntitlementCalculation.mealPriceNetPerMeal,
+        "estimatedRecognizedMealCount" to payBreakdown.estimatedRecognizedMealCount,
+        "estimatedMealEntitlementNet" to payBreakdown.estimatedMealEntitlementNet,
+        "estimateAffectsPayroll" to payBreakdown.estimateAffectsPayroll,
+        "mealEntitlementNet" to payBreakdown.mealEntitlementNet,
+        "mealEntitlementGross" to payBreakdown.mealEntitlementGross,
+        "mealSpentNetEntered" to payBreakdown.manualMealSpentNet,
+        "mealSpentNetApplied" to payBreakdown.mealSpentNetApplied,
+        "mealNetDeduction" to payBreakdown.mealNetDeduction,
+        "mealUnusedNet" to payBreakdown.mealUnusedNet,
+        "mealSpendingDefaultedToEntitlement" to payBreakdown.mealSpendingDefaultedToEntitlement,
         "sickPayBaseHourly" to payDetails.sickPayBaseHourly,
         "sickPayBase" to resolvedPayBaseAuditMap(resolvedPayBases.sickHourlyBase),
         "vacationPayBase" to resolvedPayBaseMap(payDetails.vacationPayBase),
+        "paidLeavePayBase" to resolvedPayBaseMap(payDetails.paidLeavePayBase),
         "paidHolidayPayBase" to resolvedPayBaseMap(payDetails.paidHolidayPayBase),
         "payBaseResolution" to payBaseResolutionDebugMap(
             repo,
@@ -383,7 +445,17 @@ private fun rawCalculationDebugMap(
         "totalPaidMinutes" to payDetails.totalPaidMinutes,
         "paidWorkHours" to payDetails.paidWorkHours,
         "paidWorkMinutes" to payDetails.paidWorkMinutes,
+        "paidOvertimeHours" to payDetails.paidOvertimeHours,
+        "paidOvertimeMinutes" to payDetails.paidOvertimeMinutes,
+        "compTimeEarnedHours" to summary.compTimeEarnedHours,
+        "compTimeEarnedMinutes" to summary.compTimeEarnedMinutes,
+        "coveredDeficitMinutes" to summary.coveredDeficitMinutes,
+        "uncoveredDeficitMinutes" to summary.uncoveredDeficitMinutes,
+        "regularOrCoveredPaidHours" to payDetails.regularOrCoveredPaidHours,
+        "regularOrCoveredPaidMinutes" to payDetails.regularOrCoveredPaidMinutes,
         "seniorityEligibleWorkMinutes" to summary.seniorityEligibleWorkMinutes,
+        "seniorityEligibleMinutes" to summary.seniorityEligibleMinutes,
+        "seniorityEligibleBaseGross" to summary.seniorityEligibleBaseGross,
         "summaryTotalPayBeforeSeniority" to summary.totalPay,
         "summaryTotalWithSeniority" to summary.totalWithMinuli,
         "rollingPayBaseCalculation" to repo.getRollingPayBaseCalculationForWorkMonth(target.year, target.month)?.let {
@@ -406,6 +478,8 @@ private fun monthlyPayDetailsMap(details: MonthlyPayDetails): Map<String, Any?> 
         "sundayMinutes" to details.sundayMinutes,
         "sickHours" to details.sickHours,
         "sickMinutes" to details.sickMinutes,
+        "paidLeaveHours" to details.paidLeaveHours,
+        "paidLeaveMinutes" to details.paidLeaveMinutes,
         "vacationHours" to details.vacationHours,
         "vacationMinutes" to details.vacationMinutes,
         "paidHolidayHours" to details.paidHolidayHours,
@@ -415,17 +489,37 @@ private fun monthlyPayDetailsMap(details: MonthlyPayDetails): Map<String, Any?> 
         "uncoveredDeficitHours" to details.uncoveredDeficitHours,
         "uncoveredDeficitMinutes" to details.uncoveredDeficitMinutes,
         "grossBaseRegular" to details.grossBaseRegular,
+        "baseHourlyGross" to details.baseHourlyGross,
+        "regularWorkedBaseMinutes" to details.regularWorkedBaseMinutes,
+        "regularWorkedBaseGross" to details.regularWorkedBaseGross,
+        "publicHolidayWorkedBaseMinutes" to details.publicHolidayWorkedBaseMinutes,
+        "publicHolidayWorkedBaseGross" to details.publicHolidayWorkedBaseGross,
+        "overtimeBaseMinutes" to details.overtimeBaseMinutes,
+        "overtimeBaseGross" to details.overtimeBaseGross,
+        "seniorityEligibleMinutes" to details.seniorityEligibleMinutes,
+        "seniorityEligibleBaseGross" to details.seniorityEligibleBaseGross,
+        "completedYearsOfService" to details.completedYearsOfService,
+        "seniorityRatePerYear" to details.seniorityRatePerYear,
+        "seniorityTotalRate" to details.seniorityTotalRate,
         "grossNightPremium" to details.grossNightPremium,
+        "nightPremiumGross" to details.nightPremiumGross,
         "grossOvertimePremium" to details.grossOvertimePremium,
+        "overtimePremiumGross" to details.overtimePremiumGross,
         "grossSundayPremium" to details.grossSundayPremium,
+        "sundayPremiumGross" to details.sundayPremiumGross,
         "grossHolidayPremium" to details.grossHolidayPremium,
+        "holidayPremiumGross" to details.holidayPremiumGross,
         "grossDifficultWorkConditions" to details.grossDifficultWorkConditions,
+        "difficultConditionsPremiumGross" to details.difficultConditionsPremiumGross,
         "grossSickPay" to details.grossSickPay,
+        "grossPaidLeave" to details.grossPaidLeave,
         "grossVacationPay" to details.grossVacationPay,
         "grossPaidHoliday" to details.grossPaidHoliday,
         "grossCoveredDeficitPay" to details.grossCoveredDeficitPay,
         "grossUncoveredDeficitLoss" to details.grossUncoveredDeficitLoss,
+        "absencePenaltyGross" to details.absencePenaltyGross,
         "grossTotalBeforeSeniority" to details.grossTotalBeforeSeniority,
+        "grossEarningsBeforeSeniority" to details.grossEarningsBeforeSeniority,
         "grossTotalWithSeniority" to details.grossTotalWithSeniority,
         "netTotalBeforeSeniority" to details.netTotalBeforeSeniority,
         "netSeniorityBonus" to details.netSeniorityBonus,
@@ -502,8 +596,19 @@ private fun monthlyGrossAdditionsMap(additions: MonthlyGrossAdditions): Map<Stri
         "month" to additions.month,
         "regressGross" to additions.regressGross,
         "bonusGross" to additions.bonusGross,
-        "bonusNet" to additions.bonusNet
+        "bonusNet" to additions.bonusNet,
+        "mealSpentNet" to additions.mealSpentNet,
+        "mealEntitlementNetOverride" to additions.mealEntitlementNetOverride,
+        "absencePenaltyGross" to additions.absencePenaltyGross
     )
+}
+
+private fun payrollShiftDisplayName(record: DayRecord): String {
+    return if (record.isBloodDonationLeave) {
+        "Plaćeno odsustvo – dobrovoljno davanje krvi"
+    } else {
+        record.shift.fullName
+    }
 }
 
 private fun shiftSettingsMap(): List<Map<String, Any?>> {

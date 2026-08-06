@@ -51,12 +51,12 @@ class BloodDonationLeaveTest {
         assertTrue(second?.isBloodDonationLeave == true)
         assertEquals(Shift.SICK, first?.shift)
         assertEquals(8, first?.hours)
-        assertEquals(1.0, first?.sickPayRate ?: 0.0, 0.001)
+        assertNull(first?.sickPayRate)
         assertEquals("Krv", calendarDayDetailText(first, isHolidayDay = false, workedHoliday = false))
     }
 
     @Test
-    fun `krvni dani se obracunavaju kao bolovanje sto posto`() {
+    fun `krvni dani se obracunavaju kao placeno odsustvo sto posto`() {
         val repo = ShiftRepository()
         repo.grossHourlyRateValue = 1_000.0
         repo.setMonthlyPayBases(
@@ -68,8 +68,10 @@ class BloodDonationLeaveTest {
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
 
         val details = repo.getMonthlyPayDetails(2026, 5)
-        assertEquals(16, details.sickHours)
-        assertEquals(14_400.0, details.grossSickPay, 0.01)
+        assertEquals(0, details.sickHours)
+        assertEquals(16, details.paidLeaveHours)
+        assertEquals(0.0, details.grossSickPay, 0.01)
+        assertEquals(14_400.0, details.grossPaidLeave, 0.01)
     }
 
     @Test

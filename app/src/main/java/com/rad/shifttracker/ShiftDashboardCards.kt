@@ -116,11 +116,12 @@ internal fun TotalCard(receipt: MonthlyReceipt, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun SalaryCard(month: Int, nextMonthReceipt: MonthlyReceipt) {
+internal fun SalaryCard(month: Int, nextMonthReceipt: MonthlyReceipt, onClick: () -> Unit) {
     PayAmountCard(
         label = salaryCardLabel(month),
-        amount = nextMonthReceipt.salaryNetPay,
-        isAvailable = nextMonthReceipt.isSalaryAvailable
+        amount = nextMonthReceipt.totalReceivedThisMonth,
+        isAvailable = nextMonthReceipt.isSalaryAvailable,
+        onClick = onClick
     )
 }
 

@@ -27,16 +27,32 @@ fun calculatePayBaseMonthForAverage(
     val includedDifficultConditions = details.grossDifficultWorkConditions.sanitizeAverageMoney()
     val includedSeniority = details.grossSeniorityBonus.sanitizeAverageMoney()
     val includedOtherWage = safeGrossAdditions.bonusGross.sanitizeAverageMoney()
-    val excludedGross = details.grossSickPay.sanitizeAverageMoney() +
+    val compensationGross = details.grossSickPay.sanitizeAverageMoney() +
+        details.grossPaidLeave.sanitizeAverageMoney() +
         details.grossVacationPay.sanitizeAverageMoney() +
         details.grossPaidHoliday.sanitizeAverageMoney() +
-        details.grossCoveredDeficitPay.sanitizeAverageMoney() +
+        details.grossCoveredDeficitPay.sanitizeAverageMoney()
+    val compensationHours = (
+        details.sickHours +
+            details.paidLeaveHours +
+            details.vacationHours +
+            details.paidHolidayHours +
+            details.coveredDeficitHours
+        ).coerceAtLeast(0)
+    val compensationMinutes = (
+        details.sickMinutes +
+            details.paidLeaveMinutes +
+            details.vacationMinutes +
+            details.paidHolidayMinutes +
+            details.coveredDeficitMinutes
+        ).coerceAtLeast(0)
+    val includedCompensation = if (options.includeCompensationsInAverage) compensationGross else 0.0
+    val includedCompensationHours = if (options.includeCompensationsInAverage) compensationHours else 0
+    val includedCompensationMinutes = if (options.includeCompensationsInAverage) compensationMinutes else 0
+    val excludedGross = excludeWhen(!options.includeCompensationsInAverage, compensationGross) +
         excludeWhen(!options.includeMealAllowanceInAverage, details.grossMealAddition) +
         excludeWhen(!options.includeRegressInAverage, details.grossRegressAddition)
-    val excludedHours = details.sickHours +
-        details.vacationHours +
-        details.paidHolidayHours +
-        details.coveredDeficitHours
+    val excludedHours = if (options.includeCompensationsInAverage) 0 else compensationHours
 
     return RollingPayBaseMonth(
         year = year,
@@ -50,12 +66,17 @@ fun calculatePayBaseMonthForAverage(
             includedSeniority +
             includedMeal +
             includedRegress +
-            includedOtherWage,
-        hoursForAverage = details.paidWorkHours.coerceAtLeast(0),
-        minutesForAverage = details.paidWorkMinutes.coerceAtLeast(0),
+            includedOtherWage +
+            includedCompensation,
+        // Imenilac mora da prati brojilac: kad naknade ulaze u bruto, moraju i
+        // njihovi časovi, inače se osnovica naduvava.
+        hoursForAverage = (details.paidWorkHours + includedCompensationHours).coerceAtLeast(0),
+        minutesForAverage = (details.paidWorkMinutes + includedCompensationMinutes).coerceAtLeast(0),
         source = source,
         excludedCompensationGross = excludedGross,
-        excludedCompensationHours = excludedHours.coerceAtLeast(0),
+        excludedCompensationHours = excludedHours,
+        includedCompensationGross = includedCompensation,
+        includedCompensationHours = includedCompensationHours,
         includedRegularGross = includedRegular + includedDifficultConditions,
         includedOvertimeGross = includedOvertime,
         includedNightPremiumGross = includedNight,
@@ -66,7 +87,8 @@ fun calculatePayBaseMonthForAverage(
         includedRegressGross = includedRegress,
         includedOtherWageGross = includedOtherWage,
         includeMealAllowanceInAverage = options.includeMealAllowanceInAverage,
-        includeRegressInAverage = options.includeRegressInAverage
+        includeRegressInAverage = options.includeRegressInAverage,
+        includeCompensationsInAverage = options.includeCompensationsInAverage
     )
 }
 

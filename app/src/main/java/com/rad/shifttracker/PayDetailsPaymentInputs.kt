@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
+import java.math.BigDecimal
 
 @Suppress("LongMethod")
 @Composable
@@ -33,7 +34,7 @@ internal fun MonthlyPaymentInputRows(
     val payrollMonth = monthlyReceipt.payrollMonth
     val paymentAdjustments = repo.getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month)
     val payrollGrossAdditions = repo.getMonthlyGrossAdditions(payrollMonth.year, payrollMonth.month)
-    val foodBreakdown = repo.getMonthlyFoodSpendingBreakdown(payrollMonth.year, payrollMonth.month)
+    val payBreakdown = repo.getNetPayBreakdown(payrollMonth.year, payrollMonth.month)
 
     var advanceInput by remember(paymentMonth, paymentAdjustments.advancePaymentNet) {
         mutableStateOf(formatPositiveMoneyInput(paymentAdjustments.advancePaymentNet))
@@ -44,8 +45,12 @@ internal fun MonthlyPaymentInputRows(
     var foodSpentPresent by remember(payrollMonth, payrollGrossAdditions.mealSpentNet) {
         mutableStateOf(payrollGrossAdditions.mealSpentNet != null)
     }
+    var absencePenaltyInput by remember(payrollMonth, payrollGrossAdditions.absencePenaltyGross) {
+        mutableStateOf(formatOptionalDecimalInput(payrollGrossAdditions.absencePenaltyGross))
+    }
     var advanceError by remember(paymentMonth) { mutableStateOf<String?>(null) }
     var foodSpentError by remember(payrollMonth) { mutableStateOf<String?>(null) }
+    var absencePenaltyError by remember(payrollMonth) { mutableStateOf<String?>(null) }
 
     Spacer(modifier = Modifier.height(UI.defaultSpacing.dp))
     PaymentAdjustmentInputRow(
@@ -68,26 +73,51 @@ internal fun MonthlyPaymentInputRows(
         errorMessage = advanceError,
         accentColor = THEME.warning
     )
-    FoodSpendingStatusLine(
-        label = FOOD_ALLOWANCE_STATUS_LABEL,
-        value = paymentInputMoneyText(foodBreakdown.foodAllowanceNet),
-        valueColor = THEME.success
+    PaymentAdjustmentInputRow(
+        label = "Izostanci 1",
+        value = absencePenaltyInput,
+        onValueChange = {
+            absencePenaltyInput = filterDecimalInput(it)
+            absencePenaltyError = null
+        },
+        onSave = {
+            val value = parseOptionalDecimalInput(absencePenaltyInput)
+            if (absencePenaltyInput.isNotBlank() && value == null) {
+                absencePenaltyError = "Unesi ispravan bruto iznos za Izostanci 1."
+                return@PaymentAdjustmentInputRow
+            }
+            repo.setMonthlyAbsencePenaltyGross(
+                payrollMonth.year,
+                payrollMonth.month,
+                value ?: BigDecimal.ZERO
+            )
+            absencePenaltyInput = formatOptionalDecimalInput(value ?: BigDecimal.ZERO)
+            absencePenaltyError = null
+        },
+        errorMessage = absencePenaltyError,
+        supportingText = "Posebna bruto negativna korekcija; ne menja sate ni osnovicu minulog rada.",
+        accentColor = THEME.danger
     )
     PaymentAdjustmentInputRow(
-        label = actualFoodSpentInputLabel(payrollMonth),
+        label = ACTUAL_FOOD_SPENT_INPUT_LABEL,
         value = foodSpentInput,
         onValueChange = {
             foodSpentInput = filterDecimalInput(it)
             foodSpentError = null
+            val parsed = parseOptionalMealMoneyInput(foodSpentInput)
+            if (foodSpentInput.isBlank() || parsed != null) {
+                repo.setMonthlyActualFoodSpentNetDecimal(payrollMonth.year, payrollMonth.month, parsed)
+                foodSpentPresent = parsed != null
+            }
         },
         onSave = {
-            val value = parseOptionalMoneyInput(foodSpentInput)
+            val value = parseOptionalMealMoneyInput(foodSpentInput)
             if (foodSpentInput.isNotBlank() && value == null) {
                 foodSpentError = "Unesi ispravan iznos potrošene hrane."
                 return@PaymentAdjustmentInputRow
             }
-            repo.setMonthlyActualFoodSpentNet(payrollMonth.year, payrollMonth.month, value)
-            foodSpentInput = formatOptionalMoneyInput(value)
+            repo.setMonthlyActualFoodSpentNetDecimal(payrollMonth.year, payrollMonth.month, value)
+            foodSpentInput = formatOptionalMoneyInput(value?.toDouble())
             foodSpentPresent = value != null
             foodSpentError = null
         },
@@ -96,11 +126,23 @@ internal fun MonthlyPaymentInputRows(
         supportingText = if (foodSpentPresent) {
             MEAL_SPENT_MANUAL_HELP_TEXT
         } else {
-            mealSpentSupportingText(foodBreakdown)
+            MEAL_SPENT_ASSUMED_HELP_TEXT
         },
         accentColor = THEME.success
     )
-    FoodSpendingStatusRows(foodBreakdown)
+    if (payBreakdown.canDisplayMealUnused) {
+        FoodSpendingStatusLine(
+            label = "Ostaje u plati",
+            value = mealStatusMoneyText(payBreakdown.mealUnusedNet),
+            valueColor = THEME.success
+        )
+    } else {
+        Text(
+            text = MEAL_SAFE_DEFAULT_STATUS_TEXT,
+            color = THEME.textMuted,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
 }
 
 @Composable
@@ -182,44 +224,6 @@ private fun PaymentAdjustmentInputRow(
 }
 
 @Composable
-private fun FoodSpendingStatusRows(food: MonthlyFoodSpendingBreakdown) {
-    FoodSpendingStatusLine(
-        label = FOOD_ACTUAL_SPENT_STATUS_LABEL,
-        value = paymentInputMoneyText(food.foodSpentNetApplied)
-    )
-
-    if (food.foodOverageNet > 0.0) {
-        FoodSpendingStatusLine(
-            label = FINAL_PAYMENT_FOOD_OVERAGE_LABEL,
-            value = paymentInputMoneyText(food.foodOverageNet),
-            valueColor = THEME.danger
-        )
-    } else {
-        Text(
-            text = FOOD_NOT_OVERAGE_TEXT,
-            color = THEME.success,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (food.unusedFoodNet > 0.0) {
-            FoodSpendingStatusLine(
-                label = FOOD_UNUSED_LABEL,
-                value = paymentInputMoneyText(food.unusedFoodNet),
-                valueColor = THEME.success
-            )
-            Text(
-                text = FOOD_NET_DEDUCTION_EXPLANATION_TEXT,
-                color = THEME.textMuted,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
 private fun FoodSpendingStatusLine(
     label: String,
     value: String,
@@ -255,6 +259,11 @@ private fun parseOptionalMoneyInput(input: String): Double? {
     return if (value.isFinite() && value >= 0.0) value else null
 }
 
+private fun parseOptionalMealMoneyInput(input: String): BigDecimal? {
+    if (input.isBlank()) return null
+    return input.toBigDecimalOrNull()?.takeIf { it.signum() >= 0 }?.toMealMoney()
+}
+
 private fun formatOptionalMoneyInput(value: Double?): String {
     return value?.let { formatMoney2(it) }.orEmpty()
 }
@@ -263,6 +272,15 @@ private fun formatPositiveMoneyInput(value: Double): String {
     return if (value > 0.0) formatMoney2(value) else ""
 }
 
-private fun paymentInputMoneyText(value: Double): String {
-    return "${formatMoney2(value)} ${CONFIG.pay.currency}"
+private fun parseOptionalDecimalInput(input: String): BigDecimal? {
+    if (input.isBlank()) return null
+    return input.toBigDecimalOrNull()?.takeIf { it.signum() >= 0 }
+}
+
+private fun formatOptionalDecimalInput(value: BigDecimal): String {
+    return if (value.signum() > 0) formatMoney2(value.toDouble()) else ""
+}
+
+private fun mealStatusMoneyText(value: Double): String {
+    return "${formatCurrency(value)} ${CONFIG.pay.currency}"
 }

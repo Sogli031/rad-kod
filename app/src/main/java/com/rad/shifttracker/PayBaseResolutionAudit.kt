@@ -7,10 +7,11 @@ internal fun payBaseResolutionDebugMap(
     resolved: ResolvedPayBases
 ): Map<String, Any?> {
     val anchor = repo.getKnownPayBaseAnchor()
+    // Bolovanje ima svoju osnovicu i namerno ne prati sidro, pa se primena sidra
+    // proverava samo na osnovicama za GO i praznik.
     val resolvedBases = listOf(
         resolved.vacationHourlyBase,
-        resolved.paidHolidayHourlyBase,
-        resolved.sickHourlyBase
+        resolved.paidHolidayHourlyBase
     )
     val anchorApplied = anchor != null && resolvedBases.all { base ->
         base.source == PayBaseSource.KNOWN_BASE &&
@@ -33,7 +34,8 @@ internal fun payBaseResolutionDebugMap(
         "resolutionYear" to resolutionMonth.year,
         "resolutionMonth" to resolutionMonth.month,
         "selectionMode" to repo.defaultPayBaseSelectionModeValue.name,
-        "sourceUsed" to payBaseSourceCategory(resolved.sickHourlyBase.source),
+        // Bolovanje ima svoju osnovicu, pa glavni izvor prati osnovicu za GO/praznik.
+        "sourceUsed" to payBaseSourceCategory(resolved.vacationHourlyBase.source),
         "sickHourlyBase" to resolvedPayBaseAuditMap(resolved.sickHourlyBase),
         "vacationHourlyBase" to resolvedPayBaseAuditMap(resolved.vacationHourlyBase),
         "paidHolidayHourlyBase" to resolvedPayBaseAuditMap(resolved.paidHolidayHourlyBase),

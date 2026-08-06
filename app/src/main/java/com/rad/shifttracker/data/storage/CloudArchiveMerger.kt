@@ -37,6 +37,7 @@ internal object CloudArchiveMerger {
             records = keptArchiveRecords + current.records,
             deletedMonths = deletedMonths,
             hourlyValueChanges = mergeOlderThan(archive.hourlyValueChanges, current.hourlyValueChanges, boundary),
+            foodPerDayChanges = mergeOlderThan(archive.foodPerDayChanges, current.foodPerDayChanges, boundary),
             monthlyPayBases = mergeOlderThan(
                 archive.monthlyPayBases.minus(tombstones),
                 current.monthlyPayBases,
@@ -84,6 +85,7 @@ internal object CloudArchiveMerger {
             records = archive.records.filter { it.monthKey !in tombstones },
             deletedMonths = deletedMonths,
             hourlyValueChanges = archive.hourlyValueChanges + current.hourlyValueChanges,
+            foodPerDayChanges = archive.foodPerDayChanges + current.foodPerDayChanges,
             monthlyPayBases = archive.monthlyPayBases.minus(tombstones) + current.monthlyPayBases,
             monthlyGrossAdditions = archive.monthlyGrossAdditions.minus(tombstones) + current.monthlyGrossAdditions,
             monthlyNetAdjustments = archive.monthlyNetAdjustments.minus(tombstones) + current.monthlyNetAdjustments,

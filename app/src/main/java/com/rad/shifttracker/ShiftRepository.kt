@@ -20,6 +20,7 @@ import com.rad.shifttracker.data.storage.CloudArchiveMerger
 import com.rad.shifttracker.data.storage.LocalShiftStorage
 import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
+import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -148,6 +149,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             defaultPayBaseSelectionMode = payState.defaultPayBaseSelectionMode,
             hourlyValueChanges = payState.hourlyValueChanges.toMap(),
             foodPerDay = payState.foodPerDay,
+            foodPerDayChanges = payState.foodPerDayChanges.toMap(),
             transportDailyAmount = payState.transportDailyAmount,
             creditDeductionEnabled = payState.creditDeductionEnabled,
             monthlyCreditDeductionAmount = payState.monthlyCreditDeductionAmount,
@@ -438,6 +440,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             }
             payState.hourlyValueChanges.clear()
             payState.hourlyValueChanges.putAll(snapshot.hourlyValueChanges)
+            restoreMealPriceHistoryUnsafe(snapshot)
             payState.sickPayBaseHourly = if (snapshot.sickPayBaseHourly.isFinite()) {
                 snapshot.sickPayBaseHourly.coerceIn(0.0, MAX_BASE_PAY)
             } else {
@@ -1143,7 +1146,15 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         monthlyAdjustments.getMonthlyGrossAdditions(year, month)
     }
 
-    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from applied net spending.")
+    fun setMonthlyAbsencePenaltyGross(year: Int, month: Int, amount: java.math.BigDecimal) {
+        if (year <= 0 || month !in 1..12) return
+        synchronized(lock) {
+            monthlyAdjustments.setMonthlyAbsencePenaltyGross(year, month, amount)
+        }
+        notifyChange()
+    }
+
+    @Deprecated("Legacy backup compatibility only; meal gross is always calculated from the applied meal net.")
     @Suppress("DEPRECATION")
     fun setMonthlyMealGrossOverride(year: Int, month: Int, amount: Double?) {
         if (year <= 0 || month !in 1..12) return
@@ -1210,11 +1221,14 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         notifyChange()
     }
 
-    fun setMonthlyAutomaticFoodSpentNet(year: Int, month: Int, amount: Double?) {
-        if (year <= 0 || month !in 1..12) return
-        if (amount != null && (!amount.isFinite() || amount < 0.0)) return
+    fun setMonthlyActualFoodSpentNetDecimal(year: Int, month: Int, amount: BigDecimal?) {
+        setMonthlyActualFoodSpentNet(year, month, amount?.toMealMoney()?.toDouble())
+    }
+
+    internal fun setMonthlyMealEntitlementNetOverride(year: Int, month: Int, amount: BigDecimal?) {
+        if (year <= 0 || month !in 1..12 || amount?.signum() == -1) return
         synchronized(lock) {
-            monthlyAdjustments.setMonthlyAutomaticFoodSpentNet(year, month, amount)
+            monthlyAdjustments.setMonthlyMealEntitlementNetOverride(year, month, amount?.toMealMoney())
         }
         notifyChange()
     }
@@ -1439,7 +1453,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     }
 
     private fun calculateMonthlyWorkOnlyNetPayUnsafe(year: Int, month: Int, summary: MonthSummary): Double {
-        val workOnlySummary = summary.copy(foodAllowance = 0.0)
+        val workOnlySummary = summary.copy(foodAllowance = 0.0, mealEntitlementCalculation = null)
         return payQueries.calculateMonthlyNetPayBreakdownUnsafe(
             year = year,
             month = month,
@@ -1486,15 +1500,12 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val manualFoodSpent = additions
             ?.mealSpentNet
             .sanitizeMonthlyNetOverrideOrNull()
-        val automaticFoodSpent = additions
-            ?.automaticMealSpentNet
-            .sanitizeMonthlyNetOverrideOrNull()
         val foodAllowance = getSummary(month.year, month.month).foodAllowance
         return calculateMonthlyFoodSpendingBreakdown(
             month = month,
             foodAllowanceNet = foodAllowance,
             manualFoodSpentNet = manualFoodSpent,
-            automaticFoodSpentNet = automaticFoodSpent
+            confirmedEntitlementNetOverride = additions?.mealEntitlementNetOverride?.toDouble()
         )
     }
 
@@ -1604,6 +1615,50 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             }
             notifyChange()
         }
+
+    fun getFoodPerDayForMonth(year: Int, month: Int): Double = synchronized(lock) {
+        resolveFoodPerDayForMonthUnsafe(MonthKey(year, month))
+    }
+
+    fun setFoodPerDayFromMonth(year: Int, month: Int, value: Double) {
+        if (year <= 0 || month !in 1..12 || !value.isFinite() || value < 0.0) return
+        synchronized(lock) {
+            paySettingsUpdater.setFoodPerDayFromMonth(
+                MonthKey(year, month),
+                value.coerceAtMost(MAX_FOOD_PER_DAY)
+            )
+        }
+        notifyChange()
+    }
+
+    private fun resolveFoodPerDayForMonthUnsafe(month: MonthKey): Double {
+        return payState.foodPerDayForMonth(month)
+    }
+
+    private fun restoreMealPriceHistoryUnsafe(snapshot: ShiftRepositorySnapshot) {
+        payState.foodPerDayChanges.clear()
+        payState.foodPerDayChanges.putAll(
+            snapshot.foodPerDayChanges.filter { (key, value) ->
+                key.year > 0 && key.month in 1..12 && value.isFinite() && value >= 0.0
+            }.mapValues { (_, value) -> value.coerceAtMost(MAX_FOOD_PER_DAY) }
+        )
+        // Ugrađena istorija se dopunjuje samo tamo gde korisnik nema svoju cenu
+        // koja već pokriva taj period: postojeće instalacije su snimljene bez
+        // perioda pre 01.06.2026 (cena 274,00 sa listića 05/2026), pa bi im
+        // obračun starijih meseci koristio pogrešnu cenu. Ako korisnik ima cenu
+        // koja važi od ranijeg meseca, ona ostaje netaknuta.
+        DEFAULT_MEAL_PRICE_PERIODS.forEach { period ->
+            val key = MonthKey(period.validFrom.year, period.validFrom.monthValue)
+            val coveredByUserPrice = payState.foodPerDayChanges.keys.any { it <= key }
+            if (!coveredByUserPrice) {
+                payState.foodPerDayChanges[key] = period.netAmountPerMeal.toDouble()
+            }
+        }
+    }
+
+    fun getMealPricePeriods(): List<MealPricePeriod> = synchronized(lock) {
+        payState.mealPricePeriods()
+    }
 
     var transportDailyAmountValue: Double
         get() = synchronized(lock) { payState.transportDailyAmount }
@@ -1872,7 +1927,6 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             day = date.dayOfMonth,
             shift = Shift.SICK,
             hours = config.pay.defaultHours,
-            sickPayRate = 1.0,
             source = DayRecordSource.BLOOD_DONATION_LEAVE
         )
     }
