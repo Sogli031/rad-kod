@@ -49,7 +49,8 @@ data class AbsenceRangeNetImpact(
 enum class AdvancePaymentNotificationImportDecision {
     IMPORTED,
     SKIPPED_EXISTING_ADVANCE,
-    SKIPPED_INVALID
+    SKIPPED_INVALID,
+    SKIPPED_DISABLED
 }
 
 data class AdvancePaymentNotificationImportResult(
@@ -94,6 +95,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         payQueries = payQueries
     )
     private var foodReceiptReminderEnabledState = false
+    private var autoAdvanceImportEnabledState = true
+    private var notificationAccessPromptSuppressedState = false
     private var lastBloodDonationDateState: LocalDate? = null
     private var bloodDonationCountState = 0
     private var bloodDonationHistoryState: List<LocalDate> = emptyList()
@@ -156,6 +159,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             unionMember = payState.unionMember,
             unionDuesRate = payState.unionDuesRate,
             foodReceiptReminderEnabled = foodReceiptReminderEnabledState,
+            autoAdvanceImportEnabled = autoAdvanceImportEnabledState,
+            notificationAccessPromptSuppressed = notificationAccessPromptSuppressedState,
             lastBloodDonationDate = lastBloodDonationDateState,
             bloodDonationCount = bloodDonationCountState,
             bloodDonationHistory = bloodDonationHistoryState,
@@ -462,6 +467,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             payState.unionMember = snapshot.unionMember
             payState.unionDuesRate = snapshot.unionDuesRate.sanitizeUnionDuesRate()
             foodReceiptReminderEnabledState = snapshot.foodReceiptReminderEnabled
+            autoAdvanceImportEnabledState = snapshot.autoAdvanceImportEnabled
+            notificationAccessPromptSuppressedState = snapshot.notificationAccessPromptSuppressed
             bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
             lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
             bloodDonationCountState = snapshot.bloodDonationCount.coerceAtLeast(bloodDonationHistoryState.size)
@@ -1186,6 +1193,9 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         candidate: RadAdvanceImportCandidate
     ): AdvancePaymentNotificationImportResult {
         val decision = synchronized(lock) {
+            if (!autoAdvanceImportEnabledState) {
+                return@synchronized AdvancePaymentNotificationImportDecision.SKIPPED_DISABLED
+            }
             val year = candidate.month.year
             val month = candidate.month.month
             if (year <= 0 || month !in 1..12 || candidate.amount <= 0.0 || !candidate.amount.isFinite()) {
@@ -1758,6 +1768,47 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
                     false
                 } else {
                     foodReceiptReminderEnabledState = value
+                    true
+                }
+            }
+            if (changed) {
+                notifyChange()
+            }
+        }
+
+    /**
+     * Glavni prekidač za automatski upis akontacije iz NLB obaveštenja.
+     * Kad je isključen, servis ne upisuje ništa i nema pitanja za pristup obaveštenjima.
+     */
+    var autoAdvanceImportEnabled: Boolean
+        get() = synchronized(lock) { autoAdvanceImportEnabledState }
+        set(value) {
+            val changed = synchronized(lock) {
+                if (autoAdvanceImportEnabledState == value) {
+                    false
+                } else {
+                    autoAdvanceImportEnabledState = value
+                    // Ponovno uključivanje znači da korisnik opet želi funkciju,
+                    // pa se "ne pitaj više" resetuje da dozvola može da se traži.
+                    if (value) {
+                        notificationAccessPromptSuppressedState = false
+                    }
+                    true
+                }
+            }
+            if (changed) {
+                notifyChange()
+            }
+        }
+
+    var notificationAccessPromptSuppressed: Boolean
+        get() = synchronized(lock) { notificationAccessPromptSuppressedState }
+        set(value) {
+            val changed = synchronized(lock) {
+                if (notificationAccessPromptSuppressedState == value) {
+                    false
+                } else {
+                    notificationAccessPromptSuppressedState = value
                     true
                 }
             }

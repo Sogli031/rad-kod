@@ -82,6 +82,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         data[UNION_MEMBER_KEY] = snapshot.unionMember
         data[UNION_DUES_RATE_KEY] = snapshot.unionDuesRate
         data[FOOD_RECEIPT_REMINDER_ENABLED_KEY] = snapshot.foodReceiptReminderEnabled
+        data[AUTO_ADVANCE_IMPORT_ENABLED_KEY] = snapshot.autoAdvanceImportEnabled
+        data[NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY] = snapshot.notificationAccessPromptSuppressed
         snapshot.lastBloodDonationDate?.let { date ->
             data[BLOOD_DONATION_LAST_DATE_KEY] = date.toString()
         }
@@ -181,6 +183,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val parsedUnionDuesRate =
             json.optDouble(UNION_DUES_RATE_KEY, DEFAULT_UNION_DUES_RATE).sanitizeUnionDuesRate()
         val parsedFoodReceiptReminderEnabled = json.optBoolean(FOOD_RECEIPT_REMINDER_ENABLED_KEY, false)
+        val parsedAutoAdvanceImport = parseAutoAdvanceImportFlags(json)
         val parsedLastBloodDonationDate = json.optLocalDateOrNull(BLOOD_DONATION_LAST_DATE_KEY)
         val parsedBloodDonationHistory = parseBloodDonationHistory(
             root = json.optJSONArray(BLOOD_DONATION_HISTORY_KEY),
@@ -247,6 +250,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             unionMember = parsedUnionMember,
             unionDuesRate = parsedUnionDuesRate,
             foodReceiptReminderEnabled = parsedFoodReceiptReminderEnabled,
+            autoAdvanceImportEnabled = parsedAutoAdvanceImport.enabled,
+            notificationAccessPromptSuppressed = parsedAutoAdvanceImport.promptSuppressed,
             lastBloodDonationDate = parsedBloodDonationHistory.firstOrNull() ?: parsedLastBloodDonationDate,
             bloodDonationCount = parsedBloodDonationCount,
             bloodDonationHistory = parsedBloodDonationHistory,
@@ -291,6 +296,12 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         )
         else -> config.pay.defaultCoefficient
     }
+
+    // Stari bekapi nemaju ove ključeve — auto akontacija ostaje uključena kao i pre.
+    private fun parseAutoAdvanceImportFlags(json: JSONObject) = ParsedAutoAdvanceImportFlags(
+        enabled = json.optBoolean(AUTO_ADVANCE_IMPORT_ENABLED_KEY, true),
+        promptSuppressed = json.optBoolean(NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY, false)
+    )
 
     private fun parseDeletedMonths(root: JSONArray?): List<MonthKey> {
         if (root == null) return emptyList()
@@ -670,6 +681,11 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         return parsed
     }
 
+    private data class ParsedAutoAdvanceImportFlags(
+        val enabled: Boolean,
+        val promptSuppressed: Boolean
+    )
+
     private data class ParsedAnnualLeaveCalculation(
         val input: AnnualLeaveCalculationInput?,
         val lastCalculatedDays: Int
@@ -710,6 +726,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val UNION_MEMBER_KEY = "unionMember"
         const val UNION_DUES_RATE_KEY = "unionDuesRate"
         const val FOOD_RECEIPT_REMINDER_ENABLED_KEY = "food_receipt_reminder_enabled"
+        const val AUTO_ADVANCE_IMPORT_ENABLED_KEY = "auto_advance_import_enabled"
+        const val NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY = "notification_access_prompt_suppressed"
         const val BLOOD_DONATION_LAST_DATE_KEY = "blood_donation_last_date"
         const val BLOOD_DONATION_COUNT_KEY = "blood_donation_count"
         const val BLOOD_DONATION_HISTORY_KEY = "blood_donation_history"
@@ -762,6 +780,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             CREDIT_DEDUCTION_ENABLED_KEY,
             MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY,
             FOOD_RECEIPT_REMINDER_ENABLED_KEY,
+            AUTO_ADVANCE_IMPORT_ENABLED_KEY,
+            NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY,
             BLOOD_DONATION_LAST_DATE_KEY,
             BLOOD_DONATION_COUNT_KEY,
             BLOOD_DONATION_LEAVE_KEY,

@@ -18,6 +18,9 @@ class NotificationAccessSourceTest {
         assertEquals("Kasnije", NOTIFICATION_ACCESS_LATER_LABEL)
         assertEquals("Auto akontacija", AUTO_ADVANCE_IMPORT_CHANNEL_NAME)
         assertEquals("Akontacija upisana", AUTO_ADVANCE_IMPORT_CONFIRMATION_TITLE)
+        assertEquals("Ne pitaj više nikad", NOTIFICATION_ACCESS_NEVER_ASK_LABEL)
+        assertEquals("Auto akontacija", AUTO_ADVANCE_IMPORT_SECTION_LABEL)
+        assertEquals("Upiši akontaciju iz obaveštenja", AUTO_ADVANCE_IMPORT_ENABLED_LABEL)
     }
 
     @Test
@@ -42,6 +45,10 @@ class NotificationAccessSourceTest {
         assertTrue(source.contains("requestNotificationAccessIfNeeded()"))
         assertTrue(source.contains("NotificationAccessPermissionDialog("))
         assertTrue(source.contains("notificationListenerSettingsIntent()"))
+        assertTrue(source.contains("if (!repo.autoAdvanceImportEnabled) return"))
+        assertTrue(source.contains("if (repo.notificationAccessPromptSuppressed) return"))
+        assertTrue(source.contains("repo.notificationAccessPromptSuppressed = true"))
+        assertTrue(source.contains("NOTIFICATION_ACCESS_NEVER_ASK_LABEL"))
     }
 
     @Test
@@ -53,5 +60,7 @@ class NotificationAccessSourceTest {
 
         assertTrue(source.contains("onNotificationAccessClick"))
         assertTrue(source.contains("Pristup obaveštenjima"))
+        assertTrue(source.contains("AutoAdvanceImportSwitch("))
+        assertTrue(source.contains("repo.autoAdvanceImportEnabled = checked"))
     }
 }

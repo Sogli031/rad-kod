@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
             if (showNotificationAccessDialog) {
                 NotificationAccessPermissionDialog(
                     onOpenSettings = ::openNotificationAccessSettings,
+                    onNeverAskAgain = ::suppressNotificationAccessPrompt,
                     onDismiss = { showNotificationAccessDialog = false }
                 )
             }
@@ -125,6 +126,8 @@ class MainActivity : ComponentActivity() {
 
     private fun requestNotificationAccessIfNeeded() {
         if (notificationAccessWarningShownThisForeground) return
+        if (!repo.autoAdvanceImportEnabled) return
+        if (repo.notificationAccessPromptSuppressed) return
         if (isNotificationListenerAccessEnabled(this)) return
 
         notificationAccessWarningShownThisForeground = true
@@ -157,6 +160,13 @@ class MainActivity : ComponentActivity() {
         showNotificationAccessDialog = false
         runCatching { startActivity(notificationListenerSettingsIntent()) }
     }
+
+    private fun suppressNotificationAccessPrompt() {
+        showNotificationAccessDialog = false
+        if (::repo.isInitialized) {
+            repo.notificationAccessPromptSuppressed = true
+        }
+    }
 }
 
 internal fun shouldRequestExactAlarmPermission(
@@ -170,6 +180,7 @@ internal fun shouldRequestExactAlarmPermission(
 @Composable
 private fun NotificationAccessPermissionDialog(
     onOpenSettings: () -> Unit,
+    onNeverAskAgain: () -> Unit,
     onDismiss: () -> Unit
 ) {
     PopupDialog(
@@ -210,6 +221,16 @@ private fun NotificationAccessPermissionDialog(
                 onClick = onOpenSettings
             )
         }
+        RoundedButton(
+            text = NOTIFICATION_ACCESS_NEVER_ASK_LABEL,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            bgColor = THEME.bgCard,
+            textColor = THEME.textMuted,
+            textStyle = MaterialTheme.typography.labelMedium,
+            onClick = onNeverAskAgain
+        )
     }
 }
 

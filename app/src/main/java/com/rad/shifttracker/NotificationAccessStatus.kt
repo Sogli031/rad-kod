@@ -10,6 +10,13 @@ const val NOTIFICATION_ACCESS_DIALOG_TEXT =
     "Da bi Rad automatski upisao akontaciju iz NLB obaveštenja, uključi pristup obaveštenjima za ovu aplikaciju."
 const val NOTIFICATION_ACCESS_OPEN_SETTINGS_LABEL = "Uključi"
 const val NOTIFICATION_ACCESS_LATER_LABEL = "Kasnije"
+const val NOTIFICATION_ACCESS_NEVER_ASK_LABEL = "Ne pitaj više nikad"
+const val AUTO_ADVANCE_IMPORT_SECTION_LABEL = "Auto akontacija"
+const val AUTO_ADVANCE_IMPORT_ENABLED_LABEL = "Upiši akontaciju iz obaveštenja"
+const val AUTO_ADVANCE_IMPORT_ENABLED_HINT =
+    "Rad čita NLB obaveštenja i sam upisuje akontaciju za mesec."
+const val AUTO_ADVANCE_IMPORT_DISABLED_HINT =
+    "Isključeno — akontacija se unosi ručno i nema pitanja za pristup obaveštenjima."
 
 fun isNotificationListenerAccessEnabled(context: Context): Boolean {
     val enabled = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")

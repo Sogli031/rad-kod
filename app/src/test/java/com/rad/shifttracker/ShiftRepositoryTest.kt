@@ -444,6 +444,63 @@ class ShiftRepositoryTest {
     }
 
     @Test
+    fun `auto akontacija se preskace kad je funkcija iskljucena`() {
+        repo.autoAdvanceImportEnabled = false
+
+        val result = repo.recordAdvancePaymentNotificationImport(
+            RadAdvanceImportCandidate(
+                month = MonthKey(2026, 7),
+                amount = 54_321.0,
+                dateTime = java.time.LocalDateTime.of(2026, 7, 5, 9, 14),
+                place = "VALJAONICA BAKRA SEVOJNO PRVOMAJSKA 43 SEVOJNO 378406"
+            )
+        )
+
+        assertEquals(AdvancePaymentNotificationImportDecision.SKIPPED_DISABLED, result.decision)
+        assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 7).advancePaymentNet, 0.001)
+    }
+
+    @Test
+    fun `auto akontacija je podrazumevano ukljucena i bez potisnutog pitanja`() {
+        assertTrue(repo.autoAdvanceImportEnabled)
+        assertFalse(repo.notificationAccessPromptSuppressed)
+    }
+
+    @Test
+    fun `ponovno ukljucivanje auto akontacije vraca pitanje za pristup obavestenjima`() {
+        repo.notificationAccessPromptSuppressed = true
+        repo.autoAdvanceImportEnabled = false
+
+        repo.autoAdvanceImportEnabled = true
+
+        assertFalse(repo.notificationAccessPromptSuppressed)
+    }
+
+    @Test
+    fun `podesavanja auto akontacije se cuvaju kroz export import`() {
+        repo.autoAdvanceImportEnabled = false
+        repo.notificationAccessPromptSuppressed = true
+        val json = JSONObject(repo.exportJson())
+
+        assertFalse(json.getBoolean("auto_advance_import_enabled"))
+        assertTrue(json.getBoolean("notification_access_prompt_suppressed"))
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(json.toString()))
+        assertFalse(restored.autoAdvanceImportEnabled)
+        assertTrue(restored.notificationAccessPromptSuppressed)
+    }
+
+    @Test
+    fun `stari backup bez zastavice auto akontacije ostaje ukljucen`() {
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson("{\"pay_coefficient\": 1.0}"))
+
+        assertTrue(restored.autoAdvanceImportEnabled)
+        assertFalse(restored.notificationAccessPromptSuppressed)
+    }
+
+    @Test
     fun `podesavanje kredita se cuva kroz export import`() {
         repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
         val json = JSONObject(repo.exportJson())

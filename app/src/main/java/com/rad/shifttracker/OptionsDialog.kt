@@ -91,18 +91,30 @@ internal fun OptionsDialog(
                 bold = true,
                 onClick = onHolidaysClick
             )
-            RoundedButton(
-                text = actions[4],
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                bgColor = THEME.warning,
-                textColor = THEME.textDark,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = onNotificationAccessClick
+            var autoAdvanceImportEnabled by remember(repo.autoAdvanceImportEnabled) {
+                mutableStateOf(repo.autoAdvanceImportEnabled)
+            }
+            AutoAdvanceImportSwitch(
+                enabled = autoAdvanceImportEnabled,
+                onCheckedChange = { checked ->
+                    autoAdvanceImportEnabled = checked
+                    repo.autoAdvanceImportEnabled = checked
+                }
             )
+            if (autoAdvanceImportEnabled) {
+                RoundedButton(
+                    text = actions[4],
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    bgColor = THEME.warning,
+                    textColor = THEME.textDark,
+                    radius = 14.dp,
+                    textStyle = MaterialTheme.typography.labelLarge,
+                    bold = true,
+                    onClick = onNotificationAccessClick
+                )
+            }
             FoodReceiptReminderSwitch(
                 enabled = foodReceiptReminderEnabled,
                 status = foodReceiptReminderStatus,
@@ -339,6 +351,49 @@ private fun parseUnionDuesPercentInput(input: String): Double? {
     val percent = input.toDoubleOrNull() ?: return null
     if (!percent.isFinite() || percent <= 0.0 || percent > 100.0) return null
     return percent / 100.0
+}
+
+@Composable
+private fun AutoAdvanceImportSwitch(
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    SectionLabel(text = AUTO_ADVANCE_IMPORT_SECTION_LABEL)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = AUTO_ADVANCE_IMPORT_ENABLED_LABEL,
+                color = THEME.textPrimary,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = if (enabled) AUTO_ADVANCE_IMPORT_ENABLED_HINT else AUTO_ADVANCE_IMPORT_DISABLED_HINT,
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = THEME.textDark,
+                checkedTrackColor = THEME.accentPrimary,
+                uncheckedThumbColor = THEME.textMuted,
+                uncheckedTrackColor = THEME.bgCard
+            )
+        )
+    }
 }
 
 @Composable

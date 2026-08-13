@@ -27,6 +27,8 @@ internal data class ShiftRepositorySnapshot(
     val unionMember: Boolean,
     val unionDuesRate: Double,
     val foodReceiptReminderEnabled: Boolean,
+    val autoAdvanceImportEnabled: Boolean,
+    val notificationAccessPromptSuppressed: Boolean,
     val lastBloodDonationDate: LocalDate?,
     val bloodDonationCount: Int,
     val bloodDonationHistory: List<LocalDate>,
