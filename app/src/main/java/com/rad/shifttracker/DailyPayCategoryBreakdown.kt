@@ -42,7 +42,9 @@ internal class DailyPayCategoryBreakdownCalculator(
                 record = record,
                 hasAnyMonthRecord = records.isNotEmpty(),
                 brigadeType = brigadeType,
-                monthlyOvertimeMinutes = record?.let { overtimeByDay[it.key] }
+                monthlyOvertimeMinutes = record?.let {
+                    payCalculator.monthlyOvertimeMinutesForRecord(it, brigadeType, overtimeByDay)
+                }
             )
         }
     }

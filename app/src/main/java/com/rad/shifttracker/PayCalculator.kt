@@ -8,6 +8,11 @@ import kotlin.math.roundToInt
 
 private const val MINUTES_PER_HOUR = 60
 
+// Zakonski maksimum ukupnog dnevnog rada (Zakon o radu: redovan + prekovremeni
+// ne duže od 12h dnevno). Dan duži od toga ne može biti preraspodela, pa se
+// ceo višak tog dana priznaje kao prekovremeni bez mesečnog netiranja.
+private const val MAX_LEGAL_DAILY_WORK_MINUTES = 12 * MINUTES_PER_HOUR
+
 @Suppress("LargeClass")
 class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     private fun defaultPayBases(): ResolvedPayBases {
@@ -126,20 +131,6 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         return segments
     }
 
-    private fun paidWorkMinuteSegments(record: DayRecord): List<Pair<Shift, Int>> {
-        if (record.shift !in Shift.workShifts() || record.effectiveRegularWorkMinutes <= 0) return emptyList()
-
-        val segments = mutableListOf<Pair<Shift, Int>>()
-        if (record.paidPrimaryWorkMinutes > 0) {
-            segments.add(record.shift to record.paidPrimaryWorkMinutes)
-        }
-        val shift2 = record.shift2
-        if (record.paidSecondShiftMinutes > 0 && shift2 != null) {
-            segments.add(shift2 to record.paidSecondShiftMinutes)
-        }
-        return segments
-    }
-
     private fun calculateDailyDifficultWorkConditionsBonus(
         record: DayRecord,
         baseRate: Double
@@ -155,51 +146,22 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         month: Int,
         brigadeType: BrigadeType
     ): Map<DayKey, Int> {
-        if (brigadeType != BrigadeType.CETVOROBRIGADA) return emptyMap()
-        var regularMinutesRemaining = calculateMonthlyFundHours(year, month, config.defaultHours) * MINUTES_PER_HOUR
-        if (regularMinutesRemaining <= 0) return emptyMap()
-
         val sorted = records.sortedWith(compareBy<DayRecord> { it.year }.thenBy { it.month }.thenBy { it.day })
-
-        // Radni praznici prvo troše fond i nikad ne nose prekovremene —
-        // njihovi sati se plaćaju kroz prazničnu premiju
-        // (monthlyOvertimeMinutesForRecord za njih vraća 0). Da im se višak
-        // dodeli pa nulira, ti minuti bi propali, a ukupna plata bi zavisila
-        // od toga gde u mesecu praznik pada.
-        for (record in sorted) {
-            if (!record.workedOnHoliday) continue
-            val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
-            regularMinutesRemaining -= min(recordPaidMinutes, regularMinutesRemaining)
+        return when (brigadeType) {
+            BrigadeType.CETVOROBRIGADA -> fourBrigadeOvertimeMinutesByDay(sorted, year, month, config.defaultHours)
+            BrigadeType.TROBRIGADA -> threeBrigadeOvertimeMinutesByDay(sorted, config.defaultHours)
         }
-
-        val overtimeByDay = mutableMapOf<DayKey, Int>()
-        for (record in sorted) {
-            if (record.workedOnHoliday) continue
-            val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
-            if (recordPaidMinutes <= 0) continue
-
-            val regularMinutes = min(recordPaidMinutes, regularMinutesRemaining)
-            val overtimeMinutes = recordPaidMinutes - regularMinutes
-            regularMinutesRemaining -= regularMinutes
-            if (overtimeMinutes > 0) {
-                overtimeByDay[record.key] = overtimeMinutes
-            }
-        }
-
-        return overtimeByDay
     }
 
-    private fun monthlyOvertimeMinutesForRecord(
+    internal fun monthlyOvertimeMinutesForRecord(
         record: DayRecord,
         brigadeType: BrigadeType,
         overtimeByDay: Map<DayKey, Int>
     ): Int? {
         if (record.workedOnHoliday) return 0
-        return if (brigadeType == BrigadeType.CETVOROBRIGADA) {
-            overtimeByDay[record.key] ?: 0
-        } else {
-            null
-        }
+        // Vikend kod trobrigade ostaje automatski prekovremeni — dnevna logika.
+        if (isAutomaticWeekendOvertime(record, brigadeType)) return null
+        return overtimeByDay[record.key] ?: 0
     }
 
     @Suppress("CyclomaticComplexMethod")
@@ -978,4 +940,143 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
 
         return holidayPay
     }
+}
+
+private fun paidWorkMinuteSegments(record: DayRecord): List<Pair<Shift, Int>> {
+    if (record.shift !in Shift.workShifts() || record.effectiveRegularWorkMinutes <= 0) return emptyList()
+
+    val segments = mutableListOf<Pair<Shift, Int>>()
+    if (record.paidPrimaryWorkMinutes > 0) {
+        segments.add(record.shift to record.paidPrimaryWorkMinutes)
+    }
+    val shift2 = record.shift2
+    if (record.paidSecondShiftMinutes > 0 && shift2 != null) {
+        segments.add(shift2 to record.paidSecondShiftMinutes)
+    }
+    return segments
+}
+
+private fun fourBrigadeOvertimeMinutesByDay(
+    sorted: List<DayRecord>,
+    year: Int,
+    month: Int,
+    defaultHours: Int
+): Map<DayKey, Int> {
+    var regularMinutesRemaining = calculateMonthlyFundHours(year, month, defaultHours) * MINUTES_PER_HOUR
+    if (regularMinutesRemaining <= 0) return emptyMap()
+
+    // Naknade (bolovanje, GO, plaćeno odsustvo, plaćeni praznici) na listiću
+    // pune mesečni fond, pa je norma za redovan rad fond minus ti sati —
+    // inače bi mesec sa bolovanjem tražio pun fond stvarnog rada pre prvog
+    // prekovremenog minuta.
+    regularMinutesRemaining -= min(paidAbsenceFundMinutes(sorted, year, month, defaultHours), regularMinutesRemaining)
+
+    // Radni praznici prvo troše fond i nikad ne nose prekovremene —
+    // njihovi sati se plaćaju kroz prazničnu premiju
+    // (monthlyOvertimeMinutesForRecord za njih vraća 0). Da im se višak
+    // dodeli pa nulira, ti minuti bi propali, a ukupna plata bi zavisila
+    // od toga gde u mesecu praznik pada.
+    for (record in sorted) {
+        if (!record.workedOnHoliday) continue
+        val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
+        regularMinutesRemaining -= min(recordPaidMinutes, regularMinutesRemaining)
+    }
+
+    val overtimeByDay = mutableMapOf<DayKey, Int>()
+    for (record in sorted) {
+        if (record.workedOnHoliday) continue
+        val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
+        if (recordPaidMinutes <= 0) continue
+
+        val regularMinutes = min(recordPaidMinutes, regularMinutesRemaining)
+        val overtimeMinutes = recordPaidMinutes - regularMinutes
+        regularMinutesRemaining -= regularMinutes
+        if (overtimeMinutes > 0) {
+            overtimeByDay[record.key] = overtimeMinutes
+        }
+    }
+
+    return overtimeByDay
+}
+
+/**
+ * Mesečno netiranje prekovremenih za trobrigadu, usklađeno sa platnim
+ * listićem 06/2026: sati preko 8h/dan prvo pokrivaju neopravdani manjak
+ * istog meseca (kraći dani, OFF radni dani), pa je prekovremeno samo višak.
+ * Izuzeci: vikend rad ostaje automatski prekovremeni (ne ulazi ovde), rad
+ * na praznik nikad nije prekovremeni, a dan duži od 12h ukupno prelazi
+ * zakonski dnevni maksimum pa se ceo višak tog dana priznaje kao
+ * prekovremeni bez netiranja.
+ */
+private fun threeBrigadeOvertimeMinutesByDay(
+    sorted: List<DayRecord>,
+    defaultHours: Int
+): Map<DayKey, Int> {
+    // Dan pokriven "iskoristi sate" sa balansa je slobodan dan, ne izostanak,
+    // pa njegov manjak ne upija viškove.
+    var shortageMinutesRemaining = sorted.sumOf { record ->
+        (record.hoursDeficitMinutesFor(BrigadeType.TROBRIGADA) - record.compHoursUsed * MINUTES_PER_HOUR)
+            .coerceAtLeast(0)
+    }
+    val defaultMinutes = defaultHours * MINUTES_PER_HOUR
+    val overtimeByDay = mutableMapOf<DayKey, Int>()
+    for (record in sorted) {
+        if (record.workedOnHoliday) continue
+        if (record.weekday.isWeekend) continue
+        val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
+        val extraMinutes = recordPaidMinutes - defaultMinutes
+        if (extraMinutes <= 0) continue
+        val overtimeMinutes = if (record.totalWorkMinutes > MAX_LEGAL_DAILY_WORK_MINUTES) {
+            extraMinutes
+        } else {
+            val nettedMinutes = min(extraMinutes, shortageMinutesRemaining)
+            shortageMinutesRemaining -= nettedMinutes
+            extraMinutes - nettedMinutes
+        }
+        if (overtimeMinutes > 0) {
+            overtimeByDay[record.key] = overtimeMinutes
+        }
+    }
+    return overtimeByDay
+}
+
+/** Minuti naknada koji na listiću pune mesečni fond (norma = fond − naknade). */
+private fun paidAbsenceFundMinutes(
+    records: List<DayRecord>,
+    year: Int,
+    month: Int,
+    defaultHours: Int
+): Int {
+    var minutes = 0
+    for (record in records) {
+        if (!record.weekday.isWorkday) continue
+        minutes += when {
+            record.shift == Shift.SICK || record.shift == Shift.VACATION ->
+                record.workHours * MINUTES_PER_HOUR
+            record.shift == Shift.OFF && record.isHoliday -> defaultHours * MINUTES_PER_HOUR
+            else -> 0
+        }
+    }
+    if (records.isNotEmpty()) {
+        minutes += unrecordedHolidayFundMinutes(year, month, records.map { it.day }.toSet(), defaultHours)
+    }
+    return minutes
+}
+
+private fun unrecordedHolidayFundMinutes(
+    year: Int,
+    month: Int,
+    recordedDays: Set<Int>,
+    defaultHours: Int
+): Int {
+    if (year <= 0 || month !in 1..12) return 0
+    val daysInMonth = YearMonth.of(year, month).lengthOfMonth()
+    var minutes = 0
+    for (day in 1..daysInMonth) {
+        if (day in recordedDays) continue
+        if (!isSerbianHoliday(year, month, day)) continue
+        if (!Weekday.from(LocalDate.of(year, month, day)).isWorkday) continue
+        minutes += defaultHours * MINUTES_PER_HOUR
+    }
+    return minutes
 }

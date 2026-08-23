@@ -1171,6 +1171,175 @@ class PayCalculatorTest {
     }
 
     @Test
+    fun `calculateMonthSummary cetvorobrigada bolovanje puni fond pa prekovremeno stize ranije`() {
+        // Mart 2026: fond 176h. Bolovanje 2×8h puni fond kao na listiću,
+        // pa norma za rad pada na 160h — 168h rada daje 8h prekovremeno.
+        val records = listOf(
+            DayRecord(2026, 3, 2, Shift.SICK, 8),
+            DayRecord(2026, 3, 3, Shift.SICK, 8)
+        ) + (4..24).map { day ->
+            DayRecord(2026, 3, day, Shift.FIRST, 8)
+        }
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.CETVOROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 3
+        )
+
+        assertEquals(168, result.workHours)
+        assertEquals(8, result.overtimeHours)
+    }
+
+    @Test
+    fun `calculateMonthSummary cetvorobrigada neupisan praznik puni fond`() {
+        // Novembar 2026: fond 168h, praznik 11.11. pada u sredu i nije upisan.
+        // Plaćeni praznik puni fond (norma 160h), pa 168h rada daje 8h prekovremeno.
+        val workDays = (1..22).filter { it != 11 }
+        val records = workDays.map { day ->
+            DayRecord(2026, 11, day, Shift.FIRST, 8)
+        }
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.CETVOROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 11
+        )
+
+        assertEquals(168, result.workHours)
+        assertEquals(8, result.overtimeHours)
+    }
+
+    @Test
+    fun `calculateMonthSummary trobrigada visak preko 8h pokriva manjak iz istog meseca`() {
+        // 10h dan (2h viška) + kraći dan (5h) + OFF radni dan: višak se netira
+        // na mesečnom nivou kao na listiću — nema prekovremenog.
+        val records = listOf(
+            DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2),
+            DayRecord(2026, 6, 8, Shift.OFF, 0),
+            DayRecord(2026, 6, 22, Shift.SECOND, 5)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 6
+        )
+
+        assertEquals(0, result.overtimeHours)
+        // Svih 15h se plaća kao redovan rad, bez prekovremene premije.
+        assertEquals(15 * 300.0, result.totalPay, 0.01)
+    }
+
+    @Test
+    fun `calculateMonthSummary trobrigada dan duzi od 12h ostaje prekovremeni bez netiranja`() {
+        // 14h dan prelazi zakonski dnevni maksimum od 12h — ceo višak od 6h je
+        // prekovremeni iako mesec ima manjak koji bi ga inače upio.
+        val records = listOf(
+            DayRecord(2026, 6, 1, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 6),
+            DayRecord(2026, 6, 8, Shift.OFF, 0),
+            DayRecord(2026, 6, 22, Shift.SECOND, 5)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 6
+        )
+
+        assertEquals(6, result.overtimeHours)
+        assertEquals(8 * 300.0 + 6 * 300.0 * 1.41 + 5 * 300.0, result.totalPay, 0.01)
+    }
+
+    @Test
+    fun `calculateMonthSummary trobrigada visak ostaje prekovremeni kad nema manjka`() {
+        val records = listOf(
+            DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 6
+        )
+
+        assertEquals(2, result.overtimeHours)
+    }
+
+    @Test
+    fun `calculateMonthSummary trobrigada dan pokriven kompenzacijom ne upija visak`() {
+        // OFF dan pokriven sa "iskoristi 8h" je slobodan dan, ne izostanak —
+        // njegov manjak ne sme da upije višak sa drugog dana.
+        val records = listOf(
+            DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2),
+            DayRecord(2026, 6, 8, Shift.OFF, 0, compHoursUsed = 8)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 6
+        )
+
+        assertEquals(2, result.overtimeHours)
+    }
+
+    @Test
+    fun `calculateMonthSummary trobrigada jun 2026 daje 6h prekovremenog kao platni listic`() {
+        // Regresija sa zvaničnog listića 06/2026: dupla smena 14h (6h viška
+        // preko 12h → prekovremeno), viškovi 2h i 3h se netiraju u manjak
+        // (kraći dani i OFF radni dani), noćni ukupno 43h.
+        val records = listOf(
+            DayRecord(2026, 6, 1, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 6),
+            DayRecord(2026, 6, 2, Shift.SECOND, 8),
+            DayRecord(2026, 6, 3, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 2),
+            DayRecord(2026, 6, 4, Shift.SECOND, 8),
+            DayRecord(2026, 6, 5, Shift.FIRST, 8),
+            DayRecord(2026, 6, 8, Shift.OFF, 0),
+            DayRecord(2026, 6, 9, Shift.FIRST, 7),
+            DayRecord(2026, 6, 10, Shift.OFF, 0),
+            DayRecord(2026, 6, 11, Shift.FIRST, 8),
+            DayRecord(2026, 6, 12, Shift.FIRST, 8),
+            DayRecord(2026, 6, 15, Shift.THIRD, 8),
+            DayRecord(2026, 6, 16, Shift.THIRD, 8),
+            DayRecord(2026, 6, 17, Shift.OFF, 0),
+            DayRecord(2026, 6, 18, Shift.THIRD, 8),
+            DayRecord(2026, 6, 19, Shift.THIRD, 8),
+            DayRecord(2026, 6, 22, Shift.SECOND, 5),
+            DayRecord(2026, 6, 23, Shift.SECOND, 5),
+            DayRecord(2026, 6, 24, Shift.SECOND, 4),
+            DayRecord(2026, 6, 25, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 3),
+            DayRecord(2026, 6, 26, Shift.SECOND, 4),
+            DayRecord(2026, 6, 29, Shift.FIRST, 7),
+            DayRecord(2026, 6, 30, Shift.FIRST, 5)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 6
+        )
+
+        assertEquals(144, result.workHours)
+        assertEquals(6, result.overtimeHours)
+        assertEquals(43, result.nightHours)
+    }
+
+    @Test
     fun `calculateMonthSummary cetvorobrigada placa nepun sat prekovremenog preko fonda`() {
         // Cetvorobrigada, mart 2026, fond = 176h (10560 min).
         // 20 punih 8h dana = 9600 min, + jedan 7h30 dan = 450 min -> kumulativ 10050 min (sve redovno).
