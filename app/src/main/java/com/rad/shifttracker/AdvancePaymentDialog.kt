@@ -12,7 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ fun AdvancePaymentDialog(
     onDismiss: () -> Unit
 ) {
     val currentAdjustments = repo.getMonthlyNetAdjustments(year, month)
+    val prediction = remember(year, month) { repo.getAdvancePaymentPrediction(year, month) }
     var advanceInput by remember(year, month) {
         mutableStateOf(formatRateInput(currentAdjustments.advancePaymentNet))
     }
@@ -73,6 +76,50 @@ fun AdvancePaymentDialog(
             }
         }
 
+        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentPrimary) {
+            SectionLabel(text = ADVANCE_PREDICTION_SECTION_LABEL)
+            if (prediction.isAvailable) {
+                Text(
+                    text = ADVANCE_PREDICTION_EXPLANATION_TEXT,
+                    color = THEME.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+                PredictionValueRow(
+                    label = ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL,
+                    value = predictionMoneyText(prediction.previousMonthPaidTotalNet),
+                    valueColor = THEME.textPrimary
+                )
+                PredictionValueRow(
+                    label = ADVANCE_PREDICTION_MINIMUM_LABEL,
+                    value = predictionMoneyText(prediction.minimumAdvanceNet),
+                    valueColor = THEME.warning
+                )
+                RoundedButton(
+                    text = ADVANCE_PREDICTION_USE_MINIMUM_LABEL,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.bgCardElevated,
+                    textColor = THEME.warning,
+                    textStyle = MaterialTheme.typography.labelMedium,
+                    onClick = {
+                        advanceInput = formatRateInput(prediction.minimumAdvanceNet)
+                        errorMessage = null
+                    }
+                )
+            } else {
+                Text(
+                    text = ADVANCE_PREDICTION_UNAVAILABLE_TEXT,
+                    color = THEME.textMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
@@ -107,4 +154,37 @@ fun AdvancePaymentDialog(
             )
         }
     }
+}
+
+@Composable
+private fun PredictionValueRow(
+    label: String,
+    value: String,
+    valueColor: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = THEME.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            color = valueColor,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun predictionMoneyText(value: Double): String {
+    return "${formatCurrency(value)} ${CONFIG.pay.currency}"
 }

@@ -1491,6 +1491,21 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         )
     }
 
+    fun getAdvancePaymentPrediction(year: Int, month: Int): AdvancePaymentPrediction = synchronized(lock) {
+        val paymentMonth = MonthKey(year, month)
+        val previousMonth = previousMonthKey(year, month)
+            ?: return@synchronized unavailableAdvancePaymentPrediction(paymentMonth)
+        val previousBreakdown = getMonthlyFinalPaymentBreakdown(previousMonth.year, previousMonth.month)
+        calculateAdvancePaymentPrediction(
+            paymentMonth = paymentMonth,
+            previousPaymentMonth = previousMonth,
+            isPreviousMonthNetPayAvailable = previousBreakdown.isNetPayAvailable,
+            previousMonthAdvanceNet = previousBreakdown.advancePaymentNet,
+            previousMonthFinalNet = previousBreakdown.finalRemainingNetPay,
+            previousMonthRegressNet = previousBreakdown.remainingRegressNetPay
+        )
+    }
+
     private fun currentCreditDeductionSettingsUnsafe(): CreditDeductionSettings {
         return CreditDeductionSettings(
             creditDeductionEnabled = payState.creditDeductionEnabled,

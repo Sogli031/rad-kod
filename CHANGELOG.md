@@ -3,6 +3,17 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Neobjavljeno]
+
+### Dodato
+- **Predviđanje akontacije po KU (član 91).** U dijalogu *Akontacija* prikazuje se
+  minimalna akontacija po kolektivnom ugovoru Valjaonice Bakra — 40% zarade
+  isplaćene u prethodnom kalendarskom mesecu (akontacija + konačna isplata +
+  regres; prevoz ne ulazi) — uz dugme „Unesi minimum" za brzo popunjavanje.
+  Isti minimum se prikazuje i kao napomena ispod unosa akontacije u detaljima
+  plate. Pravilo je verifikovano na platnim listićima 01–07/2026: nijedan mesec
+  ne krši minimum, a jul 2026 je isplaćen tačno na minimumu.
+
 ## [1.3] - 2026-07-10
 
 ### Ispravljeno

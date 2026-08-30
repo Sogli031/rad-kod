@@ -1,8 +1,12 @@
 package com.rad.shifttracker
 
 import kotlin.math.max
+import kotlin.math.round
 
 private const val MAX_MONTHLY_NET_ADJUSTMENT = 10_000_000.0
+
+/** KU Valjaonice Bakra, član 91: akontacija >= 40% zarade isplaćene u prethodnom mesecu. */
+const val ADVANCE_PAYMENT_MINIMUM_RATE = 0.4
 
 internal const val ADVANCE_PAYMENT_DIALOG_TITLE = "Akontacija"
 internal const val ADVANCE_PAYMENT_NET_LABEL = "Akontacija neto"
@@ -32,6 +36,15 @@ internal const val MEAL_SAFE_DEFAULT_STATUS_TEXT =
 internal const val FINAL_PAYMENT_UNAVAILABLE_TEXT =
     "Nije moguće izračunati konačnu isplatu jer mesečna plata nije izračunata."
 internal const val FINAL_PAYMENT_ADVANCE_WARNING_TEXT = "Akontacija je veća od obračunate neto plate."
+internal const val ADVANCE_PREDICTION_SECTION_LABEL = "Predviđanje (KU čl. 91)"
+internal const val ADVANCE_PREDICTION_EXPLANATION_TEXT =
+    "Po kolektivnom ugovoru akontacija ne može biti manja od 40% zarade isplaćene u prethodnom mesecu."
+internal const val ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL = "Isplaćeno u prethodnom mesecu"
+internal const val ADVANCE_PREDICTION_MINIMUM_LABEL = "Minimalna akontacija (40%)"
+internal const val ADVANCE_PREDICTION_USE_MINIMUM_LABEL = "Unesi minimum"
+internal const val ADVANCE_PREDICTION_UNAVAILABLE_TEXT =
+    "Predviđanje nije dostupno — nema podataka o isplatama za prethodni mesec."
+
 internal const val CREDIT_DEDUCTION_SECTION_LABEL = "Kredit/obustava"
 internal const val CREDIT_DEDUCTION_ENABLED_LABEL = "Kredit aktivan"
 internal const val MONTHLY_CREDIT_DEDUCTION_AMOUNT_LABEL = "Mesečna rata kredita"
@@ -236,4 +249,57 @@ internal fun mealSpentSupportingText(food: MonthlyFoodSpendingBreakdown): String
         MealSpentSource.MANUAL -> MEAL_SPENT_MANUAL_HELP_TEXT
         MealSpentSource.ENTITLEMENT_ASSUMED -> MEAL_SPENT_ASSUMED_HELP_TEXT
     }
+}
+
+/**
+ * Predviđanje akontacije za mesec isplate [paymentMonth] po KU članu 91: akontacija ne može
+ * biti manja od 40% zarade isplaćene u prethodnom mesecu. "Isplaćeno u prethodnom mesecu" je
+ * zbir akontacije, konačne isplate i regresa koji su legli u prethodnom kalendarskom mesecu
+ * (prevoz nije zarada i ne ulazi u osnovicu).
+ */
+data class AdvancePaymentPrediction(
+    val paymentMonth: MonthKey,
+    val previousPaymentMonth: MonthKey?,
+    val isAvailable: Boolean,
+    val previousMonthAdvanceNet: Double,
+    val previousMonthFinalNet: Double,
+    val previousMonthRegressNet: Double,
+    val previousMonthPaidTotalNet: Double,
+    val minimumAdvanceNet: Double
+)
+
+fun calculateAdvancePaymentPrediction(
+    paymentMonth: MonthKey,
+    previousPaymentMonth: MonthKey?,
+    isPreviousMonthNetPayAvailable: Boolean,
+    previousMonthAdvanceNet: Double,
+    previousMonthFinalNet: Double,
+    previousMonthRegressNet: Double
+): AdvancePaymentPrediction {
+    val safeAdvance = previousMonthAdvanceNet.sanitizeMonthlyNetAdjustment()
+    val safeFinal = previousMonthFinalNet.sanitizeMonthlyNetAdjustment()
+    val safeRegress = previousMonthRegressNet.sanitizeMonthlyNetAdjustment()
+    val paidTotal = safeAdvance + safeFinal + safeRegress
+    val available = previousPaymentMonth != null && isPreviousMonthNetPayAvailable && paidTotal > 0.0
+    return AdvancePaymentPrediction(
+        paymentMonth = paymentMonth,
+        previousPaymentMonth = previousPaymentMonth,
+        isAvailable = available,
+        previousMonthAdvanceNet = safeAdvance,
+        previousMonthFinalNet = safeFinal,
+        previousMonthRegressNet = safeRegress,
+        previousMonthPaidTotalNet = paidTotal,
+        minimumAdvanceNet = if (available) round(paidTotal * ADVANCE_PAYMENT_MINIMUM_RATE) else 0.0
+    )
+}
+
+internal fun unavailableAdvancePaymentPrediction(paymentMonth: MonthKey): AdvancePaymentPrediction {
+    return calculateAdvancePaymentPrediction(
+        paymentMonth = paymentMonth,
+        previousPaymentMonth = null,
+        isPreviousMonthNetPayAvailable = false,
+        previousMonthAdvanceNet = 0.0,
+        previousMonthFinalNet = 0.0,
+        previousMonthRegressNet = 0.0
+    )
 }

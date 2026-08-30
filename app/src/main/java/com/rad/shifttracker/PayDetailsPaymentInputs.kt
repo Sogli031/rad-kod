@@ -33,6 +33,7 @@ internal fun MonthlyPaymentInputRows(
     val paymentMonth = monthlyReceipt.paymentMonth
     val payrollMonth = monthlyReceipt.payrollMonth
     val paymentAdjustments = repo.getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month)
+    val advancePrediction = repo.getAdvancePaymentPrediction(paymentMonth.year, paymentMonth.month)
     val payrollGrossAdditions = repo.getMonthlyGrossAdditions(payrollMonth.year, payrollMonth.month)
     val payBreakdown = repo.getNetPayBreakdown(payrollMonth.year, payrollMonth.month)
 
@@ -71,6 +72,11 @@ internal fun MonthlyPaymentInputRows(
             advanceError = null
         },
         errorMessage = advanceError,
+        supportingText = if (advancePrediction.isAvailable) {
+            "Min. po KU čl. 91: ${mealStatusMoneyText(advancePrediction.minimumAdvanceNet)}"
+        } else {
+            null
+        },
         accentColor = THEME.warning
     )
     PaymentAdjustmentInputRow(
