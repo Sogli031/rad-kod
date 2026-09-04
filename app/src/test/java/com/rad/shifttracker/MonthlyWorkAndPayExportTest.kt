@@ -240,6 +240,31 @@ class MonthlyWorkAndPayExportTest {
     }
 
     @Test
+    fun `daily breakdown keeps extra minutes in night and Sunday work`() {
+        val records = listOf(
+            DayRecord(2026, 7, 31, Shift.THIRD, 4, regularShortageMinutes = 30),
+            DayRecord(2026, 7, 5, Shift.FIRST, 4, regularShortageMinutes = 30)
+        )
+        val breakdowns = DailyPayCategoryBreakdownCalculator(
+            payCalculator = PayCalculator(),
+            difficultConditionsPercent = 0.0
+        ).calculateForMonth(
+            records = records,
+            year = 2026,
+            month = 7,
+            brigadeType = BrigadeType.TROBRIGADA
+        )
+
+        val friday = breakdowns.getValue(DayKey(2026, 7, 31))
+        assertEquals(270, friday.regularWorkMinutes)
+        assertEquals(270, friday.nightWorkMinutes)
+
+        val sunday = breakdowns.getValue(DayKey(2026, 7, 5))
+        assertEquals(270, sunday.overtimeMinutes)
+        assertEquals(270, sunday.sundayWorkMinutes)
+    }
+
+    @Test
     fun `ordinary Saturday remains overtime when it is not a holiday`() {
         val records = listOf(
             DayRecord(2026, 5, 9, Shift.FIRST, 5, holidayOverride = false)

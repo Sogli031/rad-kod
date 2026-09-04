@@ -5,6 +5,10 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
 
 ## [Neobjavljeno]
 
+### Ispravljeno
+- Dnevni pregled kategorija (noćni i nedeljni rad) više ne seče dodatne
+  minute dana na cele sate; usklađen je sa mesečnim obračunom koji ih plaća.
+
 ### Dodato
 - **Predviđanje akontacije po KU (član 91).** U dijalogu *Akontacija* prikazuje se
   minimalna akontacija po kolektivnom ugovoru Valjaonice Bakra — 40% zarade

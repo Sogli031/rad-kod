@@ -124,8 +124,8 @@ internal class DailyPayCategoryBreakdownCalculator(
     ): DailyPayCategoryBreakdown {
         val paidWorkMinutes = paidWorkMinutes(record)
         val overtimeMinutes = overtimeMinutes(record, brigadeType, monthlyOvertimeMinutes, paidWorkMinutes)
-        val sundayMinutes = payCalculator.getSundayHours(record, brigadeType) * MINUTES_PER_HOUR
-        val nightMinutes = payCalculator.getNightHours(record) * MINUTES_PER_HOUR
+        val sundayMinutes = sundayWorkMinutes(record, brigadeType)
+        val nightMinutes = nightWorkMinutes(record)
         val holidayWorkMinutes = if (record.workedOnHoliday) paidWorkMinutes else 0
         val difficultMinutes = if (difficultConditionsPercent > 0.0) paidWorkMinutes else 0
         val categories = workDayCategories(
@@ -167,7 +167,7 @@ internal class DailyPayCategoryBreakdownCalculator(
         if (monthlyOvertimeMinutes != null) {
             return monthlyOvertimeMinutes.coerceIn(0, paidWorkMinutes)
         }
-        return payCalculator.getOvertimeHours(record, brigadeType) * MINUTES_PER_HOUR
+        return payCalculator.getOvertimeMinutes(record, brigadeType)
     }
 
     private fun workDayCategories(

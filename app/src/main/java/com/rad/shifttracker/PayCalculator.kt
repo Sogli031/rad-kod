@@ -64,6 +64,11 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     }
 
     fun getOvertimeHours(record: DayRecord, brigadeType: BrigadeType): Int {
+        return getOvertimeMinutes(record, brigadeType) / MINUTES_PER_HOUR
+    }
+
+    /** Dnevni prekovremeni minuti bez mesečnog netiranja; vikend trobrigade je ceo prekovremeni. */
+    fun getOvertimeMinutes(record: DayRecord, brigadeType: BrigadeType): Int {
         if (record.shift == Shift.SICK || record.shift == Shift.OFF || record.shift == Shift.VACATION) {
             return 0
         }
@@ -72,10 +77,9 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
 
         val paidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
         if (paidMinutes <= 0) return 0
-        if (isAutomaticWeekendOvertime(record, brigadeType)) return paidMinutes / MINUTES_PER_HOUR
+        if (isAutomaticWeekendOvertime(record, brigadeType)) return paidMinutes
 
-        val overtimeMinutes = (paidMinutes - config.defaultHours * MINUTES_PER_HOUR).coerceAtLeast(0)
-        return overtimeMinutes / MINUTES_PER_HOUR
+        return (paidMinutes - config.defaultHours * MINUTES_PER_HOUR).coerceAtLeast(0)
     }
 
     fun getFoodAllowance(record: DayRecord): Double {
@@ -942,7 +946,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     }
 }
 
-private fun paidWorkMinuteSegments(record: DayRecord): List<Pair<Shift, Int>> {
+internal fun paidWorkMinuteSegments(record: DayRecord): List<Pair<Shift, Int>> {
     if (record.shift !in Shift.workShifts() || record.effectiveRegularWorkMinutes <= 0) return emptyList()
 
     val segments = mutableListOf<Pair<Shift, Int>>()

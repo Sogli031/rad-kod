@@ -100,3 +100,17 @@ internal fun calculateDifficultWorkConditionsBonusMinutes(
     if (minutes <= 0 || baseRate <= 0.0) return 0.0
     return minutes.toDouble() / MINUTES_PER_HOUR * baseRate * difficultWorkConditionsRate
 }
+
+/** Noćni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun). */
+internal fun nightWorkMinutes(record: DayRecord): Int {
+    return paidWorkMinuteSegments(record)
+        .filter { (shift, _) -> shift == Shift.THIRD }
+        .sumOf { (_, minutes) -> minutes }
+}
+
+/** Nedeljni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun). */
+internal fun sundayWorkMinutes(record: DayRecord, brigadeType: BrigadeType): Int {
+    return paidWorkMinuteSegments(record).sumOf { (shift, minutes) ->
+        getSundayMinutesForShift(record.weekday, shift, minutes, brigadeType)
+    }
+}
