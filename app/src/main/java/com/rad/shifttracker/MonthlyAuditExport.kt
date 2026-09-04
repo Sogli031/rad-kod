@@ -36,7 +36,7 @@ internal fun grossAdditionsBreakdownMap(
         "totalGrossAdditions" to payBreakdown.grossAdditionsTotal,
         "grossUpNetRetentionRate" to grossUpNetRetentionRate(contributionsPercent, taxPercent),
         "grossUpFormulaDescription" to
-            "mealEntitlementGross = payrollRound(mealEntitlementNet / grossUpNetRetentionRate)"
+            "mealEntitlementGross = roundHalfUp2(mealEntitlementNet / grossUpNetRetentionRate)"
     )
 }
 

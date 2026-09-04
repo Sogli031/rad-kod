@@ -34,11 +34,11 @@ class PayrollCorrectionsRegressionTest {
         assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, breakdown.mealCalculationMode)
         assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
         assertMoney(3_840.00, breakdown.mealEntitlementNet)
-        assertMoney(5_478.00, breakdown.mealEntitlementGross)
+        assertMoney(5_477.89, breakdown.mealEntitlementGross)
         assertMoney(3_620.00, breakdown.mealSpentNetApplied)
         assertMoney(3_620.00, breakdown.mealNetDeduction)
         assertMoney(220.00, breakdown.mealUnusedNet)
-        assertMoney(105_478.00, breakdown.grossTotal)
+        assertMoney(105_477.89, breakdown.grossTotal)
         assertTrue(!breakdown.mealSpendingDefaultedToEntitlement)
     }
 
@@ -59,7 +59,7 @@ class PayrollCorrectionsRegressionTest {
         )
 
         assertMoney(5_880.0, breakdown.mealEntitlementNet)
-        assertMoney(8_388.0, breakdown.mealEntitlementGross)
+        assertMoney(8_388.02, breakdown.mealEntitlementGross)
         assertMoney(5_880.0, breakdown.mealSpentNetApplied)
         assertMoney(5_880.0, breakdown.mealNetDeduction)
         assertMoney(0.0, breakdown.mealUnusedNet)
@@ -158,7 +158,8 @@ class PayrollCorrectionsRegressionTest {
                 absencePenaltyGross = BigDecimal("495.00")
             )
         )
-        assertPayroll(may, 176_923.11, 35_207.70, 14_270.21, 127_445.20, 121_965.20)
+        // Listić 05/2026 u dinar: TO2 7.817,40 = 5.480 / 0,701 na dve decimale.
+        assertPayroll(may, 176_923.51, 35_207.78, 14_270.25, 127_445.48, 121_965.48)
 
         val juneWorkGross = money(139 * 637.32) +
             money(6 * 637.32) +
@@ -185,7 +186,9 @@ class PayrollCorrectionsRegressionTest {
                 mealEntitlementNetOverride = BigDecimal("3840.00")
             )
         )
-        assertPayroll(june, 113_463.72, 22_579.28, 7_924.27, 82_960.17, 79_340.17)
+        // Listić 06/2026 ima TO2 5.478,00 (odgovara neto 3.840,08); uz potvrđeno pravo
+        // 3.840,00 gross-up daje 5.477,89, pa kontrolni iznosi odstupaju 0,11 od listića.
+        assertPayroll(june, 113_463.61, 22_579.26, 7_924.26, 82_960.09, 79_340.09)
     }
 
     @Test

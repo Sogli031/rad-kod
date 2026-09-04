@@ -843,7 +843,7 @@ class ShiftRepositoryTest {
         assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, breakdown.mealCalculationMode)
         assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
         assertEquals(3_840.0, breakdown.mealEntitlementNet, 0.01)
-        assertEquals(5_478.0, breakdown.mealGrossApplied, 0.01)
+        assertEquals(5_477.89, breakdown.mealGrossApplied, 0.01)
         assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(3_620.0, breakdown.mealNetDeduction, 0.01)
     }
@@ -853,7 +853,7 @@ class ShiftRepositoryTest {
         repo.foodPerDayValue = 5_880.0
         repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
         val automatic = repo.getNetPayBreakdown(2026, 6)
-        assertEquals(8_388.0, automatic.mealGrossApplied, 0.01)
+        assertEquals(8_388.02, automatic.mealGrossApplied, 0.01)
 
         var changeCount = 0
         val token = repo.onChange { changeCount += 1 }
@@ -865,7 +865,7 @@ class ShiftRepositoryTest {
         val julyFinalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 7)
         assertEquals(1, changeCount)
         assertEquals(3_840.0, recalculated.mealEntitlementNet, 0.01)
-        assertEquals(5_478.0, recalculated.mealGrossApplied, 0.01)
+        assertEquals(5_477.89, recalculated.mealGrossApplied, 0.01)
         assertEquals(3_620.0, recalculated.mealNetDeduction, 0.01)
         assertEquals(220.0, recalculated.mealUnusedNet, 0.01)
         assertEquals(recalculated.displayPay, julyReceipt.salaryNetPay, 0.01)
@@ -2712,7 +2712,7 @@ class ShiftRepositoryTest {
         val grossDailyPay = repo.calculateDailyPay(record)
 
         assertEquals(8_000.0, grossDailyPay, 0.01)
-        assertEquals(5_607.74, repo.calculateEstimatedDailyNetPay(record), 0.01)
+        assertEquals(5_608.00, repo.calculateEstimatedDailyNetPay(record), 0.01)
     }
 
     @Test
@@ -3013,8 +3013,8 @@ class ShiftRepositoryTest {
         val record = repo.get(2026, 6, 4)!!
 
         assertEquals(280.0, repo.getSummary(2026, 6).minuliRadBonus, 0.01)
-        assertEquals(8_622.0, repo.calculateEstimatedDailyGrossPay(record), 0.01)
-        assertEquals(5_804.02, repo.calculateEstimatedDailyNetPay(record), 0.01)
+        assertEquals(8_622.37, repo.calculateEstimatedDailyGrossPay(record), 0.01)
+        assertEquals(5_804.28, repo.calculateEstimatedDailyNetPay(record), 0.01)
     }
 
     @Test
@@ -3788,8 +3788,8 @@ class ShiftRepositoryTest {
         val offRecord = repo.get(2026, 6, 6)
 
         assertNotNull(paidRecord)
-        assertEquals(8_343.0, repo.calculateEstimatedDailyGrossPay(paidRecord!!), 0.01)
-        assertEquals(5_600.10, repo.calculateEstimatedDailyNetPay(paidRecord), 0.01)
+        assertEquals(8_342.86, repo.calculateEstimatedDailyGrossPay(paidRecord!!), 0.01)
+        assertEquals(5_600.00, repo.calculateEstimatedDailyNetPay(paidRecord), 0.01)
         assertNull(offRecord)
     }
 

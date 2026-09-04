@@ -865,7 +865,7 @@ class PayBreakdownTest {
             )
         )
 
-        assertEquals(5_164.0, breakdown.grossMealAddition, 0.0001)
+        assertEquals(5_164.05, breakdown.grossMealAddition, 0.0001)
         assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
         assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
         assertEquals(3_620.0, breakdown.mealAllowanceNet, 0.01)
@@ -933,7 +933,7 @@ class PayBreakdownTest {
         assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
         assertEquals(MealSpentSource.MANUAL, breakdown.mealSpentSource)
         assertEquals(4_240.0, breakdown.mealCoveredNet, 0.01)
-        assertEquals(6_049.0, breakdown.grossMealAddition, 0.0001)
+        assertEquals(6_048.50, breakdown.grossMealAddition, 0.0001)
         assertEquals(4_240.0, breakdown.mealEntitlementNetApplied, 0.01)
         assertEquals(4_240.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(4_240.0, breakdown.netDeductionsTotal, 0.01)
@@ -957,7 +957,7 @@ class PayBreakdownTest {
         )
 
         assertEquals(3_620.0, breakdown.mealCoveredNet, 0.01)
-        assertEquals(5_164.0, breakdown.grossMealAddition, 0.0001)
+        assertEquals(5_164.05, breakdown.grossMealAddition, 0.0001)
         assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
         assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(3_620.0, breakdown.netDeductionsTotal, 0.01)
@@ -982,7 +982,7 @@ class PayBreakdownTest {
         )
 
         assertEquals(5_530.0, breakdown.mealCoveredNet, 0.01)
-        assertEquals(7_889.0, breakdown.grossMealAddition, 0.0001)
+        assertEquals(7_888.73, breakdown.grossMealAddition, 0.0001)
         assertEquals(5_530.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(5_530.0, breakdown.netDeductionsTotal, 0.01)
     }
@@ -1050,8 +1050,8 @@ class PayBreakdownTest {
         val lowerEntitlement = calculate(5_000.0)
         val higherEntitlement = calculate(6_000.0)
         assertEquals(lowerEntitlement.grossMealAddition, higherEntitlement.grossMealAddition, 0.0001)
-        assertEquals(6_049.0, lowerEntitlement.grossMealAddition, 0.0001)
-        assertEquals(6_049.0, higherEntitlement.grossMealAddition, 0.0001)
+        assertEquals(6_048.50, lowerEntitlement.grossMealAddition, 0.0001)
+        assertEquals(6_048.50, higherEntitlement.grossMealAddition, 0.0001)
         assertEquals(4_240.0, lowerEntitlement.mealCoveredNet, 0.01)
         assertEquals(4_240.0, lowerEntitlement.mealAllowanceNet, 0.01)
         assertEquals(4_240.0, higherEntitlement.mealAllowanceNet, 0.01)
@@ -1082,7 +1082,7 @@ class PayBreakdownTest {
         )
 
         assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
-        assertEquals(5_164.0, breakdown.grossMealAddition, 0.0001)
+        assertEquals(5_164.05, breakdown.grossMealAddition, 0.0001)
         assertEquals(3_620.0, breakdown.mealCoveredNet, 0.01)
         assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(3_620.0, breakdown.netDeductionsTotal, 0.01)
@@ -1108,8 +1108,8 @@ class PayBreakdownTest {
 
         assertTrue(lowerSpending.grossMealAddition != higherSpending.grossMealAddition)
         assertEquals(higherSpending.mealSpentNetApplied, otherGross.mealSpentNetApplied, 0.01)
-        assertEquals(1_427.0, lowerSpending.grossMealAddition, 0.0001)
-        assertEquals(5_164.0, higherSpending.grossMealAddition, 0.0001)
+        assertEquals(1_426.53, lowerSpending.grossMealAddition, 0.0001)
+        assertEquals(5_164.05, higherSpending.grossMealAddition, 0.0001)
         assertEquals(higherSpending.grossMealAddition, otherGross.grossMealAddition, 0.0001)
     }
 
@@ -1135,7 +1135,7 @@ class PayBreakdownTest {
         assertEquals(6_160.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, breakdown.mealSpentSource)
         assertEquals(6_160.0, breakdown.mealCoveredNet, 0.01)
-        assertEquals(8_787.0, breakdown.grossMealAddition, 0.01)
+        assertEquals(8_787.45, breakdown.grossMealAddition, 0.01)
         assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
         assertEquals(6_160.0, breakdown.mealNetDeduction, 0.01)
         assertEquals(6_160.0, breakdown.netDeductionsTotal, 0.01)
@@ -1155,7 +1155,7 @@ class PayBreakdownTest {
 
         assertEquals(5_880.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, breakdown.mealSpentSource)
-        assertEquals(8_388.0, breakdown.mealGrossApplied, 0.0001)
+        assertEquals(8_388.02, breakdown.mealGrossApplied, 0.0001)
         assertEquals(5_880.0, breakdown.mealNetDeduction, 0.01)
     }
 
@@ -1173,7 +1173,7 @@ class PayBreakdownTest {
 
         assertEquals(5_880.0, breakdown.mealSpentNetApplied, 0.01)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, breakdown.mealSpentSource)
-        assertEquals(8_388.0, breakdown.mealGrossApplied, 0.0001)
+        assertEquals(8_388.02, breakdown.mealGrossApplied, 0.0001)
         assertEquals(5_880.0, breakdown.mealNetDeduction, 0.01)
     }
 
@@ -1196,13 +1196,13 @@ class PayBreakdownTest {
         val automaticZero = calculate(null)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, automaticZero.mealSpentSource)
         assertEquals(5_880.0, automaticZero.mealSpentNetApplied, 0.01)
-        assertEquals(8_388.0, automaticZero.mealGrossApplied, 0.0001)
+        assertEquals(8_388.02, automaticZero.mealGrossApplied, 0.0001)
         assertEquals(5_880.0, automaticZero.mealNetDeduction, 0.01)
 
         val manual = calculate(3_620.0)
         assertEquals(MealSpentSource.MANUAL, manual.mealSpentSource)
         assertEquals(3_620.0, manual.mealSpentNetApplied, 0.01)
-        assertEquals(5_164.0, manual.mealGrossApplied, 0.0001)
+        assertEquals(5_164.05, manual.mealGrossApplied, 0.0001)
         assertEquals(3_620.0, manual.mealNetDeduction, 0.01)
         assertEquals(0.0, manual.mealUnusedNet, 0.01)
     }
@@ -1232,7 +1232,7 @@ class PayBreakdownTest {
 
         assertEquals(7_160.0, overSpending.mealCoveredNet, 0.01)
         assertEquals(7_160.0, overSpending.mealSpentNetApplied, 0.01)
-        assertEquals(10_214.0, overSpending.grossMealAddition, 0.0001)
+        assertEquals(10_213.98, overSpending.grossMealAddition, 0.0001)
         assertEquals(7_160.0, overSpending.mealEntitlementNetApplied, 0.01)
         assertEquals(0.0, overSpending.mealUnusedNet, 0.01)
         assertEquals(7_160.0, overSpending.netDeductionsTotal, 0.01)
@@ -1264,7 +1264,7 @@ class PayBreakdownTest {
 
         assertEquals(5_160.0, lowerSpending.mealCoveredNet, 0.01)
         assertEquals(5_160.0, lowerSpending.mealSpentNetApplied, 0.01)
-        assertEquals(7_361.0, lowerSpending.grossMealAddition, 0.0001)
+        assertEquals(7_360.91, lowerSpending.grossMealAddition, 0.0001)
         assertEquals(5_160.0, lowerSpending.mealEntitlementNetApplied, 0.01)
         assertEquals(0.0, lowerSpending.mealUnusedNet, 0.01)
         assertEquals(5_160.0, lowerSpending.netDeductionsTotal, 0.01)

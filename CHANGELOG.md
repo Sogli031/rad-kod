@@ -6,6 +6,8 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
 ## [Neobjavljeno]
 
 ### Ispravljeno
+- Bruto toplog obroka (neto / 0,701) zaokružuje se na dve decimale kao na
+  platnom listiću (05/2026: 7.817,40; 07/2026: 4.129,81), umesto na ceo dinar.
 - Dnevni pregled kategorija (noćni i nedeljni rad) više ne seče dodatne
   minute dana na cele sate; usklađen je sa mesečnim obračunom koji ih plaća.
 

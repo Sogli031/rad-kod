@@ -412,8 +412,7 @@ private fun calculateMealGrossFromNet(
     if (net.signum() <= 0 || netFactor <= 0.0) return BigDecimal.ZERO.setScale(2)
     return net
         .divide(netFactor.toPayrollDecimal(), PAYROLL_MATH_CONTEXT)
-        .setScale(0, RoundingMode.HALF_UP)
-        .setScale(2)
+        .setScale(2, RoundingMode.HALF_UP)
 }
 
 private fun Double.toPayrollDecimal(): BigDecimal {
