@@ -271,10 +271,22 @@ private fun absenceAndLeaveRows(
         if (uncoveredLoss > 0.0 || payDetails.grossUncoveredDeficitLoss > 0.0) {
             add(
                 WorkHoursTableLine(
-                    "Izostanci",
+                    "Manjak po danima (saldo)",
                     formatHoursAndMinutes(-uncoveredDeficitMinutes(payBreakdown, payDetails)),
                     deductionMoneyText(uncoveredLoss),
                     WorkHoursTone.Danger
+                )
+            )
+        }
+        // Listić (šifra 95): fond − plaćeni sati bez prekovremenih; bez iznosa jer ti sati nisu plaćeni.
+        val fundAbsenceMinutes = payDetails.fundAbsenceMinutes(payBreakdown.monthlyFundHours)
+        if (fundAbsenceMinutes > 0) {
+            add(
+                WorkHoursTableLine(
+                    "Izostanci po fondu (listić)",
+                    formatHoursAndMinutes(-fundAbsenceMinutes),
+                    "–",
+                    WorkHoursTone.Muted
                 )
             )
         }

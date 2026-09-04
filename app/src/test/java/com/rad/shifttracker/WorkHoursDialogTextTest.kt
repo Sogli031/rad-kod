@@ -21,7 +21,9 @@ class WorkHoursDialogTextTest {
         assertTrue(workHoursSource.contains("PopupDialog("))
         assertTrue(workHoursSource.contains("title = WORK_HOURS_DIALOG_TITLE"))
         assertTrue(workHoursSource.contains("\"Obični sati\""))
-        assertTrue(workHoursSource.contains("\"Izostanci\""))
+        assertTrue(workHoursSource.contains("\"Manjak po danima (saldo)\""))
+        assertTrue(workHoursSource.contains("\"Izostanci po fondu (listić)\""))
+        assertTrue(workHoursSource.contains("payDetails.fundAbsenceMinutes(payBreakdown.monthlyFundHours)"))
         assertTrue(workHoursSource.contains("\"Godišnji odmor\""))
     }
 

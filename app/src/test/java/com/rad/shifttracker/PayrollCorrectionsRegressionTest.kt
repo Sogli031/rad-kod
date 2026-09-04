@@ -89,6 +89,38 @@ class PayrollCorrectionsRegressionTest {
     }
 
     @Test
+    fun `maj 2026 izostanci po fondu prate listic a manjak po danima ostaje saldo`() {
+        val repo = ShiftRepository()
+        repo.set(2026, 5, 1, Shift.FIRST, 8)
+        repo.set(2026, 5, 2, Shift.SECOND, 5)
+        listOf(4, 5, 6, 8, 27, 28, 29).forEach { day -> repo.set(2026, 5, day, Shift.THIRD, 8) }
+        repo.set(2026, 5, 7, Shift.OFF, 0)
+        repo.set(2026, 5, 11, Shift.SECOND, 5)
+        listOf(12, 13, 15).forEach { day -> repo.set(2026, 5, day, Shift.SECOND, 8) }
+        repo.set(2026, 5, 14, Shift.SECOND, 6)
+        (18..22).forEach { day -> repo.set(2026, 5, day, Shift.FIRST, 8) }
+        repo.set(2026, 5, 23, Shift.FIRST, 6)
+        repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 25))
+
+        val details = repo.getMonthlyPayDetails(2026, 5)
+        val breakdown = repo.getNetPayBreakdown(2026, 5)
+        assertEquals(168, breakdown.monthlyFundHours)
+        assertEquals(131 * 60, details.regularWorkedBaseMinutes)
+        assertEquals(13 * 60, details.publicHolidayWorkedBaseMinutes)
+        assertEquals(6 * 60, details.overtimeMinutes)
+        assertEquals(16 * 60, details.paidLeaveMinutes)
+        // Manjak po danima (saldo): 07.05 ceo dan, 11.05 3h, 14.05 2h.
+        assertEquals(13 * 60, details.uncoveredDeficitMinutes)
+        // Listić 05/2026 šifra 95: 168 − (132 + 13 + 16) = 7h. Subota 02.05 (5h na praznik)
+        // puni fond, prekovremeno 23.05 ne. App ima 1h režije manje u unosima, pa daje 8h.
+        assertEquals(8 * 60, details.fundAbsenceMinutes(breakdown.monthlyFundHours))
+
+        val export = JSONObject(repo.exportSelectedMonthWorkAndPayJson(2026, 5))
+        assertEquals(8 * 60, export.getJSONObject("monthlySummary").getInt("fundAbsenceMinutes"))
+        assertEquals(8 * 60, export.getJSONObject("rawCalculationDebug").getInt("fundAbsenceMinutes"))
+    }
+
+    @Test
     fun `jun placeni i kompenzacioni dodatni rad se ne placaju dvaput`() {
         val config = CONFIG.pay.copy(foodPerDay = 0.0)
         val calculator = PayCalculator(config)

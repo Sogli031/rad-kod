@@ -12,6 +12,11 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
   minute dana na cele sate; usklađen je sa mesečnim obračunom koji ih plaća.
 
 ### Dodato
+- **Izostanci po fondu (listić)** u dijalogu *Sati rada*: fond meseca minus svi
+  sati plaćeni po osnovi bez prekovremenih, isto što platni listić prikazuje
+  pod šifrom 95. Dosadašnji red „Izostanci" (dnevni manjak koji hrani saldo
+  sati) preimenovan je u „Manjak po danima (saldo)". Isti broj ide i u export
+  (`fundAbsenceMinutes`).
 - **Predviđanje akontacije po KU (član 91).** U dijalogu *Akontacija* prikazuje se
   minimalna akontacija po kolektivnom ugovoru Valjaonice Bakra — 40% zarade
   isplaćene u prethodnom kalendarskom mesecu (akontacija + konačna isplata +

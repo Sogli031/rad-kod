@@ -249,6 +249,7 @@ internal fun auditChecksMap(
 
     val fundComparableMinutes = payDetails.totalPaidMinutes - payDetails.overtimeMinutes
     val fundMinutes = payBreakdown.monthlyFundHours * 60
+    val fundAbsenceMinutes = payDetails.fundAbsenceMinutes(payBreakdown.monthlyFundHours)
     val workHoursMatchFund = fundMinutes == fundComparableMinutes
     if (!workHoursMatchFund) {
         warnings += "Paid non-overtime hours ${formatHoursAndMinutes(fundComparableMinutes)} do not match monthly " +
@@ -261,6 +262,7 @@ internal fun auditChecksMap(
         "grossTotalMatchesParts" to grossTotalMatchesParts,
         "displayPayMatchesFormula" to displayPayMatchesFormula,
         "workHoursMatchFund" to workHoursMatchFund,
+        "fundAbsenceMinutes" to fundAbsenceMinutes,
         "warnings" to warnings
     )
 }

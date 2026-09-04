@@ -91,3 +91,15 @@ data class MonthlyPayDetails(
     val netRatioBeforeSeniority: Double
         get() = if (grossTotalBeforeSeniority > 0.0) netTotalBeforeSeniority / grossTotalBeforeSeniority else 0.0
 }
+
+/**
+ * Izostanci kao na platnom listiću (šifra 95): mesečni fond umanjen za sve
+ * sate plaćene po osnovi koji ga pune (režija, rad na praznik, naknade,
+ * pokriven manjak). Prekovremeni sati fond ne pune. Ovo je knjigovodstveni
+ * ostatak fonda, a ne dnevni manjak koji hrani saldo sati.
+ */
+fun MonthlyPayDetails.fundAbsenceMinutes(monthlyFundHours: Int): Int {
+    if (monthlyFundHours <= 0) return 0
+    val paidNonOvertimeMinutes = totalPaidMinutes - overtimeMinutes
+    return (monthlyFundHours * 60 - paidNonOvertimeMinutes).coerceAtLeast(0)
+}
