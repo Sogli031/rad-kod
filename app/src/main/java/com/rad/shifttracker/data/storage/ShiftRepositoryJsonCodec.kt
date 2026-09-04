@@ -84,6 +84,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         data[FOOD_RECEIPT_REMINDER_ENABLED_KEY] = snapshot.foodReceiptReminderEnabled
         data[AUTO_ADVANCE_IMPORT_ENABLED_KEY] = snapshot.autoAdvanceImportEnabled
         data[NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY] = snapshot.notificationAccessPromptSuppressed
+        data[MAIN_PAY_INCLUDES_TRANSPORT_KEY] = snapshot.mainPayIncludesTransport
         snapshot.lastBloodDonationDate?.let { date ->
             data[BLOOD_DONATION_LAST_DATE_KEY] = date.toString()
         }
@@ -182,7 +183,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val parsedUnionMember = json.optBoolean(UNION_MEMBER_KEY, false)
         val parsedUnionDuesRate =
             json.optDouble(UNION_DUES_RATE_KEY, DEFAULT_UNION_DUES_RATE).sanitizeUnionDuesRate()
-        val parsedFoodReceiptReminderEnabled = json.optBoolean(FOOD_RECEIPT_REMINDER_ENABLED_KEY, false)
         val parsedAutoAdvanceImport = parseAutoAdvanceImportFlags(json)
         val parsedLastBloodDonationDate = json.optLocalDateOrNull(BLOOD_DONATION_LAST_DATE_KEY)
         val parsedBloodDonationHistory = parseBloodDonationHistory(
@@ -249,9 +249,10 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             monthlyCreditDeductionAmount = parsedMonthlyCreditDeductionAmount,
             unionMember = parsedUnionMember,
             unionDuesRate = parsedUnionDuesRate,
-            foodReceiptReminderEnabled = parsedFoodReceiptReminderEnabled,
+            foodReceiptReminderEnabled = json.optBoolean(FOOD_RECEIPT_REMINDER_ENABLED_KEY, false),
             autoAdvanceImportEnabled = parsedAutoAdvanceImport.enabled,
             notificationAccessPromptSuppressed = parsedAutoAdvanceImport.promptSuppressed,
+            mainPayIncludesTransport = json.optBoolean(MAIN_PAY_INCLUDES_TRANSPORT_KEY, true),
             lastBloodDonationDate = parsedBloodDonationHistory.firstOrNull() ?: parsedLastBloodDonationDate,
             bloodDonationCount = parsedBloodDonationCount,
             bloodDonationHistory = parsedBloodDonationHistory,
@@ -728,6 +729,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val FOOD_RECEIPT_REMINDER_ENABLED_KEY = "food_receipt_reminder_enabled"
         const val AUTO_ADVANCE_IMPORT_ENABLED_KEY = "auto_advance_import_enabled"
         const val NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY = "notification_access_prompt_suppressed"
+        /** Stari bekapi nemaju ovaj ključ — prikaz ispod kalendara ostaje sa prevozom kao i do sada. */
+        const val MAIN_PAY_INCLUDES_TRANSPORT_KEY = "main_pay_includes_transport"
         const val BLOOD_DONATION_LAST_DATE_KEY = "blood_donation_last_date"
         const val BLOOD_DONATION_COUNT_KEY = "blood_donation_count"
         const val BLOOD_DONATION_HISTORY_KEY = "blood_donation_history"

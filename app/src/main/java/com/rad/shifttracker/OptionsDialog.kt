@@ -91,6 +91,16 @@ internal fun OptionsDialog(
                 bold = true,
                 onClick = onHolidaysClick
             )
+            var mainPayIncludesTransport by remember(repo.mainPayIncludesTransport) {
+                mutableStateOf(repo.mainPayIncludesTransport)
+            }
+            MainPayTransportSwitch(
+                enabled = mainPayIncludesTransport,
+                onCheckedChange = { checked ->
+                    mainPayIncludesTransport = checked
+                    repo.mainPayIncludesTransport = checked
+                }
+            )
             var autoAdvanceImportEnabled by remember(repo.autoAdvanceImportEnabled) {
                 mutableStateOf(repo.autoAdvanceImportEnabled)
             }
@@ -354,11 +364,42 @@ private fun parseUnionDuesPercentInput(input: String): Double? {
 }
 
 @Composable
+private fun MainPayTransportSwitch(
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    OptionToggleRow(
+        sectionLabel = MAIN_PAY_TRANSPORT_SECTION_LABEL,
+        title = MAIN_PAY_TRANSPORT_LABEL,
+        hint = if (enabled) MAIN_PAY_TRANSPORT_ENABLED_HINT else MAIN_PAY_TRANSPORT_DISABLED_HINT,
+        enabled = enabled,
+        onCheckedChange = onCheckedChange
+    )
+}
+
+@Composable
 private fun AutoAdvanceImportSwitch(
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    SectionLabel(text = AUTO_ADVANCE_IMPORT_SECTION_LABEL)
+    OptionToggleRow(
+        sectionLabel = AUTO_ADVANCE_IMPORT_SECTION_LABEL,
+        title = AUTO_ADVANCE_IMPORT_ENABLED_LABEL,
+        hint = if (enabled) AUTO_ADVANCE_IMPORT_ENABLED_HINT else AUTO_ADVANCE_IMPORT_DISABLED_HINT,
+        enabled = enabled,
+        onCheckedChange = onCheckedChange
+    )
+}
+
+@Composable
+private fun OptionToggleRow(
+    sectionLabel: String,
+    title: String,
+    hint: String,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    SectionLabel(text = sectionLabel)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -369,14 +410,14 @@ private fun AutoAdvanceImportSwitch(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = AUTO_ADVANCE_IMPORT_ENABLED_LABEL,
+                text = title,
                 color = THEME.textPrimary,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = if (enabled) AUTO_ADVANCE_IMPORT_ENABLED_HINT else AUTO_ADVANCE_IMPORT_DISABLED_HINT,
+                text = hint,
                 color = THEME.textSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 4,

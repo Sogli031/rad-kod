@@ -63,5 +63,7 @@ internal data class ShiftRepositorySnapshot(
      * spajanje sa arhivom u oblaku vratilo obrisani najstariji mesec —
      * granica merge-a se pomeri naviše pa ga arhiva ponovo isporuči.
      */
-    val deletedMonths: List<MonthKey> = emptyList()
+    val deletedMonths: List<MonthKey> = emptyList(),
+    /** Da li kartice ispod kalendara („Plata za…", „Primanja u ovom mesecu") uključuju prevoz. */
+    val mainPayIncludesTransport: Boolean = true
 )

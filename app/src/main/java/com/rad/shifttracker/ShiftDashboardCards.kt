@@ -106,23 +106,37 @@ internal fun StatsSection(
 }
 
 @Composable
-internal fun TotalCard(receipt: MonthlyReceipt, onClick: () -> Unit) {
+internal fun TotalCard(
+    receipt: MonthlyReceipt,
+    includeTransport: Boolean = true,
+    onClick: () -> Unit
+) {
     PayAmountCard(
         label = TOTAL_CARD_LABEL,
-        amount = receipt.totalReceivedThisMonth,
+        amount = mainPayCardAmount(receipt, includeTransport),
         isAvailable = receipt.isSalaryAvailable,
         onClick = onClick
     )
 }
 
 @Composable
-internal fun SalaryCard(month: Int, nextMonthReceipt: MonthlyReceipt, onClick: () -> Unit) {
+internal fun SalaryCard(
+    month: Int,
+    nextMonthReceipt: MonthlyReceipt,
+    includeTransport: Boolean = true,
+    onClick: () -> Unit
+) {
     PayAmountCard(
         label = salaryCardLabel(month),
-        amount = nextMonthReceipt.totalReceivedThisMonth,
+        amount = mainPayCardAmount(nextMonthReceipt, includeTransport),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
         onClick = onClick
     )
+}
+
+/** Iznos na kartici ispod kalendara: sa prevozom (podrazumevano) ili samo neto plata i regres. */
+internal fun mainPayCardAmount(receipt: MonthlyReceipt, includeTransport: Boolean): Double {
+    return if (includeTransport) receipt.totalReceivedThisMonth else receipt.displayPay
 }
 
 @Composable

@@ -93,6 +93,12 @@ internal const val SATNICA_HOURLY_VALUE_LABEL = "Vrednost sata"
 internal const val SATNICA_DIFFICULT_WORK_CONDITIONS_LABEL = "Otežani uslovi rada (%)"
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL = "Prevoz po danu"
+internal const val MAIN_PAY_TRANSPORT_SECTION_LABEL = "Prikaz ispod kalendara"
+internal const val MAIN_PAY_TRANSPORT_LABEL = "Prevoz u iznosu za isplatu"
+internal const val MAIN_PAY_TRANSPORT_ENABLED_HINT =
+    "Kartice „Plata za…“ i „Primanja u ovom mesecu“ prikazuju neto platu (i regres) zajedno sa prevozom."
+internal const val MAIN_PAY_TRANSPORT_DISABLED_HINT =
+    "Isključeno — kartice prikazuju samo neto platu (i regres), bez prevoza. Detalji plate i dalje prikazuju prevoz."
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_HINT = "Unesi iznos prevoza po radnom danu"
 

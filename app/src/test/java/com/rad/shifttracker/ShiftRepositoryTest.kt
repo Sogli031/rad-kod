@@ -492,6 +492,32 @@ class ShiftRepositoryTest {
     }
 
     @Test
+    fun `prevoz u iznosu ispod kalendara je podrazumevano ukljucen`() {
+        assertTrue(repo.mainPayIncludesTransport)
+    }
+
+    @Test
+    fun `iskljucen prevoz ispod kalendara se cuva kroz export import i stari backup ostaje sa prevozom`() {
+        var changeCount = 0
+        val token = repo.onChange { changeCount += 1 }
+        repo.mainPayIncludesTransport = false
+        repo.mainPayIncludesTransport = false
+        repo.removeOnChange(token)
+        assertEquals(1, changeCount)
+
+        val json = JSONObject(repo.exportJson())
+        assertFalse(json.getBoolean("main_pay_includes_transport"))
+
+        val restored = ShiftRepository()
+        assertTrue(restored.importFromJson(json.toString()))
+        assertFalse(restored.mainPayIncludesTransport)
+
+        val legacy = ShiftRepository()
+        assertTrue(legacy.importFromJson("{\"pay_coefficient\": 1.0}"))
+        assertTrue(legacy.mainPayIncludesTransport)
+    }
+
+    @Test
     fun `stari backup bez zastavice auto akontacije ostaje ukljucen`() {
         val restored = ShiftRepository()
         assertTrue(restored.importFromJson("{\"pay_coefficient\": 1.0}"))

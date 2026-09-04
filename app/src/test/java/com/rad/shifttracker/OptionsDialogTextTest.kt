@@ -33,6 +33,42 @@ class OptionsDialogTextTest {
     }
 
     @Test
+    fun `options dialog exposes transport toggle for pay cards below calendar`() {
+        assertEquals("Prikaz ispod kalendara", MAIN_PAY_TRANSPORT_SECTION_LABEL)
+        assertEquals("Prevoz u iznosu za isplatu", MAIN_PAY_TRANSPORT_LABEL)
+
+        val optionsSource = listOf(
+            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
+        ).first { it.exists() }.readText()
+        assertTrue(optionsSource.contains("MainPayTransportSwitch("))
+        assertTrue(optionsSource.contains("repo.mainPayIncludesTransport = checked"))
+
+        val screenSource = listOf(
+            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt")
+        ).first { it.exists() }.readText()
+        assertEquals(2, screenSource.split("includeTransport = mainPayIncludesTransport").size - 1)
+    }
+
+    @Test
+    fun `pay cards below calendar drop transport only when toggle is off`() {
+        val receipt = MonthlyReceipt(
+            year = 2026,
+            month = 8,
+            salaryMonth = MonthKey(2026, 7),
+            salaryNetPay = 100_000.0,
+            regressNetPay = 20_000.0,
+            transportEligibleDays = 10,
+            transportDailyAmount = 240.0
+        )
+
+        assertEquals(122_400.0, mainPayCardAmount(receipt, includeTransport = true), 0.001)
+        assertEquals(120_000.0, mainPayCardAmount(receipt, includeTransport = false), 0.001)
+        assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, includeTransport = true), 0.001)
+    }
+
+    @Test
     fun `options dialog does not expose exact alarm permission action`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),

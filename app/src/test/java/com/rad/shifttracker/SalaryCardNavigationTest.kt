@@ -16,7 +16,7 @@ class SalaryCardNavigationTest {
 
         assertTrue(salaryCardSource.contains("onClick: () -> Unit"))
         assertTrue(salaryCardSource.contains("onClick = onClick"))
-        assertTrue(salaryCardSource.contains("amount = nextMonthReceipt.totalReceivedThisMonth"))
+        assertTrue(salaryCardSource.contains("amount = mainPayCardAmount(nextMonthReceipt, includeTransport)"))
         assertTrue(!salaryCardSource.contains("amount = nextMonthReceipt.salaryNetPay"))
         assertTrue(screenSource.contains("onClick = { dialogState = DialogState.SalaryDetails }"))
         assertTrue(dialogsSource.contains("DialogState.SalaryDetails ->"))

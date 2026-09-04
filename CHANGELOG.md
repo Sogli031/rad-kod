@@ -12,6 +12,12 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
   minute dana na cele sate; usklađen je sa mesečnim obračunom koji ih plaća.
 
 ### Dodato
+- **Prekidač „Prevoz u iznosu za isplatu"** u *Opcijama* (sekcija „Prikaz ispod
+  kalendara"). Podrazumevano uključen, kao i do sada: kartice „Plata za…" i
+  „Primanja u ovom mesecu" prikazuju neto platu (i regres) sa prevozom. Kad se
+  isključi, prikazuju samo neto platu (i regres) bez prevoza; detalji plate i
+  dalje prikazuju prevoz kao zasebnu stavku. Čuva se u JSON-u
+  (`main_pay_includes_transport`, stari bekapi ostaju sa prevozom).
 - **Izostanci po fondu (listić)** u dijalogu *Sati rada*: fond meseca minus svi
   sati plaćeni po osnovi bez prekovremenih, isto što platni listić prikazuje
   pod šifrom 95. Dosadašnji red „Izostanci" (dnevni manjak koji hrani saldo

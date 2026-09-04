@@ -97,6 +97,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     private var foodReceiptReminderEnabledState = false
     private var autoAdvanceImportEnabledState = true
     private var notificationAccessPromptSuppressedState = false
+    private var mainPayIncludesTransportState = true
     private var lastBloodDonationDateState: LocalDate? = null
     private var bloodDonationCountState = 0
     private var bloodDonationHistoryState: List<LocalDate> = emptyList()
@@ -161,6 +162,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             foodReceiptReminderEnabled = foodReceiptReminderEnabledState,
             autoAdvanceImportEnabled = autoAdvanceImportEnabledState,
             notificationAccessPromptSuppressed = notificationAccessPromptSuppressedState,
+            mainPayIncludesTransport = mainPayIncludesTransportState,
             lastBloodDonationDate = lastBloodDonationDateState,
             bloodDonationCount = bloodDonationCountState,
             bloodDonationHistory = bloodDonationHistoryState,
@@ -469,6 +471,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             foodReceiptReminderEnabledState = snapshot.foodReceiptReminderEnabled
             autoAdvanceImportEnabledState = snapshot.autoAdvanceImportEnabled
             notificationAccessPromptSuppressedState = snapshot.notificationAccessPromptSuppressed
+            mainPayIncludesTransportState = snapshot.mainPayIncludesTransport
             bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
             lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
             bloodDonationCountState = snapshot.bloodDonationCount.coerceAtLeast(bloodDonationHistoryState.size)
@@ -1795,6 +1798,27 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
      * Glavni prekidač za automatski upis akontacije iz NLB obaveštenja.
      * Kad je isključen, servis ne upisuje ništa i nema pitanja za pristup obaveštenjima.
      */
+    /**
+     * Da li kartice ispod kalendara („Plata za…", „Primanja u ovom mesecu")
+     * prikazuju neto platu (i regres) zajedno sa prevozom. Isključeno = samo
+     * neto plata; detalji plate i dalje prikazuju prevoz kao zasebnu stavku.
+     */
+    var mainPayIncludesTransport: Boolean
+        get() = synchronized(lock) { mainPayIncludesTransportState }
+        set(value) {
+            val changed = synchronized(lock) {
+                if (mainPayIncludesTransportState == value) {
+                    false
+                } else {
+                    mainPayIncludesTransportState = value
+                    true
+                }
+            }
+            if (changed) {
+                notifyChange()
+            }
+        }
+
     var autoAdvanceImportEnabled: Boolean
         get() = synchronized(lock) { autoAdvanceImportEnabledState }
         set(value) {
