@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.UI
+import com.rad.shifttracker.Spacing
 
 /**
  * Position options for status indicator dots within a container.
@@ -49,7 +50,7 @@ fun BoxScope.StatusIndicator(
     Box(
         modifier = modifier
             .align(alignment)
-            .padding(4.dp)
+            .padding(Spacing.xs)
             .size(UI.indicatorDotSize.dp)
             .background(color, CircleShape)
     )
@@ -67,7 +68,7 @@ fun BoxScope.BottomBarIndicator(
     Box(
         modifier = modifier
             .align(Alignment.BottomCenter)
-            .padding(start = 8.dp, end = 8.dp, bottom = 2.dp)
+            .padding(start = Spacing.sm, end = Spacing.sm, bottom = Spacing.xxs)
             .height(UI.indicatorBarHeight.dp)
             .fillMaxWidth()
             .background(color, CircleShape)

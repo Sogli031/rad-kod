@@ -130,7 +130,7 @@ fun SickVacationDialog(
             SectionLabel(text = "Opseg dana")
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 ModernTextField(
                     value = startText,
@@ -163,7 +163,7 @@ fun SickVacationDialog(
             val isSick = absenceType == AbsenceType.SICK
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 DayEditChoiceButton(
                     text = "Bolovanje",
@@ -187,7 +187,7 @@ fun SickVacationDialog(
             DayEditChoiceHeader(text = "Isplata bolovanja")
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {
                     DayEditChoiceButton(
@@ -264,7 +264,7 @@ fun SickVacationDialog(
 @Composable
 private fun VacationRangePreviewCard(preview: VacationRangePreview) {
     PopupCard(
-        spacing = 5.dp
+        spacing = Spacing.xs
     ) {
         SectionLabel(text = "Godišnji")
         Text(
@@ -291,7 +291,7 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
     val difference = impact?.netDifference ?: 0.0
     val differenceColor = absenceNetDifferenceColor(difference)
     PopupCard(
-        spacing = 5.dp
+        spacing = Spacing.xs
     ) {
         SectionLabel(text = "Neto promena")
         if (impact == null) {

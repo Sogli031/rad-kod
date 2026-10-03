@@ -113,7 +113,7 @@ private fun OptionActionButton(
     )
 }
 
-private val OPTION_ROW_PADDING = PaddingValues(vertical = 10.dp)
+private val OPTION_ROW_PADDING = PaddingValues(vertical = Spacing.md)
 
 @Composable
 private fun OptionDivider() {
@@ -132,7 +132,7 @@ private fun ManualPaySettingsSection(repo: ShiftRepository) {
         style = MaterialTheme.typography.bodySmall,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
+        modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm)
     )
     // Prevoz po danu se ne kuca: čita se iz najnovijeg obračuna prevoza (~15. u mesecu).
     Text(
@@ -141,7 +141,7 @@ private fun ManualPaySettingsSection(repo: ShiftRepository) {
         style = MaterialTheme.typography.bodySmall,
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(bottom = 10.dp)
+        modifier = Modifier.padding(bottom = Spacing.md)
     )
 }
 

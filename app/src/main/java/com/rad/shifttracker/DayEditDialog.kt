@@ -391,7 +391,7 @@ private fun DayEditStatusHeader(
     }
 
     if (estimatedNetDailyPay > 0.0 || netDifferenceText != null) {
-        PopupCard(spacing = 6.dp) {
+        PopupCard(spacing = Spacing.sm) {
             DayEditValueRow(
                 label = "Neto procena",
                 value = "${formatNumber(estimatedNetDailyPay)} ${CONFIG.pay.currency}",
@@ -414,7 +414,7 @@ private fun DayEditValueRow(label: String, value: String, valueColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Text(
             text = label,
@@ -448,7 +448,7 @@ private fun DayEditHolidayWarningStrip(text: String) {
             .clip(shape)
             .background(MaterialTheme.extendedColors.warning.copy(alpha = 0.14f))
             .border(1.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.35f), shape)
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm)
     ) {
         Text(
             text = text,
@@ -502,7 +502,7 @@ internal fun RowScope.DayEditChoiceButton(
             maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
         )
     }
 }
@@ -520,7 +520,7 @@ private fun DayEditDayTypeSelector(
     val isWorkDaySelected = selectedShift in Shift.workShifts()
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
             text = "Radio sam",
@@ -537,7 +537,7 @@ private fun DayEditDayTypeSelector(
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
             text = "Godišnji",
@@ -554,7 +554,7 @@ private fun DayEditDayTypeSelector(
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
             text = dayEditShiftButtonText(Shift.OFF),
@@ -582,7 +582,7 @@ private fun DayEditWorkControls(
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             DayEditValueButton(
                 label = "Redovni sati",
@@ -631,8 +631,8 @@ private fun DayEditValueButton(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA), shape)
             .radClickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
     ) {
         Text(
             text = label,
@@ -661,7 +661,7 @@ private fun DayEditShiftSelector(
     DayEditChoiceHeader(text = question)
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         for (shift in shifts) {
             DayEditChoiceButton(
@@ -684,7 +684,7 @@ private fun DayEditOvertimeTypeSelector(
     DayEditChoiceHeader(text = question)
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
             text = "Plaćeno",
@@ -759,7 +759,7 @@ private fun DayEditSickControls(
         DayEditChoiceHeader(text = "Isplata bolovanja")
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             val rates = listOf(
                 CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%",
@@ -829,14 +829,14 @@ private fun DayEditCompensationBlock(
     DayEditSectionCard(title = "Kompenzacija") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = UI.buttonHeight.dp)
-                    .padding(horizontal = 2.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                    .padding(horizontal = Spacing.xxs, vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
             ) {
                 Text(
                     text = "Bilans sati",

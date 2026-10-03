@@ -175,9 +175,9 @@ fun PopupDialog(
                         // Guta dodire iznad lista (bez semantike), da ne zatvore dijalog preko scrim-a.
                         .pointerInput(Unit) { detectTapGestures { } }
                         .padding(bottom = insets.calculateBottomPadding())
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.lg)
                         .wrapContentHeight(),
-                    verticalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     SheetHeader(
                         title = title,
@@ -199,14 +199,14 @@ fun PopupDialog(
                                 .fillMaxWidth()
                                 .weight(1f, fill = false)
                                 .verticalScroll(scrollState),
-                            verticalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                         ) {
                             content()
                         }
                     } else {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                         ) {
                             content()
                         }
@@ -215,8 +215,8 @@ fun PopupDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            verticalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+                                .padding(top = Spacing.xs),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                         ) {
                             footerContent()
                         }
@@ -230,7 +230,7 @@ fun PopupDialog(
                     hostState = host,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = insets.calculateTopPadding() + 8.dp, start = 16.dp, end = 16.dp)
+                        .padding(top = insets.calculateTopPadding() + Spacing.sm, start = Spacing.lg, end = Spacing.lg)
                 )
             }
         }
@@ -254,7 +254,7 @@ private fun SheetHeader(
                 orientation = Orientation.Vertical,
                 onDragStopped = { velocity -> onDragStopped(velocity) }
             ),
-        verticalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         SheetDragHandle(
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -272,7 +272,7 @@ private fun SheetHeader(
             maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 2.dp)
+                .padding(bottom = Spacing.xxs)
                 .semantics { heading() }
         )
     }
@@ -336,7 +336,7 @@ private fun DialogEdgeToEdgeWindow() {
 @Composable
 fun PopupCard(
     modifier: Modifier = Modifier,
-    spacing: Dp = UI.defaultSpacing.dp,
+    spacing: Dp = Spacing.sm,
     content: @Composable ColumnScope.() -> Unit
 ) {
     GlassCard(
@@ -346,7 +346,7 @@ fun PopupCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing)
         ) {
             content()
@@ -372,12 +372,12 @@ fun HoursPickerDialog(
         val rows = hours.chunked(4)
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             for (row in rows) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     for (hour in row) {
                         val isSelected = hour == currentHours
@@ -415,7 +415,7 @@ fun ShortageMinutesDialog(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             for (minutes in regularShortageMinuteOptions()) {
                 val isSelected = minutes == currentMinutes
@@ -464,12 +464,12 @@ fun CompUsedDialog(
         )
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             for (row in rows) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     for (hours in row) {
                         val isSelected = hours == currentHours

@@ -74,13 +74,13 @@ internal fun PayslipFolderSettingsSection() {
     }
 
     Column(
-        modifier = Modifier.padding(vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = Modifier.padding(vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             ModernTextField(
                 value = folderInput,
@@ -227,8 +227,8 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
     val error = connector.error
 
     Column(
-        modifier = Modifier.padding(vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = Modifier.padding(vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Text(
             text = gmailPayslipAccessStatusText(accountEmail),

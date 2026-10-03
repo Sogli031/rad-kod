@@ -342,7 +342,7 @@ private fun PayslipFileActions(isReading: Boolean, onReplace: () -> Unit, onDele
         modifier = Modifier
             .fillMaxWidth()
             .height(PAYSLIP_FILE_ACTION_HEIGHT),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         RoundedButton(
             text = if (isReading) "Čitam listu..." else "Zameni listu",
@@ -388,7 +388,7 @@ private fun PayslipDeleteDialog(month: MonthKey, onConfirm: () -> Unit, onDismis
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            horizontalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             RoundedButton(
                 text = "Otkaži",
@@ -488,7 +488,7 @@ internal fun LastPayslipValues(payslip: ParsedPayslip) {
 
 @Composable
 private fun ReaderValueRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(
             text = label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

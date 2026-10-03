@@ -181,7 +181,7 @@ private fun BloodDonationHistorySection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(UI.buttonHeight.dp),
-                horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RoundedButton(
@@ -217,7 +217,7 @@ private fun BloodDonationHistoryRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(MIN_TOUCH_TARGET),
-        horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

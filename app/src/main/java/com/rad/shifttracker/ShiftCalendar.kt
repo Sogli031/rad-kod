@@ -70,7 +70,7 @@ internal fun calendarCellFontScale(systemFontScale: Float, dayHeight: Float): Fl
 /** Visina ćelije tako da svi redovi meseca stanu u dostupnu visinu (najviše podrazumevana). */
 internal fun calendarDayHeight(availableHeight: Float, rows: Int): Float {
     if (rows <= 0) return UI.dayButtonHeight.toFloat()
-    val fit = (availableHeight - 2 * CALENDAR_PADDING - UI.smallSpacing * (rows - 1)) / rows
+    val fit = (availableHeight - 2 * CALENDAR_PADDING - Spacing.xs.value * (rows - 1)) / rows
     return fit.coerceIn(CALENDAR_MIN_DAY_HEIGHT, UI.dayButtonHeight.toFloat())
 }
 
@@ -80,12 +80,12 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
         modifier = Modifier
             .fillMaxWidth()
             .height(UI.headerHeight.dp)
-            .padding(horizontal = 2.dp),
+            .padding(horizontal = Spacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec", onClick = onPrev)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             AutoSizeText(
                 text = MONTH_NAMES[month],
                 color = MaterialTheme.colorScheme.onSurface,
@@ -142,7 +142,7 @@ internal fun WeekdayHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .height(UI.weekdayHeaderHeight.dp)
-            .padding(horizontal = 6.dp),
+            .padding(horizontal = Spacing.sm),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -188,12 +188,12 @@ internal fun CalendarSection(
                         .fillMaxSize()
                         .padding(CALENDAR_PADDING.dp)
                         .verticalScroll(scrollState),
-                    verticalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     for (week in weeks) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                         ) {
                             for (day in week) {
                                 val record = if (day != 0) repo.get(year, month, day) else null
@@ -302,7 +302,7 @@ private fun RowScope.DayButton(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
-                .padding(horizontal = 3.dp),
+                .padding(horizontal = Spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {

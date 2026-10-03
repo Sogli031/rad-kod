@@ -92,7 +92,7 @@ private fun RadButtonLabel(text: String, style: TextStyle, contentDescription: S
         maxLines = 1,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xxs)
             .then(
                 // Dugme sa jednim znakom (X, +, -) čitač izgovara kroz opis, ne kroz sam znak.
                 if (contentDescription == null) {
@@ -171,7 +171,7 @@ fun RoundedButton(
         shape = CircleShape,
         colors = radButtonColors(container = bgColor, content = textColor),
         border = BorderStroke(1.dp, borderColor.copy(alpha = 0.5f)),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 0.dp)
     ) {
         RadButtonLabel(
             text = text,
@@ -204,7 +204,7 @@ fun GlowButton(
             container = if (destructive) scheme.error else scheme.primary,
             content = if (destructive) scheme.onError else scheme.onPrimary
         ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 0.dp)
     ) {
         RadButtonLabel(text = text, style = textStyle.copy(fontWeight = FontWeight.Bold))
     }
@@ -234,11 +234,11 @@ fun LabeledSwitchRow(
             .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
             Text(
                 text = title,
@@ -282,7 +282,7 @@ fun LabeledCheckboxRow(
             .heightIn(min = MIN_TOUCH_TARGET)
             .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onCheckedChange)
             .padding(contentPadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(MIN_TOUCH_TARGET), contentAlignment = Alignment.Center) {
@@ -363,7 +363,7 @@ fun StatColumn(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        modifier = modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -415,8 +415,8 @@ private fun SummaryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
         ) {
             SectionLabel(text = label)
             AutoSizeText(

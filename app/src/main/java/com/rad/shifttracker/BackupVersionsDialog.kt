@@ -80,7 +80,7 @@ private fun LoadingCard() {
     PopupCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.height(18.dp),
@@ -164,7 +164,7 @@ private fun RestoreConfirmCard(
         if (isBusy) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.height(18.dp),
@@ -180,7 +180,7 @@ private fun RestoreConfirmCard(
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 RoundedButton(
                     text = "Otkaži",
@@ -231,7 +231,7 @@ fun RestoreLatestConfirmDialog(
             if (isBusy) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.height(18.dp),
@@ -247,7 +247,7 @@ fun RestoreLatestConfirmDialog(
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     RoundedButton(
                         text = "Otkaži",
@@ -307,7 +307,7 @@ fun CloudBackupFoundDialog(
             if (isBusy) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.height(18.dp),
@@ -333,7 +333,7 @@ fun CloudBackupFoundDialog(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     RoundedButton(
                         text = "Kasnije",

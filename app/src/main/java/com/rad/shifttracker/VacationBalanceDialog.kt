@@ -130,7 +130,7 @@ fun VacationBalanceDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f), MaterialTheme.shapes.small)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
                 ) {
                     Text(
                         text = "Prekora\u010den fond godi\u0161njeg!",

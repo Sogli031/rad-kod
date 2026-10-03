@@ -39,7 +39,7 @@ internal fun MonthlyPaymentInputRows(
     }
     var advanceError by remember(paymentMonth) { mutableStateOf<String?>(null) }
 
-    Spacer(modifier = Modifier.height(UI.defaultSpacing.dp))
+    Spacer(modifier = Modifier.height(Spacing.sm))
     PaymentAdjustmentInputRow(
         label = ADVANCE_PAYMENT_DIALOG_TITLE,
         value = advanceInput,
@@ -80,10 +80,10 @@ private fun PaymentAdjustmentInputRow(
     supportingText: String? = null,
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AutoSizeText(
@@ -107,7 +107,7 @@ private fun PaymentAdjustmentInputRow(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ModernTextField(

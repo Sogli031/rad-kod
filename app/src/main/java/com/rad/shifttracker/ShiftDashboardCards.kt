@@ -219,14 +219,14 @@ private fun PayAmountCard(
             HorizontalDivider(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = Spacing.lg),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
             )
         }
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = Spacing.lg),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AutoSizeText(
@@ -238,7 +238,7 @@ private fun PayAmountCard(
                 maxLines = 1,
                 modifier = Modifier
                     .weight(1.15f)
-                    .padding(end = UI.smallSpacing.dp)
+                    .padding(end = Spacing.xs)
             )
             AutoSizeText(
                 text = totalText,
@@ -300,8 +300,8 @@ internal fun BottomBar(
             modifier = Modifier
                 .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
-                .padding(start = UI.cardPadding.dp, top = 6.dp, end = UI.cardPadding.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(start = Spacing.lg, top = Spacing.sm, end = Spacing.lg, bottom = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             buttons.forEach { item ->
@@ -323,7 +323,7 @@ private fun BottomBarAction(item: BottomBarItem, enabled: Boolean, modifier: Mod
             .clip(MaterialTheme.shapes.medium)
             .radClickable(enabled = enabled, onClick = item.onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         Box(
             modifier = Modifier
@@ -353,7 +353,7 @@ private fun BottomBarAction(item: BottomBarItem, enabled: Boolean, modifier: Mod
             maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 2.dp)
+                .padding(bottom = Spacing.xxs)
         )
     }
 }

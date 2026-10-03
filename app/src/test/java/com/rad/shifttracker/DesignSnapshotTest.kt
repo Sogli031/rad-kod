@@ -179,17 +179,17 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
                 .padding(
-                    start = UI.cardPadding.dp,
+                    start = Spacing.lg,
                     top = 16.dp,
-                    end = UI.cardPadding.dp,
+                    end = Spacing.lg,
                     bottom = mainContentBottomPaddingDp().dp
                 ),
-            verticalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             HeaderSection(month = month, year = year, onPrev = {}, onNext = {})
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 CompTimeCard(summary = summary, modifier = Modifier.weight(1f), onClick = {})
                 VacationCard(repo = repo, repoTick = 0, year = year, today = today, modifier = Modifier.weight(1f), onClick = {})

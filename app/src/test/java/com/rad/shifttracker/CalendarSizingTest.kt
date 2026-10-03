@@ -16,7 +16,7 @@ class CalendarSizingTest {
         val rows = 6
         val height = calendarDayHeight(available, rows)
         assertTrue(height < UI.dayButtonHeight)
-        assertTrue(rows * height + (rows - 1) * UI.smallSpacing + 12f <= available + 0.001f)
+        assertTrue(rows * height + (rows - 1) * Spacing.xs.value + 12f <= available + 0.001f)
     }
 
     @Test

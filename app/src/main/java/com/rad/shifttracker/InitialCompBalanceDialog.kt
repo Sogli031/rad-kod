@@ -122,7 +122,7 @@ fun InitialCompBalanceDialog(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             RoundedButton(
                 text = INITIAL_COMP_BALANCE_RESET_LABEL,

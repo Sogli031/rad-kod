@@ -10,7 +10,7 @@ class ScreenSafeAreaTest {
 
     @Test
     fun `main content reserves the bottom bar boundary`() {
-        assertEquals(UI.bottomBarHeight + UI.largeSpacing, mainContentBottomPaddingDp())
+        assertEquals(UI.bottomBarHeight + Spacing.sm.value.toInt(), mainContentBottomPaddingDp())
     }
 
     @Test

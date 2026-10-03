@@ -39,7 +39,7 @@ fun CrashLogScreen(crashLog: String) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(Spacing.lg)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -56,7 +56,7 @@ fun CrashLogScreen(crashLog: String) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             Button(
                 onClick = {
@@ -75,7 +75,7 @@ fun CrashLogScreen(crashLog: String) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             Box(
                 modifier = Modifier
@@ -85,7 +85,7 @@ fun CrashLogScreen(crashLog: String) {
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = MaterialTheme.shapes.small
                     )
-                    .padding(12.dp)
+                    .padding(Spacing.md)
                     .verticalScroll(rememberScrollState())
                     .horizontalScroll(rememberScrollState())
             ) {

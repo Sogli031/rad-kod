@@ -57,7 +57,7 @@ fun PayDetailsDialog(
     val bottomScrollPadding = maxOf(
         navigationBarBottomPadding,
         PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP.dp
-    ) + UI.largeSpacing.dp
+    ) + Spacing.sm
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -73,8 +73,8 @@ fun PayDetailsDialog(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(UI.cardPadding.dp),
-                verticalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+                    .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 PayDetailsHeroCard(
                     paymentTitle = paymentMonthTitleText(monthlyReceipt),
@@ -321,7 +321,7 @@ private fun CompactInfoRow(
             maxLines = 1,
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 8.dp)
+                .padding(end = Spacing.sm)
         )
         // Iznos se nikad ne skraćuje; kad nema mesta, smanjuje se naziv levo.
         Text(
@@ -344,7 +344,7 @@ private fun CompactDeductionDetailRow(
         label = label,
         value = deductionMoneyText(value),
         color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(start = UI.largeSpacing.dp)
+        modifier = Modifier.padding(start = Spacing.sm)
     )
 }
 
@@ -354,7 +354,7 @@ private fun CompactTextBlock(
     value: String,
     color: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
             text = label,
             color = MaterialTheme.extendedColors.textSecondary,

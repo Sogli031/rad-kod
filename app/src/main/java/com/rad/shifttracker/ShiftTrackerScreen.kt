@@ -382,12 +382,12 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
                 .padding(
-                    start = UI.cardPadding.dp,
+                    start = Spacing.lg,
                     top = 16.dp,
-                    end = UI.cardPadding.dp,
+                    end = Spacing.lg,
                     bottom = mainContentBottomPaddingDp().dp
                 ),
-            verticalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             HeaderSection(
                 month = currentMonth,
@@ -406,7 +406,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 CompTimeCard(
                     summary = summary,
@@ -484,7 +484,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 hostState = host,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(start = 16.dp, end = 16.dp, bottom = UI.bottomBarHeight.dp)
+                    .padding(start = Spacing.lg, end = Spacing.lg, bottom = UI.bottomBarHeight.dp)
             )
         }
     }
@@ -640,7 +640,7 @@ private fun monthTransition(forward: Boolean): ContentTransform {
 private const val MONTH_SLIDE_DIVISOR = 8
 
 internal fun mainContentBottomPaddingDp(): Int {
-    return UI.bottomBarHeight + UI.largeSpacing
+    return UI.bottomBarHeight + Spacing.sm.value.toInt()
 }
 
 /** Korisnička poruka posle verzionisanog backup-a (uspeh / upozorenje / greška). */

@@ -5,7 +5,6 @@ object UI {
     const val iconButtonSize = 48
     const val saveButtonHeight = 52
     const val cardRadius = 12
-    const val cardPadding = 16
     const val headerHeight = 52
     const val statCardHeight = 62
     const val totalCardHeight = 82
@@ -17,9 +16,6 @@ object UI {
     const val popupMaxHeight = 760
     const val popupEdgePadding = 28
     const val popupBottomSafePadding = 0
-    const val defaultSpacing = 8
-    const val largeSpacing = 10
-    const val smallSpacing = 4
     const val indicatorDotSize = 6
     const val indicatorBarHeight = 3
 

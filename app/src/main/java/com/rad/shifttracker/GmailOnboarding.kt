@@ -508,7 +508,7 @@ private val ONBOARDING_FAILED_SUMMARY = OnboardingSummary(
 private fun InlineSummaryRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -577,9 +577,9 @@ private fun OnboardingProgressDialog(done: Int, total: Int) {
                 .clip(MaterialTheme.shapes.extraLarge)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge)
-                .padding(24.dp),
+                .padding(Spacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             Text(
                 text = GMAIL_ONBOARDING_IMPORTING_TEXT,
@@ -632,8 +632,8 @@ internal fun SideRunMessagesDialog(messages: List<String>, onDismiss: () -> Unit
                 .clip(MaterialTheme.shapes.extraLarge)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             Text(
                 text = SIDE_RUN_MESSAGES_TITLE,
@@ -646,7 +646,7 @@ internal fun SideRunMessagesDialog(messages: List<String>, onDismiss: () -> Unit
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 messages.forEach { message ->
                     Text(text = message, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
@@ -782,7 +782,7 @@ private fun OnboardingActions(
     when (step) {
         OnboardingStep.Intro -> Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             RoundedButton(
                 text = GMAIL_ONBOARDING_SKIP_LABEL,

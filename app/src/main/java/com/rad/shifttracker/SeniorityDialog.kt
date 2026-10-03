@@ -208,7 +208,7 @@ private fun SeniorityModeSelector(
 ) {
     PopupCard {
         SectionLabel(text = "Režim unosa")
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             SeniorityModeButton(
                 text = "Znam kada sam počeo",
                 selected = selectedMode == SeniorityInputMode.KNOWN_START,
@@ -322,13 +322,13 @@ private fun PayslipPercentSection(
 
 @Composable
 private fun MonthGrid(selectedMonth: Int, onMonthChange: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         for (monthRow in (1..12).chunked(3)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(42.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 for (monthNumber in monthRow) {
                     val selected = selectedMonth == monthNumber
@@ -369,7 +369,7 @@ private fun SeniorityFactorDropdown(
     onFactorChange: (SeniorityIncreaseFactor) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         SectionLabel(text = "Stepen uvećanja")
         Box(modifier = Modifier.fillMaxWidth()) {
             RoundedButton(
@@ -441,11 +441,11 @@ private fun PreviewBox(color: androidx.compose.ui.graphics.Color, content: @Comp
         modifier = Modifier
             .fillMaxWidth()
             .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.small)
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = Spacing.sm, vertical = Spacing.sm)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content
         )

@@ -166,7 +166,7 @@ private fun PayslipMonthReplaceDialog(month: MonthKey, dayCount: Int, onConfirm:
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            horizontalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             RoundedButton(
                 text = "Otkaži",

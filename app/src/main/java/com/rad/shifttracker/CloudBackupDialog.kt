@@ -87,7 +87,7 @@ fun CloudBackupDialog(
                             color = MaterialTheme.extendedColors.info,
                             strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.sm))
                         Text(
                             text = "Sinhronizacija...",
                             color = MaterialTheme.extendedColors.info,
@@ -125,7 +125,7 @@ fun CloudBackupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), MaterialTheme.shapes.small)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
                 ) {
                     FormErrorText(
                         message = syncError,

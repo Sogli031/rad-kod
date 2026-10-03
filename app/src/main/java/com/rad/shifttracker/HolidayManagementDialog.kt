@@ -52,7 +52,7 @@ fun HolidayManagementDialog(
             SectionLabel(text = "Dodaj ručni praznik")
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ModernTextField(
@@ -113,7 +113,7 @@ fun HolidayManagementDialog(
             SectionLabel(text = "Lista praznika")
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 entries.forEach { entry ->
                     HolidayEntryRow(
@@ -153,11 +153,11 @@ private fun HolidayEntryRow(
             uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
             checkmarkColor = MaterialTheme.colorScheme.onPrimary
         ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+        contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.sm)
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
         ) {
             Text(
                 text = entry.name,
@@ -183,7 +183,7 @@ private fun HolidayEntryRow(
             modifier = Modifier
                 .clearAndSetSemantics { }
                 .background(stateColor.copy(alpha = 0.18f), MaterialTheme.shapes.small)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
         ) {
             Text(
                 text = if (entry.isActive) "Da" else "Ne",

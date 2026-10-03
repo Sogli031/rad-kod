@@ -97,7 +97,7 @@ fun AdvancePaymentDialog(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             RoundedButton(
                 text = ADVANCE_PAYMENT_CANCEL_LABEL,
@@ -137,7 +137,7 @@ private fun PredictionValueRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

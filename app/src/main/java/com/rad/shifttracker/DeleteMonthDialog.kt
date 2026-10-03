@@ -34,7 +34,7 @@ fun DeleteMonthDialog(
         scrollable = true
     ) {
         PopupCard(
-            spacing = UI.largeSpacing.dp
+            spacing = Spacing.sm
         ) {
             AutoSizeText(
                 text = "!",
@@ -65,7 +65,7 @@ fun DeleteMonthDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(UI.buttonHeight.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 RoundedButton(
                     text = "Ovaj mesec",
@@ -92,7 +92,7 @@ fun DeleteMonthDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.saveButtonHeight.dp),
-            horizontalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             RoundedButton(
                 text = "Otkaži",

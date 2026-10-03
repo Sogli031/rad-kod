@@ -104,6 +104,24 @@ class DesignSystemTest {
         assertTrue("Boje idu kroz MaterialTheme.colorScheme/extendedColors:\n" + offenders.joinToString("\n"), offenders.isEmpty())
     }
 
+    @Test
+    fun `spacing goes through Spacing tokens`() {
+        val mainDir = File(themeSourcePath()).parentFile
+        val spacingContext = Regex("""padding\(|spacedBy\(|PaddingValues\(|\bspacing = |Spacer\(""")
+        val sizeContext = Regex("""size\(|strokeWidth|border\(|shape|offset\(|\b(height|width|heightIn|widthIn)\(""")
+        val literal = Regex("""\b([2-9]|[1-9]\d+)\.dp\b""")
+        val offenders = mainDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "Spacing.kt" }
+            .flatMap { file ->
+                file.readLines().mapIndexedNotNull { index, line ->
+                    val spacingOnly = spacingContext.containsMatchIn(line) && !sizeContext.containsMatchIn(line)
+                    if (spacingOnly && literal.containsMatchIn(line)) "${file.name}:${index + 1}: ${line.trim()}" else null
+                }
+            }
+            .toList()
+        assertTrue("Razmaci idu kroz Spacing.*:\n" + offenders.joinToString("\n"), offenders.isEmpty())
+    }
+
     private fun themeSourcePath(): String {
         return listOf(
             "src/main/java/com/rad/shifttracker/Theme.kt",
