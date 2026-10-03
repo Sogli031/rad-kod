@@ -421,8 +421,11 @@ internal fun payslipMissingText(month: MonthKey): String =
 internal fun payslipNotArrivedText(month: MonthKey): String =
     "Lista za ${monthYearText(month)} još nije stigla."
 
-/** Dan u sledećem mesecu kad stiže konačna lista za prethodni mesec (lista za septembar: 20. oktobar). */
-internal const val PAYSLIP_ARRIVAL_DAY = 20
+/**
+ * Od ovog dana u sledećem mesecu lista za prethodni mesec može da postoji (lista za septembar: od 15. oktobra).
+ * Isti dan uključuje „Listu“ i pokreće automatsku proveru konačne liste iz Gmail-a.
+ */
+internal const val PAYSLIP_ARRIVAL_DAY = 15
 
 /**
  * Lista za mesec stiže [PAYSLIP_ARRIVAL_DAY]. sledećeg meseca; do tada (i za tekući i budući mesec)

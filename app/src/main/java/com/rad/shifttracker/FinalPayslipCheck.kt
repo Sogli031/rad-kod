@@ -10,7 +10,6 @@ import java.time.YearMonth
  * dok je nema, jedna pretraga u Gmail-u (folder samo kad Gmail ne radi); nađena lista se upisuje
  * kao u „Listi“ i javlja porukom u aplikaciji.
  */
-private const val FINAL_PAYSLIP_FROM_DAY = 15
 private const val FINAL_PAYSLIP_CHECK_PREFS = "rad_final_payslip_check"
 private const val KEY_LAST_CHECK_MILLIS = "last_check_millis"
 private const val KEY_LAST_DEDUCTIONS_REFRESH_MILLIS = "last_deductions_refresh_millis"
@@ -19,7 +18,7 @@ private const val FINAL_PAYSLIP_CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000L
 
 /** Mesec rada čija se konačna lista čeka, ili null ako je već učitana, obrisana ili je rano. */
 internal fun finalPayslipCheckMonth(repo: ShiftRepository, today: LocalDate): MonthKey? {
-    if (today.dayOfMonth < FINAL_PAYSLIP_FROM_DAY) return null
+    if (today.dayOfMonth < PAYSLIP_ARRIVAL_DAY) return null
     val previous = YearMonth.from(today).minusMonths(1)
     val month = MonthKey(previous.year, previous.monthValue)
     return month.takeIf { repo.getSavedPayslip(it.year, it.month) == null && !repo.isPayslipDeleted(it) }

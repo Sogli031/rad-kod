@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [5.3] - 2026-10-03
+- **Lista:** uključuje se od 15. sledećeg meseca (lista za septembar od 15. oktobra), isti dan kad počinje automatska provera konačne liste iz Gmail-a.
+
 ## [5.2] - 2026-10-03
 - **Lista:** dugme je isključeno dok lista za mesec ne stigne (20. sledećeg meseca; lista za septembar od 20. oktobra), ne već od 1. u mesecu.
 
