@@ -15,7 +15,7 @@ $gradle = Get-Content app\build.gradle.kts -Raw
 $version = [regex]::Match($gradle, 'versionName = "([^"]+)"').Groups[1].Value
 if (-not $version) { throw 'versionName nije nađen' }
 
-.\gradlew.bat testDebugUnitTest detekt lintDebug assembleRelease --no-daemon
+.\gradlew.bat testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease --no-daemon
 if ($LASTEXITCODE -ne 0) { throw 'Build ili testovi su pali' }
 
 $apk = 'app\build\outputs\apk\release\app-release.apk'

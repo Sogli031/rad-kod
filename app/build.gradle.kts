@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.detekt)
     alias(libs.plugins.roborazzi)
+    alias(libs.plugins.kover)
 }
 
 // Zajednički potpis: Desktop\programi\keystore
@@ -170,4 +171,28 @@ roborazzi {
 detekt {
     buildUponDefaultConfig = true
     config.setFrom(files("$rootDir/detekt.yml"))
+}
+
+// Pokrivenost testovima: obračun plate i podaci ne smeju da padnu ispod praga (koverVerifyDebug, deo `check`).
+kover {
+    reports {
+        filters {
+            includes {
+                classes(
+                    "com.rad.shifttracker.PayCalculator*",
+                    "com.rad.shifttracker.ShiftRepository",
+                    "com.rad.shifttracker.data.repository.RepositoryPayQueries*",
+                    "com.rad.shifttracker.data.repository.RepositoryPayBaseResolver*",
+                    "com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec*",
+                    "com.rad.shifttracker.data.storage.CloudArchiveMerger*",
+                    "com.rad.shifttracker.PayslipParserKt*"
+                )
+            }
+        }
+        verify {
+            rule("Obracun i podaci") {
+                minBound(90)
+            }
+        }
+    }
 }

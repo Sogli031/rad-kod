@@ -43,7 +43,7 @@ jobs:
       # release buildType je potpisan debug ključem (vidi app/build.gradle.kts),
       # pa assembleRelease daje instalabilan app-release.apk bez pravog keystore-a.
       - name: Unit tests + detekt + lint + assemble release
-        run: ./gradlew testDebugUnitTest detekt lintDebug assembleRelease -PallowDebugSigning=true --no-daemon --stacktrace
+        run: ./gradlew testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease -PallowDebugSigning=true --no-daemon --stacktrace
 
       - name: Upload release APK
         if: success()
