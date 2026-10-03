@@ -40,6 +40,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,12 +65,9 @@ import com.rad.shifttracker.data.backup.BackupVersion
 import com.rad.shifttracker.data.backup.GoogleDriveBackup
 import com.rad.shifttracker.data.backup.SignInState
 import com.rad.shifttracker.data.backup.VersionedBackupPlanner
-import java.time.Duration
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.YearMonth
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -194,33 +196,22 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val context = LocalContext.current
     val showMessage = rememberShowMessage()
     val snackbarHostState = LocalAppSnackbar.current
+    val viewModel: MainViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { MainViewModel(repo, context.applicationContext, createSavedStateHandle()) }
+        }
+    )
+    val ui by viewModel.state.collectAsStateWithLifecycle()
+    val today by viewModel.today.collectAsStateWithLifecycle()
+    val selectedMonth by viewModel.month.collectAsStateWithLifecycle()
+    // Brojač izmena podataka za delove koji još sami čitaju repo (kalendar, godišnji, dijalozi).
     val repoTick = remember { mutableIntStateOf(0) }
-
-    // Use DisposableEffect to properly clean up the callback when composable leaves composition
     DisposableEffect(repo) {
-        val callbackToken = repo.onChange {
-            scope.launch {
-                repoTick.intValue += 1
-            }
-        }
-        onDispose {
-            repo.removeOnChange(callbackToken)
-        }
+        val callbackToken = repo.onChange { scope.launch { repoTick.intValue += 1 } }
+        onDispose { repo.removeOnChange(callbackToken) }
     }
 
     val reducedMotion = rememberReducedMotion()
-    var today by remember { mutableStateOf(LocalDate.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            today = LocalDate.now()
-            val nextMidnight = today.plusDays(1).atStartOfDay()
-            val delayMillis = Duration
-                .between(LocalDateTime.now(), nextMidnight)
-                .toMillis()
-                .coerceAtLeast(60_000L)
-            delay(delayMillis)
-        }
-    }
 
     // Google Drive backup state
     val signInState by backup.signInState.collectAsState()
@@ -276,86 +267,33 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         }
     }
 
-    // rememberSaveable: rotacija/ubijanje procesa ne sme da vrati kalendar
-    // sa pregledanog meseca na tekući.
-    var currentYear by rememberSaveable { mutableIntStateOf(today.year) }
-    var currentMonth by rememberSaveable { mutableIntStateOf(today.monthValue) }
+    // Izabrani mesec živi u MainViewModel (preživljava rotaciju i ubijanje procesa).
+    val currentYear = selectedMonth.year
+    val currentMonth = selectedMonth.month
     val launchSelectedMonthExport = rememberMonthlyWorkAndPayExportLauncher(repo, currentYear, currentMonth, showMessage)
     val launchAllMonthsDebugExport = rememberAllMonthsCalculationDebugExportLauncher(repo, showMessage)
     val vacationAsOfDate = remember(currentYear, currentMonth, today) {
         vacationCardAsOfDate(currentYear, currentMonth, today)
     }
-    val summary = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getSummary(currentYear, currentMonth)
-    }
-    val payBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getNetPayBreakdown(currentYear, currentMonth)
-    }
-    val monthlyReceipt = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyReceipt(currentYear, currentMonth)
-    }
-    val nextMonthReceipt = remember(repoTick.intValue, currentYear, currentMonth) {
-        val nextMonth = YearMonth.of(currentYear, currentMonth).plusMonths(1)
-        repo.getMonthlyReceipt(nextMonth.year, nextMonth.monthValue)
-    }
-    val mainPayIncludesTransport = remember(repoTick.intValue) { repo.mainPayIncludesTransport }
-    val monthlyFinalPaymentBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyFinalPaymentBreakdown(currentYear, currentMonth)
-    }
-    val nextMonthFinalPaymentBreakdown = remember(repoTick.intValue, currentYear, currentMonth) {
-        val nextMonth = YearMonth.of(currentYear, currentMonth).plusMonths(1)
-        repo.getMonthlyFinalPaymentBreakdown(nextMonth.year, nextMonth.monthValue)
-    }
-    val overtimeNetImpact = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyOvertimeNetImpact(currentYear, currentMonth)
-    }
-    val payrollMonthKey = monthlyReceipt.payrollMonth
-    val payrollSummary = remember(repoTick.intValue, payrollMonthKey) {
-        repo.getSummary(payrollMonthKey.year, payrollMonthKey.month)
-    }
-    val payrollPayBreakdown = remember(repoTick.intValue, payrollMonthKey) {
-        repo.getNetPayBreakdown(payrollMonthKey.year, payrollMonthKey.month)
-    }
-    val payDetails = remember(repoTick.intValue, payrollMonthKey) {
-        repo.getMonthlyPayDetails(payrollMonthKey.year, payrollMonthKey.month)
-    }
-    val selectedMonthPayDetails = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyPayDetails(currentYear, currentMonth)
-    }
-    val selectedMonthOvertimeNetImpact = remember(repoTick.intValue, currentYear, currentMonth) {
-        repo.getMonthlyOvertimeNetImpact(currentYear, currentMonth)
-    }
-    val annualNetPayAverages = remember(repoTick.intValue, payrollMonthKey) {
-        repo.getAnnualNetPayAverages(payrollMonthKey.year)
-    }
-    val recentNetPayAverageAsOfDate = remember(payrollMonthKey, today) {
-        vacationCardAsOfDate(payrollMonthKey.year, payrollMonthKey.month, today)
-    }
-    val recentNetPayAverage = remember(repoTick.intValue, payrollMonthKey, recentNetPayAverageAsOfDate) {
-        repo.getRecentNetPayAverage(payrollMonthKey.year, payrollMonthKey.month, recentNetPayAverageAsOfDate)
-    }
-    val selectedMonthKey = MonthKey(currentYear, currentMonth)
-    val selectedMonthAnnualNetPayAverages = remember(repoTick.intValue, selectedMonthKey) {
-        repo.getAnnualNetPayAverages(selectedMonthKey.year)
-    }
-    val selectedMonthRecentNetPayAverageAsOfDate = remember(selectedMonthKey, today) {
-        vacationCardAsOfDate(selectedMonthKey.year, selectedMonthKey.month, today)
-    }
-    val selectedMonthRecentNetPayAverage = remember(
-        repoTick.intValue,
-        selectedMonthKey,
-        selectedMonthRecentNetPayAverageAsOfDate
-    ) {
-        repo.getRecentNetPayAverage(
-            selectedMonthKey.year,
-            selectedMonthKey.month,
-            selectedMonthRecentNetPayAverageAsOfDate
-        )
-    }
+    val summary = ui.summary
+    val payBreakdown = ui.payBreakdown
+    val monthlyReceipt = ui.monthlyReceipt
+    val nextMonthReceipt = ui.nextMonthReceipt
+    val mainPayIncludesTransport = ui.mainPayIncludesTransport
+    val monthlyFinalPaymentBreakdown = ui.monthlyFinalPaymentBreakdown
+    val nextMonthFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown
+    val overtimeNetImpact = ui.overtimeNetImpact
+    val payrollSummary = ui.payrollSummary
+    val payrollPayBreakdown = ui.payrollPayBreakdown
+    val payDetails = ui.payDetails
+    val selectedMonthPayDetails = ui.selectedMonthPayDetails
+    val selectedMonthOvertimeNetImpact = ui.overtimeNetImpact
+    val annualNetPayAverages = ui.annualNetPayAverages
+    val recentNetPayAverage = ui.recentNetPayAverage
+    val selectedMonthAnnualNetPayAverages = ui.selectedMonthAnnualNetPayAverages
+    val selectedMonthRecentNetPayAverage = ui.selectedMonthRecentNetPayAverage
     val scheduler = remember { ShiftScheduler() }
-    val bloodDonationReminderStatus = remember(repoTick.intValue, today) {
-        BloodDonationReminderScheduler.currentStatus(context, repo)
-    }
+    val bloodDonationReminderStatus = ui.bloodDonationReminderStatus
 
     // Otvoren dijalog preživljava rotaciju; DayEdit obnavlja zapis iz repo-a.
     var dialogState by rememberSaveable(
@@ -393,16 +331,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             HeaderSection(
                 month = currentMonth,
                 year = currentYear,
-                onPrev = {
-                    val previous = YearMonth.of(currentYear, currentMonth).minusMonths(1)
-                    currentYear = previous.year
-                    currentMonth = previous.monthValue
-                },
-                onNext = {
-                    val next = YearMonth.of(currentYear, currentMonth).plusMonths(1)
-                    currentYear = next.year
-                    currentMonth = next.monthValue
-                }
+                onPrev = viewModel::showPreviousMonth,
+                onNext = viewModel::showNextMonth
             )
 
             Row(

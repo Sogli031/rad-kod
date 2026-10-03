@@ -32,10 +32,7 @@ class WorkHoursDialogTextTest {
         val screenSource = sourceText("ShiftTrackerScreen.kt")
         val mainDialogsSource = sourceText("MainDialogs.kt")
 
-        assertTrue(screenSource.contains("val selectedMonthPayDetails = remember(repoTick.intValue, currentYear, currentMonth)"))
-        assertTrue(screenSource.contains("repo.getMonthlyPayDetails(currentYear, currentMonth)"))
-        assertTrue(screenSource.contains("val selectedMonthOvertimeNetImpact = remember(repoTick.intValue, currentYear, currentMonth)"))
-        assertTrue(screenSource.contains("repo.getMonthlyOvertimeNetImpact(currentYear, currentMonth)"))
+        // Izvor podataka (izabrani mesec za sate, mesec isplate za obračun) proverava MainViewModelTest.
         assertTrue(screenSource.contains("workHoursSummary = summary"))
         assertTrue(screenSource.contains("workHoursPayBreakdown = payBreakdown"))
         assertTrue(screenSource.contains("workHoursPayDetails = selectedMonthPayDetails"))

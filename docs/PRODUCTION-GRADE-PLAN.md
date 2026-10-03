@@ -20,7 +20,10 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | — | **v5.1 objavljena na zahtev korisnika** (međuverzija za proveru preko Obtainium-a) | potpis isti kao v5.0 |
 | 5.2, 5.3, 5.5 (deo), 5.7, 5.8 (deo) | **gotovo i proveren na telefonu (2026-10-03)**: kalendar sa skrolom cele strane, svetla tema + izbor, `OutlinedCard`, segmentirani izbor, dvokolonski prikaz ≥ 840dp, „ukloni animacije“ | testovi + detekt + lint zeleni; `ThemeContrastTest` za obe teme |
 | 5.5 / 5.8 — svesno nije | `BottomAppBar` (fiksna visina 80dp ne raste sa fontom → ostaje ručna traka), `ModalBottomSheet` (ostaje `Dialog` sa podešenom tastaturom), `MotionScheme`/spring (traži material3 1.4, Faza 4.6) | — |
-| 1, 2, 4, 7–10 | nije početo | — |
+| 2 (deo) | **gotovo i instalirano na Pixel 9 (2026-10-03)**: R8 + shrink (APK 27 → 10,5 MB), release pada bez zajedničkog ključa (`-PallowDebugSigning=true` samo za CI), `network_security_config`, `release.ps1` (testovi, `apksigner`, otisak ključa, `mapping.txt`, SHA-256), AGP 8.13 / Kotlin 2.1.21 / Gradle 8.13 (lint je pucao na v5.5), version catalog, `targetSdk` 36 | gate zelen; 📱 ručno proći Drive backup/restore, Gmail uvoz, izvoz JSON-a, obaveštenja (R8 refleksija) |
+| 2 — izmena plana | **čitanje listića iz foldera i `MANAGE_EXTERNAL_STORAGE` uklonjeni** (korisnik koristi samo Gmail) umesto SAF-a | manifest bez dozvola za fajlove |
+| 4 (deo) | **`MainViewModel`**: izabrani mesec (SavedStateHandle), današnji dan, ~20 upita na `Dispatchers.Default` kao jedan `MainMonthState`; ukinut dupli `getMonthlyOvertimeNetImpact`; `collectAsStateWithLifecycle`; `MainViewModelTest` | proveren na telefonu (listanje meseci) |
+| 2, 4, 7–10 — ostaje | Baseline Profile 📱, SAF nije potreban; kalendar jedan `getMonthRecords`, `@Immutable`, podela `ShiftRepository`, testovi ponašanja umesto izvornog teksta, Kover, Faze 8–10 | — |
 
 Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
 donja traka „Po…"/„Op…".

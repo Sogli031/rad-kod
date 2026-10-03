@@ -11,6 +11,8 @@ coroutines = "1.9.0"
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-core-ktx = "androidx.core:core-ktx:1.13.1"
 androidx-lifecycle-runtime-ktx = "androidx.lifecycle:lifecycle-runtime-ktx:2.8.6"
+androidx-lifecycle-runtime-compose = "androidx.lifecycle:lifecycle-runtime-compose:2.8.6"
+androidx-lifecycle-viewmodel-compose = "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6"
 androidx-activity-compose = "androidx.activity:activity-compose:1.9.3"
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-text = { module = "androidx.compose.ui:ui-text" }
