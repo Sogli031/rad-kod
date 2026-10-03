@@ -232,7 +232,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     // Backup u oblaku koji ovaj uređaj još nije preuzeo (nova instalacija): čim se
     // korisnik prijavi, ponudi Restore umesto da sveže stanje ode preko njega.
     val cloudBackupFound = remember { mutableStateOf<BackupVersion?>(null) }
-    var requestedEntryPermissions by rememberSaveable { mutableStateOf(false) }
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -248,22 +247,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             showMessage("Prijava uspešna!")
         }
     }
-    val entryPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
     val bloodDonationNotificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         handleBloodDonationPermissionResult(granted, context, repo, showMessage)
-    }
-    LaunchedEffect(requestedEntryPermissions) {
-        if (!requestedEntryPermissions) {
-            requestedEntryPermissions = true
-            val permissions = requiredOnboardingPermissions(context)
-            if (permissions.isNotEmpty()) {
-                entryPermissionLauncher.launch(permissions)
-            }
-        }
     }
 
     // Izabrani mesec živi u MainViewModel (preživljava rotaciju i ubijanje procesa).
@@ -299,6 +286,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         stateSaver = dialogStateSaver { day -> repo.get(currentYear, currentMonth, day) }
     ) { mutableStateOf<DialogState>(DialogState.None) }
     val dismissDialog = { dialogState = DialogState.None }
+    LaunchedEffect(dialogState) { CrashContext.screen = dialogStateToKey(dialogState) }
     // Prvo pokretanje posle instalacije: prvo „Popuni smene“ (izbor brigade utiče i na pravo na
     // godišnji), pa Gmail sa listićima (koeficijent, minuli rad, porez, prevoz, akontacija...).
     // Prvo pokretanje je završeno tek kad Gmail korak prođe (MainDialogData.onFirstLaunchDone): ako

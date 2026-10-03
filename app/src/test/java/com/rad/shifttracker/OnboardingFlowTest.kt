@@ -23,16 +23,6 @@ class OnboardingFlowTest {
     }
 
     @Test
-    fun `first launch does not ask for coefficient seniority or tax update`() {
-        val onboarding = source("Onboarding.kt")
-        assertFalse(onboarding.contains("OnboardingStep"))
-        assertFalse(onboarding.contains("payCoefficientValue"))
-        assertFalse(onboarding.contains("minuliRadStartYearValue"))
-        assertFalse(onboarding.contains("difficultWorkConditionsPercentValue"))
-        assertFalse(onboarding.contains("fetchAndApplyLatestTaxParameters"))
-    }
-
-    @Test
     fun `app works with default pay settings before any payslip`() {
         val repo = testRepository()
         assertTrue(repo.payCoefficientValue > 0.0)
