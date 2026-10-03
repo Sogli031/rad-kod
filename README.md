@@ -10,10 +10,11 @@ Namenjena radnicima u industriji/proizvodnji.
 - **UI:** Jetpack Compose (Material 3), 100% Compose, bez XML layout-a
 - **Backup:** Google Drive API
 - **Čuvanje podataka:** lokalni JSON fajl (bez baze)
-- **Testovi:** JUnit 4, MockK
-- **Lint:** Detekt
-- **Build:** AGP 8.7.3, Kotlin 2.0.21, Gradle 8.9, JDK 17
-- **SDK:** compileSdk 35, minSdk 26, targetSdk 35
+- **Testovi:** JUnit 4, Robolectric (Compose UI), Roborazzi (snimci ekrana)
+- **Lint:** Detekt, Android lint
+- **Build:** AGP 8.13, Kotlin 2.1.21, Gradle 8.13, JDK 17 (verzije u `gradle/libs.versions.toml`)
+- **SDK:** compileSdk 36, minSdk 26, targetSdk 36
+- **Release:** R8 + shrink, potpis zajedničkim ključem
 
 ## Pokretanje
 
@@ -21,17 +22,21 @@ Namenjena radnicima u industriji/proizvodnji.
 2. Napravi `local.properties` u korenu (ovaj fajl se ne komituje) sa:
    ```
    sdk.dir=PUTANJA_DO_ANDROID_SDK
-   MAPS_API_KEY=TVOJ_KLJUC
    ```
 3. Sync Gradle i pokreni na uređaju/emulatoru (minSdk 26).
 
-## Release potpis
+## Release
 
-Za postojeći lokalni tok i direktnu nadogradnju telefona release APK se
-podrazumevano potpisuje istim debug ključem kao ranije. Za pravi javni release
-kopiraj `keystore.properties.example` kao `keystore.properties` i upiši putanju
-i lozinke svog release keystore-a; tada Gradle automatski koristi taj ključ.
-`keystore.properties` i keystore fajlovi su ignorisani u Git-u.
+Potpis dolazi iz zajedničkog ključa u `..\keystore` (`keystore.properties` + `release.jks`,
+ne komituju se). Bez njega `assembleRelease` pada, da APK ne bi tiho dobio debug ključ;
+CI (nema ključa) koristi `-PallowDebugSigning=true`.
+
+Objava: podigni `versionCode`/`versionName` u `app/build.gradle.kts`, pa
+`.elease.ps1 -Notes "Šta je novo"`. Skripta pokreće testove, detekt i lint, gradi APK,
+proverava `apksigner` i otisak ključa, čuva `mapping.txt` u `release-out\` i pravi GitHub release.
+`-SkipPublish` samo gradi. Instalacija na telefon: `adb install -r` (isti potpis čuva podatke).
+
+Izveštaj o stabilnosti Compose-a: `./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports`.
 
 ## Struktura
 
