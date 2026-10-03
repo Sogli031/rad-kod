@@ -21,6 +21,10 @@ object UI {
 
     /** Najveća širina sadržaja: na tabletu/preklopljenom telefonu se ne razvlači preko cele širine. */
     const val contentMaxWidth = 600
+
+    /** Od ove širine (M3 „expanded“) kalendar i iznosi idu u dve kolone. */
+    const val wideLayoutMinWidth = 840
+    const val wideContentMaxWidth = 1200
 }
 
 data class PayConfig(

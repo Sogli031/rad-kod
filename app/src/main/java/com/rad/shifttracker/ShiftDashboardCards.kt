@@ -5,11 +5,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,35 +111,43 @@ internal fun StatsSection(
         )
     )
 
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(UI.statCardHeight.dp)
-    ) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            stats.forEachIndexed { index, stat ->
-                if (index > 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
-                    )
+    // Pri velikom fontu četiri stubca ne staju: kartica se lomi u 2 × 2.
+    val perRow = if (LocalDensity.current.fontScale > WIDE_LAYOUT_FONT_SCALE) 2 else stats.size
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            stats.chunked(perRow).forEachIndexed { rowIndex, rowStats ->
+                if (rowIndex > 0) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
                 }
-                val clickModifier = stat.onClick?.let { Modifier.radClickable(onClick = it) } ?: Modifier
-                StatColumn(
-                    label = stat.label,
-                    value = stat.value,
-                    color = stat.color,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .then(clickModifier)
-                )
+                Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max)) {
+                    rowStats.forEachIndexed { index, stat ->
+                        if (index > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
+                            )
+                        }
+                        val clickModifier = stat.onClick?.let { Modifier.radClickable(onClick = it) } ?: Modifier
+                        StatColumn(
+                            label = stat.label,
+                            value = stat.value,
+                            color = stat.color,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .then(clickModifier)
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+/** Iznad ovog sistemskog fonta stubci (statistika, donja traka) idu u dva reda. */
+internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f
 
 @Composable
 internal fun TotalCard(
@@ -203,7 +213,7 @@ private fun PayAmountCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(COMPACT_PAY_CARD_HEIGHT.dp)
+            .heightIn(min = COMPACT_PAY_CARD_HEIGHT.dp)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
             .then(clickModifier)
@@ -224,8 +234,8 @@ private fun PayAmountCard(
         }
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = Spacing.lg),
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AutoSizeText(
@@ -287,6 +297,7 @@ internal fun BottomBar(
         BottomBarItem(specs.deleteMonth.icon, specs.deleteMonth.label, scheme.error, null, onDeleteMonth)
     )
 
+    val perRow = if (LocalDensity.current.fontScale > WIDE_LAYOUT_FONT_SCALE) 3 else buttons.size
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -294,18 +305,25 @@ internal fun BottomBar(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
-        Row(
+        Column(
             modifier = Modifier
                 .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
                 .padding(start = Spacing.lg, top = Spacing.sm, end = Spacing.lg, bottom = Spacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
-            buttons.forEach { item ->
-                // „Lista“ je siva dok mesec traje — lista za njega još ne postoji.
-                val enabled = basePayEnabled || item.label != specs.basePay.label
-                BottomBarAction(item = item, enabled = enabled, modifier = Modifier.weight(1f))
+            buttons.chunked(perRow).forEach { rowButtons ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    rowButtons.forEach { item ->
+                        // „Lista“ je siva dok mesec traje — lista za njega još ne postoji.
+                        val enabled = basePayEnabled || item.label != specs.basePay.label
+                        BottomBarAction(item = item, enabled = enabled, modifier = Modifier.weight(1f).fillMaxHeight())
+                    }
+                }
             }
         }
     }
@@ -356,7 +374,7 @@ private fun BottomBarAction(item: BottomBarItem, enabled: Boolean, modifier: Mod
 }
 
 private const val BOTTOM_BAR_ICON_HEIGHT_DP = 32
-private const val BOTTOM_BAR_LABEL_MIN_SP = 9
+private const val BOTTOM_BAR_LABEL_MIN_SP = 11
 
 /** M3 vrednost za onemogućen sadržaj. */
 private const val DISABLED_ALPHA = 0.38f

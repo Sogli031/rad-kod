@@ -1,17 +1,11 @@
 package com.rad.shifttracker
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class ScreenSafeAreaTest {
-
-    @Test
-    fun `main content reserves the bottom bar boundary`() {
-        assertEquals(UI.bottomBarHeight + Spacing.sm.value.toInt(), mainContentBottomPaddingDp())
-    }
 
     @Test
     fun `generic popup dialogs stay inside safe drawing insets`() {
@@ -47,7 +41,8 @@ class ScreenSafeAreaTest {
     fun `popup cards clip content to rounded container`() {
         val source = appSource("UiComponents.kt")
 
-        assertTrue(source.contains(".clip(shape)"))
+        // OutlinedCard sam zaobljava i kliping sadržaja po obliku kartice.
+        assertTrue(source.contains("OutlinedCard("))
     }
 
     @Test

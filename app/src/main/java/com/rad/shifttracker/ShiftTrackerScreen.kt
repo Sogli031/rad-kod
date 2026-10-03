@@ -7,16 +7,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +29,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -180,7 +187,7 @@ fun RadApp(repo: ShiftRepository, backup: com.rad.shifttracker.data.backup.Googl
 
 @Composable
 // Existing route owns cross-dialog state; detekt stays active for newly added methods.
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.backup.GoogleDriveBackup) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -200,6 +207,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         }
     }
 
+    val reducedMotion = rememberReducedMotion()
     var today by remember { mutableStateOf(LocalDate.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -368,27 +376,16 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            // Pozadina ide i ispod statusne i navigacione trake (inseti), u boji izabrane teme.
+            .background(MaterialTheme.colorScheme.background)
             .padding(WindowInsets.safeDrawing.asPaddingValues())
     ) {
-        BackgroundLayer()
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxHeight()
-                .widthIn(max = UI.contentMaxWidth.dp)
-                .fillMaxWidth()
-                .padding(
-                    start = Spacing.lg,
-                    top = 16.dp,
-                    end = Spacing.lg,
-                    bottom = mainContentBottomPaddingDp().dp
-                ),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-        ) {
+        // Cela strana skroluje kad ne staje (veći font, mesec od šest nedelja); donja traka ostaje zakucana.
+        // Kalendar sa zaglavljem i statistika sa platom: jedna kolona na telefonu, dve kolone na širokom ekranu.
+        val calendarPane: @Composable ColumnScope.() -> Unit = {
             HeaderSection(
                 month = currentMonth,
                 year = currentYear,
@@ -426,13 +423,17 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             // Prelaz meseca: M3 „shared axis“ (klizanje po x + bledenje); stari mesec izlazi sa svojim podacima.
             AnimatedContent(
                 targetState = currentYear * MONTHS_PER_YEAR + (currentMonth - 1),
-                modifier = Modifier.weight(1f),
-                transitionSpec = { monthTransition(forward = targetState > initialState) },
+                transitionSpec = {
+                    if (reducedMotion) {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    } else {
+                        monthTransition(forward = targetState > initialState)
+                    }
+                },
                 label = "month"
             ) { monthIndex ->
                 key(repoTick.intValue) {
                     CalendarSection(
-                        modifier = Modifier.fillMaxSize(),
                         year = monthIndex / MONTHS_PER_YEAR,
                         month = monthIndex % MONTHS_PER_YEAR + 1,
                         today = today,
@@ -443,6 +444,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     )
                 }
             }
+        }
+        val summaryPane: @Composable ColumnScope.() -> Unit = {
             StatsSection(
                 summary = summary,
                 payBreakdown = payBreakdown,
@@ -467,9 +470,56 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 }
             }
         }
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val wide = maxWidth >= UI.wideLayoutMinWidth.dp
+            BackgroundLayer()
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxHeight()
+                    .widthIn(max = (if (wide) UI.wideContentMaxWidth else UI.contentMaxWidth).dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        start = Spacing.lg,
+                        top = Spacing.lg,
+                        end = Spacing.lg,
+                        bottom = Spacing.sm
+                    ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                if (wide) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            content = calendarPane
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            content = summaryPane
+                        )
+                    }
+                } else {
+                    calendarPane()
+                    summaryPane()
+                }
+            }
+
+            snackbarHostState?.let { host ->
+                SnackbarHost(
+                    hostState = host,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = Spacing.lg, end = Spacing.lg)
+                )
+            }
+        }
 
         BottomBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier,
             onAutoFill = { dialogState = DialogState.AutoFill },
             onSickVacation = { dialogState = DialogState.SickVacation },
             onBasePay = { dialogState = DialogState.BasePay },
@@ -478,15 +528,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onDeleteMonth = { dialogState = DialogState.DeleteMonth },
             basePayEnabled = !isPayslipMonthUnfinished(MonthKey(currentYear, currentMonth), today)
         )
-
-        snackbarHostState?.let { host ->
-            SnackbarHost(
-                hostState = host,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = Spacing.lg, end = Spacing.lg, bottom = UI.bottomBarHeight.dp)
-            )
-        }
     }
 
     // Upisana akontacija / promenjen prevoz iz obračuna: poruka u aplikaciji, ne na telefonu.
@@ -638,10 +679,6 @@ private fun monthTransition(forward: Boolean): ContentTransform {
 }
 
 private const val MONTH_SLIDE_DIVISOR = 8
-
-internal fun mainContentBottomPaddingDp(): Int {
-    return UI.bottomBarHeight + Spacing.sm.value.toInt()
-}
 
 /** Korisnička poruka posle verzionisanog backup-a (uspeh / upozorenje / greška). */
 internal fun backupResultMessage(outcome: BackupOutcome): String = when (outcome) {

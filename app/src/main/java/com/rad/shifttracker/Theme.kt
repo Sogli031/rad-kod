@@ -5,7 +5,17 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -128,7 +138,11 @@ data class ExtendedColors(
     val compTimeUsed: Color,
     val compTimeDeficit: Color,
     val weekendOt: Color,
-    val sunday: Color
+    val sunday: Color,
+    /** Tekst na punoj boji smene 1, 2 i godišnjeg. */
+    val onShiftBright: Color,
+    /** Tekst na punoj boji ostalih smena (treća, bolovanje). U tamnoj temi tamni, jer su te boje posvetljene. */
+    val onShiftDeep: Color
 )
 
 internal val DarkExtendedColors = ExtendedColors(
@@ -148,7 +162,51 @@ internal val DarkExtendedColors = ExtendedColors(
     compTimeUsed = Color(0xFFFB923C),
     compTimeDeficit = Color(0xFFF87171),
     weekendOt = Color(0xFFFBBF24),
-    sunday = Color(0xFFF97316)
+    sunday = Color(0xFFF97316),
+    onShiftBright = DarkPalette.textDark,
+    onShiftDeep = DarkPalette.textDark
+)
+
+/**
+ * Svetla paleta: isti akcent (cijan, tamniji ton) i iste uloge boja; boje smena su tamnije da bi tekst u
+ * boji smene na toniranoj ćeliji imao >= 4.5:1 (proverava `ThemeContrastTest`).
+ */
+private object LightPalette {
+    val bg = Color(0xFFF8FAFC)
+    val card = Color(0xFFFFFFFF)
+    val cardLow = Color(0xFFF1F5F9)
+    val cardHigh = Color(0xFFEEF2F7)
+    val cardHighest = Color(0xFFE2E8F0)
+    val border = Color(0xFFCBD5E1)
+    val outline = Color(0xFF64748B)
+    val accent = Color(0xFF0369A1)
+    val textPrimary = Color(0xFF0F172A)
+    val textMuted = Color(0xFF475569)
+    val danger = Color(0xFFB91C1C)
+    val white = Color(0xFFFFFFFF)
+    val compTime = Color(0xFF0F6B63)
+}
+
+internal val LightExtendedColors = ExtendedColors(
+    textSecondary = Color(0xFF334155),
+    textFaint = Color(0xFF526277),
+    success = Color(0xFF166534),
+    warning = Color(0xFF92400E),
+    info = Color(0xFF1D4ED8),
+    shift1 = LightPalette.accent,
+    shift2 = Color(0xFF166534),
+    shift3 = Color(0xFF6D28D9),
+    sick = LightPalette.danger,
+    vacation = Color(0xFF92400E),
+    off = LightPalette.border,
+    doubleShift = Color(0xFFC2410C),
+    compTime = LightPalette.compTime,
+    compTimeUsed = Color(0xFFC2410C),
+    compTimeDeficit = LightPalette.danger,
+    weekendOt = Color(0xFF92400E),
+    sunday = Color(0xFFC2410C),
+    onShiftBright = LightPalette.white,
+    onShiftDeep = LightPalette.white
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { DarkExtendedColors }
@@ -202,11 +260,72 @@ internal val RadDarkColorScheme: ColorScheme = darkColorScheme(
     surfaceContainerHighest = DarkPalette.empty
 )
 
+internal val RadLightColorScheme: ColorScheme = lightColorScheme(
+    primary = LightPalette.accent,
+    onPrimary = LightPalette.white,
+    primaryContainer = Color(0xFFE0F2FE),
+    onPrimaryContainer = Color(0xFF0C4A6E),
+    inversePrimary = DarkPalette.accentPrimary,
+    secondary = Color(0xFFB45309),
+    onSecondary = LightPalette.white,
+    secondaryContainer = Color(0xFFFDE7B8),
+    onSecondaryContainer = Color(0xFF4A3410),
+    tertiary = LightPalette.compTime,
+    onTertiary = LightPalette.white,
+    tertiaryContainer = Color(0xFFCCFBF1),
+    onTertiaryContainer = Color(0xFF0F3F3A),
+    background = LightPalette.bg,
+    onBackground = LightPalette.textPrimary,
+    surface = LightPalette.bg,
+    onSurface = LightPalette.textPrimary,
+    surfaceVariant = LightPalette.cardHighest,
+    onSurfaceVariant = LightPalette.textMuted,
+    surfaceTint = LightPalette.accent,
+    inverseSurface = Color(0xFF1E293B),
+    inverseOnSurface = Color(0xFFF1F5F9),
+    error = LightPalette.danger,
+    onError = LightPalette.white,
+    errorContainer = Color(0xFFFEE2E2),
+    onErrorContainer = Color(0xFF5B1A1A),
+    outline = LightPalette.outline,
+    outlineVariant = LightPalette.border,
+    scrim = Color.Black,
+    surfaceBright = LightPalette.card,
+    surfaceDim = Color(0xFFE2E8F0),
+    surfaceContainerLowest = LightPalette.card,
+    surfaceContainerLow = LightPalette.cardLow,
+    surfaceContainer = LightPalette.card,
+    surfaceContainerHigh = LightPalette.cardHigh,
+    surfaceContainerHighest = LightPalette.cardHighest
+)
+
+/** Boja pozadine prozora u izabranoj temi (da prvi frejm nema bljesak suprotne teme). */
+internal fun windowBackgroundColor(dark: Boolean): Color =
+    if (dark) RadDarkColorScheme.background else RadLightColorScheme.background
+
 @Composable
-fun RadTheme(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalExtendedColors provides DarkExtendedColors) {
+fun RadTheme(settings: ThemeSettings = ThemeStore.settings, content: @Composable () -> Unit) {
+    val dark = settings.isDark(isSystemInDarkTheme())
+    val context = LocalContext.current
+    val colorScheme = when {
+        settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> RadDarkColorScheme
+        else -> RadLightColorScheme
+    }
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
+    CompositionLocalProvider(LocalExtendedColors provides if (dark) DarkExtendedColors else LightExtendedColors) {
         MaterialTheme(
-            colorScheme = RadDarkColorScheme,
+            colorScheme = colorScheme,
             typography = RadTypography,
             shapes = RadShapes,
             content = content

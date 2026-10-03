@@ -18,7 +18,9 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | 5.6 | **gotovo**: `Spacing` (4dp mreža) umesto literala u razmacima | DesignSystemTest zabranjuje `.dp` u razmaku |
 | 5.4 | težina fonta gotova (`*Emphasized`); minimum 11sp čeka 5.3 (kalendar) | DesignSystemTest zabranjuje `FontWeight.` |
 | — | **v5.1 objavljena na zahtev korisnika** (međuverzija za proveru preko Obtainium-a) | potpis isti kao v5.0 |
-| 1, 2, 4, 5.2/5.3/5.5/5.7/5.8, 7–10 | nije početo | — |
+| 5.2, 5.3, 5.5 (deo), 5.7, 5.8 (deo) | **gotovo i proveren na telefonu (2026-10-03)**: kalendar sa skrolom cele strane, svetla tema + izbor, `OutlinedCard`, segmentirani izbor, dvokolonski prikaz ≥ 840dp, „ukloni animacije“ | testovi + detekt + lint zeleni; `ThemeContrastTest` za obe teme |
+| 5.5 / 5.8 — svesno nije | `BottomAppBar` (fiksna visina 80dp ne raste sa fontom → ostaje ručna traka), `ModalBottomSheet` (ostaje `Dialog` sa podešenom tastaturom), `MotionScheme`/spring (traži material3 1.4, Faza 4.6) | — |
+| 1, 2, 4, 7–10 | nije početo | — |
 
 Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
 donja traka „Po…"/„Op…".

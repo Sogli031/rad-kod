@@ -54,8 +54,8 @@ enum class Shift(val value: Int) {
         @Composable
         @ReadOnlyComposable
         get() = when (this) {
-            FIRST, SECOND, VACATION -> MaterialTheme.colorScheme.onPrimary
-            else -> MaterialTheme.colorScheme.onSurface
+            FIRST, SECOND, VACATION -> MaterialTheme.extendedColors.onShiftBright
+            else -> MaterialTheme.extendedColors.onShiftDeep
         }
 
     val icon: String

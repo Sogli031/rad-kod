@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -463,6 +466,46 @@ private fun DayEditHolidayWarningStrip(text: String) {
  * Dugme izbora u jednoj boji teme: izabrano = puna plava (kao „Sačuvaj“),
  * neizabrano = neutralna tamna podloga sa sivim tekstom.
  */
+internal class DayEditChoice(val text: String, val selected: Boolean, val onClick: () -> Unit)
+
+/**
+ * Izbor jedne od nekoliko vrednosti kao M3 `SingleChoiceSegmentedButtonRow`: izabrani segment je
+ * popunjen akcentom (`primary`), ostali su neutralni; svaki je radio dugme za čitač ekrana.
+ */
+@Composable
+internal fun DayEditSegmentedChoice(options: List<DayEditChoice>, minHeight: Int) {
+    val scheme = MaterialTheme.colorScheme
+    val colors = SegmentedButtonDefaults.colors(
+        activeContainerColor = scheme.primary,
+        activeContentColor = scheme.onPrimary,
+        activeBorderColor = scheme.primary,
+        inactiveContainerColor = scheme.surfaceContainerHigh,
+        inactiveContentColor = MaterialTheme.extendedColors.textSecondary,
+        inactiveBorderColor = scheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
+    )
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option.selected,
+                onClick = option.onClick,
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                modifier = Modifier.heightIn(min = minHeight.dp),
+                colors = colors,
+                label = {
+                    AutoSizeText(
+                        text = option.text,
+                        style = (if (option.selected) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge)
+                            .copy(textAlign = TextAlign.Center),
+                        maxFontSize = MaterialTheme.typography.labelLarge.fontSize,
+                        minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                        maxLines = 1
+                    )
+                }
+            )
+        }
+    }
+}
+
 @Composable
 internal fun RowScope.DayEditChoiceButton(
     text: String,
@@ -656,19 +699,12 @@ private fun DayEditShiftSelector(
     onSelected: (Shift) -> Unit
 ) {
     DayEditChoiceHeader(text = question)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-    ) {
-        for (shift in shifts) {
-            DayEditChoiceButton(
-                text = dayEditShiftButtonText(shift),
-                selected = shift == selectedShift,
-                minHeight = DAY_EDIT_SHIFT_CHOICE_HEIGHT,
-                onClick = { onSelected(shift) }
-            )
-        }
-    }
+    DayEditSegmentedChoice(
+        options = shifts.map { shift ->
+            DayEditChoice(dayEditShiftButtonText(shift), shift == selectedShift) { onSelected(shift) }
+        },
+        minHeight = DAY_EDIT_SHIFT_CHOICE_HEIGHT
+    )
 }
 
 /** „Plaćeno / Za sate“ — jedan red, isti stil za sva pitanja o dodatnom radu. */
@@ -679,23 +715,13 @@ private fun DayEditOvertimeTypeSelector(
     onSelected: (OvertimeType) -> Unit
 ) {
     DayEditChoiceHeader(text = question)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-    ) {
-        DayEditChoiceButton(
-            text = "Plaćeno",
-            selected = selected == OvertimeType.PAID,
-            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
-            onClick = { onSelected(OvertimeType.PAID) }
-        )
-        DayEditChoiceButton(
-            text = "Za sate",
-            selected = selected == OvertimeType.COMP_TIME,
-            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
-            onClick = { onSelected(OvertimeType.COMP_TIME) }
-        )
-    }
+    DayEditSegmentedChoice(
+        options = listOf(
+            DayEditChoice("Plaćeno", selected == OvertimeType.PAID) { onSelected(OvertimeType.PAID) },
+            DayEditChoice("Za sate", selected == OvertimeType.COMP_TIME) { onSelected(OvertimeType.COMP_TIME) }
+        ),
+        minHeight = OVERTIME_TYPE_CHOICE_HEIGHT
+    )
 }
 
 @Composable
@@ -754,23 +780,18 @@ private fun DayEditSickControls(
 ) {
     DayEditSectionCard(title = "Bolovanje") {
         DayEditChoiceHeader(text = "Isplata bolovanja")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-        ) {
-            val rates = listOf(
-                CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%",
-                1.0 to "100%"
-            )
-            for (rate in rates) {
-                DayEditChoiceButton(
-                    text = rate.second,
-                    selected = kotlin.math.abs(sickPayRate - rate.first) < 0.01,
-                    minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
-                    onClick = { onSickPayRateSelected(rate.first) }
-                )
-            }
-        }
+        val rates = listOf(
+            CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%",
+            1.0 to "100%"
+        )
+        DayEditSegmentedChoice(
+            options = rates.map { rate ->
+                DayEditChoice(rate.second, kotlin.math.abs(sickPayRate - rate.first) < 0.01) {
+                    onSickPayRateSelected(rate.first)
+                }
+            },
+            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT
+        )
     }
 }
 

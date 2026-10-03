@@ -22,6 +22,7 @@ class DayEditDialogTextTest {
         assertEquals(48, source.constantValue("DAY_EDIT_SHIFT_CHOICE_HEIGHT"))
         assertEquals(0, Regex("""\.height\(DAY_EDIT_SHIFT_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
         assertEquals(1, Regex("""minHeight = DAY_EDIT_SHIFT_CHOICE_HEIGHT""").findAll(source).count())
+        assertEquals(true, source.contains("SingleChoiceSegmentedButtonRow("))
         assertEquals(true, source.contains(".heightIn(min = minHeight.dp)"))
     }
 
@@ -31,8 +32,8 @@ class DayEditDialogTextTest {
 
         assertEquals(48, source.constantValue("OVERTIME_TYPE_CHOICE_HEIGHT"))
         assertEquals(0, Regex("""\.height\(OVERTIME_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        // Plaćeno i Za sate u selektoru prekovremenog + izbor procenta bolovanja.
-        assertEquals(3, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
+        // Selektor prekovremenog i izbor procenta bolovanja (segmentirani izbor).
+        assertEquals(2, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
         assertEquals(true, source.contains(".heightIn(min = minHeight.dp)"))
     }
 
@@ -120,7 +121,7 @@ class DayEditDialogTextTest {
         // Detalj dana se prvo smanjuje (AutoSizeText), a ne seče odmah.
         assertEquals(true, source.contains("AutoSizeText("))
         assertEquals(true, source.contains("text = detailLines[0]"))
-        assertEquals(true, source.contains("minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp"))
+        assertEquals(true, source.contains("minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp"))
     }
 
     @Test

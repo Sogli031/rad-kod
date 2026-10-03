@@ -3,6 +3,17 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Nije objavljeno] - 2026-10-03
+Ostatak Faze 5 (dizajn), proveren na Pixel 9 preko adb-a; ide u zajednički release 6.0.
+- **Kalendar (5.3):** ćelije ≥ 48dp i rastu sa fontom, tekst u ćeliji najmanje 11sp, cela strana skroluje
+  (donja traka ostaje); pri fontu > 1.3 statistika i donja traka idu u dva reda.
+- **Komponente (5.5):** `OutlinedCard` umesto ručne kartice, `SingleChoiceSegmentedButtonRow` za izbor smene,
+  prekovremenog i procenta bolovanja.
+- **Svetla tema (5.2):** Opcije → Tema (Tamna / Svetla / Sistem) i „Boje sa pozadine" (Android 12+); tamna ostaje podrazumevana.
+  Kontrast ≥ 4.5:1 za svaku boju smene u obe teme je pod testom. Tekst na punoj boji treće smene/bolovanja u tamnoj temi je sada tamni.
+- **Pokret (5.8):** sistemsko „ukloni animacije" gasi prelaz meseca i klizanje lista.
+- **Adaptivno (5.7):** od 840dp kalendar levo, statistika i plata desno; list ostaje najviše 600dp.
+
 ## [5.3] - 2026-10-03
 - **Lista:** uključuje se od 15. sledećeg meseca (lista za septembar od 15. oktobra), isti dan kad počinje automatska provera konačne liste iz Gmail-a.
 

@@ -4,19 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -49,29 +45,31 @@ import java.time.LocalDate
 /** Alfa tonirane pozadine ćelije i njenog okvira (boja smene). */
 private const val DAY_TINT_ALPHA = 0.18f
 private const val DAY_TINT_BORDER_ALPHA = 0.35f
-private const val CALENDAR_DETAIL_MAX_FONT_SIZE = 10.5f
-private const val CALENDAR_DETAIL_MIN_FONT_SIZE = 9f
-/** Najniža ćelija dana; ispod ovoga kalendar se skroluje. */
-internal const val CALENDAR_MIN_DAY_HEIGHT = 30f
-/** Ćelija je fiksne visine, pa sistemski font veći od ovoga ne sme da je preraste. */
-internal const val CALENDAR_MAX_FONT_SCALE = 1.15f
+/** Tekst ćelije je 11sp (M3 `labelSmall`) i ne smanjuje se; što ne stane skraćuje se, pun opis ima čitač ekrana. */
+private const val CALENDAR_DETAIL_FONT_SIZE = 11f
+/** Najmanja dodirna visina ćelije (M3 minimum). */
+internal const val CALENDAR_MIN_CELL_HEIGHT = 48f
+/**
+ * Ćelija je široka oko 44dp, pa se font u njoj prati do ovoga; ostatak ekrana prati ceo sistemski font.
+ * Veći font ne lomi ćelije nego ekran skroluje.
+ */
+internal const val CALENDAR_CELL_MAX_FONT_SCALE = 1.15f
 /** Visina tri reda teksta ćelije (dan, smena, sati) pri fontu 1.0, sa malo vazduha. */
 private const val CALENDAR_CELL_CONTENT_HEIGHT = 44f
-private const val CALENDAR_MIN_FONT_SCALE = 0.65f
+private const val CALENDAR_CELL_VERTICAL_PADDING = 8f
 private const val CALENDAR_PADDING = 6f
 
-/** Font u ćeliji: sistemski (najviše 1.15), a manji kad je ćelija niža od tri reda teksta. */
-internal fun calendarCellFontScale(systemFontScale: Float, dayHeight: Float): Float {
-    val fitScale = dayHeight / CALENDAR_CELL_CONTENT_HEIGHT
-    return minOf(systemFontScale, CALENDAR_MAX_FONT_SCALE, fitScale).coerceAtLeast(CALENDAR_MIN_FONT_SCALE)
-}
+/** Font u ćeliji i zaglavlju dana: sistemski, ali najviše koliko staje u širinu ćelije. */
+internal fun calendarCellFontScale(systemFontScale: Float): Float =
+    minOf(systemFontScale, CALENDAR_CELL_MAX_FONT_SCALE)
 
-/** Visina ćelije tako da svi redovi meseca stanu u dostupnu visinu (najviše podrazumevana). */
-internal fun calendarDayHeight(availableHeight: Float, rows: Int): Float {
-    if (rows <= 0) return UI.dayButtonHeight.toFloat()
-    val fit = (availableHeight - 2 * CALENDAR_PADDING - Spacing.xs.value * (rows - 1)) / rows
-    return fit.coerceIn(CALENDAR_MIN_DAY_HEIGHT, UI.dayButtonHeight.toFloat())
-}
+/** Visina ćelije prati font u njoj; nikad ispod podrazumevane (58dp) ni M3 minimuma (48dp). */
+internal fun calendarDayHeight(cellFontScale: Float): Float =
+    maxOf(
+        UI.dayButtonHeight.toFloat(),
+        CALENDAR_MIN_CELL_HEIGHT,
+        CALENDAR_CELL_CONTENT_HEIGHT * cellFontScale + CALENDAR_CELL_VERTICAL_PADDING
+    )
 
 @Composable
 internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: () -> Unit) {
@@ -137,27 +135,31 @@ private const val CHEVRON_VISUAL_SIZE_DP = 40
 
 @Composable
 internal fun WeekdayHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(UI.weekdayHeaderHeight.dp)
-            .padding(horizontal = Spacing.sm),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        WEEKDAY_NAMES.forEachIndexed { index, name ->
-            val color = if (index >= 5) MaterialTheme.extendedColors.weekendOt.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
-            Text(
-                text = name,
-                color = color,
-                style = MaterialTheme.typography.labelSmallEmphasized.copy(
-                    letterSpacing = 0.6.sp,
-                    textAlign = TextAlign.Center
-                ),
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+    val density = LocalDensity.current
+    // Sedam stubaca je uskih kao ćelije: isti najviši font kao u kalendaru.
+    CompositionLocalProvider(LocalDensity provides Density(density.density, calendarCellFontScale(density.fontScale))) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(UI.weekdayHeaderHeight.dp)
+                .padding(horizontal = Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            WEEKDAY_NAMES.forEachIndexed { index, name ->
+                val color = if (index >= 5) MaterialTheme.extendedColors.weekendOt.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+                Text(
+                    text = name,
+                    color = color,
+                    style = MaterialTheme.typography.labelSmallEmphasized.copy(
+                        letterSpacing = 0.6.sp,
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -172,43 +174,38 @@ internal fun CalendarSection(
     onDayClick: (Int, DayRecord?) -> Unit
 ) {
     val weeks = remember(year, month) { getMonthMatrix(year, month) }
-    val scrollState = rememberScrollState()
     val brigadeType = repo.brigadeTypeValue
     val density = LocalDensity.current
+    val cellFontScale = calendarCellFontScale(density.fontScale)
+    val dayHeight = calendarDayHeight(cellFontScale)
     GlassCard(modifier = modifier.fillMaxWidth()) {
-        // Ćelije se smanjuju da ceo mesec stane i na nižim ekranima; skrol ostaje samo kao rezerva.
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val dayHeight = calendarDayHeight(maxHeight.value, weeks.size)
-            val cellDensity = Density(density.density, calendarCellFontScale(density.fontScale, dayHeight))
-            CompositionLocalProvider(LocalDensity provides cellDensity) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(CALENDAR_PADDING.dp)
-                        .verticalScroll(scrollState),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-                ) {
-                    for (week in weeks) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
-                        ) {
-                            for (day in week) {
-                                val record = if (day != 0) repo.get(year, month, day) else null
-                                val isToday = day == today.dayOfMonth &&
-                                    month == today.monthValue &&
-                                    year == today.year
-                                DayButton(
-                                    day = day,
-                                    record = record,
-                                    isToday = isToday,
-                                    year = year,
-                                    month = month,
-                                    brigadeType = brigadeType,
-                                    height = dayHeight,
-                                    onClick = { onDayClick(day, record) }
-                                )
-                            }
+        CompositionLocalProvider(LocalDensity provides Density(density.density, cellFontScale)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(CALENDAR_PADDING.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                for (week in weeks) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        for (day in week) {
+                            val record = if (day != 0) repo.get(year, month, day) else null
+                            val isToday = day == today.dayOfMonth &&
+                                month == today.monthValue &&
+                                year == today.year
+                            DayButton(
+                                day = day,
+                                record = record,
+                                isToday = isToday,
+                                year = year,
+                                month = month,
+                                brigadeType = brigadeType,
+                                height = dayHeight,
+                                onClick = { onDayClick(day, record) }
+                            )
                         }
                     }
                 }
@@ -321,8 +318,8 @@ private fun RowScope.DayButton(
                     lineHeight = 12.sp,
                     textAlign = TextAlign.Center
                 ),
-                maxFontSize = CALENDAR_DETAIL_MAX_FONT_SIZE.sp,
-                minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp,
+                maxFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
+                minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -337,8 +334,8 @@ private fun RowScope.DayButton(
                         lineHeight = 12.sp,
                         textAlign = TextAlign.Center
                     ),
-                    maxFontSize = if (isLeaveLabel) CALENDAR_DETAIL_MAX_FONT_SIZE.sp else 10.sp,
-                    minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp,
+                    maxFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
+                    minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )

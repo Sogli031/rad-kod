@@ -1,6 +1,8 @@
 package com.rad.shifttracker
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -170,7 +172,8 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
     val monthlyReceipt = repo.getMonthlyReceipt(year, month)
     val next = YearMonth.of(year, month).plusMonths(1)
     val nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue)
-    Box(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
         BackgroundLayer()
         Column(
             modifier = Modifier
@@ -178,12 +181,8 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 .fillMaxHeight()
                 .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
-                .padding(
-                    start = Spacing.lg,
-                    top = 16.dp,
-                    end = Spacing.lg,
-                    bottom = mainContentBottomPaddingDp().dp
-                ),
+                .verticalScroll(rememberScrollState())
+                .padding(start = Spacing.lg, top = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             HeaderSection(month = month, year = year, onPrev = {}, onNext = {})
@@ -196,7 +195,6 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
             }
             WeekdayHeader()
             CalendarSection(
-                modifier = Modifier.weight(1f).fillMaxSize(),
                 year = year,
                 month = month,
                 today = today,
@@ -218,8 +216,9 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 }
             }
         }
+        }
         BottomBar(
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier,
             onAutoFill = {},
             onSickVacation = {},
             onBasePay = {},

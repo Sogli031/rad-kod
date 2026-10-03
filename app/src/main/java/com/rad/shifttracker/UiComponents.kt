@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -124,13 +126,13 @@ fun GlassCard(
     shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor, shape)
-            .border(1.dp, borderColor.copy(alpha = CARD_BORDER_ALPHA), shape)
+    OutlinedCard(
+        modifier = modifier,
+        shape = shape,
+        colors = CardDefaults.outlinedCardColors(containerColor = bgColor),
+        border = BorderStroke(1.dp, borderColor.copy(alpha = CARD_BORDER_ALPHA))
     ) {
-        content()
+        Box { content() }
     }
 }
 
@@ -361,7 +363,9 @@ fun StatColumn(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+        modifier = modifier
+            .heightIn(min = UI.statCardHeight.dp)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -381,7 +385,7 @@ fun StatColumn(
                 textAlign = TextAlign.Center
             ),
             maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-            minFontSize = 9.sp,
+            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
             maxLines = 1,
             modifier = Modifier.fillMaxWidth()
         )

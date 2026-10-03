@@ -3,7 +3,11 @@ package com.rad.shifttracker
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import android.os.Build
+import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.MutableTransitionState
@@ -25,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
@@ -54,6 +59,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -84,6 +90,18 @@ private const val DISMISS_FLING_VELOCITY = 1500f
 /** M3 emphasized easing za prelaze: ulaz usporava, izlaz ubrzava (isto koristi prelaz meseca). */
 internal val EmphasizedDecelerateEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 internal val EmphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+/**
+ * Sistemska „ukloni animacije“ (skala trajanja animacija = 0): prelazi su trenutni.
+ * Čita se pri ulasku u kompoziciju; promena podešavanja važi pri sledećem otvaranju ekrana.
+ */
+@Composable
+internal fun rememberReducedMotion(): Boolean {
+    val resolver = LocalContext.current.contentResolver
+    return remember {
+        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
+}
+
 private const val SHEET_ENTER_MS = 400
 private const val SHEET_EXIT_MS = 200
 
@@ -104,6 +122,7 @@ fun PopupDialog(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val overlayInteraction = remember { MutableInteractionSource() }
+    val reducedMotion = rememberReducedMotion()
     val scheme = MaterialTheme.colorScheme
     val sheetShape = MaterialTheme.shapes.extraLarge.copy(
         bottomStart = ZeroCornerSize,
@@ -121,7 +140,7 @@ fun PopupDialog(
     }
     val scrimAlpha by animateFloatAsState(
         targetValue = if (visibleState.targetState) SCRIM_ALPHA else 0f,
-        animationSpec = tween(if (visibleState.targetState) SHEET_ENTER_MS else SHEET_EXIT_MS),
+        animationSpec = if (reducedMotion) snap() else tween(if (visibleState.targetState) SHEET_ENTER_MS else SHEET_EXIT_MS),
         label = "scrim"
     )
     val dragState = rememberDraggableState { delta ->
@@ -159,9 +178,18 @@ fun PopupDialog(
 
             AnimatedVisibility(
                 visibleState = visibleState,
-                modifier = Modifier.fillMaxWidth(),
-                enter = slideInVertically(tween(SHEET_ENTER_MS, easing = EmphasizedDecelerateEasing)) { it },
-                exit = slideOutVertically(tween(SHEET_EXIT_MS, easing = EmphasizedAccelerateEasing)) { it }
+                // Na širokom ekranu list ostaje čitljive širine, centriran uz donju ivicu.
+                modifier = Modifier.widthIn(max = UI.contentMaxWidth.dp).fillMaxWidth(),
+                enter = if (reducedMotion) {
+                    EnterTransition.None
+                } else {
+                    slideInVertically(tween(SHEET_ENTER_MS, easing = EmphasizedDecelerateEasing)) { it }
+                },
+                exit = if (reducedMotion) {
+                    ExitTransition.None
+                } else {
+                    slideOutVertically(tween(SHEET_EXIT_MS, easing = EmphasizedAccelerateEasing)) { it }
+                }
             ) {
                 Column(
                     modifier = Modifier
