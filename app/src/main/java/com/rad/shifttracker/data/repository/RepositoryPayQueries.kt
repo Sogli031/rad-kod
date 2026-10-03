@@ -36,8 +36,6 @@ internal class RepositoryPayQueries(
     private val recordStore: ShiftRecordStore,
     private val getCompBalanceAtMonthStartUnsafe: (Int, Int) -> Int,
     private val getCompBalanceMinutesAtMonthStartUnsafe: (Int, Int) -> Int,
-    private val getCompBalanceAtMonthStartReadOnly: (Int, Int) -> Int,
-    private val getCompBalanceMinutesAtMonthStartReadOnly: (Int, Int) -> Int,
     private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int,
     private val percentDeductionsForMonthUnsafe: (MonthKey) -> PercentDeductions?
 ) {
@@ -46,12 +44,9 @@ internal class RepositoryPayQueries(
         payState = payState,
         recordStore = recordStore,
         getSummaryCalculator = ::getSummaryCalculator,
-        createSummaryCalculator = ::createSummaryCalculator,
         grossHourlyRateUnsafe = ::grossHourlyRateUnsafe,
         getCompBalanceAtMonthStartUnsafe = getCompBalanceAtMonthStartUnsafe,
         getCompBalanceMinutesAtMonthStartUnsafe = getCompBalanceMinutesAtMonthStartUnsafe,
-        getCompBalanceAtMonthStartReadOnly = getCompBalanceAtMonthStartReadOnly,
-        getCompBalanceMinutesAtMonthStartReadOnly = getCompBalanceMinutesAtMonthStartReadOnly,
         calculateYearsOfServiceUnsafe = calculateYearsOfServiceUnsafe
     )
 

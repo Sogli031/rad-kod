@@ -44,21 +44,6 @@ internal class RepositoryCompBalanceCalculator(
         return balance
     }
 
-    fun hoursAtMonthStartReadOnly(year: Int, month: Int): Int {
-        return minutesAtMonthStartReadOnly(year, month) / MINUTES_PER_HOUR
-    }
-
-    fun minutesAtMonthStartReadOnly(year: Int, month: Int): Int {
-        val target = MonthKey(year, month)
-        val priorMonths = recordStore.getAllMonthsSorted().filter { it < target }
-        var balance = payState.initialCompBalanceMinutes
-        for (priorMonth in priorMonths) {
-            balance += monthNetChangeMinutes(priorMonth)
-            if (balance < 0) balance = 0
-        }
-        return balance
-    }
-
     /** Isto kao MonthSummary.compTimeNetMinutes: manjak pokriven „Odradom" ne skida saldo. */
     private fun monthNetChangeMinutes(month: MonthKey): Int {
         val monthRecords = recordStore.getMonthRecords(month)

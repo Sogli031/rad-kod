@@ -40,12 +40,9 @@ internal class RepositoryPayBaseResolver(
     private val payState: RepositoryPayState,
     private val recordStore: ShiftRecordStore,
     private val getSummaryCalculator: () -> PayCalculator,
-    private val createSummaryCalculator: () -> PayCalculator,
     private val grossHourlyRateUnsafe: (Int, Int) -> Double,
     private val getCompBalanceAtMonthStartUnsafe: (Int, Int) -> Int,
     private val getCompBalanceMinutesAtMonthStartUnsafe: (Int, Int) -> Int,
-    private val getCompBalanceAtMonthStartReadOnly: (Int, Int) -> Int,
-    private val getCompBalanceMinutesAtMonthStartReadOnly: (Int, Int) -> Int,
     private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int
 ) {
     /**
@@ -82,48 +79,6 @@ internal class RepositoryPayBaseResolver(
         val calculatedBase = when (selectedMode) {
             PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS -> getRollingPayBaseCalculationUnsafe(year, month)
             PayBaseSelectionMode.KNOWN_BASE -> getKnownPayBaseCalculationUnsafe(year, month)
-            PayBaseSelectionMode.MANUAL,
-            PayBaseSelectionMode.DEFAULT_VALUES -> null
-        }
-        val payBaseDefaults = when (selectedMode) {
-            PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
-            PayBaseSelectionMode.KNOWN_BASE,
-            PayBaseSelectionMode.DEFAULT_VALUES -> PayBaseDefaults(
-                vacationHourlyBase = config.pay.vacationPayBaseHourly,
-                paidHolidayHourlyBase = config.pay.paidHolidayPayBaseHourly,
-                sickHourlyBase = config.pay.sickPayBaseHourly
-            )
-            PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                vacationHourlyBase = configuredSickHourlyBase,
-                paidHolidayHourlyBase = configuredSickHourlyBase,
-                sickHourlyBase = configuredSickHourlyBase
-            )
-        }
-        return resolvePayBasesForMonth(
-            year = year,
-            month = month,
-            monthlyBases = payState.monthlyPayBases,
-            defaults = payBaseDefaults,
-            calculatedBase = calculatedBase,
-            defaultSelectionMode = payState.defaultPayBaseSelectionMode
-        )
-    }
-
-    fun resolvedPayBasesForWorkMonthReadOnly(year: Int, month: Int): ResolvedPayBases {
-        return payBaseResolutionMonthForWorkMonth(year, month).let { sourceMonth ->
-            getResolvedPayBasesReadOnly(sourceMonth.year, sourceMonth.month)
-        }
-    }
-
-    private fun getResolvedPayBasesReadOnly(year: Int, month: Int): ResolvedPayBases {
-        val key = MonthKey(year, month)
-        val selectedMode = effectivePayBaseSelectionMode(
-            payState.monthlyPayBases[key],
-            payState.defaultPayBaseSelectionMode
-        )
-        val calculatedBase = when (selectedMode) {
-            PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS -> calculateRollingPayBaseCalculationReadOnly(year, month)
-            PayBaseSelectionMode.KNOWN_BASE -> getKnownPayBaseCalculationReadOnly(year, month)
             PayBaseSelectionMode.MANUAL,
             PayBaseSelectionMode.DEFAULT_VALUES -> null
         }
@@ -247,59 +202,6 @@ internal class RepositoryPayBaseResolver(
         return calculateRollingPayBaseCalculation(rollingMonths)
     }
 
-    private fun calculateRollingPayBaseCalculationReadOnly(year: Int, month: Int): RollingPayBaseCalculation? {
-        val months = previousTwelveMonthKeys(year, month)
-        if (months.size != 12) {
-            return null
-        }
-
-        val monthSimulator = RollingPayBaseMonthSimulator(config, payState, recordStore)
-        val simulationPattern = monthSimulator.findPattern()
-        val rollingMonths = mutableListOf<RollingPayBaseMonth>()
-        for (key in months) {
-            val monthKey = MonthKey(key.year, key.month)
-            val payBaseSourceMonth = payBaseSourceMonthForWorkMonth(key.year, key.month)
-            val realRecords = getCompleteMonthRecordsForRollingPayBaseUnsafe(monthKey)
-            val monthRecords = realRecords
-                ?: monthSimulator.simulateEmptyMonth(monthKey, simulationPattern)
-                ?: return null
-            val selectedMode = effectivePayBaseSelectionMode(
-                payState.monthlyPayBases[payBaseSourceMonth],
-                payState.defaultPayBaseSelectionMode
-            )
-            val payBaseDefaults = when (selectedMode) {
-                PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
-                PayBaseSelectionMode.KNOWN_BASE,
-                PayBaseSelectionMode.DEFAULT_VALUES -> PayBaseDefaults(
-                    vacationHourlyBase = config.pay.vacationPayBaseHourly,
-                    paidHolidayHourlyBase = config.pay.paidHolidayPayBaseHourly,
-                    sickHourlyBase = config.pay.sickPayBaseHourly
-                )
-                PayBaseSelectionMode.MANUAL -> PayBaseDefaults(
-                    vacationHourlyBase = configuredSickHourlyBase,
-                    paidHolidayHourlyBase = configuredSickHourlyBase,
-                    sickHourlyBase = configuredSickHourlyBase
-                )
-            }
-            val payBases = resolvePayBasesForMonth(
-                year = payBaseSourceMonth.year,
-                month = payBaseSourceMonth.month,
-                monthlyBases = payState.monthlyPayBases,
-                defaults = payBaseDefaults,
-                calculatedBase = null,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
-            )
-            rollingMonths += calculatePayBaseMonthReadOnly(
-                monthKey = monthKey,
-                monthRecords = monthRecords,
-                payBases = payBases,
-                source = if (realRecords != null) PayBaseMonthSource.REAL else PayBaseMonthSource.SIMULATED
-            )
-        }
-
-        return calculateRollingPayBaseCalculation(rollingMonths)
-    }
-
     private fun getKnownPayBaseCalculationUnsafe(year: Int, month: Int): RollingPayBaseCalculation? {
         val target = MonthKey(year, month)
         val anchor = payState.knownPayBaseAnchorFor(target) ?: return null
@@ -360,66 +262,6 @@ internal class RepositoryPayBaseResolver(
         )
     }
 
-    private fun getKnownPayBaseCalculationReadOnly(year: Int, month: Int): RollingPayBaseCalculation? {
-        val target = MonthKey(year, month)
-        val anchor = payState.knownPayBaseAnchorFor(target) ?: return null
-        if (!anchor.grossHourlyBase.isFinite() || anchor.grossHourlyBase <= 0.0) return null
-
-        val followingMonths = mutableListOf<RollingPayBaseMonth>()
-
-        for (monthKey in monthsBetweenAnchorAndTarget(anchor.month, target)) {
-            val payBaseSourceMonth = payBaseSourceMonthForWorkMonth(monthKey.year, monthKey.month)
-            val previousCalculation = calculateKnownPayBaseCalculationForTargetUnsafe(
-                anchor = anchor,
-                target = monthKey,
-                followingMonths = followingMonths,
-                defaultHours = config.pay.defaultHours
-            ) ?: return null
-            val realRecords = getCompleteMonthRecordsForRollingPayBaseUnsafe(monthKey)
-            if (realRecords == null) {
-                val carryForwardHours = calculateMonthlyFundHours(
-                    monthKey.year,
-                    monthKey.month,
-                    config.pay.defaultHours
-                )
-                if (carryForwardHours <= 0) return null
-                followingMonths += RollingPayBaseMonth(
-                    year = monthKey.year,
-                    month = monthKey.month,
-                    grossForAverage = previousCalculation.hourlyBase * carryForwardHours.toDouble(),
-                    hoursForAverage = carryForwardHours,
-                    source = PayBaseMonthSource.CARRY_FORWARD
-                )
-                continue
-            }
-            val payBases = resolvePayBasesForMonth(
-                year = payBaseSourceMonth.year,
-                month = payBaseSourceMonth.month,
-                monthlyBases = payState.monthlyPayBases,
-                defaults = PayBaseDefaults(
-                    vacationHourlyBase = config.pay.vacationPayBaseHourly,
-                    paidHolidayHourlyBase = config.pay.paidHolidayPayBaseHourly,
-                    sickHourlyBase = config.pay.sickPayBaseHourly
-                ),
-                calculatedBase = previousCalculation,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode
-            )
-            followingMonths += calculatePayBaseMonthReadOnly(
-                monthKey = monthKey,
-                monthRecords = realRecords,
-                payBases = payBases,
-                source = PayBaseMonthSource.REAL
-            )
-        }
-
-        return calculateKnownPayBaseCalculationForTargetUnsafe(
-            anchor = anchor,
-            target = target,
-            followingMonths = followingMonths,
-            defaultHours = config.pay.defaultHours
-        )
-    }
-
     private fun calculatePayBaseMonthUnsafe(
         monthKey: MonthKey,
         monthRecords: List<DayRecord>,
@@ -453,56 +295,6 @@ internal class RepositoryPayBaseResolver(
             regressPaidInMonth = payState.regressPaidInMonth(monthKey)
         )
         val details = getSummaryCalculator().calculateMonthlyPayDetails(
-            records = monthRecords,
-            summary = summary,
-            baseRate = grossHourlyRate,
-            netBreakdown = breakdown,
-            brigadeType = payState.brigadeType,
-            payBases = payBases
-        )
-        return calculatePayBaseMonthForAverage(
-            year = monthKey.year,
-            month = monthKey.month,
-            details = details,
-            source = source,
-            grossAdditions = grossAdditions
-        )
-    }
-
-    private fun calculatePayBaseMonthReadOnly(
-        monthKey: MonthKey,
-        monthRecords: List<DayRecord>,
-        payBases: ResolvedPayBases,
-        source: PayBaseMonthSource
-    ): RollingPayBaseMonth {
-        val grossHourlyRate = grossHourlyRateUnsafe(monthKey.year, monthKey.month)
-        val calculator = createSummaryCalculator()
-        val summary = calculator.calculateMonthSummary(
-            records = monthRecords,
-            baseRate = grossHourlyRate,
-            startingCompBalance = getCompBalanceAtMonthStartReadOnly(monthKey.year, monthKey.month),
-            startingCompBalanceMinutes = getCompBalanceMinutesAtMonthStartReadOnly(monthKey.year, monthKey.month),
-            yearsOfService = calculateYearsOfServiceUnsafe(monthKey.year, monthKey.month),
-            brigadeType = payState.brigadeType,
-            summaryYear = monthKey.year,
-            summaryMonth = monthKey.month,
-            payBases = payBases
-        )
-        summary.applyMealEntitlement(monthKey, monthRecords, recordStore, payState, config.pay.defaultHours)
-        val grossAdditions = payState.monthlyGrossAdditions[monthKey]
-            ?: MonthlyGrossAdditions(monthKey.year, monthKey.month)
-        val breakdown = calculateMonthlyNetPayBreakdown(
-            summary = summary,
-            grossHourlyRate = grossHourlyRate,
-            monthlyFundHours = calculateMonthlyFundHours(monthKey.year, monthKey.month, config.pay.defaultHours),
-            contributionsPercent = payState.employeeContributionsPercent,
-            taxRelief = payState.taxRelief,
-            taxPercent = payState.taxPercent,
-            grossAdditions = grossAdditions,
-            regressNet = payState.regressNetForMonth(monthKey),
-            regressPaidInMonth = payState.regressPaidInMonth(monthKey)
-        )
-        val details = calculator.calculateMonthlyPayDetails(
             records = monthRecords,
             summary = summary,
             baseRate = grossHourlyRate,

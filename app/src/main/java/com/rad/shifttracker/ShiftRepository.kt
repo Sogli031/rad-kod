@@ -89,8 +89,6 @@ class ShiftRepository(
         recordStore = recordStore,
         getCompBalanceAtMonthStartUnsafe = compBalanceCalculator::hoursAtMonthStart,
         getCompBalanceMinutesAtMonthStartUnsafe = compBalanceCalculator::minutesAtMonthStart,
-        getCompBalanceAtMonthStartReadOnly = compBalanceCalculator::hoursAtMonthStartReadOnly,
-        getCompBalanceMinutesAtMonthStartReadOnly = compBalanceCalculator::minutesAtMonthStartReadOnly,
         calculateYearsOfServiceUnsafe = ::calculateYearsOfServiceUnsafe,
         percentDeductionsForMonthUnsafe = { month -> percentDeductionsForMonth(month, savedPayslipsUnsafe()) }
     )
