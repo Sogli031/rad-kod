@@ -39,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -213,9 +212,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val reducedMotion = rememberReducedMotion()
 
     // Google Drive backup state
-    val signInState by backup.signInState.collectAsState()
-    val syncState by backup.syncState.collectAsState()
-    val lastSyncTime by backup.lastSyncTime.collectAsState()
+    val signInState by backup.signInState.collectAsStateWithLifecycle()
+    val syncState by backup.syncState.collectAsStateWithLifecycle()
+    val lastSyncTime by backup.lastSyncTime.collectAsStateWithLifecycle()
     // Dijalog ranijih verzija backup-a (lista se učitava pri otvaranju).
     var showBackupVersionsDialog by rememberSaveable { mutableStateOf(false) }
     var backupVersions by remember { mutableStateOf<List<BackupVersion>?>(null) }
@@ -313,6 +312,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         val wide = currentWindowAdaptiveInfo().windowSizeClass
             .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
         var selectedDay by rememberSaveable(currentYear, currentMonth) { mutableStateOf<Int?>(null) }
+        val selectedDayRecord = remember(selectedDay, currentYear, currentMonth, repoTick.intValue) {
+            selectedDay?.let { repo.get(currentYear, currentMonth, it) }
+        }
+        val selectedDayBrigade = remember(repoTick.intValue) { repo.brigadeTypeValue }
         // Kalendar sa zaglavljem i statistika sa platom: jedna kolona na telefonu, dve kolone na širokom ekranu.
         val calendarPane: @Composable ColumnScope.() -> Unit = {
             HeaderSection(
@@ -332,10 +335,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     onClick = { dialogState = DialogState.InitialCompBalance }
                 )
                 VacationCard(
-                    repo = repo,
-                    repoTick = repoTick.intValue,
-                    year = currentYear,
-                    today = vacationAsOfDate,
+                    summary = ui.vacationSummary,
                     modifier = Modifier.weight(1f),
                     onClick = { dialogState = DialogState.VacationSettings }
                 )
@@ -373,8 +373,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     month = currentMonth,
                     day = day,
                     today = today,
-                    repo = repo,
-                    onEdit = { dialogState = DialogState.DayEdit(day, repo.get(currentYear, currentMonth, day)) }
+                    record = selectedDayRecord,
+                    brigadeType = selectedDayBrigade,
+                    onEdit = { dialogState = DialogState.DayEdit(day, selectedDayRecord) }
                 )
             }
             StatsSection(
@@ -461,7 +462,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     }
 
     // Upisana akontacija / promenjen prevoz iz obračuna: poruka u aplikaciji, ne na telefonu.
-    val sideRunMessages by SideRunMessages.pending.collectAsState()
+    val sideRunMessages by SideRunMessages.pending.collectAsStateWithLifecycle()
     if (sideRunMessages.isNotEmpty() && dialogState == DialogState.None) {
         SideRunMessagesDialog(messages = sideRunMessages, onDismiss = SideRunMessages::clear)
     }

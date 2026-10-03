@@ -191,7 +191,7 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 CompTimeCard(summary = summary, modifier = Modifier.weight(1f), onClick = {})
-                VacationCard(repo = repo, repoTick = 0, year = year, today = today, modifier = Modifier.weight(1f), onClick = {})
+                VacationCard(summary = repo.getVacationBalanceSummary(year, today), modifier = Modifier.weight(1f), onClick = {})
             }
             WeekdayHeader()
             CalendarSection(

@@ -160,6 +160,8 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.core)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Samo u debug build-u: curenje memorije (LeakCanary), vidi i StrictMode u RadApplication.
+    debugImplementation(libs.leakcanary)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 

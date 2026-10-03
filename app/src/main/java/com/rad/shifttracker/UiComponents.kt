@@ -40,7 +40,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +59,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AutoSizeText
-import java.time.LocalDate
 import java.util.Locale
 
 /** Najmanja dodirna površina kontrole (Material i WCAG 2.5.8): 48dp. */
@@ -465,14 +463,10 @@ fun CompTimeCard(
 
 @Composable
 fun VacationCard(
-    repo: ShiftRepository,
-    repoTick: Int,
-    year: Int,
-    today: LocalDate,
+    summary: VacationBalanceSummary,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val summary = remember(repoTick, year, today) { repo.getVacationBalanceSummary(year, today) }
     val exceeded = summary.warnings.contains(VacationWarnings.VACATION_EXCEEDED)
 
     val mainColor = if (exceeded) MaterialTheme.colorScheme.error else MaterialTheme.extendedColors.vacation

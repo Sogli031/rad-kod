@@ -44,7 +44,8 @@ internal data class MainMonthState(
     val recentNetPayAverage: RecentNetPayAverage,
     val selectedMonthAnnualNetPayAverages: AnnualNetPayAverages,
     val selectedMonthRecentNetPayAverage: RecentNetPayAverage,
-    val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus
+    val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
+    val vacationSummary: VacationBalanceSummary
 )
 
 /** Ulaz od kog zavisi [MainMonthState]: izmena podataka, izabrani mesec i današnji dan. */
@@ -133,7 +134,8 @@ internal class MainViewModel(
             recentNetPayAverage = repo.getRecentNetPayAverage(payroll.year, payroll.month, payrollAsOf),
             selectedMonthAnnualNetPayAverages = repo.getAnnualNetPayAverages(year),
             selectedMonthRecentNetPayAverage = repo.getRecentNetPayAverage(year, month, selectedAsOf),
-            bloodDonationReminderStatus = BloodDonationReminderScheduler.currentStatus(appContext, repo)
+            bloodDonationReminderStatus = BloodDonationReminderScheduler.currentStatus(appContext, repo),
+            vacationSummary = repo.getVacationBalanceSummary(year, selectedAsOf)
         )
     }
 }

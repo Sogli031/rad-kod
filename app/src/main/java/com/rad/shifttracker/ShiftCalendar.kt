@@ -469,10 +469,10 @@ internal fun SelectedDayCard(
     month: Int,
     day: Int,
     today: LocalDate,
-    repo: ShiftRepository,
+    record: DayRecord?,
+    brigadeType: BrigadeType,
     onEdit: () -> Unit
 ) {
-    val record = repo.get(year, month, day)
     val isHolidayDay = record?.holidayOverride ?: isSerbianHoliday(year, month, day)
     val description = calendarDayDescription(
         day = day,
@@ -481,7 +481,7 @@ internal fun SelectedDayCard(
         isToday = today == LocalDate.of(year, month, day),
         isHolidayDay = isHolidayDay,
         workedHoliday = record?.workedOnHoliday ?: false,
-        brigadeType = repo.brigadeTypeValue
+        brigadeType = brigadeType
     )
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(

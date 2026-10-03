@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import android.app.Application
+import android.os.StrictMode
 import com.rad.shifttracker.data.backup.BackupScheduler
 import com.rad.shifttracker.data.backup.GoogleDriveBackup
 import com.rad.shifttracker.data.backup.GoogleDriveBackupProvider
@@ -32,6 +33,7 @@ class RadApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashLogStorage.install(this, appName = "Rad")
+        if (BuildConfig.DEBUG) enableStrictMode()
         deleteSharedPreferences("gps_shift_state")
         cleanUpRemovedFeatures(this)
     }
@@ -98,6 +100,12 @@ class RadApplication : Application() {
     }
 
     fun consumePersistenceFailure(): Boolean = persistenceFailure.getAndSet(false)
+
+    /** Samo u debug build-u: upis i čitanje na glavnoj niti i propuštena zatvaranja idu u logcat (bez pada aplikacije). */
+    private fun enableStrictMode() {
+        StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
+        StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().detectLeakedSqlLiteObjects().penaltyLog().build())
+    }
 }
 
 /**
