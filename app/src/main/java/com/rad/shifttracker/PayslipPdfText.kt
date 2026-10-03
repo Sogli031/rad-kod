@@ -9,7 +9,6 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.InputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
@@ -29,10 +28,6 @@ internal data class PdfGlyph(
  */
 internal fun readPayslip(context: Context, uri: Uri): PayslipParseResult =
     readPayslipFrom(context) { context.contentResolver.openInputStream(uri) }
-
-/** Isto, za PDF nađen u folderu sa listićima. */
-internal fun readPayslip(context: Context, file: File): PayslipParseResult =
-    readPayslipFrom(context) { file.inputStream() }
 
 /** Isto, za PDF prilog preuzet iz Gmail-a (samo u memoriji). */
 internal fun readPayslip(context: Context, bytes: ByteArray): PayslipParseResult =

@@ -1,149 +1,30 @@
 package com.rad.shifttracker
 
-import androidx.compose.ui.text.input.ImeAction
 import android.accounts.AccountManager
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/**
- * Opcije → „Folder sa listićima“: gde „Lista“ traži PDF listić meseca i dugme za
- * „Pristup svim fajlovima“ (kao „Pristup obaveštenjima“). Status se osvežava po povratku
- * iz podešavanja telefona.
- */
-@Composable
-internal fun PayslipFolderSettingsSection() {
-    val context = LocalContext.current
-    val settings = remember { PayslipFolderSettings(context) }
-    var folderInput by remember { mutableStateOf(settings.folder) }
-    var saved by remember { mutableStateOf(false) }
-    var pickError by remember { mutableStateOf<String?>(null) }
-    var hasAccess by remember { mutableStateOf(hasPayslipFolderAccess(context)) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) hasAccess = hasPayslipFolderAccess(context)
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    // Sistemski birač foldera; sam „Download“ se tu ne može izabrati (Android 11+), pa je on podrazumevan.
-    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val folder = payslipFolderFromTreeUri(uri)
-        if (folder == null) {
-            pickError = "Izaberi folder u memoriji telefona (SD kartica nije podržana)."
-        } else {
-            settings.folder = folder
-            folderInput = folder
-            saved = true
-            pickError = null
-        }
-    }
-
-    Column(
-        modifier = Modifier.padding(vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-        ) {
-            ModernTextField(
-                value = folderInput,
-                onValueChange = {
-                    folderInput = it
-                    saved = false
-                    pickError = null
-                },
-                hintText = PAYSLIP_FOLDER_DEFAULT,
-                label = "Folder",
-                isError = pickError != null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                modifier = Modifier.weight(1f)
-            )
-            RoundedButton(
-                text = if (saved) "Sačuvano" else "Sačuvaj",
-                modifier = Modifier
-                    .width(96.dp)
-                    .height(UI.buttonHeight.dp),
-                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                textColor = MaterialTheme.colorScheme.onSurface,
-                textStyle = MaterialTheme.typography.labelMedium,
-                onClick = {
-                    settings.folder = folderInput
-                    folderInput = settings.folder
-                    saved = true
-                }
-            )
-        }
-        pickError?.let {
-            FormErrorText(message = it, style = MaterialTheme.typography.bodySmall)
-        }
-        RoundedButton(
-            text = PAYSLIP_FOLDER_PICK_LABEL,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(UI.buttonHeight.dp),
-            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            textColor = MaterialTheme.colorScheme.onSurface,
-            borderColor = MaterialTheme.colorScheme.outlineVariant,
-            textStyle = MaterialTheme.typography.labelLarge,
-            onClick = { runCatching { folderPicker.launch(null) } }
-        )
-        Text(
-            text = "$PAYSLIP_FOLDER_ACCESS_LABEL: ${payslipFolderAccessStatusText(hasAccess)}",
-            color = if (hasAccess) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.warning,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        RoundedButton(
-            text = PAYSLIP_FOLDER_ACCESS_LABEL,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(UI.buttonHeight.dp),
-            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            textColor = MaterialTheme.colorScheme.onSurface,
-            borderColor = MaterialTheme.colorScheme.outlineVariant,
-            textStyle = MaterialTheme.typography.labelLarge,
-            onClick = { openPayslipFolderAccessSettings(context) }
-        )
-    }
-}
 
 /** Povezivanje Gmail-a za listiće: [connect] otvara izbor naloga, pa Google dozvolu. */
 internal class GmailPayslipConnector(

@@ -205,13 +205,7 @@ internal fun deletePayslipForMonth(repo: ShiftRepository, store: PayslipSnapshot
     if (store.load()?.month == month) store.clear()
 }
 
-internal const val PAYSLIP_FOLDER_NO_ACCESS_TEXT =
-    "Uključi „Pristup fajlovima“ u Opcijama — onda se lista sama nađe u folderu."
-
-internal fun payslipNotInFolderText(folder: String, month: MonthKey): String =
-    "U folderu $folder nema liste za ${monthYearText(month)}."
-
-/** Stanje pretrage foldera sa listićima za mesec bez listića. */
+/** Stanje pretrage Gmail-a za mesec bez listića. */
 internal data class FolderPayslipScan(
     val found: FoundPayslip? = null,
     val text: String? = null,
@@ -219,8 +213,7 @@ internal data class FolderPayslipScan(
 )
 
 /**
- * Nema listića za mesec: Gmail, ako je povezan. Folder sa listićima (Opcije) samo kad Gmail ne radi
- * (nije povezan, dozvola istekla, nema interneta) — ako Gmail radi, a listića nema, to je odgovor.
+ * Nema listića za mesec: traži se u Gmail-u, ako je povezan.
  */
 @Composable
 private fun rememberFolderPayslipScan(month: MonthKey, missing: Boolean): FolderPayslipScan {
@@ -251,26 +244,13 @@ private fun rememberFolderPayslipScan(month: MonthKey, missing: Boolean): Folder
         } else {
             null
         }
-        val folderText = if (hasPayslipFolderAccess(context)) {
-            val folder = PayslipFolderSettings(context).folder
-            scan = FolderPayslipScan(isScanning = true)
-            val hit = withContext(Dispatchers.IO) {
-                runPayslipSafely { findPayslipInFolder(context, payslipFolderFile(folder), month) }
-            }
-            if (hit != null) {
-                scan = FolderPayslipScan(found = hit)
-                return@LaunchedEffect
-            }
-            payslipNotInFolderText(folder, month)
-        } else {
-            PAYSLIP_FOLDER_NO_ACCESS_TEXT
-        }
-        scan = FolderPayslipScan(text = listOfNotNull(gmailText, folderText).joinToString("\n"))
+        scan = FolderPayslipScan(text = gmailText ?: GMAIL_NOT_CONNECTED_TEXT)
     }
     return scan
 }
 
 private const val GMAIL_SCANNING_TEXT = "Tražim listu u Gmail-u..."
+private const val GMAIL_NOT_CONNECTED_TEXT = "Gmail nije povezan — poveži ga u Opcijama."
 private const val GMAIL_NO_ACCESS_TEXT = "Gmail dozvola je istekla — poveži Gmail ponovo u Opcijama."
 private const val GMAIL_FAILED_TEXT = "Gmail trenutno nije dostupan (nema interneta?). Pokušaj ponovo."
 

@@ -75,11 +75,6 @@ internal fun OptionsDialog(
             )
         }
 
-        SectionLabel(text = PAYSLIP_FOLDER_SECTION_LABEL)
-        PopupCard(spacing = 0.dp) {
-            PayslipFolderSettingsSection()
-        }
-
         SectionLabel(text = GMAIL_PAYSLIP_SECTION_LABEL)
         PopupCard(spacing = 0.dp) {
             GmailPayslipSettingsSection(repo = repo)

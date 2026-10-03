@@ -161,10 +161,7 @@ internal fun collectSideRuns(context: Context, months: List<MonthKey>): Collecte
             GmailSideRunsResult.Failed -> gmailFailed = true
             GmailSideRunsResult.NoAccess -> Unit
         }
-        if (!hasPayslipFolderAccess(context)) return@flatMap emptyList()
-        val folder = payslipFolderFile(PayslipFolderSettings(context).folder)
-        runPayslipSafely { findSideRunsInFolder(context, folder, month) }.orEmpty()
-            .also { Log.i(SIDE_RUN_LOG_TAG, "${month.year}-${month.month} folder: ${it.size} obračuna") }
+        emptyList()
     }
     return CollectedSideRuns(runs, gmailFailed)
 }

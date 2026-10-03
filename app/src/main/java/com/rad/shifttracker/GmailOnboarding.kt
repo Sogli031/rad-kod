@@ -270,12 +270,7 @@ internal fun importFromGmailForOnboarding(
         payslips = results.filterIsInstance<PayslipParseResult.Success>().map { it.payslip }.filter { it.month in months }
         runs = sideMonths.flatMap { sideRuns(results.asSequence(), it) }
     } else {
-        payslips = if (hasPayslipFolderAccess(context)) {
-            val folder = payslipFolderFile(PayslipFolderSettings(context).folder)
-            months.mapNotNull { runPayslipSafely { findPayslipInFolder(context, folder, it) }?.result?.payslip }
-        } else {
-            emptyList()
-        }
+        payslips = emptyList()
         runs = collectSideRuns(context, sideMonths).runs
     }
     val plan = applyOnboardingPayslips(repo, payslips)

@@ -83,11 +83,7 @@ private fun findFinalPayslip(context: Context, month: MonthKey): Pair<PayslipPar
     val found = when (gmail) {
         is GmailPayslipResult.Found -> gmail.payslip.result
         GmailPayslipResult.NotFound -> null
-        GmailPayslipResult.NoAccess, GmailPayslipResult.Failed -> if (hasPayslipFolderAccess(context)) {
-            findPayslipInFolder(context, payslipFolderFile(PayslipFolderSettings(context).folder), month)?.result
-        } else {
-            null
-        }
+        GmailPayslipResult.NoAccess, GmailPayslipResult.Failed -> null
     }
     return found to gmail
 }
@@ -105,11 +101,7 @@ private fun findFinalPayslips(context: Context, months: List<MonthKey>): List<Pa
     }
     val slips = when (gmail) {
         is GmailRangeResult.Read -> gmail.results.mapNotNull { (_, result) -> (result as? PayslipParseResult.Success)?.payslip }
-        GmailRangeResult.NoAccess, GmailRangeResult.Failed -> {
-            if (!hasPayslipFolderAccess(context)) return null
-            val folder = payslipFolderFile(PayslipFolderSettings(context).folder)
-            months.mapNotNull { findPayslipInFolder(context, folder, it)?.result?.payslip }
-        }
+        GmailRangeResult.NoAccess, GmailRangeResult.Failed -> return null
     }
     return slips.filter { it.month in wanted }
         .groupBy { it.month }
