@@ -23,7 +23,11 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | 2 (deo) | **gotovo i instalirano na Pixel 9 (2026-10-03)**: R8 + shrink (APK 27 → 10,5 MB), release pada bez zajedničkog ključa (`-PallowDebugSigning=true` samo za CI), `network_security_config`, `release.ps1` (testovi, `apksigner`, otisak ključa, `mapping.txt`, SHA-256), AGP 8.13 / Kotlin 2.1.21 / Gradle 8.13 (lint je pucao na v5.5), version catalog, `targetSdk` 36 | gate zelen; 📱 ručno proći Drive backup/restore, Gmail uvoz, izvoz JSON-a, obaveštenja (R8 refleksija) |
 | 2 — izmena plana | **čitanje listića iz foldera i `MANAGE_EXTERNAL_STORAGE` uklonjeni** (korisnik koristi samo Gmail) umesto SAF-a | manifest bez dozvola za fajlove |
 | 4 (deo) | **`MainViewModel`**: izabrani mesec (SavedStateHandle), današnji dan, ~20 upita na `Dispatchers.Default` kao jedan `MainMonthState`; ukinut dupli `getMonthlyOvertimeNetImpact`; `collectAsStateWithLifecycle`; `MainViewModelTest` | proveren na telefonu (listanje meseci) |
-| 2, 4, 7–10 — ostaje | Baseline Profile 📱, SAF nije potreban; kalendar jedan `getMonthRecords`, `@Immutable`, podela `ShiftRepository`, testovi ponašanja umesto izvornog teksta, Kover, Faze 8–10 | — |
+| 4 (deo 2) | kalendar jednim `getMonthRecords` bez `key(repoTick)`; Compose stability config (nestabilnih klasa 107 → 31, preostale su servisi/repo); sve kompozicije preskočive (strong skipping) | snimci pikselski isti |
+| 7 (deo) | Kover prag 90% za obračun i podatke (danas 92,7%; `RepositoryPayBaseResolver` 56% je najslabija tačka), u `release.ps1` i CI; testovi koji čitaju izvorni tekst zamenjeni `DashboardBehaviorTest` (ostao nijedan `sourceText`) | `koverVerifyDebug` |
+| 8–9 (deo) | `MAPS_API_KEY` uklonjen iz `local.properties` i README-a; README ažuriran (alati, release tok) | — |
+| 3 — golden test | pokriven postojećim `PayslipFillRoundTripTest`/`PayslipMonthFillScenariosTest` (8 listića × 3 faze, obračun = listić) | testovi zeleni |
+| 2, 4, 7–10 — ostaje | Baseline Profile 📱, podela `ShiftRepository` (2509 linija), `RepositoryPayBaseResolver` pokrivenost, Faze 8, 10 (crash log, release napomene), TalkBack 📱 | — |
 
 Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
 donja traka „Po…"/„Op…".

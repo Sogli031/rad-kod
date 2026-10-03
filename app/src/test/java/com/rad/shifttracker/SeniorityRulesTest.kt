@@ -4,8 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.nio.file.Files
-import java.nio.file.Path
 
 class SeniorityRulesTest {
 
@@ -105,21 +103,5 @@ class SeniorityRulesTest {
         assertEquals(12.0, estimate.estimatedEffectiveYears, 0.0001)
         assertEquals(2014, estimate.estimatedStartYear)
         assertFalse(estimate.rounded)
-    }
-
-    @Test
-    fun `seniority info tekst koristi uvek dijakritike za uvecani`() {
-        val source = sourceText("SeniorityDialog.kt")
-
-        assertTrue(source.contains("Beneficirani/uvećani staž se ovde koristi za minuli rad"))
-        assertFalse(source.contains("Beneficirani/uvecani staž"))
-    }
-
-    private fun sourceText(fileName: String): String {
-        val path = checkNotNull(listOf(
-            Path.of("src", "main", "java", "com", "rad", "shifttracker", fileName),
-            Path.of("app", "src", "main", "java", "com", "rad", "shifttracker", fileName)
-        ).firstOrNull { Files.exists(it) }) { "Source file not found: $fileName" }
-        return String(Files.readAllBytes(path), Charsets.UTF_8)
     }
 }
