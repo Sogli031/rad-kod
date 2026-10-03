@@ -3,8 +3,8 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [Nije objavljeno] - 2026-10-03
-Ostatak Faze 5 (dizajn), proveren na Pixel 9 preko adb-a; ide u zajednički release 6.0.
+## [5.4] - 2026-10-03
+Ostatak Faze 5 (dizajn), proveren na Pixel 9 preko adb-a; objavljeno kao 5.4.
 - **Kalendar (5.3):** ćelije ≥ 48dp i rastu sa fontom, tekst u ćeliji najmanje 11sp, cela strana skroluje
   (donja traka ostaje); pri fontu > 1.3 statistika i donja traka idu u dva reda.
 - **Komponente (5.5):** `OutlinedCard` umesto ručne kartice, `SingleChoiceSegmentedButtonRow` za izbor smene,
