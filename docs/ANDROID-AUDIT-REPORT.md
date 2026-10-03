@@ -1,122 +1,103 @@
-# Android audit — Rad (android-audit skill, bez dizajna)
+# Android audit — Rad (posle plana „production grade“)
 
-Datum: 2026-10-03 · verzija 5.0 (versionCode 41) · metod: `build_audit_context.py` + `score.py` + 8 specijalista
-(arhitektura, bezbednost, performanse, kompatibilnost, build, testiranje, pristupačnost, Play preflight).
-Sve je **statička** provera izvora; ništa nije mereno na uređaju. Sve tvrdnje označene ✔ proverio sam i ručno.
+Datum: 2026-10-04 · verzija koda: 5.5 + izmene za 6.0 (versionCode 46, neobjavljeno) · metod: `android` skill
+(`scan_project`, `analyze_*`, `check_r8_config`, `build_audit_context`, `score.py`) nad čistom kopijom commitovanog stanja,
+plus ručna provera nalaza. Sve je **statička** provera izvora; ništa nije mereno na uređaju. Prethodni audit (2026-10-03, v5.0) je u git istoriji.
 
 ## Ocena
 
-| Kategorija | Težina | Ocena | Težinski |
-|---|---|---|---|
-| Arhitektura | 15 | 40 | 6.0 |
-| Performanse | 15 | 50 | 7.5 |
-| Bezbednost | 15 | 70 | 10.5 |
-| Kompatibilnost | 10 | 80 | 8.0 |
-| Dizajn sistem (M3 audit, ne android-design agent) | 10 | 60 | 6.0 |
-| Pristupačnost | 10 | 65 | 6.5 |
-| Testiranje | 10 | 65 | 6.5 |
-| Build | 10 | 55 | 5.5 |
-| Play preflight (nije relevantno za sideload) | 5 | 40 | 2.0 |
-| **Zbir** | | | **58.5** |
+| Kategorija | Težina | Pre (v5.0) | Sada | Težinski |
+|---|---|---|---|---|
+| Arhitektura | 15 | 40 | 62 | 9.3 |
+| Performanse | 15 | 50 | 68 | 10.2 |
+| Bezbednost | 15 | 70 | 80 | 12.0 |
+| Kompatibilnost | 10 | 80 | 82 | 8.2 |
+| Dizajn sistem (M3 audit 77/100) | 10 | 60 | 77 | 7.7 |
+| Pristupačnost | 10 | 65 | 72 | 7.2 |
+| Testiranje | 10 | 65 | 76 | 7.6 |
+| Build | 10 | 55 | 80 | 8.0 |
+| Play preflight (sideload, nije relevantno) | 5 | 40 | 50 | 2.5 |
+| **Zbir** | | **58.5** | | **72.7** |
 
-**Završna ocena skill-a: 40/100** jer važi gornja granica za kritični gate.
+**Završna ocena skill-a: 40/100** zbog gornje granice za kritični gate. Taj gate je lažan (vidi dole), pa je stvarna ocena **72.7**.
+Cilj plana (≥ 80) nije dostignut; razlog je Arhitektura (62) i Performanse (68), ne dizajn ni bezbednost.
 
-Gate-ovi koji su okinuli:
+## Gate-ovi
 
 | Gate | Ozbiljnost | Stvaran? |
 |---|---|---|
-| C1 izvezena komponenta bez dozvole | critical | **Lažan** — `MainActivity` je LAUNCHER. Gate se tako ne može zadovoljiti ni u jednoj aplikaciji sa ikonom, pa granica 40 ostaje i posle svih popravki |
-| C7 release bez shrink/obfuskacije | critical | Stvaran |
-| H2 nema benchmark/Baseline Profile | high | Stvaran |
-| H3 nizak pouzdan rizik dodirne mete | high | Delimično (heuristika, 2 mesta) |
-| H6 nema network security config | high | Stvaran, nizak rizik (targetSdk 35 blokira cleartext) |
+| C1 izvezena komponenta bez dozvole | critical | **Lažan** — `MainActivity` je LAUNCHER; ne može se zadovoljiti ni u jednoj aplikaciji sa ikonom |
+| H2 nema benchmark/Baseline Profile | high | **Stvaran** — jedini otvoren pravi gate |
+| H3 nizak pouzdan rizik dodirne mete | high | **Lažan** — oba mesta proverena: `DayEditDialog.kt:531` ima `heightIn(min = MIN_TOUCH_TARGET)`, `PopupComponents.kt:166` je ceo providni sloj iza lista |
+| C5/C6 Vitals (crash/ANR) | critical | traži spoljne podatke (Play Console); aplikacija se ne distribuira kroz Play |
+| ~~C7 release bez shrink~~ | — | **rešeno** (R8 + shrink, APK 27 → 10,5 MB) |
+| ~~H6 network security config~~ | — | **rešeno** (`cleartextTrafficPermitted=false`) |
 
-Tri „high" gate-a daju granicu 60. Bez C1 (lažnog) i uz popravljen C7, H2 i H6, granica nestaje.
-Gore: C1 se ne može popraviti, pa je realna „čista" ocena **58.5**, a cilj plana je ≥ 80.
+## Šta se promenilo od prošlog audita
 
-## Nalazi po kategorijama (najvažniji, sa lokacijom)
+- Release: R8 i shrink, potpis samo zajedničkim ključem (build pada bez njega), 16 KB poravnanje proveren, `release.ps1` sa `apksigner`/`zipalign`.
+- Dozvole: nema `MANAGE_EXTERNAL_STORAGE` ni READ/WRITE_EXTERNAL; crash log samo u privatnom folderu, bez poruka izuzetaka.
+- Podaci: restore guard, `schema_version` + migracije, atomski upis, `Clock`.
+- Arhitektura: `MainViewModel`, `ShiftRepository` 2509 → 395 linija, mrtav kod (−205 linija) uklonjen, `collectAsStateWithLifecycle` svuda.
+- Build: version catalog (50 unosa, 0 inline verzija), AGP 8.13 / Kotlin 2.1.21 / Gradle 8.13, `targetSdk` 36, Gradle cache/parallel/configuration-cache, nove verzije Google biblioteka.
+- Testovi: 1127 testova, Robolectric UI, Roborazzi snimci, Kover prag 90% na obračunu i podacima (92,7%).
+- Nalaz ovog audita, popravljen odmah: `BloodDonationReminderReceiver` nije ponovo zakazivao podsetnik posle nadogradnje aplikacije ni promene vremena
+  i čitao je lokalni fajl na glavnoj niti → dodati `MY_PACKAGE_REPLACED`, `TIME_SET`, `TIMEZONE_CHANGED` i `goAsync()` sa radnom niti.
 
-### Bezbednost (7/10) — nema Critical
-- **Medium ✔ Restore briše sve na „praznom" JSON-u.** `ShiftRepository.kt:422-429`: `importFromJson` dekodira pa briše
-  stanje, a `ShiftRepositoryJsonCodec.decode` (`:53-59`) prihvata svaki validan `JSONObject` (`optX` sa
-  podrazumevanim vrednostima). `{"x":1}` ostavlja 0 zapisa i resetuje podešavanja. Lokalna zaštita postoji samo za `"{}"`
-  (`:2425`). Ublaženo: sigurnosna kopija pre restore-a i `BackupAnomalyGuard` za backup.
-- **Medium Javni crash log.** `CrashLogStorage.kt:60-92` piše ceo stack trace u `Documents/crash_log.txt` (MediaStore, raste
-  bez rotacije); poruke izuzetaka mogu da sadrže delove ulaza.
-- **Medium `MANAGE_EXTERNAL_STORAGE`** samo zbog skeniranja foldera sa PDF-ovima (`PayslipFolder.kt:60-62,179-184`); SAF dozvola
-  se uzima kao string putanje, bez `takePersistableUriPermission`.
-- **Low** Zajednički potpisni ključ za više aplikacija; `GmailPayslipCache`/`PayslipSnapshotStore` čuvaju imena priloga i
-  naziva obustava (u `filesDir` i u Drive backup-u); `MAPS_API_KEY` u `local.properties` se ne koristi.
-- Dobro: `allowBackup=false`, samo launcher je exported, `FLAG_IMMUTABLE`, PDF ograničenja (10 MB, 10 strana, OOM uhvaćen),
-  minimalni OAuth opsezi, `AtomicFile` + karantin oštećenog fajla, izvozi bez JMBG/računa.
+## Nalazi po kategorijama
 
-### Arhitektura (4/10)
-- **High ✔ Nema ViewModel-a.** `ShiftTrackerScreen.kt:279-347`: ~17 upita nad repo-om u `remember(repoTick…)` na glavnoj niti.
-- **High God-class.** `ShiftRepository.kt` 2462 linije / 162 funkcije, bez interfejsa; UI i receiver zavise od konkretne klase.
-- **Medium** `ShiftRepository()` se pravi na 3 mesta (`RadApplication.kt:51`, `BloodDonationReminderReceiver.kt:10` ✔ rezervna
-  instanca, `PayslipMonthFill.kt:316`); nema DI-ja.
-- **Medium** `THEME`/`CONFIG` globalni singleton (444 upotrebe); `DialogState` sa 21 stanjem kao ručna navigacija; globalno
-  stanje u `GmailImportRunner` i `SideRunMessages`; 5× `collectAsState` bez lifecycle-a.
-- **Napomena:** projekat je jedan modul; „multi-module" u skeneru je lažno pozitivan (koren ima samo `apply false`).
+### Arhitektura (62)
+- **Medium** Nema DI/kontejnera: `RadApplication` drži `ShiftRepository` i `GoogleDriveBackup` kao singletone, a dijalozi i kalendar primaju `repo` direktno
+  (`CalendarSection`, `MainDialogs`, 21 `DialogState` bez back stack-a).
+- **Medium** `ShiftRepository` je i dalje jedna fasada: logika je u fajlovima proširenja (`ShiftRepository*.kt`), ali stanje i zaključavanje su zajednički (`internal` polja, `synchronized(lock)`); interfejsi po domenima nisu uvedeni.
+- **Low** `MainActivity` pokreće provere (`checkSideRunsOnEntry`) iz aktivnosti, a `GmailImportRunner`/`SideRunMessages` su globalni singletoni.
+- Dobro: `MainViewModel` + `StateFlow`, izvedeni podaci van glavne niti, 0 `LiveData`, 0 kapt/ksp.
 
-### Performanse (5/10) — sve statički, merenja traže uređaj
-- **High** Release bez R8 (APK 25 MB); nema Baseline Profile-a.
-- **High ✔ Dupli upit:** `getMonthlyOvertimeNetImpact(currentYear,currentMonth)` se računa dvaput (linije ~283 i ~299); podaci za
-  dijaloge (`payDetails`, prosečne neto plate) se računaju i kad nijedan dijalog nije otvoren.
-- **High** Kalendar: `key(repoTick)` pravi sve iznova, a `repo.get` po ćeliji uzima `synchronized(lock)` na glavnoj niti
-  (`ShiftCalendar.kt`, `ShiftRepository.kt:588`).
-- **High** `AutoSizeText` (`ResponsiveText.kt:70-137`) piše stanje iz `onTextLayout` (×0.9 po koraku, sakriven dok se ne smiri);
-  ~60+ instanci po mesecu.
-- **Medium** `onStop` čeka `flush` do 2 s na glavnoj niti (`RadApplication.kt:139`); `initializeServices` i `loadFromLocal` pre
-  `setContent`; restore parsira JSON na Main niti; `buildCloudSnapshot` drži `lock` tokom decode+merge.
-- **Low** Ceo JSON se piše na svaku izmenu (debounce postoji); `GmailPayslipCache` piše bez `AtomicFile`.
+### Performanse (68)
+- **High (gate H2)** Nema Baseline Profile ni Macrobenchmark modula; hladan start nije meren.
+- **Medium** 36 data klasa sa kolekcijama; stability config pokriva `java.time`, `BigDecimal`, kolekcije (nestabilnih klasa 107 → 31, preostale su servisi/repo), strong skipping je uključen.
+- **Low** `AutoSizeText` (27 mesta) meri tekst u kompoziciji.
+- Dobro: kalendar čita mesec jednim upitom, nema `key(repoTick)` koji gradi sve iznova, R8, StrictMode i LeakCanary u debug-u.
 
-### Kompatibilnost (8/10)
-- Edge-to-edge ručno preko deprecated API-ja (`MainActivity.kt:27-35`) → `enableEdgeToEdge()`.
-- Sheet-ovi `fillMaxWidth` bez `widthIn` (razvlače se na ≥600dp); ručni `WindowManager.LayoutParams` u `DialogEdgeToEdgeWindow`
-  (kruto vezano za Compose `Dialog`).
-- Podsetnik za krv: receiver radi `loadFromLocal` sinhrono u `onReceive` (bez `goAsync`); alarm se ponovo zakazuje samo na
-  `BOOT_COMPLETED` i `onResume` (nema `MY_PACKAGE_REPLACED`/`TIME_SET`/`TIMEZONE_CHANGED`).
-- Lokalni formateri bez `Locale` (`BackupVersionsDialog.kt:370`, `CloudBackupDialog.kt:222`, `BloodDonationReminder.kt:13-15`).
-- Dobro: nema exact-alarm dozvola, `POST_NOTIFICATIONS` kontekstualno, `FLAG_IMMUTABLE`, WorkManager, nema nativnog koda (16 KB ok,
-  potvrditi na APK-u).
+### Bezbednost (80)
+- **Medium** Podaci u mirovanju nisu šifrovani (lokalni JSON u `filesDir`, JMBG i račun iz listića) — odluka korisnika: Faza 9 se ne radi.
+- **Low** `Log.w/i` ispisuju vrednosti podešavanja (koeficijent, osnovica) i dijagnostiku obračuna; vidljivo samo preko adb-a.
+- **Low** `R8` širok `-keep` za `com.tom_roush.pdfbox.**` i Google model klase (potrebno zbog refleksije; sužavati tek uz test sa nalogom).
+- Dobro: `allowBackup=false`, nema cleartext-a, scope-ovi `drive.appdata` i `gmail.readonly`, nema `exported` komponenti osim launcher-a, crash log bez poruka, restore guard.
 
-### Build (5.5/10)
-- **High** Potpis zavisi od `../keystore/signing.gradle` van repoa (`app/build.gradle.kts:9,33`); ako fajla nema, ide debug ključ **bez
-  greške**; CI zato pravi debug-potpisan APK. `ReleaseSigningConfigurationTest` samo traži stringove u izvoru.
-- **High** R8 isključen, a postojeća `-keep` pravila ga skoro poništavaju; posle uključivanja obavezno testirati refleksiju
-  (Gson/Google API klijenti, pdfbox).
-- **Medium** Nema version catalog-a (18 inline verzija), nema dependency verification-a, `gradle.properties` bez caching/parallel,
-  verzija ručno u `defaultConfig`, README zastareo za potpis, CI korak `sed … org.gradle.java.home` ne radi ništa.
-- **Low** Mrtve `androidTestImplementation` zavisnosti (nema `androidTest`); stari: play-services-auth 21.0.0, pdfbox-android 2.0.27.
-- Dobro: usklađeni AGP/Gradle/Kotlin/Compose, samo `google()`+`mavenCentral()`, nema KAPT/KSP/SNAPSHOT.
+### Kompatibilnost (82)
+- `compileSdk`/`targetSdk` 36, `minSdk` 26, predictive back uključen, 16 KB poravnanje proveren, `POST_NOTIFICATIONS` traži se u toku rada.
+- **Low** Compose BOM 2025.12.01 i `activity-compose` 1.12.4 nisu najnoviji (BOM 2026.09.00 postoji); namerno ne dirano posle provere dizajna.
+- **Low** `play-services-auth` 21.6.0 (postoji 22.0.0, veliki skok) — proveriti pre sledećeg većeg izdanja.
 
-### Testiranje (6.5/10)
-- 1028 testova (potvrđeno), svi zeleni; **0** UI/instrumentacionih.
-- **✔ MockK i coroutines-test su deklarisani a ne koriste se nigde** (0 `import io.mockk`, 0 `runTest`) — async putanje
-  (`BackupWorker`, persistence scheduler) nisu testirane.
-- **✔ 14 testova čita izvorni .kt tekst** (ranije sam rekao 3 — pogrešno): brittle, padaju na refaktor, prolaze kad UI ne radi.
-- **High** `CloudArchiveMerger` (172 linije, tombstone/granice) nema direktan test; **High** golden listići postoje samo za
-  parser, ne za poređenje izračunatog bruto/neto sa listićem; `PayslipPdfText` (PDFBox) nema test sa pravim PDF-om.
-- **Medium** `isReturnDefaultValues=true` skriva Android pozive; nema Robolectric-a (`LocalShiftStorage`, `GoogleDriveBackup`);
-  vreme: `LocalDate.now()` u testovima i legacy `years_of_service` migracija zavisna od dana; `Thread.sleep(20)` u scheduler testu;
-  `ShiftRepositoryTest` 4413 linija.
-- Dobro: seed-ovani fuzz za parser, `HolidaysTest` (2025–2035), `BackupLocaleTest`, regresioni testovi sa konkretnim iznosima.
+### Dizajn sistem (77)
+- Preuzeto iz M3 audita (77/100): boje i oblici iz teme, `Spacing` 4dp, M3 komponente; ostaje ručna donja traka i sheet u `Dialog`-u (svesno).
 
-### Pristupačnost (6.5/10)
-- **High** Switch/Checkbox redovi nisu `toggleable` (0 upotreba): `OptionsDialog.kt:134-163`, `SeniorityDialog.kt:354-378`,
-  `AnnualLeaveEntitlementCard.kt:113-128`, `DayEditDialog.kt:606-616`, `HolidayManagementDialog.kt:145-162`.
-- **High** Greške u formama (`FoodAllowanceDialog.kt:54-61`, `AbsenceDialog.kt:235-243`, `BloodDonationDialog.kt:350-358`…) su običan
-  `Text` bez `liveRegion`/`isError`.
-- **Medium** `ModernTextField` ima samo placeholder (nestaje kad se unese vrednost); 0 `ImeAction`/`FocusRequester`; scrim lista je
-  neimenovan `clickable` (nema `paneTitle`); dugme „X" (`BloodDonationDialog.kt:228-238`) bez opisa; kalendar max font 1.15 i ćelije <48dp;
-  nema poštovanja „ukloni animacije".
-- Dobro: `radClickable` + `Role.Button`, opis dana u kalendaru, `heading()`, custom action „Zatvori", `selectable(RadioButton)`.
+### Pristupačnost (72)
+- Dobro: `toggleable` redovi, `liveRegion` za greške, 48dp mete, font prati sistem, kontrast pod testom.
+- **Medium** TalkBack nije ručno prošao; nema ATF testa; 143 tvrdo kodirana teksta (nema `strings.xml`, `plurals`).
 
-### Play preflight (4/10, za sideload irelevantno)
-Blokiralo bi Play: `MANAGE_EXTERNAL_STORAGE`, nema AAB, debug/zajednički ključ, nema politike privatnosti i Data safety
-forme, `gmail.readonly` je restricted opseg (OAuth verifikacija). Za Obtainium nije potrebno.
+### Testiranje (76)
+- 1127 unit/Robolectric testova, Roborazzi snimci (glavni ekran × font × širina), Kover 92,7% na obračunu i podacima.
+- **Medium** Ekrani/dijalozi nemaju pokrivenost (UI sloj ~0–10%); nema instrumentacionih testova.
+- **Low** Još oko 10 testova čita izvorni tekst (`OptionsDialogTextTest`, `PayDetailsDialogTextTest`, `BloodDonationLeaveTest` …).
+- **Low** `RepositoryPayBaseResolver` je najslabije pokriven deo obračuna.
 
-## Šta ovaj audit NE pokriva (traži uređaj)
-Jank/start (Perfetto, Macrobenchmark), stvarni kontrast, TalkBack redosled, font 200%, ponašanje na tabletu i API 35/36, veličina APK-a
-posle R8, ponašanje alarma posle update-a i promene zone.
+### Build (80)
+- Dobro: version catalog, R8, potpis bez tihog debug ključa, `release.ps1`, CI (nije pokrenut na GitHub-u), Kover u `check`.
+- **Low** Nema `verification-metadata.xml` (provera integriteta zavisnosti), nema convention plugina (jedan modul, nije potrebno).
+- **Low** CI nikad nije pokrenut sa novim tokom (SDK 36, Kover, `allowDebugSigning`) jer ništa nije pushovano.
+
+### Play preflight (50)
+- Distribucija je sideload/Obtainium; AAB, upload ključ, privacy policy i Data safety nisu rađeni (nisu potrebni bez Play-a).
+
+## Preporuke (po prioritetu)
+
+1. **Baseline Profile + Macrobenchmark** (gate H2, jedina pravi granica): traži telefon; izmeri hladan start pre/posle.
+2. Ručna provera R8 tokova sa novim bibliotekama: Drive backup/restore, Gmail uvoz, izvoz JSON-a, obaveštenje za krv.
+3. Uvesti mali `AppContainer` (ili Hilt) i interfejse po domenima za repo; `ShiftRepositoryUi`/dijalozi da primaju interfejs, ne konkretnu klasu.
+4. TalkBack prolaz + ATF test; zatim `strings.xml`.
+5. Preostalih ~10 testova koji čitaju izvor zameniti testovima ponašanja; podići pokrivenost `RepositoryPayBaseResolver`.
+6. `verification-metadata.xml` i prvi zeleni CI run na GitHub-u pre izdanja 6.0.
+
+Procena: stavke 1, 3 i 4 podižu Performanse (+10), Arhitekturu (+10) i Pristupačnost (+8), tj. zbir na oko **76–77**; za ≥ 80 treba još Testiranje (+8, UI pokrivenost i instrumentacioni testovi) i Build (+5, verifikacija zavisnosti, zeleni CI).
