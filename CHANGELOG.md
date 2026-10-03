@@ -3,7 +3,7 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [Nije objavljeno] - 2026-10-03
+## [5.5] - 2026-10-03
 - **Tema:** izbor teme (i „Boje sa pozadine“) uklonjen iz Opcija; aplikacija je uvek tamna. Svetla paleta ostaje u kodu kao rezerva.
 - **Biblioteke:** Compose BOM 2025.12.01 (material3 1.4.0), compileSdk 36, `material3-adaptive` 1.2.0.
 - **Pokret:** spring umesto tween-a za list i prelaz meseca (`RadMotion`).
