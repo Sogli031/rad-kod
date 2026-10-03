@@ -32,7 +32,8 @@ ne komituju se). Bez njega `assembleRelease` pada, da APK ne bi tiho dobio debug
 CI (nema ključa) koristi `-PallowDebugSigning=true`.
 
 Objava: podigni `versionCode`/`versionName` u `app/build.gradle.kts`, pa
-`.elease.ps1 -Notes "Šta je novo"`. Skripta pokreće testove, detekt i lint, gradi APK,
+`.
+elease.ps1 -Notes "Šta je novo"`. Skripta pokreće testove, detekt i lint, gradi APK,
 proverava `apksigner` i otisak ključa, čuva `mapping.txt` u `release-out\` i pravi GitHub release.
 `-SkipPublish` samo gradi. Instalacija na telefon: `adb install -r` (isti potpis čuva podatke).
 
