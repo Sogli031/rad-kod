@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,11 +41,9 @@ fun AutoFillDialog(
     PopupDialog(
         title = "Auto-popuna",
         onDismiss = onDismiss,
-        widthRatio = UI.popupWidthRatio,
-        scrollable = true,
-        accent = THEME.accentSecondary
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentSecondary) {
+        PopupCard {
             AutoSizeText(
                 text = "Automatsko popunjavanje smena",
                 color = THEME.textPrimary,
@@ -163,19 +162,15 @@ fun AutoFillDialog(
                     errorMessage = null
                 },
                 hintText = "Unesi broj meseci unapred...",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                label = "Broj meseci",
+                isError = errorMessage != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
         errorMessage?.let { message ->
-            Text(
-                text = message,
-                color = THEME.danger,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            FormErrorText(message = message)
         }
 
         GlowButton(
@@ -183,8 +178,6 @@ fun AutoFillDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.accentSecondary,
-            textColor = THEME.textPrimary,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val monthsAhead = monthsInput.toIntOrNull()

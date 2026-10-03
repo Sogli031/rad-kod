@@ -1,7 +1,5 @@
 package com.rad.shifttracker
 
-import java.time.LocalDate
-import java.time.LocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -9,27 +7,26 @@ import org.junit.Test
 
 class OptionsDialogTextTest {
     @Test
-    fun `options dialog exposes cloud export holidays and notification access`() {
+    fun `options dialog exposes cloud export and holidays`() {
         assertEquals(
             listOf(
                 "Google cloud",
                 "Export rada i obračuna za izabrani mesec",
                 "Debug export za ChatGPT – svi meseci",
-                "Praznici",
-                "Pristup obaveštenjima"
+                "Praznici"
             ),
             optionsDialogActionLabels()
         )
     }
 
     @Test
-    fun `bottom bar exposes blood donation shortcut label`() {
-        assertEquals("Krv", BLOOD_DONATION_BOTTOM_BAR_LABEL)
+    fun `test export actions are hidden from options`() {
+        assertFalse(SHOW_TEST_EXPORT_ACTIONS)
     }
 
     @Test
-    fun `options dialog exposes food receipt reminder label`() {
-        assertEquals("Podsetnik za račun hrane", FOOD_RECEIPT_REMINDER_OPTION_LABEL)
+    fun `bottom bar exposes blood donation shortcut label`() {
+        assertEquals("Krv", BLOOD_DONATION_BOTTOM_BAR_LABEL)
     }
 
     @Test
@@ -41,7 +38,7 @@ class OptionsDialogTextTest {
             java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
         ).first { it.exists() }.readText()
-        assertTrue(optionsSource.contains("MainPayTransportSwitch("))
+        assertTrue(optionsSource.contains("title = MAIN_PAY_TRANSPORT_LABEL"))
         assertTrue(optionsSource.contains("repo.mainPayIncludesTransport = checked"))
 
         val screenSource = listOf(
@@ -82,98 +79,71 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `main activity warns about exact alarm permission only for active reminders`() {
+    fun `main activity no longer asks for exact alarm permission`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/MainActivity.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/MainActivity.kt")
         ).first { it.exists() }.readText()
 
         assertTrue(source.contains("override fun onResume()"))
-        assertTrue(source.contains("requestExactAlarmPermissionIfNeeded()"))
-        assertTrue(source.contains("shouldRequestExactAlarmPermission("))
-        assertTrue(source.contains("ExactAlarmPermissionDialog("))
-        assertTrue(source.contains("mutableStateOf(false)"))
-        assertTrue(source.contains("FoodReceiptReminderScheduler.exactAlarmSettingsIntent(this)"))
-        assertFalse(source.contains("AlertDialog.Builder(this)"))
-        assertFalse(source.contains("exact_alarm_permission_asked"))
+        assertFalse(source.contains("ExactAlarm"))
+        assertFalse(source.contains("FoodReceiptReminder"))
     }
 
     @Test
-    fun `exact alarm permission is not requested when reminders are inactive`() {
-        assertFalse(
-            shouldRequestExactAlarmPermission(
-                foodReceiptReminderEnabled = false,
-                bloodDonationReminderEnabled = false,
-                exactAlarmPermissionMissing = true
-            )
-        )
-        assertTrue(
-            shouldRequestExactAlarmPermission(
-                foodReceiptReminderEnabled = true,
-                bloodDonationReminderEnabled = false,
-                exactAlarmPermissionMissing = true
-            )
-        )
-        assertTrue(
-            shouldRequestExactAlarmPermission(
-                foodReceiptReminderEnabled = false,
-                bloodDonationReminderEnabled = true,
-                exactAlarmPermissionMissing = true
-            )
-        )
-        assertFalse(
-            shouldRequestExactAlarmPermission(
-                foodReceiptReminderEnabled = true,
-                bloodDonationReminderEnabled = true,
-                exactAlarmPermissionMissing = false
-            )
-        )
+    fun `manifest has no exact alarm permission or food receipt receiver`() {
+        val manifest = listOf(
+            java.io.File("src/main/AndroidManifest.xml"),
+            java.io.File("app/src/main/AndroidManifest.xml")
+        ).first { it.exists() }.readText()
+
+        assertFalse(manifest.contains("SCHEDULE_EXACT_ALARM"))
+        assertFalse(manifest.contains("USE_EXACT_ALARM"))
+        assertFalse(manifest.contains("FoodReceiptReminderReceiver"))
+        assertTrue(manifest.contains(".BloodDonationReminderReceiver"))
     }
 
     @Test
-    fun `options dialog exposes credit deduction settings labels`() {
-        assertEquals("Kredit/obustava", CREDIT_DEDUCTION_SECTION_LABEL)
-        assertEquals("Kredit aktivan", CREDIT_DEDUCTION_ENABLED_LABEL)
-        assertEquals("Mesečna rata kredita", MONTHLY_CREDIT_DEDUCTION_AMOUNT_LABEL)
-        assertEquals("RSD", CREDIT_DEDUCTION_CURRENCY_LABEL)
+    fun `difficult conditions and transport moved from lista to options`() {
+        val options = listOf(
+            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
+        ).first { it.exists() }.readText()
+        val lista = listOf(
+            java.io.File("src/main/java/com/rad/shifttracker/PayslipReaderDialog.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/PayslipReaderDialog.kt")
+        ).first { it.exists() }.readText()
+
+        assertTrue(options.contains("SectionLabel(text = MANUAL_PAY_SETTINGS_SECTION_LABEL)"))
+        // Sekcija „Odbici od plate“ (Član sindikata) je ukinuta: obustave su samo sa liste.
+        assertFalse(options.contains("Odbici od plate"))
+        // Otežani uslovi se više ne kucaju: upisuje ih lista (šifra 21), ovde se samo prikazuju.
+        assertFalse(options.contains("repo.difficultWorkConditionsPercentValue ="))
+        assertTrue(options.contains("difficultWorkConditionsStatusText(repo.difficultWorkConditionsPercentValue)"))
+        // Prevoz po danu se više ne kuca: samo se prikazuje, upisuje ga obračun prevoza.
+        assertFalse(options.contains("repo.transportDailyAmountValue ="))
+        assertTrue(options.contains("transportDailyAmountStatusText(repo.transportDailyAmountValue)"))
+        assertFalse(lista.contains("difficultWorkConditionsPercentValue"))
+        assertFalse(lista.contains("transportDailyAmountValue"))
     }
 
     @Test
-    fun `options dialog renders credit deduction controls`() {
+    fun `difficult conditions status shows percent from payslip or none`() {
+        assertEquals("Otežani uslovi rada: 32%", difficultWorkConditionsStatusText(32.0))
+        assertEquals("Otežani uslovi rada: nema", difficultWorkConditionsStatusText(0.0))
+    }
+
+    @Test
+    fun `options dialog has no manual loan anymore`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
         ).first { it.exists() }.readText()
 
-        assertTrue(source.contains("CreditDeductionSettingsSection("))
-        assertTrue(source.contains("repo.setCreditDeductionSettings("))
-        assertTrue(source.contains("KeyboardType.Decimal"))
-    }
-
-    @Test
-    fun `food receipt reminder status formats scheduled third shift reminder`() {
-        val status = FoodReceiptReminderScheduleStatus(
-            reminder = FoodReceiptReminder(
-                month = MonthKey(2026, 5),
-                mealTime = LocalDateTime.of(2026, 5, 31, 1, 0),
-                shiftDate = LocalDate.of(2026, 5, 30),
-                shift = Shift.THIRD
-            ),
-            exactAlarmAvailable = true,
-            notificationPermissionGranted = true
-        )
-
-        assertEquals(
-            "Podsetnik: 31.05.2026 u 01:00",
-            foodReceiptReminderStatusText(status)
-        )
-    }
-
-    @Test
-    fun `food receipt reminder status shows no scheduled reminder`() {
-        assertEquals(
-            "Podsetnik: nema",
-            foodReceiptReminderStatusText(FoodReceiptReminderScheduleStatus())
-        )
+        assertFalse(source.contains("CreditDeduction"))
+        assertFalse(source.contains("Kredit"))
+        // Obustave u % (sindikat) idu samo sa liste, bez prekidača „Član sindikata“.
+        assertFalse(source.contains("UnionDues"))
+        assertFalse(source.contains("sindikat", ignoreCase = true))
     }
 }

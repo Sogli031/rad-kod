@@ -50,18 +50,19 @@ class MealEntitlementTest {
 
     @Test
     fun `jun 2026 ignoriše procenjenih 21 obrok i koristi potvrđeni override`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         (1..21).forEach { day -> repo.set(2026, 6, day, Shift.FIRST, 8, holidayOverride = false) }
+        // Stari ručni unos potrošnje se ignoriše: pojedeno = pripada.
         repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
 
         val breakdown = repo.getNetPayBreakdown(2026, 6)
         assertEquals(21, breakdown.mealEntitlementCalculation.recognizedMealCount)
         assertEquals(3_840.0, breakdown.mealEntitlementNet, 0.0)
         assertEquals(5_477.89, breakdown.mealEntitlementGross, 0.0)
-        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.0)
-        assertEquals(3_620.0, breakdown.mealNetDeduction, 0.0)
-        assertEquals(220.0, breakdown.mealUnusedNet, 0.0)
-        assertFalse(breakdown.mealSpendingDefaultedToEntitlement)
+        assertEquals(3_840.0, breakdown.mealSpentNetApplied, 0.0)
+        assertEquals(3_840.0, breakdown.mealNetDeduction, 0.0)
+        assertEquals(0.0, breakdown.mealUnusedNet, 0.0)
+        assertTrue(breakdown.mealSpendingDefaultedToEntitlement)
 
         val debug = JSONObject(repo.exportSelectedMonthWorkAndPayJson(2026, 6))
             .getJSONObject("rawCalculationDebug")
@@ -76,16 +77,16 @@ class MealEntitlementTest {
         assertEquals(240.0, debug.getDouble("mealPriceNetPerMeal"), 0.0)
         assertEquals(3_840.0, debug.getDouble("mealEntitlementNet"), 0.0)
         assertEquals(5_477.89, debug.getDouble("mealEntitlementGross"), 0.0)
-        assertEquals(3_620.0, debug.getDouble("mealSpentNetEntered"), 0.0)
-        assertEquals(3_620.0, debug.getDouble("mealSpentNetApplied"), 0.0)
-        assertEquals(220.0, debug.getDouble("mealUnusedNet"), 0.0)
+        assertTrue(debug.isNull("mealSpentNetEntered"))
+        assertEquals(3_840.0, debug.getDouble("mealSpentNetApplied"), 0.0)
+        assertEquals(0.0, debug.getDouble("mealUnusedNet"), 0.0)
         assertEquals(5_040.0, debug.getDouble("estimatedMealEntitlementNet"), 0.0)
         assertFalse(debug.getBoolean("estimateAffectsPayroll"))
-        assertFalse(debug.getBoolean("mealSpendingDefaultedToEntitlement"))
+        assertTrue(debug.getBoolean("mealSpendingDefaultedToEntitlement"))
     }
 
     @Test
-    fun `rucna potrosnja bez potvrđenog prava ne stvara razliku u plati`() {
+    fun `rucna potrosnja se ignorise i racuna se procenjeno pravo`() {
         val estimate = calculateMealEntitlementForAccountingMonth(
             records = (1..21).map { day -> DayRecord(2026, 6, day, Shift.FIRST, 8) },
             month = MonthKey(2026, 6),
@@ -107,8 +108,8 @@ class MealEntitlementTest {
             grossAdditions = MonthlyGrossAdditions(2026, 6, mealSpentNet = 3_620.0)
         )
         assertEquals(MealEntitlementSource.SAFE_DEFAULT_EQUALS_SPENDING, breakdown.mealEntitlementSource)
-        assertEquals(3_620.0, breakdown.mealEntitlementNetApplied, 0.0)
-        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.0)
+        assertEquals(5_040.0, breakdown.mealEntitlementNetApplied, 0.0)
+        assertEquals(5_040.0, breakdown.mealSpentNetApplied, 0.0)
         assertEquals(0.0, breakdown.mealUnusedNet, 0.0)
         assertEquals(21, breakdown.estimatedRecognizedMealCount)
         assertEquals(5_040.0, breakdown.estimatedMealEntitlementNet, 0.0)
@@ -117,7 +118,7 @@ class MealEntitlementTest {
 
     @Test
     fun `prazan unos potrosnje se u debug izvozu oznacava kao podrazumevano pravo`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
 
         val debug = JSONObject(repo.exportSelectedMonthWorkAndPayJson(2026, 6))
@@ -132,11 +133,11 @@ class MealEntitlementTest {
 
     @Test
     fun `potvrđeno mesecno pravo ostaje sacuvano kroz backup`() {
-        val source = ShiftRepository()
+        val source = testRepository()
         source.setMonthlyMealEntitlementNetOverride(2026, 6, BigDecimal("3840.00"))
         source.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(source.exportJson()))
 
         val additions = restored.getMonthlyGrossAdditions(2026, 6)
@@ -144,6 +145,8 @@ class MealEntitlementTest {
         assertEquals(0, BigDecimal("3840.00").compareTo(additions.mealEntitlementNetOverride))
         assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
         assertEquals(3_840.0, breakdown.mealEntitlementNetApplied, 0.0)
-        assertEquals(220.0, breakdown.mealUnusedNet, 0.0)
+        // Ručni unos ostaje u backup-u, ali ne utiče na obračun.
+        assertEquals(3_620.0, additions.mealSpentNet ?: 0.0, 0.0)
+        assertEquals(0.0, breakdown.mealUnusedNet, 0.0)
     }
 }

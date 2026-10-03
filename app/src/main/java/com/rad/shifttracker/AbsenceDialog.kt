@@ -1,12 +1,11 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,28 +15,35 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.ui.components.ResponsiveInfoRow
+import java.time.YearMonth
 import kotlin.math.abs
 
-private const val ABSENCE_TYPE_CHOICE_HEIGHT = 58
-private const val ABSENCE_RATE_CHOICE_HEIGHT = 58
 
 // Existing dialog flow is intentionally grouped; detekt stays active for newly added methods.
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 fun SickVacationDialog(
-    year: Int,
-    month: Int,
+    initialYear: Int,
+    initialMonth: Int,
     scheduler: ShiftScheduler,
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
+    // Mesec se menja strelicama u dijalogu, bez vraćanja na kalendar.
+    var shownMonth by remember { mutableStateOf(YearMonth.of(initialYear, initialMonth)) }
+    val year = shownMonth.year
+    val month = shownMonth.monthValue
     var absenceType by remember { mutableStateOf(AbsenceType.SICK) }
     var sickPayRate by remember { mutableDoubleStateOf(CONFIG.pay.sickPayRate) }
     var startText by remember { mutableStateOf("") }
@@ -45,9 +51,7 @@ fun SickVacationDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Get max days in this month for validation
-    val maxDays = remember(year, month) {
-        java.time.YearMonth.of(year, month).lengthOfMonth()
-    }
+    val maxDays = shownMonth.lengthOfMonth()
     val previewImpact by remember(year, month, maxDays, absenceType, sickPayRate, startText, endText, repo) {
         derivedStateOf {
             val start = startText.toIntOrNull()
@@ -94,105 +98,30 @@ fun SickVacationDialog(
     PopupDialog(
         title = "Bolovanje / Godi\u0161nji",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.info
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.info) {
-            AutoSizeText(
-                text = "Unos odsustva",
-                color = THEME.textPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                minFontSize = MaterialTheme.typography.titleSmall.fontSize,
-                maxLines = 1
-            )
-            Text(
-                text = "${MONTH_NAMES[month]} $year",
-                color = THEME.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
         PopupCard {
-            SectionLabel(text = "Tip odsustva")
+            SectionLabel(text = "Mesec odsustva")
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = ABSENCE_TYPE_CHOICE_HEIGHT.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val isSick = absenceType == AbsenceType.SICK
-                RoundedButton(
-                    text = "BOLOVANJE",
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = ABSENCE_TYPE_CHOICE_HEIGHT.dp),
-                    bgColor = if (isSick) THEME.sick else THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
-                    radius = 14.dp,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    onClick = {
-                        absenceType = AbsenceType.SICK
-                        errorMessage = null
-                    }
-                )
-                RoundedButton(
-                    text = "GODI\u0160NJI",
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = ABSENCE_TYPE_CHOICE_HEIGHT.dp),
-                    bgColor = if (!isSick) THEME.vacation else THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
-                    radius = 14.dp,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    onClick = {
-                        absenceType = AbsenceType.VACATION
-                        errorMessage = null
-                    }
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                val isSick = absenceType == AbsenceType.SICK
+                HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec") {
+                    shownMonth = shownMonth.minusMonths(1)
+                    errorMessage = null
+                }
                 Text(
-                    text = "Isplata bolovanja",
-                    color = if (isSick) THEME.textSecondary else THEME.textMuted,
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "${MONTH_NAMES[month]} $year",
+                    color = THEME.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = ABSENCE_RATE_CHOICE_HEIGHT.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {
-                        val selected = kotlin.math.abs(sickPayRate - rate.first) < 0.01
-                        val bgColor = if (isSick) {
-                            if (selected) THEME.sick else THEME.bgCardElevated
-                        } else {
-                            THEME.bgCard
-                        }
-                        val textColor = if (isSick) THEME.textPrimary else THEME.textMuted
-                        RoundedButton(
-                            text = rate.second,
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = ABSENCE_RATE_CHOICE_HEIGHT.dp),
-                            bgColor = bgColor,
-                            textColor = textColor,
-                            radius = 14.dp,
-                            textStyle = MaterialTheme.typography.labelLarge,
-                            bold = true,
-                            enabled = isSick,
-                            onClick = { sickPayRate = rate.first }
-                        )
-                    }
+                HeaderChevron(icon = Icons.Filled.ChevronRight, label = "Sledeći mesec") {
+                    shownMonth = shownMonth.plusMonths(1)
+                    errorMessage = null
                 }
             }
         }
@@ -200,53 +129,74 @@ fun SickVacationDialog(
         PopupCard {
             SectionLabel(text = "Opseg dana")
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(72.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Od",
-                        color = THEME.textSecondary,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    ModernTextField(
-                        value = startText,
-                        onValueChange = {
-                            startText = it.filter(Char::isDigit)
-                            errorMessage = null
-                        },
-                        hintText = "Početak",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Do",
-                        color = THEME.textSecondary,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    ModernTextField(
-                        value = endText,
-                        onValueChange = {
-                            endText = it.filter(Char::isDigit)
-                            errorMessage = null
-                        },
-                        hintText = "Kraj",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                ModernTextField(
+                    value = startText,
+                    onValueChange = {
+                        startText = it.filter(Char::isDigit)
+                        errorMessage = null
+                    },
+                    hintText = "Početak",
+                    label = "Od",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                    modifier = Modifier.weight(1f)
+                )
+                ModernTextField(
+                    value = endText,
+                    onValueChange = {
+                        endText = it.filter(Char::isDigit)
+                        errorMessage = null
+                    },
+                    hintText = "Kraj",
+                    label = "Do",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Isti izgled izbora kao u prozoru dana (DayEditChoiceButton).
+        PopupCard {
+            SectionLabel(text = "Tip odsustva")
+            val isSick = absenceType == AbsenceType.SICK
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DayEditChoiceButton(
+                    text = "Bolovanje",
+                    selected = isSick,
+                    minHeight = DAY_TYPE_CHOICE_HEIGHT,
+                    onClick = {
+                        absenceType = AbsenceType.SICK
+                        errorMessage = null
+                    }
+                )
+                DayEditChoiceButton(
+                    text = "Godišnji",
+                    selected = !isSick,
+                    minHeight = DAY_TYPE_CHOICE_HEIGHT,
+                    onClick = {
+                        absenceType = AbsenceType.VACATION
+                        errorMessage = null
+                    }
+                )
+            }
+            DayEditChoiceHeader(text = "Isplata bolovanja")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {
+                    DayEditChoiceButton(
+                        text = rate.second,
+                        // Za godišnji isplata bolovanja ne važi, pa nijedan procenat nije označen.
+                        selected = isSick && abs(sickPayRate - rate.first) < 0.01,
+                        minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
+                        enabled = isSick,
+                        onClick = { sickPayRate = rate.first }
                     )
                 }
             }
@@ -258,13 +208,7 @@ fun SickVacationDialog(
         }
 
         errorMessage?.let { message ->
-            Text(
-                text = message,
-                color = THEME.danger,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            FormErrorText(message = message)
         }
 
         GlowButton(
@@ -272,8 +216,6 @@ fun SickVacationDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.info,
-            textColor = THEME.textPrimary,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val start = startText.toIntOrNull()
@@ -322,8 +264,6 @@ fun SickVacationDialog(
 @Composable
 private fun VacationRangePreviewCard(preview: VacationRangePreview) {
     PopupCard(
-        bgColor = THEME.bgCardElevated,
-        borderColor = if (preview.warnings.isEmpty()) THEME.vacation else THEME.warning,
         spacing = 5.dp
     ) {
         SectionLabel(text = "Godišnji")
@@ -351,8 +291,6 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
     val difference = impact?.netDifference ?: 0.0
     val differenceColor = absenceNetDifferenceColor(difference)
     PopupCard(
-        bgColor = THEME.bgCardElevated,
-        borderColor = if (impact == null) THEME.glassBorder else differenceColor,
         spacing = 5.dp
     ) {
         SectionLabel(text = "Neto promena")

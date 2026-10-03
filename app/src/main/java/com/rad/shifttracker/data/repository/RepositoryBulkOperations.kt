@@ -92,7 +92,9 @@ internal class RepositoryBulkOperations(
                 hours = rec.hours,
                 balanceExempt = rec.balanceExempt,
                 sickPayRate = finalSickRate,
-                source = rec.source
+                source = rec.source,
+                holidayOverride = rec.holidayOverride,
+                holidayWorkOverride = rec.holidayWorkOverride
             )
             recordStore.set(record)
         }

@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,13 +5,8 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
 }
 
-val releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
-val releaseKeystoreProperties = Properties().apply {
-    if (releaseKeystorePropertiesFile.exists()) {
-        releaseKeystorePropertiesFile.inputStream().use(::load)
-    }
-}
-val releaseSigningConfigured = releaseKeystorePropertiesFile.exists()
+// Zajednički potpis: Desktop\programi\keystore
+rootProject.file("../keystore/signing.gradle").takeIf { it.exists() }?.let { apply(from = it) }
 
 android {
     namespace = "com.rad.shifttracker"
@@ -23,21 +16,10 @@ android {
         applicationId = "com.rad.shifttracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 41
+        versionName = "5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    signingConfigs {
-        if (releaseSigningConfigured) {
-            create("release") {
-                storeFile = rootProject.file(requireNotNull(releaseKeystoreProperties.getProperty("storeFile")))
-                storePassword = requireNotNull(releaseKeystoreProperties.getProperty("storePassword"))
-                keyAlias = requireNotNull(releaseKeystoreProperties.getProperty("keyAlias"))
-                keyPassword = requireNotNull(releaseKeystoreProperties.getProperty("keyPassword"))
-            }
-        }
     }
 
     buildTypes {
@@ -48,10 +30,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = when {
-                releaseSigningConfigured -> signingConfigs.getByName("release")
-                else -> signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -92,11 +71,13 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Robolectric + Compose UI testovi na računaru traže resurse (tema, manifest) u unit testovima.
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.05.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -113,12 +94,19 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Uvoz platnog listića iz PDF-a (samo lokalna ekstrakcija teksta, bez mreže)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
     // Google Drive Backup
     implementation("com.google.android.gms:play-services-auth:21.0.0")
     implementation("com.google.api-client:google-api-client-android:2.2.0") {
         exclude(group = "org.apache.httpcomponents")
     }
     implementation("com.google.apis:google-api-services-drive:v3-rev20231128-2.0.0") {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    // Listići iz Gmail-a (samo čitanje)
+    implementation("com.google.apis:google-api-services-gmail:v1-rev20240520-2.0.0") {
         exclude(group = "org.apache.httpcomponents")
     }
     implementation("com.google.http-client:google-http-client-gson:1.43.3") {
@@ -130,12 +118,16 @@ dependencies {
     testImplementation("org.json:json:20240303")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("io.mockk:mockk:1.13.13")
+    // Compose UI testovi bez uređaja (pristupačnost: semantika, dodirne površine)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 
     // Android instrumentation testing
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 detekt {

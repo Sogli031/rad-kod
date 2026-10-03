@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -82,7 +83,7 @@ fun CrashLogScreen(crashLog: String) {
                     .weight(1f)
                     .background(
                         color = THEME.bgCard,
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        shape = MaterialTheme.shapes.small
                     )
                     .padding(12.dp)
                     .verticalScroll(rememberScrollState())

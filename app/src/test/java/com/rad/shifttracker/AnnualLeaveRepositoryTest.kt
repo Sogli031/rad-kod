@@ -7,7 +7,7 @@ import org.junit.Test
 class AnnualLeaveRepositoryTest {
     @Test
     fun `upitnik za godisnji podrazumevano koristi minuli rad na prvi januar`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.minuliRadStartYearValue = 2019
         repo.minuliRadStartMonthValue = 5
 
@@ -19,7 +19,7 @@ class AnnualLeaveRepositoryTest {
 
     @Test
     fun `upitnik za godisnji i poslednji rezultat se cuvaju kroz export import`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val input = AnnualLeaveCalculationInput(
             totalSeniorityYears = 20.0,
             yearsAtEmployer = 20.0,
@@ -32,7 +32,7 @@ class AnnualLeaveRepositoryTest {
         val breakdown = calculateAnnualLeaveDays(input)
         repo.setAnnualLeaveCalculation(input, breakdown.totalDays)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
         val restoredInput = restored.getAnnualLeaveCalculationInput(2026)
 

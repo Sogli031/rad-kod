@@ -28,7 +28,8 @@ object BackupRetentionPolicy {
         val keepLatest: Int = 10,
         val dailyDays: Int = 7,
         val weeklyWeeks: Int = 4,
-        val monthlyMonths: Int = 12
+        val monthlyMonths: Int = 12,
+        val keepSafetyCopies: Int = 5
     )
 
     /** Verzije koje treba obrisati (sve što nije u skupu za zadržavanje). */
@@ -47,8 +48,15 @@ object BackupRetentionPolicy {
         config: Config,
         zone: ZoneId
     ): Set<String> {
-        val newestFirst = versions.sortedByDescending { it.createdAtMillis }
         val keep = LinkedHashSet<String>()
+
+        // 0) Sigurnosne kopije pre vraćanja se vode odvojeno: zadrži par najnovijih,
+        // ali im ne daj da istisnu redovne verzije iz kofa ispod (često su polu-prazne).
+        val (safetyCopies, regular) = versions.partition { it.safety }
+        safetyCopies.sortedByDescending { it.createdAtMillis }
+            .take(config.keepSafetyCopies.coerceAtLeast(0))
+            .forEach { keep += it.fileId }
+        val newestFirst = regular.sortedByDescending { it.createdAtMillis }
 
         // 1) Poslednjih N verzija.
         newestFirst.take(config.keepLatest.coerceAtLeast(1)).forEach { keep += it.fileId }

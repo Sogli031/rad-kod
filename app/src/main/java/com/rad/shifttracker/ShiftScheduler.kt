@@ -252,14 +252,18 @@ class ShiftScheduler(
                 date = date.plusDays(1)
                 continue
             }
-            // Praznik važi za pon–pet; u četvorobrigadi je i subota cikličan
-            // radni dan pa se subotnji praznik tretira isto kao petak.
-            val holidayDayApplies = date.dayOfWeek.value <= DayOfWeek.FRIDAY.value ||
-                (normalizedSettings.mode == ShiftFillMode.FOUR_BRIGADE && date.dayOfWeek == DayOfWeek.SATURDAY)
             // Ručno isključen/uključen praznik (holidayOverride) ima prednost
             // nad kalendarom — isto kao u previewVacationRange.
             val isHolidayDate = existing?.holidayOverride
                 ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
+            // Praznik pon–pet je slobodan dan (plaćen kao državni praznik). Četvorobrigada radi
+            // praznike po ciklusu, osim prve smene (kao ponedeljkom posle nedelje) — livnica, listići
+            // 02, 04 i 05/2026: rad na praznik i državni praznik tačni tek uz to pravilo.
+            val holidayDayApplies = when (normalizedSettings.mode) {
+                ShiftFillMode.FOUR_BRIGADE ->
+                    calculateShiftForDate(date, normalizedSettings) == Shift.FIRST
+                else -> date.dayOfWeek.value <= DayOfWeek.FRIDAY.value
+            }
             val record = if (holidayDayApplies && isHolidayDate) {
                 BatchRecord(
                     year = date.year,

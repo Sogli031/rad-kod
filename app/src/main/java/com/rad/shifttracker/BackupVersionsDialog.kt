@@ -36,9 +36,7 @@ fun BackupVersionsDialog(
     PopupDialog(
         title = "Ranije verzije",
         onDismiss = onDismiss,
-        widthRatio = 0.9f,
-        scrollable = true,
-        accent = THEME.info
+        scrollable = true
     ) {
         val pending = pendingRestore
         when {
@@ -49,7 +47,7 @@ fun BackupVersionsDialog(
                 onCancel = { pendingRestore = null }
             )
             versions == null -> LoadingCard()
-            versions.isEmpty() -> PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.info) {
+            versions.isEmpty() -> PopupCard {
                 Text(
                     text = "Nema sačuvanih verzija u oblaku.",
                     color = THEME.textSecondary,
@@ -57,7 +55,7 @@ fun BackupVersionsDialog(
                 )
             }
             else -> {
-                PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.info) {
+                PopupCard {
                     Text(
                         text = "Izaberi verziju za vraćanje. Pre vraćanja se automatski " +
                             "napravi sigurnosna kopija trenutnog stanja.",
@@ -79,7 +77,7 @@ fun BackupVersionsDialog(
 
 @Composable
 private fun LoadingCard() {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.info) {
+    PopupCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -104,7 +102,7 @@ private fun BackupVersionRow(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
-    PopupCard(bgColor = THEME.bgCard, borderColor = THEME.bgCardElevated) {
+    PopupCard {
         Text(
             text = formatVersionTime(version.createdAtMillis),
             color = THEME.textPrimary,
@@ -115,6 +113,13 @@ private fun BackupVersionRow(
             color = THEME.textSecondary,
             style = MaterialTheme.typography.labelMedium
         )
+        if (version.safety) {
+            Text(
+                text = "Sigurnosna kopija stanja pre jednog vraćanja — nije redovan backup.",
+                color = THEME.info,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
         if (version.flagged) {
             Text(
                 text = "⚠ Mogući pad podataka — proveri pre vraćanja.",
@@ -129,7 +134,6 @@ private fun BackupVersionRow(
                 .height(40.dp),
             bgColor = THEME.info,
             textColor = THEME.textPrimary,
-            radius = 12.dp,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             enabled = enabled,
@@ -145,7 +149,7 @@ private fun RestoreConfirmCard(
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+    PopupCard {
         Text(
             text = "Vraćanje verzije od ${formatVersionTime(version.createdAtMillis)}",
             color = THEME.textPrimary,
@@ -185,7 +189,6 @@ private fun RestoreConfirmCard(
                         .height(44.dp),
                     bgColor = THEME.bgCard,
                     textColor = THEME.textPrimary,
-                    radius = 12.dp,
                     onClick = onCancel
                 )
                 RoundedButton(
@@ -195,7 +198,6 @@ private fun RestoreConfirmCard(
                         .height(44.dp),
                     bgColor = THEME.warning,
                     textColor = THEME.textDark,
-                    radius = 12.dp,
                     bold = true,
                     onClick = onConfirm
                 )
@@ -216,11 +218,9 @@ fun RestoreLatestConfirmDialog(
 ) {
     PopupDialog(
         title = "Vraćanje iz oblaka",
-        onDismiss = onDismiss,
-        widthRatio = 0.9f,
-        accent = THEME.warning
+        onDismiss = onDismiss
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+        PopupCard {
             Text(
                 text = "Trenutno stanje će biti zamenjeno najnovijom verzijom iz oblaka. " +
                     "Izmene od poslednjeg backup-a bi bile izgubljene, pa se pre vraćanja " +
@@ -256,7 +256,6 @@ fun RestoreLatestConfirmDialog(
                             .height(44.dp),
                         bgColor = THEME.bgCard,
                         textColor = THEME.textPrimary,
-                        radius = 12.dp,
                         onClick = onDismiss
                     )
                     RoundedButton(
@@ -266,9 +265,93 @@ fun RestoreLatestConfirmDialog(
                             .height(44.dp),
                         bgColor = THEME.warning,
                         textColor = THEME.textDark,
-                        radius = 12.dp,
                         bold = true,
                         onClick = onConfirm
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * U oblaku postoji backup koji ovaj uređaj nije preuzeo (tipično: nova instalacija).
+ * Korisnik bira: vrati sve iz oblaka (preporučeno) ili zadrži podatke sa ovog
+ * uređaja kao merodavne. Dok ne izabere, automatski backup je pauziran.
+ */
+@Composable
+fun CloudBackupFoundDialog(
+    version: BackupVersion,
+    isBusy: Boolean,
+    onRestore: () -> Unit,
+    onKeepLocal: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    PopupDialog(
+        title = "Pronađen backup u oblaku",
+        onDismiss = onDismiss
+    ) {
+        PopupCard {
+            Text(
+                text = "Backup od ${formatVersionTime(version.createdAtMillis)}",
+                color = THEME.textPrimary,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+            )
+            Text(
+                text = "${backupVersionSummary(version)}. Ovaj uređaj ga još nije preuzeo. " +
+                    "„Vrati sve iz oblaka“ vraća sve upise i sva podešavanja tačno kako su sačuvani. " +
+                    "Dok ne izabereš, automatski backup je pauziran da ništa u oblaku ne bude pregaženo.",
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+            if (isBusy) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(18.dp),
+                        color = THEME.info,
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "Vraćanje u toku…",
+                        color = THEME.info,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                RoundedButton(
+                    text = "Vrati sve iz oblaka",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    bgColor = THEME.info,
+                    textColor = THEME.textPrimary,
+                    bold = true,
+                    onClick = onRestore
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    RoundedButton(
+                        text = "Kasnije",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        bgColor = THEME.bgCard,
+                        textColor = THEME.textPrimary,
+                        onClick = onDismiss
+                    )
+                    RoundedButton(
+                        text = "Zadrži ovaj uređaj",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        bgColor = THEME.warning,
+                        textColor = THEME.textDark,
+                        onClick = onKeepLocal
                     )
                 }
             }

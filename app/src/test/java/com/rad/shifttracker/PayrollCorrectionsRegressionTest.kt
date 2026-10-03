@@ -10,39 +10,6 @@ import org.junit.Test
 
 class PayrollCorrectionsRegressionTest {
     @Test
-    fun `jun 2026 potvrđeno pravo i rucna potrosnja ostavljaju razliku u plati`() {
-        val breakdown = calculateMonthlyNetPayBreakdown(
-            summary = MonthSummary(
-                year = 2026,
-                month = 6,
-                totalPay = 100_000.0,
-                foodAllowance = 3_840.0
-            ),
-            grossHourlyRate = 637.32,
-            monthlyFundHours = 176,
-            contributionsPercent = 19.9,
-            taxRelief = 34_221.0,
-            taxPercent = 10.0,
-            grossAdditions = MonthlyGrossAdditions(
-                year = 2026,
-                month = 6,
-                mealSpentNet = 3_620.0,
-                mealEntitlementNetOverride = BigDecimal("3840.00")
-            )
-        )
-
-        assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, breakdown.mealCalculationMode)
-        assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
-        assertMoney(3_840.00, breakdown.mealEntitlementNet)
-        assertMoney(5_477.89, breakdown.mealEntitlementGross)
-        assertMoney(3_620.00, breakdown.mealSpentNetApplied)
-        assertMoney(3_620.00, breakdown.mealNetDeduction)
-        assertMoney(220.00, breakdown.mealUnusedNet)
-        assertMoney(105_477.89, breakdown.grossTotal)
-        assertTrue(!breakdown.mealSpendingDefaultedToEntitlement)
-    }
-
-    @Test
     fun `bez unete potrosnje podrazumeva se celo automatsko pravo`() {
         val breakdown = calculateMonthlyNetPayBreakdown(
             summary = MonthSummary(
@@ -69,7 +36,7 @@ class PayrollCorrectionsRegressionTest {
 
     @Test
     fun `krvni dani 25 i 26 maj su placeno odsustvo a ne bolovanje`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.setKnownPayBaseAnchor(2026, 5, 950.58)
         repo.setDefaultPayBaseSelection(PayBaseSelectionMode.KNOWN_BASE)
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 25))
@@ -90,7 +57,7 @@ class PayrollCorrectionsRegressionTest {
 
     @Test
     fun `maj 2026 izostanci po fondu prate listic a manjak po danima ostaje saldo`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 1, Shift.FIRST, 8)
         repo.set(2026, 5, 2, Shift.SECOND, 5)
         listOf(4, 5, 6, 8, 27, 28, 29).forEach { day -> repo.set(2026, 5, day, Shift.THIRD, 8) }
@@ -176,7 +143,8 @@ class PayrollCorrectionsRegressionTest {
                 month = 5,
                 totalPay = mayWorkGross,
                 minuliRadBonus = money(145 * 637.32 * 0.035),
-                foodAllowance = BigDecimal("7817.40").multiply(BigDecimal("0.701")).toDouble()
+                // 20 priznatih obroka × 274,00 = 5.480,00 neto (pojedeno = pripada).
+                foodAllowance = 5_480.0
             ),
             grossHourlyRate = 637.32,
             monthlyFundHours = 168,
@@ -186,7 +154,6 @@ class PayrollCorrectionsRegressionTest {
             grossAdditions = MonthlyGrossAdditions(
                 year = 2026,
                 month = 5,
-                mealSpentNet = 5_480.0,
                 absencePenaltyGross = BigDecimal("495.00")
             )
         )
@@ -213,19 +180,20 @@ class PayrollCorrectionsRegressionTest {
             grossAdditions = MonthlyGrossAdditions(
                 year = 2026,
                 month = 6,
-                mealSpentNet = 3_620.0,
                 absencePenaltyGross = BigDecimal("330.00"),
                 mealEntitlementNetOverride = BigDecimal("3840.00")
             )
         )
         // Listić 06/2026 ima TO2 5.478,00 (odgovara neto 3.840,08); uz potvrđeno pravo
         // 3.840,00 gross-up daje 5.477,89, pa kontrolni iznosi odstupaju 0,11 od listića.
-        assertPayroll(june, 113_463.61, 22_579.26, 7_924.26, 82_960.09, 79_340.09)
+        // Pojedeno se ne unosi: aplikacija skida celo pravo (3.840), a listić je skinuo stvarnih
+        // 3.620 — za isplatu je zato 220 manje od listića (bruto i neto se slažu).
+        assertPayroll(june, 113_463.61, 22_579.26, 7_924.26, 82_960.09, 79_120.09)
     }
 
     @Test
     fun `overtime type i Izostanci 1 prezive cuvanje ucitavanje zbir i debug export`() {
-        val source = ShiftRepository()
+        val source = testRepository()
         source.set(
             year = 2026,
             month = 6,
@@ -236,7 +204,7 @@ class PayrollCorrectionsRegressionTest {
         )
         source.setMonthlyAbsencePenaltyGross(2026, 6, BigDecimal("330.00"))
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(source.exportJson()))
         assertEquals(OvertimeType.COMP_TIME, restored.get(2026, 6, 3)?.overtimeType)
         assertEquals(
@@ -256,23 +224,30 @@ class PayrollCorrectionsRegressionTest {
     }
 
     @Test
-    fun `bolovanje koristi svoju osnovicu i kad je poznata osnovica za GO drugacija`() {
-        val repo = ShiftRepository()
+    fun `bolovanje prati istu osnovicu kao GO i praznik`() {
+        val repo = testRepository()
+        // Osnovice sa listića: 03/2026 (bolovanje 23.888,93 / 40 h / 0,65) i 05/2026 (plaćeno odsustvo).
+        repo.setKnownPayBaseAnchor(2026, 3, 918.805)
         repo.setKnownPayBaseAnchor(2026, 5, 950.58)
         repo.setDefaultPayBaseSelection(PayBaseSelectionMode.KNOWN_BASE)
-        // Listić 03/2026: 23.888,93 / 40 h = 597,22 = 65% × 918,81.
         (2..6).forEach { day ->
             repo.set(2026, 3, day, Shift.SICK, 8, sickPayRate = 0.65, holidayOverride = false)
         }
+        repo.set(2026, 6, 1, Shift.SICK, 8, sickPayRate = 0.65, holidayOverride = false)
 
-        val resolved = repo.getResolvedPayBasesForWorkMonth(2026, 3)
-        val details = repo.getMonthlyPayDetails(2026, 3)
+        val march = repo.getResolvedPayBasesForWorkMonth(2026, 3)
+        val marchDetails = repo.getMonthlyPayDetails(2026, 3)
+        val june = repo.getResolvedPayBasesForWorkMonth(2026, 6)
+        val juneDetails = repo.getMonthlyPayDetails(2026, 6)
 
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.001)
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
-        assertEquals(40, details.sickHours)
-        // Listić zaokružuje satnicu na 597,22, pa razlika na 40 h ostaje ispod dinara.
-        assertEquals(23_888.93, details.grossSickPay, 0.2)
+        assertEquals(918.805, march.sickHourlyBase.value, 0.001)
+        assertEquals(PayBaseSource.KNOWN_BASE, march.sickHourlyBase.source)
+        assertEquals(march.vacationHourlyBase.value, march.sickHourlyBase.value, 0.0)
+        assertEquals(40, marchDetails.sickHours)
+        assertEquals(23_888.93, marchDetails.grossSickPay, 0.01)
+        // Novo bolovanje se plaća po tekućoj osnovici (KU čl. 66), a ne po martovskoj.
+        assertEquals(950.58, june.sickHourlyBase.value, 0.001)
+        assertEquals(8 * 950.58 * 0.65, juneDetails.grossSickPay, 0.01)
     }
 
     @Test

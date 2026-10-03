@@ -30,6 +30,37 @@ class BackupRetentionPolicyTest {
     ): Set<String> = BackupRetentionPolicy.selectForDeletion(versions, config, utc).map { it.fileId }.toSet()
 
     @Test
+    fun `sigurnosna kopija pre vracanja nikad nije najnovija verzija za restore`() {
+        val good = version("good", millisDaysAgo(1))
+        val safety = version("safety", millisDaysAgo(0)).copy(safety = true)
+
+        assertEquals("good", VersionedBackupPlanner.latest(listOf(good, safety))?.fileId)
+        assertEquals(null, VersionedBackupPlanner.latest(listOf(safety)))
+    }
+
+    @Test
+    fun `safety oznaka prezivljava appProperties`() {
+        val stats = BackupStats(recordCount = 1, monthCount = 1, totalWorkMinutes = 480, null, null)
+        val props = BackupMetadata.toProperties(1_000L, stats, flagged = false, appVersion = "1.0", safety = true)
+        val regular = BackupMetadata.toProperties(1_000L, stats, flagged = false, appVersion = "1.0")
+
+        assertTrue(BackupMetadata.buildVersion("id", "rad_backup_1000.json", null, props).safety)
+        assertFalse(BackupMetadata.buildVersion("id", "rad_backup_1000.json", null, regular).safety)
+    }
+
+    @Test
+    fun `sigurnosne kopije ne istiskuju redovne verzije i same se orezuju`() {
+        val regular = (1..3).map { version("r$it", millisDaysAgo(it)) }
+        val safeties = (0..7).map { version("s$it", millisDaysAgo(0, extraHoursBack = it)).copy(safety = true) }
+        val config = BackupRetentionPolicy.Config(keepLatest = 1, dailyDays = 0, weeklyWeeks = 0, monthlyMonths = 0)
+
+        val deleted = deletedIds(regular + safeties, config)
+
+        assertFalse("r1" in deleted)
+        assertEquals(setOf("s5", "s6", "s7"), deleted.filter { it.startsWith("s") }.toSet())
+    }
+
+    @Test
     fun `jedna ili nijedna verzija se ne brise`() {
         assertTrue(BackupRetentionPolicy.selectForDeletion(emptyList(), zone = utc).isEmpty())
         assertTrue(

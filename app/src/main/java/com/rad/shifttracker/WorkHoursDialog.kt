@@ -16,7 +16,6 @@ import kotlin.math.roundToInt
 
 internal const val WORK_HOURS_DIALOG_TITLE = "Sati rada"
 
-private const val WORK_HOURS_DIALOG_WIDTH_RATIO = 0.85f
 private const val WORK_HOURS_MINUTES_PER_HOUR = 60
 private const val WORK_HOURS_TABLE_LABEL_WEIGHT = 1.15f
 private const val WORK_HOURS_TABLE_HOURS_WEIGHT = 0.55f
@@ -29,18 +28,19 @@ fun WorkHoursDialog(
     month: MonthKey,
     payDetails: MonthlyPayDetails,
     deficitNetLoss: Double,
+    seniorityConfigured: Boolean,
     onDismiss: () -> Unit
 ) {
     PopupDialog(
         title = WORK_HOURS_DIALOG_TITLE,
         onDismiss = onDismiss,
-        widthRatio = WORK_HOURS_DIALOG_WIDTH_RATIO,
-        scrollable = true,
-        accent = THEME.textPrimary
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.textPrimary) {
+        PopupCard {
             SectionLabel(text = monthYearText(month))
         }
+
+        PayAccuracyWarningsCard(payAccuracyWarningTexts(payDetails, seniorityConfigured))
 
         WorkHoursSection("Pregled", overviewRows(summary, payBreakdown, payDetails))
         WorkHoursTableSection("Dodaci", addOnRows(payBreakdown, payDetails))
@@ -283,12 +283,28 @@ private fun absenceAndLeaveRows(
         if (fundAbsenceMinutes > 0) {
             add(
                 WorkHoursTableLine(
-                    "Izostanci po fondu (listić)",
+                    "Izostanci po fondu (lista)",
                     formatHoursAndMinutes(-fundAbsenceMinutes),
                     "–",
                     WorkHoursTone.Muted
                 )
             )
+            // Listić piše cele sate, a ostatak minuta skida kroz šifru 96; ovde je to već u satima.
+            val roundingGross = estimateAbsenceRoundingGross(
+                fundAbsenceMinutes = fundAbsenceMinutes,
+                grossHourlyRate = payBreakdown.grossHourlyRate,
+                seniorityTotalRate = payDetails.seniorityTotalRate
+            )
+            if (roundingGross > 0) {
+                add(
+                    WorkHoursTableLine(
+                        "od toga „Izostanci 1“ na listi",
+                        formatHoursAndMinutes(-(fundAbsenceMinutes % WORK_HOURS_MINUTES_PER_HOUR)),
+                        "≈ ${deductionMoneyText(roundingGross.toDouble())}",
+                        WorkHoursTone.Muted
+                    )
+                )
+            }
         }
     }
 }

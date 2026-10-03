@@ -14,6 +14,29 @@ internal const val ANNUAL_NET_PAY_AVERAGE_EMPTY_TEXT = "Nema unetih meseci za go
 internal const val PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT = "Nedostaje obračun prethodnog meseca."
 internal const val PAY_DETAILS_HOURLY_VALUE_LABEL = "Vrednost sata"
 
+/**
+ * Šifra 96 na listiću nije kazna nego zaokruživanje: režija se piše u celim satima
+ * naviše, a ostatak minuta se skida ovde po satnici sa minulim radom. Listić 07/2026:
+ * 31.07. rađeno 4h30 → 5h režije, 3h izostanaka i −330 din (30 min × 637,32 × 1,035).
+ */
+
+/**
+ * Procena stavke „Izostanci 1" iz ostatka minuta izostanka u mesecu: minuti preko
+ * celih sati × satnica × (1 + stopa minulog rada), zaokruženo na ceo dinar kao na listiću.
+ */
+internal fun estimateAbsenceRoundingGross(
+    fundAbsenceMinutes: Int,
+    grossHourlyRate: Double,
+    seniorityTotalRate: Double
+): Int {
+    val remainderMinutes = fundAbsenceMinutes.coerceAtLeast(0) % MINUTES_PER_HOUR_FOR_TEXT
+    if (remainderMinutes == 0 || !grossHourlyRate.isFinite() || grossHourlyRate <= 0.0) return 0
+    val rate = grossHourlyRate * (1.0 + seniorityTotalRate.coerceAtLeast(0.0))
+    return Math.round(rate * remainderMinutes / MINUTES_PER_HOUR_FOR_TEXT).toInt()
+}
+
+private const val MINUTES_PER_HOUR_FOR_TEXT = 60
+
 internal fun annualNetPayAverageLabels(): List<String> {
     return listOf(
         "Prosek plate",
@@ -57,15 +80,9 @@ internal fun payrollMonthTitleText(receipt: MonthlyReceipt): String {
     return "Obračun za ${monthYearText(receipt.payrollMonth)}"
 }
 
-internal fun payDetailsReceiptDescriptionText(receipt: MonthlyReceipt): String {
-    if (!receipt.isSalaryAvailable) return PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT
-    val payrollMonth = monthYearText(receipt.payrollMonth)
-    return if (receipt.transportAmount > 0.0) {
-        "Procena uplate na račun za obračunski mesec $payrollMonth, uključujući odvojenu stavku prevoza."
-    } else {
-        "Procena uplate na račun za obračunski mesec $payrollMonth."
-    }
-}
+/** Samo kad plata nije izračunata; inače nema opisa. */
+internal fun payDetailsReceiptDescriptionText(receipt: MonthlyReceipt): String? =
+    if (receipt.isSalaryAvailable) null else PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT
 
 internal fun payDetailsNetSalaryLabel(receipt: MonthlyReceipt): String {
     return "Neto plata za ${monthNameText(receipt.payrollMonth)}"

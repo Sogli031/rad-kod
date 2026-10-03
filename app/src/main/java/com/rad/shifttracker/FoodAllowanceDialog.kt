@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,11 +31,9 @@ fun FoodAllowanceDialog(
     PopupDialog(
         title = "Hrana",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.accentSecondary
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentSecondary) {
+        PopupCard {
             SectionLabel(text = "Dnevni iznos od ${monthYearText(selectedMonth)}")
             Text(
                 text = "Za izabrani mesec: ${formatRateInput(selectedPrice)} ${CONFIG.pay.currency}",
@@ -50,17 +49,13 @@ fun FoodAllowanceDialog(
                     errorMessage = null
                 },
                 hintText = "Iznos hrane...",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                label = "Iznos hrane (${CONFIG.pay.currency})",
+                isError = errorMessage != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth()
             )
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = THEME.danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                FormErrorText(message = message)
             }
         }
 
@@ -69,8 +64,6 @@ fun FoodAllowanceDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.accentSecondary,
-            textColor = THEME.textPrimary,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val newValue = foodInput.toDoubleOrNull()

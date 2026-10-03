@@ -1,7 +1,9 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -29,13 +31,9 @@ fun DeleteMonthDialog(
     PopupDialog(
         title = "Potvrda brisanja",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.danger
+        scrollable = true
     ) {
         PopupCard(
-            bgColor = THEME.bgCardElevated,
-            borderColor = THEME.danger,
             spacing = UI.largeSpacing.dp
         ) {
             AutoSizeText(
@@ -45,7 +43,7 @@ fun DeleteMonthDialog(
                 maxFontSize = MaterialTheme.typography.displaySmall.fontSize,
                 minFontSize = MaterialTheme.typography.headlineMedium.fontSize,
                 maxLines = 1,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
             )
             Text(
                 text = if (deleteAll) {
@@ -66,25 +64,23 @@ fun DeleteMonthDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(UI.buttonHeight.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 RoundedButton(
                     text = "Ovaj mesec",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     bgColor = if (!deleteAll) THEME.danger else THEME.bgCardElevated,
                     textColor = THEME.textPrimary,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = { deleteAll = false }
                 )
                 RoundedButton(
                     text = "Svi meseci",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     bgColor = if (deleteAll) THEME.danger else THEME.bgCardElevated,
                     textColor = THEME.textPrimary,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = { deleteAll = true }
@@ -95,25 +91,23 @@ fun DeleteMonthDialog(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(UI.saveButtonHeight.dp),
             horizontalArrangement = Arrangement.spacedBy(UI.largeSpacing.dp)
         ) {
             RoundedButton(
                 text = "Otkaži",
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 bgColor = THEME.bgCardElevated,
                 textColor = THEME.textPrimary,
                 borderColor = THEME.glassBorder,
-                radius = 14.dp,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = onDismiss
             )
             GlowButton(
                 text = "Obriši",
-                modifier = Modifier.weight(1f),
-                bgColor = THEME.danger,
-                textColor = THEME.textPrimary,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                destructive = true,
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = {
                     if (deleteAll) {

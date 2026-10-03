@@ -20,5 +20,12 @@ data class BackupVersion(
     val flagged: Boolean = false,
     val stats: BackupStats? = null,
     val schemaVersion: Int = 0,
-    val appVersion: String? = null
+    val appVersion: String? = null,
+    /**
+     * Sigurnosna kopija napravljena neposredno PRE vraćanja (da restore bude
+     * poništiv). Nije deo redovne linije backup-a: ne sme da bude „najnovija
+     * verzija" za Restore niti arhiva za spajanje — inače bi Restore na novoj
+     * instalaciji vratio upravo tu, polu-praznu kopiju.
+     */
+    val safety: Boolean = false
 )

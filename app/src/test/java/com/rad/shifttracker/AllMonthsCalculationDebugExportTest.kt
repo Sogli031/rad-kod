@@ -9,7 +9,7 @@ import org.junit.Test
 class AllMonthsCalculationDebugExportTest {
     @Test
     fun `debug export includes every saved month through the real monthly calculation export`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         for (month in 1..6) {
             repo.set(2026, month, 10, Shift.FIRST, 8, holidayOverride = false)
         }
@@ -56,7 +56,7 @@ class AllMonthsCalculationDebugExportTest {
 
     @Test
     fun `debug export contains only months with saved daily entries`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 1, 5, Shift.FIRST, 8, holidayOverride = false)
         repo.set(2026, 6, 5, Shift.SECOND, 8, holidayOverride = false)
 

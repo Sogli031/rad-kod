@@ -82,32 +82,28 @@ class BloodDonationReminderTest {
     }
 
     @Test
-    fun `status upozorava kada tacni alarmi nisu dozvoljeni`() {
+    fun `status ne pominje tacne alarme`() {
         val status = BloodDonationReminderScheduleStatus(
             lastDonationDate = LocalDate.of(2026, 1, 10),
             donationCount = 1,
             nextDonationDate = LocalDate.of(2026, 4, 10),
             nextReminderTime = LocalDateTime.of(2026, 4, 10, 9, 0),
-            notificationPermissionGranted = true,
-            exactAlarmAvailable = false
+            notificationPermissionGranted = true
         )
 
-        assertTrue(
-            bloodDonationReminderStatusText(status)
-                .contains("Tačni alarmi nisu dozvoljeni")
-        )
+        assertFalse(bloodDonationReminderStatusText(status).contains("Tačni alarmi"))
     }
 
     @Test
-    fun `scheduler koristi exact alarm sa uskim fallback prozorom`() {
+    fun `scheduler koristi obican alarm bez dozvole za tacne alarme`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/BloodDonationReminderScheduler.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/BloodDonationReminderScheduler.kt")
         ).first { it.exists() }.readText()
 
-        assertTrue(source.contains("setExactAndAllowWhileIdle"))
-        assertTrue(source.contains("BLOOD_DONATION_FALLBACK_WINDOW_MILLIS = 10 * 60 * 1000L"))
-        assertFalse(source.contains("REMINDER_WINDOW_MILLIS = 6 * 60 * 60 * 1000L"))
+        assertTrue(source.contains("setAndAllowWhileIdle"))
+        assertFalse(source.contains("setExact"))
+        assertFalse(source.contains("canScheduleExactAlarms"))
     }
 
     @Test

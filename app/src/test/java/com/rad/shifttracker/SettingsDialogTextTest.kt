@@ -1,8 +1,6 @@
 package com.rad.shifttracker
 
-import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsDialogTextTest {
@@ -42,14 +40,6 @@ class SettingsDialogTextTest {
         assertEquals("Od meseca", SATNICA_HOURLY_HISTORY_MONTH_LABEL)
         assertEquals("Godina", SATNICA_HOURLY_HISTORY_YEAR_LABEL)
         assertEquals("Nova vrednost sata", SATNICA_HOURLY_HISTORY_VALUE_LABEL)
-    }
-
-    @Test
-    fun `base pay dialog keeps visual sections extracted`() {
-        val source = basePayDialogSource()
-
-        assertTrue(source.contains("BasePaySectionCard("))
-        assertTrue(source.contains("BasePayPreviewStrip("))
     }
 
     @Test
@@ -192,15 +182,5 @@ class SettingsDialogTextTest {
             "Fallback simulacija: realni meseci: 9; simulirani meseci: 3",
             rollingPayBaseSourceDetailsText(calculation)
         )
-    }
-
-    private fun basePayDialogSource(): String {
-        val candidates = listOf(
-            File("src/main/java/com/rad/shifttracker/BasePayDialog.kt"),
-            File("app/src/main/java/com/rad/shifttracker/BasePayDialog.kt")
-        )
-        val sourceFile = candidates.firstOrNull { it.isFile }
-        requireNotNull(sourceFile) { "BasePayDialog.kt source file was not found." }
-        return sourceFile.readText()
     }
 }

@@ -67,10 +67,7 @@ class PayDetailsDialogTextTest {
 
         assertEquals("Isplata u Jul 2026", paymentMonthTitleText(receipt))
         assertEquals("Obračun za Jun 2026", payrollMonthTitleText(receipt))
-        assertEquals(
-            "Procena uplate na račun za obračunski mesec Jun 2026, uključujući odvojenu stavku prevoza.",
-            payDetailsReceiptDescriptionText(receipt)
-        )
+        assertEquals(null, payDetailsReceiptDescriptionText(receipt))
         assertEquals(
             "4560.00 RSD",
             payDetailsTransportAmountText(receipt)
@@ -136,19 +133,12 @@ class PayDetailsDialogTextTest {
     fun `advance payment labels and unavailable text match requested wording`() {
         assertEquals("Akontacija", ADVANCE_PAYMENT_DIALOG_TITLE)
         assertEquals("Akontacija neto", ADVANCE_PAYMENT_NET_LABEL)
-        assertEquals(
-            "Unesi neto iznos akontacije koji je već isplaćen. Ovaj iznos se ne koristi za obračun bruto plate, poreza i doprinosa, već samo umanjuje iznos koji ostaje za konačnu isplatu.",
-            ADVANCE_PAYMENT_EXPLANATION_TEXT
-        )
         assertEquals("Neto plata", FINAL_PAYMENT_NET_PAY_LABEL)
         assertEquals("Isplaćena akontacija", FINAL_PAYMENT_ADVANCE_LABEL)
         assertEquals("Obustave", FINAL_PAYMENT_DEDUCTIONS_LABEL)
         assertEquals("Preostalo za konačnu isplatu", FINAL_PAYMENT_REMAINING_LABEL)
         assertEquals("Preostalo 20.", FINAL_PAYMENT_REMAINING_20_LABEL)
         assertEquals("Preostalo regres", FINAL_PAYMENT_REMAINING_REGRESS_LABEL)
-        assertEquals("Kredit", FINAL_PAYMENT_LOAN_DEDUCTION_LABEL)
-        assertEquals("Hrana prekoračeno", FINAL_PAYMENT_FOOD_OVERAGE_LABEL)
-        assertEquals("Ostale obustave", FINAL_PAYMENT_OTHER_DEDUCTIONS_LABEL)
         assertEquals("ručno uneto", MANUAL_ENTRY_BADGE_TEXT)
         assertEquals("Hrana nije prekoračena", FOOD_NOT_OVERAGE_TEXT)
         assertEquals(
@@ -238,29 +228,25 @@ class PayDetailsDialogTextTest {
         ).first { it.exists() }.readText()
 
         assertTrue(source.contains("if (finalPayment.deductionsNet > 0.0)"))
-        assertTrue(source.contains("FINAL_PAYMENT_FOOD_OVERAGE_LABEL"))
         assertTrue(source.contains("FINAL_PAYMENT_REMAINING_20_LABEL"))
         assertTrue(source.contains("FINAL_PAYMENT_REMAINING_REGRESS_LABEL"))
         assertTrue(source.contains("if (finalPayment.remainingRegressNetPay > 0.0)"))
     }
 
     @Test
-    fun `final payment deductions show loan separately and food overage only when present`() {
+    fun `final payment deductions are listed under their payslip names`() {
         val source = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
         ).first { it.exists() }.readText()
         val deductionsIndex = source.indexOf("FINAL_PAYMENT_DEDUCTIONS_LABEL")
-        val loanIndex = source.indexOf("FINAL_PAYMENT_LOAN_DEDUCTION_LABEL", deductionsIndex)
-        val foodIndex = source.indexOf("FINAL_PAYMENT_FOOD_OVERAGE_LABEL", deductionsIndex)
+        val rowsIndex = source.indexOf("finalPayment.deductions.forEach", deductionsIndex)
 
         assertTrue(deductionsIndex >= 0)
-        assertTrue(loanIndex > deductionsIndex)
-        assertTrue(foodIndex > loanIndex)
-        assertTrue(source.contains("finalPayment.loanDeductionNet > 0.0"))
-        assertTrue(source.contains("finalPayment.foodOverageDeductionNet > 0.0"))
+        assertTrue(rowsIndex > deductionsIndex)
+        assertTrue(source.contains("label = deduction.name"))
+        assertTrue(!source.contains("Kredit"))
     }
-
     @Test
     fun `food spending input shows net allowance spent and basic data only shows entitlement`() {
         val dialogSource = listOf(
@@ -284,24 +270,20 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `standardni UI ima samo neto unos toplog obroka bez bruto i korekcije`() {
+    fun `standardni UI nema nikakav unos toplog obroka`() {
         val inputSource = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
         ).first { it.exists() }.readText()
 
-        assertEquals(
-            "Potrošeni topli obrok — neto",
-            ACTUAL_FOOD_SPENT_INPUT_LABEL
-        )
-        assertTrue(inputSource.contains("ACTUAL_FOOD_SPENT_INPUT_LABEL"))
-        assertTrue(inputSource.contains("repo.setMonthlyActualFoodSpentNet"))
+        // Topli obrok se računa kao da je pojedeno koliko pripada; prekoračenje javlja „Lista“.
+        assertTrue(!inputSource.contains("ACTUAL_FOOD_SPENT_INPUT_LABEL"))
+        assertTrue(!inputSource.contains("repo.setMonthlyActualFoodSpentNet"))
         assertTrue(!inputSource.contains("Pravo na topli obrok"))
         assertTrue(!inputSource.contains("repo.setMonthlyMealEntitlementNetOverride"))
         assertTrue(!inputSource.contains("label = \"Potrošeno\""))
-        assertTrue(inputSource.contains("\"Ostaje u plati\""))
-        assertTrue(inputSource.contains("payBreakdown.canDisplayMealUnused"))
-        assertTrue(inputSource.contains("MEAL_SAFE_DEFAULT_STATUS_TEXT"))
+        assertTrue(!inputSource.contains("\"Ostaje u plati\""))
+        assertTrue(!inputSource.contains("MEAL_SAFE_DEFAULT_STATUS_TEXT"))
         assertTrue(!inputSource.contains("Neiskorišćeno"))
         assertTrue(!inputSource.contains("repo.setMonthlyMealGrossOverride"))
         assertTrue(!inputSource.contains("repo.setMonthlyMealSettlementAdjustmentNet"))
@@ -310,8 +292,8 @@ class PayDetailsDialogTextTest {
         assertTrue(!inputSource.contains("Topli obrok — bruto sa obračuna"))
         assertTrue(!inputSource.contains("Ručno unet bruto iznos"))
         assertTrue(!inputSource.contains("filterSignedDecimalInput"))
-        assertTrue(inputSource.contains("MEAL_SPENT_MANUAL_HELP_TEXT"))
-        assertTrue(inputSource.contains("MEAL_SPENT_ASSUMED_HELP_TEXT"))
+        assertTrue(!inputSource.contains("MEAL_SPENT_MANUAL_HELP_TEXT"))
+        assertTrue(!inputSource.contains("MEAL_SPENT_ASSUMED_HELP_TEXT"))
         assertTrue(!inputSource.contains("mealGross = value ?: food"))
         assertTrue(!inputSource.contains("Stvarni neto"))
         assertTrue(!inputSource.contains("actualSalaryNetInputLabel"))

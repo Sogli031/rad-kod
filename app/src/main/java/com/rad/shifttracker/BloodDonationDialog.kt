@@ -1,7 +1,9 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -37,9 +39,7 @@ internal fun BloodDonationDialog(
     PopupDialog(
         title = BLOOD_DONATION_OPTION_LABEL,
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.danger
+        scrollable = true
     ) {
         BloodDonationStatusSection(
             repo = repo,
@@ -76,7 +76,7 @@ private fun BloodDonationStatusSection(
     var showHistory by remember { mutableStateOf(false) }
     var pendingDeleteDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.danger) {
+    PopupCard {
         SectionLabel(text = "Status")
         BloodDonationInfoText(text = bloodDonationLastDateText(savedDate))
         BloodDonationInfoText(text = bloodDonationNextDateText(savedDate))
@@ -91,9 +91,11 @@ private fun BloodDonationStatusSection(
                 errorMessage = null
             },
             hintText = "Dan",
+            label = "Dan u mesecu",
+            isError = errorMessage != null,
             modifier = Modifier.fillMaxWidth()
         )
-        errorMessage?.let { BloodDonationErrorText(it) }
+        errorMessage?.let { FormErrorText(message = it, style = MaterialTheme.typography.bodySmall) }
         RoundedButton(
             text = "SAČUVAJ",
             modifier = Modifier
@@ -161,7 +163,7 @@ private fun BloodDonationHistorySection(
     onCancelDelete: () -> Unit,
     onConfirmDelete: (LocalDate) -> Unit
 ) {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.danger) {
+    PopupCard {
         SectionLabel(text = "Istorija davanja")
         if (history.isEmpty()) {
             BloodDonationInfoText(text = BLOOD_DONATION_HISTORY_EMPTY_TEXT)
@@ -184,7 +186,7 @@ private fun BloodDonationHistorySection(
             ) {
                 RoundedButton(
                     text = "Otkaži",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     bgColor = THEME.bgCardElevated,
                     textColor = THEME.textPrimary,
                     borderColor = THEME.glassBorder,
@@ -194,7 +196,7 @@ private fun BloodDonationHistorySection(
                 )
                 RoundedButton(
                     text = "Obriši",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     bgColor = THEME.danger,
                     textColor = THEME.textPrimary,
                     textStyle = MaterialTheme.typography.labelLarge,
@@ -214,7 +216,7 @@ private fun BloodDonationHistoryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp),
+            .height(MIN_TOUCH_TARGET),
         horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -228,7 +230,8 @@ private fun BloodDonationHistoryRow(
         )
         RoundedButton(
             text = "X",
-            modifier = Modifier.size(44.dp),
+            contentDescription = "Ukloni davanje ${bloodDonationHistoryDateText(date)}",
+            modifier = Modifier.size(MIN_TOUCH_TARGET),
             bgColor = THEME.bgCardElevated,
             textColor = THEME.textPrimary,
             borderColor = THEME.danger,
@@ -249,10 +252,11 @@ private fun BloodDonationLeaveSection(
     var leaveDayInput by remember { mutableStateOf("") }
     var leaveErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.danger) {
+    PopupCard {
         SectionLabel(text = "Dani odsustva po osnovu davanja krvi")
-        BloodDonationInfoText(text = bloodDonationLeaveLastUsageText(leaveStartDate))
-        BloodDonationInfoText(text = bloodDonationLeaveNextUsageText(leaveStartDate))
+        val usage = repo.lastBloodDonationLeaveUsage
+        BloodDonationInfoText(text = bloodDonationLeaveUsageText(usage))
+        BloodDonationInfoText(text = bloodDonationLeaveNextText(usage))
 
         SectionLabel(text = "Prvi dan odsustva")
         DatePartField(
@@ -262,9 +266,11 @@ private fun BloodDonationLeaveSection(
                 leaveErrorMessage = null
             },
             hintText = "Dan",
+            label = "Dan u mesecu",
+            isError = leaveErrorMessage != null,
             modifier = Modifier.fillMaxWidth()
         )
-        leaveErrorMessage?.let { BloodDonationErrorText(it) }
+        leaveErrorMessage?.let { FormErrorText(message = it, style = MaterialTheme.typography.bodySmall) }
         BloodDonationLeaveActions(
             repo = repo,
             selectedYear = selectedYear,
@@ -335,25 +341,18 @@ private fun DatePartField(
     value: String,
     onValueChange: (String) -> Unit,
     hintText: String,
+    label: String,
+    isError: Boolean,
     modifier: Modifier = Modifier
 ) {
     ModernTextField(
         value = value,
         onValueChange = onValueChange,
         hintText = hintText,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        label = label,
+        isError = isError,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         modifier = modifier
-    )
-}
-
-@Composable
-private fun BloodDonationErrorText(message: String) {
-    Text(
-        text = message,
-        color = THEME.danger,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
     )
 }
 

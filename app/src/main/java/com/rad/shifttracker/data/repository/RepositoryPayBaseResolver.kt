@@ -49,9 +49,8 @@ internal class RepositoryPayBaseResolver(
     private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int
 ) {
     /**
-     * Podešena osnovica za bolovanje. Na listiću je to zasebna kategorija koja ne
-     * prati prosek za GO/praznik, pa se primenjuje i kada su ostale osnovice
-     * izračunate iz proseka ili poznate osnovice.
+     * Ručno podešena osnovica; važi samo u ručnom režimu, i to za sve tri naknade.
+     * U ostalim režimima bolovanje prati istu osnovicu kao GO i praznik (KU čl. 66).
      */
     private val configuredSickHourlyBase: Double
         get() = payState.sickPayBaseHourly.takeIf { it.isFinite() && it > 0.0 }
@@ -60,7 +59,7 @@ internal class RepositoryPayBaseResolver(
     fun payBaseResolutionMonthForWorkMonth(year: Int, month: Int): MonthKey {
         val workMonth = MonthKey(year, month)
         val exactKnownAnchorApplies = payState.defaultPayBaseSelectionMode == PayBaseSelectionMode.KNOWN_BASE &&
-            payState.knownPayBaseAnchor?.month == workMonth
+            payState.knownPayBaseAnchors.containsKey(workMonth)
         return if (exactKnownAnchorApplies) {
             workMonth
         } else {
@@ -106,8 +105,7 @@ internal class RepositoryPayBaseResolver(
             monthlyBases = payState.monthlyPayBases,
             defaults = payBaseDefaults,
             calculatedBase = calculatedBase,
-            defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-            sickBaseOverride = configuredSickHourlyBase
+            defaultSelectionMode = payState.defaultPayBaseSelectionMode
         )
     }
 
@@ -149,8 +147,7 @@ internal class RepositoryPayBaseResolver(
             monthlyBases = payState.monthlyPayBases,
             defaults = payBaseDefaults,
             calculatedBase = calculatedBase,
-            defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-            sickBaseOverride = configuredSickHourlyBase
+            defaultSelectionMode = payState.defaultPayBaseSelectionMode
         )
     }
 
@@ -237,8 +234,7 @@ internal class RepositoryPayBaseResolver(
                 monthlyBases = payState.monthlyPayBases,
                 defaults = payBaseDefaults,
                 calculatedBase = null,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-                sickBaseOverride = configuredSickHourlyBase
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode
             )
             rollingMonths += calculatePayBaseMonthUnsafe(
                 monthKey = monthKey,
@@ -291,8 +287,7 @@ internal class RepositoryPayBaseResolver(
                 monthlyBases = payState.monthlyPayBases,
                 defaults = payBaseDefaults,
                 calculatedBase = null,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-                sickBaseOverride = configuredSickHourlyBase
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode
             )
             rollingMonths += calculatePayBaseMonthReadOnly(
                 monthKey = monthKey,
@@ -307,8 +302,8 @@ internal class RepositoryPayBaseResolver(
 
     private fun getKnownPayBaseCalculationUnsafe(year: Int, month: Int): RollingPayBaseCalculation? {
         val target = MonthKey(year, month)
-        val anchor = payState.knownPayBaseAnchor ?: return null
-        if (anchor.month > target || !anchor.grossHourlyBase.isFinite() || anchor.grossHourlyBase <= 0.0) return null
+        val anchor = payState.knownPayBaseAnchorFor(target) ?: return null
+        if (!anchor.grossHourlyBase.isFinite() || anchor.grossHourlyBase <= 0.0) return null
 
         val followingMonths = mutableListOf<RollingPayBaseMonth>()
 
@@ -347,8 +342,7 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 ),
                 calculatedBase = previousCalculation,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-                sickBaseOverride = configuredSickHourlyBase
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode
             )
             followingMonths += calculatePayBaseMonthUnsafe(
                 monthKey = monthKey,
@@ -368,8 +362,8 @@ internal class RepositoryPayBaseResolver(
 
     private fun getKnownPayBaseCalculationReadOnly(year: Int, month: Int): RollingPayBaseCalculation? {
         val target = MonthKey(year, month)
-        val anchor = payState.knownPayBaseAnchor ?: return null
-        if (anchor.month > target || !anchor.grossHourlyBase.isFinite() || anchor.grossHourlyBase <= 0.0) return null
+        val anchor = payState.knownPayBaseAnchorFor(target) ?: return null
+        if (!anchor.grossHourlyBase.isFinite() || anchor.grossHourlyBase <= 0.0) return null
 
         val followingMonths = mutableListOf<RollingPayBaseMonth>()
 
@@ -408,8 +402,7 @@ internal class RepositoryPayBaseResolver(
                     sickHourlyBase = config.pay.sickPayBaseHourly
                 ),
                 calculatedBase = previousCalculation,
-                defaultSelectionMode = payState.defaultPayBaseSelectionMode,
-                sickBaseOverride = configuredSickHourlyBase
+                defaultSelectionMode = payState.defaultPayBaseSelectionMode
             )
             followingMonths += calculatePayBaseMonthReadOnly(
                 monthKey = monthKey,
@@ -445,6 +438,7 @@ internal class RepositoryPayBaseResolver(
             summaryMonth = monthKey.month,
             payBases = payBases
         )
+        summary.applyMealEntitlement(monthKey, monthRecords, recordStore, payState, config.pay.defaultHours)
         val grossAdditions = payState.monthlyGrossAdditions[monthKey]
             ?: MonthlyGrossAdditions(monthKey.year, monthKey.month)
         val breakdown = calculateMonthlyNetPayBreakdown(
@@ -454,7 +448,9 @@ internal class RepositoryPayBaseResolver(
             contributionsPercent = payState.employeeContributionsPercent,
             taxRelief = payState.taxRelief,
             taxPercent = payState.taxPercent,
-            grossAdditions = grossAdditions
+            grossAdditions = grossAdditions,
+            regressNet = payState.regressNetForMonth(monthKey),
+            regressPaidInMonth = payState.regressPaidInMonth(monthKey)
         )
         val details = getSummaryCalculator().calculateMonthlyPayDetails(
             records = monthRecords,
@@ -492,6 +488,7 @@ internal class RepositoryPayBaseResolver(
             summaryMonth = monthKey.month,
             payBases = payBases
         )
+        summary.applyMealEntitlement(monthKey, monthRecords, recordStore, payState, config.pay.defaultHours)
         val grossAdditions = payState.monthlyGrossAdditions[monthKey]
             ?: MonthlyGrossAdditions(monthKey.year, monthKey.month)
         val breakdown = calculateMonthlyNetPayBreakdown(
@@ -501,7 +498,9 @@ internal class RepositoryPayBaseResolver(
             contributionsPercent = payState.employeeContributionsPercent,
             taxRelief = payState.taxRelief,
             taxPercent = payState.taxPercent,
-            grossAdditions = grossAdditions
+            grossAdditions = grossAdditions,
+            regressNet = payState.regressNetForMonth(monthKey),
+            regressPaidInMonth = payState.regressPaidInMonth(monthKey)
         )
         val details = calculator.calculateMonthlyPayDetails(
             records = monthRecords,

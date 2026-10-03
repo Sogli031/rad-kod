@@ -33,6 +33,7 @@ class RadApplication : Application() {
         super.onCreate()
         CrashLogStorage.install(this, appName = "Rad")
         deleteSharedPreferences("gps_shift_state")
+        cleanUpRemovedFeatures(this)
     }
 
     /**
@@ -68,8 +69,8 @@ class RadApplication : Application() {
                 persistenceFailure.set(!saved)
                 if (!saved) {
                     android.util.Log.e("RadApplication", "Lokalno čuvanje podataka nije uspelo")
+                    persistenceScheduler?.markDirty()
                 }
-                FoodReceiptReminderScheduler.reschedule(this@RadApplication, repository)
                 BloodDonationReminderScheduler.reschedule(this@RadApplication, repository)
                 BackupScheduler.scheduleDebounced(this@RadApplication)
             },
@@ -84,10 +85,11 @@ class RadApplication : Application() {
         }
         // Objavi tek kad je potpuno učitan i povezan.
         shiftRepository = repository
-        FoodReceiptReminderScheduler.reschedule(this, repository)
         BloodDonationReminderScheduler.reschedule(this, repository)
         // Dnevni safety-net backup ako korisnik dugo ne menja podatke.
         BackupScheduler.schedulePeriodic(this)
+        // Akontacija, prevoz i regres se traže i bez otvaranja aplikacije.
+        SideRunWorker.schedulePeriodic(this)
     }
 
     fun flushPendingPersistence(): Boolean {
@@ -113,7 +115,11 @@ internal class RepositoryPersistenceScheduler(
     }
     private val pending = AtomicBoolean(false)
 
+    /** Ima izmena koje još nisu snimljene (ili je poslednje snimanje pokvareno). */
+    private val dirty = AtomicBoolean(false)
+
     fun schedule() {
+        dirty.set(true)
         if (!pending.compareAndSet(false, true)) return
         executor.execute {
             pending.set(false)
@@ -121,9 +127,18 @@ internal class RepositoryPersistenceScheduler(
         }
     }
 
+    /** Označi da stanje nije snimljeno, pa sledeći [flush] ponovo pokušava. */
+    fun markDirty() {
+        dirty.set(true)
+    }
+
+    /**
+     * Čeka da se snimi ono što je na čekanju. Kad nema nesnimljenih izmena ne radi ništa —
+     * inače bi svako gašenje ekrana ponovo snimalo i zakazivalo cloud backup bez ikakve izmene.
+     */
     fun flush(timeoutMillis: Long = FLUSH_TIMEOUT_MILLIS): Boolean {
         return try {
-            executor.submit(java.util.concurrent.Callable { runWork() })
+            executor.submit(java.util.concurrent.Callable { if (dirty.get()) runWork() else true })
                 .get(timeoutMillis, TimeUnit.MILLISECONDS)
         } catch (error: Exception) {
             onFailure(error)
@@ -132,10 +147,13 @@ internal class RepositoryPersistenceScheduler(
     }
 
     private fun runWork(): Boolean {
+        // Spušta se PRE posla: izmena koja stigne u toku snimanja ostaje označena.
+        dirty.set(false)
         return try {
             work()
             true
         } catch (error: Exception) {
+            dirty.set(true)
             onFailure(error)
             false
         }

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,13 +77,16 @@ fun AutoSizeText(
     color: Color = Color.Unspecified
 ) {
     val configuration = LocalConfiguration.current
+    // Kalendar ima svoju gustinu fonta (zavisi od visine ćelije), pa i ona poništava smanjenje.
+    val density = LocalDensity.current
     var fontSize by remember(
         text,
         maxFontSize,
         minFontSize,
         maxLines,
         configuration.screenWidthDp,
-        configuration.fontScale
+        configuration.fontScale,
+        density
     ) { mutableStateOf(maxFontSize) }
     var readyToDraw by remember(
         text,
@@ -90,8 +94,11 @@ fun AutoSizeText(
         minFontSize,
         maxLines,
         configuration.screenWidthDp,
-        configuration.fontScale
+        configuration.fontScale,
+        density
     ) { mutableStateOf(false) }
+    // Širina za koju je veličina izračunata: kad se promeni (ćelija se proširila), kreće se opet od najveće.
+    var measuredWidth by remember { mutableStateOf(-1) }
 
     Text(
         text = text,
@@ -105,6 +112,16 @@ fun AutoSizeText(
         style = style,
         softWrap = false,
         onTextLayout = { result ->
+            val width = result.layoutInput.constraints.maxWidth
+            if (width != measuredWidth) {
+                val firstMeasure = measuredWidth < 0
+                measuredWidth = width
+                if (!firstMeasure && fontSize != maxFontSize) {
+                    readyToDraw = false
+                    fontSize = maxFontSize
+                    return@Text
+                }
+            }
             if (result.didOverflowWidth || result.didOverflowHeight) {
                 val newSize = fontSize * 0.9f
                 if (newSize >= minFontSize) {

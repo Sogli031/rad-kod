@@ -150,7 +150,7 @@ fun calculateMealEntitlementForAccountingMonth(
                 rejected += RejectedMealDecision(accountingDate, record.date, rejectionReason)
                 return@forEach
             }
-            val isPaidLeave = record.isBloodDonationLeave
+            val isPaidLeave = record.isPaidLeave
             val additionalWorkMinutes = if (isPaidLeave) {
                 0
             } else {
@@ -191,7 +191,7 @@ fun calculateMealEntitlementForAccountingMonth(
 private fun mealRejectionReason(record: DayRecord): String? {
     if (record.shift == Shift.OFF) return "DAY_OFF_WITHOUT_WORK"
     if (record.shift == Shift.SICK) {
-        if (!record.isBloodDonationLeave) return "SICK_LEAVE_WITHOUT_WORK"
+        if (!record.isPaidLeave) return "SICK_LEAVE_WITHOUT_WORK"
         // Plaćeno odsustvo (dobrovoljno davanje krvi) obračun tretira kao dan na
         // radu i priznaje obrok — potvrđeno listićem 05/2026 (25. i 26.05.).
         return if (record.totalWorkMinutes < MINIMUM_MEAL_WORK_MINUTES) {

@@ -14,7 +14,10 @@ data class MonthKey(val year: Int, val month: Int) : Comparable<MonthKey> {
 enum class DayRecordSource(val jsonValue: String) {
     MANUAL("manual"),
     AUTO_FILL("auto_fill"),
-    BLOOD_DONATION_LEAVE("blood_donation_leave");
+    BLOOD_DONATION_LEAVE("blood_donation_leave"),
+
+    /** Plaćeno odsustvo upisano pri popunjavanju meseca po platnom listiću (šifra 11). */
+    PAID_LEAVE("paid_leave");
 
     companion object {
         fun fromJson(value: String?): DayRecordSource {
@@ -66,6 +69,7 @@ class DayRecord(
     }
     val source: DayRecordSource = when {
         source == DayRecordSource.BLOOD_DONATION_LEAVE && shift == Shift.SICK -> source
+        source == DayRecordSource.PAID_LEAVE && shift == Shift.SICK -> source
         source == DayRecordSource.AUTO_FILL && (shift in Shift.workShifts() || shift == Shift.OFF) -> source
         else -> DayRecordSource.MANUAL
     }
@@ -80,6 +84,10 @@ class DayRecord(
 
     val isBloodDonationLeave: Boolean
         get() = source == DayRecordSource.BLOOD_DONATION_LEAVE
+
+    /** Plaćeno odsustvo (100% po osnovici): davanje krvi ili odsustvo sa listića. */
+    val isPaidLeave: Boolean
+        get() = source == DayRecordSource.BLOOD_DONATION_LEAVE || source == DayRecordSource.PAID_LEAVE
 
     val isDoubleShift: Boolean
         get() = shift in Shift.workShifts() && shift2 != null && shift2 in Shift.workShifts() && workHours2 > 0
@@ -158,6 +166,8 @@ class DayRecord(
             return if (isHoliday || balanceExempt) 0 else CONFIG.pay.defaultHours * MINUTES_PER_HOUR
         }
         if (shift !in Shift.workShifts()) return 0
+        // Kraći dan upisan po listiću: izostanak nije pokriven saldom, pa ga ni ne troši.
+        if (balanceExempt) return 0
         val workedMinutes = if (isDoubleShift && !isCompTimeOvertime) totalWorkMinutes else effectiveRegularWorkMinutes
         val defaultMinutes = CONFIG.pay.defaultHours * MINUTES_PER_HOUR
         return if (workedMinutes < defaultMinutes) defaultMinutes - workedMinutes else 0

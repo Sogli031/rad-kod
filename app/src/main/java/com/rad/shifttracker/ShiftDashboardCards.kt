@@ -1,50 +1,73 @@
 package com.rad.shifttracker
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.ZeroCornerSize
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AppIcons
 import com.rad.shifttracker.ui.components.AutoSizeText
 
-internal const val TOTAL_CARD_LABEL = "Primanja u ovom mesecu"
+// Kad je kartica „Primanja u …“ sakrivena, kartica plate ostaje sama i zaobljena.
+internal const val SHOW_TOTAL_CARD = true
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
-internal const val COMPACT_PAY_CARD_HEIGHT = 38
-internal const val PAY_CARDS_SPACING = 6
+internal const val COMPACT_PAY_CARD_HEIGHT = 41
+// Dve kartice plate su vizuelno jedna grupa: bez razmaka, gornja/donja zaobljena.
+internal const val PAY_CARDS_SPACING = 0
 
+/** Plata za rad u mesecu: „Septembarska plata“ (isplaćuje se sledećeg meseca). */
 internal fun salaryCardLabel(month: Int): String {
-    val monthName = MONTH_NAMES.getOrElse(month) { "Mesec" }
-    return "Plata za $monthName"
+    val adjective = when (month) {
+        1 -> "Januarska"
+        2 -> "Februarska"
+        3 -> "Martovska"
+        4 -> "Aprilska"
+        5 -> "Majska"
+        6 -> "Junska"
+        7 -> "Julska"
+        8 -> "Avgustovska"
+        9 -> "Septembarska"
+        10 -> "Oktobarska"
+        11 -> "Novembarska"
+        12 -> "Decembarska"
+        else -> return "Plata"
+    }
+    return "$adjective plata"
 }
 
+/** Šta leže na račun u mesecu (plata za prošli mesec, akontacija, prevoz): „Primanja u Septembru“. */
+internal fun totalCardLabel(year: Int, month: Int): String {
+    if (month !in 1..12) return "Primanja"
+    return "Primanja u ${monthLocativeText(MonthKey(year, month))}"
+}
+
+/** Četiri statistike u jednoj kartici, razdvojene tankim linijama. */
 @Composable
 internal fun StatsSection(
     summary: MonthSummary,
@@ -60,7 +83,7 @@ internal fun StatsSection(
         "Minuli"
     }
 
-    val stats = mutableListOf(
+    val stats = listOf(
         StatItem(
             WORK_HOURS_CARD_LABEL,
             formatHours(summary.workHours),
@@ -87,20 +110,32 @@ internal fun StatsSection(
         )
     )
 
-    Row(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(UI.statCardHeight.dp),
-        horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
+            .height(UI.statCardHeight.dp)
     ) {
-        for (stat in stats) {
-            StatCard(
-                label = stat.label,
-                value = stat.value,
-                color = stat.color,
-                modifier = Modifier.weight(1f),
-                onClick = stat.onClick
-            )
+        Row(modifier = Modifier.fillMaxSize()) {
+            stats.forEachIndexed { index, stat ->
+                if (index > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .background(THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA))
+                    )
+                }
+                val clickModifier = stat.onClick?.let { Modifier.radClickable(onClick = it) } ?: Modifier
+                StatColumn(
+                    label = stat.label,
+                    value = stat.value,
+                    color = stat.color,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .then(clickModifier)
+                )
+            }
         }
     }
 }
@@ -112,9 +147,12 @@ internal fun TotalCard(
     onClick: () -> Unit
 ) {
     PayAmountCard(
-        label = TOTAL_CARD_LABEL,
+        label = totalCardLabel(receipt.year, receipt.month),
         amount = mainPayCardAmount(receipt, includeTransport),
         isAvailable = receipt.isSalaryAvailable,
+        amountColor = THEME.textPrimary,
+        shape = MaterialTheme.shapes.medium.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
+        showTopDivider = true,
         onClick = onClick
     )
 }
@@ -130,6 +168,13 @@ internal fun SalaryCard(
         label = salaryCardLabel(month),
         amount = mainPayCardAmount(nextMonthReceipt, includeTransport),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
+        amountColor = THEME.accentPrimary,
+        shape = if (SHOW_TOTAL_CARD) {
+            MaterialTheme.shapes.medium.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize)
+        } else {
+            MaterialTheme.shapes.medium
+        },
+        showTopDivider = false,
         onClick = onClick
     )
 }
@@ -139,96 +184,76 @@ internal fun mainPayCardAmount(receipt: MonthlyReceipt, includeTransport: Boolea
     return if (includeTransport) receipt.totalReceivedThisMonth else receipt.displayPay
 }
 
+/** Jedan red grupe plate: etiketa levo, iznos desno. */
 @Composable
 private fun PayAmountCard(
     label: String,
     amount: Double,
     isAvailable: Boolean,
+    amountColor: Color,
+    shape: Shape,
+    showTopDivider: Boolean,
     onClick: (() -> Unit)? = null
 ) {
     val totalText = if (isAvailable) {
         "${formatCurrency(amount)} ${CONFIG.pay.currency}"
     } else TOTAL_CARD_UNAVAILABLE_TEXT
-    val totalColor = if (isAvailable) THEME.accentPrimary else THEME.warning
-    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
-    GlassCard(
+    val totalColor = if (isAvailable) amountColor else THEME.warning
+    val clickModifier = if (onClick != null) Modifier.radClickable(onClick = onClick) else Modifier
+    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(COMPACT_PAY_CARD_HEIGHT.dp)
-            .then(clickModifier),
-        bgColor = THEME.bgCardElevated,
-        borderColor = THEME.accentPrimary
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
+            .then(clickModifier)
     ) {
-        BoxWithConstraints(
+        // Okvir se crta ručno da bi se spojio preko oba reda kao jedna kartica.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .border(1.dp, borderColor, shape)
+        )
+        if (showTopDivider) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 14.dp),
+                color = THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA)
+            )
+        }
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = UI.cardPadding.dp, vertical = 4.dp)
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val compactLayout = useCompactTotalCardLayout(maxWidth.value)
-            if (compactLayout) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AutoSizeText(
-                        text = label,
-                        color = THEME.textMuted,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            textAlign = TextAlign.Center
-                        ),
-                        maxFontSize = MaterialTheme.typography.labelMedium.fontSize,
-                        minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    AutoSizeText(
-                        text = totalText,
-                        color = totalColor,
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
-                        ),
-                        maxFontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                        minFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AutoSizeText(
-                        text = label,
-                        color = THEME.textMuted,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            textAlign = TextAlign.Start
-                        ),
-                        maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                        minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .weight(1.15f)
-                            .padding(end = UI.smallSpacing.dp)
-                    )
-                    AutoSizeText(
-                        text = totalText,
-                        color = totalColor,
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.End
-                        ),
-                        maxFontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                        minFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                    )
-                }
-            }
+            AutoSizeText(
+                text = label,
+                color = THEME.textSecondary,
+                style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Start),
+                maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1.15f)
+                    .padding(end = UI.smallSpacing.dp)
+            )
+            AutoSizeText(
+                text = totalText,
+                color = totalColor,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                ),
+                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+                minFontSize = MaterialTheme.typography.titleMedium.fontSize,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
         }
     }
 }
@@ -237,6 +262,11 @@ internal fun useCompactTotalCardLayout(cardWidthDp: Float): Boolean {
     return cardWidthDp < 320f
 }
 
+/**
+ * Donja traka akcija (M3 stil donje trake): površina `surfaceContainer`, šest akcija sa ikonom i
+ * nazivom; cela stavka je dodirna (najmanje 48dp), sa ripple-om i ulogom dugmeta. Jedino „Popuni“
+ * ima tonski indikator kao glavna radnja, a „Briši“ je u boji `error`.
+ */
 @Composable
 internal fun BottomBar(
     modifier: Modifier,
@@ -245,98 +275,94 @@ internal fun BottomBar(
     onBasePay: () -> Unit,
     onHolidays: () -> Unit,
     onOptions: () -> Unit,
-    onDeleteMonth: () -> Unit
+    onDeleteMonth: () -> Unit,
+    basePayEnabled: Boolean = true
 ) {
+    val scheme = MaterialTheme.colorScheme
     val specs = bottomBarButtonSpecs()
     val buttons = listOf(
-        Quad(specs.autoFill.icon, specs.autoFill.label, THEME.accentPrimary, onAutoFill),
-        Quad(specs.sickVacation.icon, specs.sickVacation.label, THEME.info, onSickVacation),
-        Quad(specs.basePay.icon, specs.basePay.label, THEME.success, onBasePay),
-        Quad(specs.holidays.icon, specs.holidays.label, THEME.warning, onHolidays),
-        Quad(specs.options.icon, specs.options.label, THEME.accentSecondary, onOptions),
-        Quad(specs.deleteMonth.icon, specs.deleteMonth.label, THEME.danger, onDeleteMonth)
+        BottomBarItem(specs.autoFill.icon, specs.autoFill.label, scheme.primary, scheme.primaryContainer, onAutoFill),
+        BottomBarItem(specs.sickVacation.icon, specs.sickVacation.label, scheme.onSurfaceVariant, null, onSickVacation),
+        BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
+        BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
+        BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
+        BottomBarItem(specs.deleteMonth.icon, specs.deleteMonth.label, scheme.error, null, onDeleteMonth)
     )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(THEME.bgSecondary.copy(alpha = 0.94f))
+            .background(scheme.surfaceContainer),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Buttons row
+        HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
         Row(
             modifier = Modifier
+                .widthIn(max = UI.contentMaxWidth.dp)
                 .fillMaxWidth()
-                .padding(horizontal = UI.cardPadding.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp),
+                .padding(start = UI.cardPadding.dp, top = 6.dp, end = UI.cardPadding.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             buttons.forEach { item ->
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    BottomBarIconButton(
-                        icon = item.icon,
-                        label = item.label,
-                        bgColor = item.color,
-                        textColor = THEME.textPrimary,
-                        modifier = Modifier
-                            .height(44.dp)
-                            .fillMaxWidth(),
-                        onClick = item.onClick
-                    )
-                    AutoSizeText(
-                        text = item.label,
-                        color = THEME.textMuted,
-                        style = MaterialTheme.typography.labelMedium.copy(textAlign = TextAlign.Center),
-                        maxFontSize = MaterialTheme.typography.labelMedium.fontSize,
-                        minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                // „Lista“ je siva dok mesec traje — lista za njega još ne postoji.
+                val enabled = basePayEnabled || item.label != specs.basePay.label
+                BottomBarAction(item = item, enabled = enabled, modifier = Modifier.weight(1f))
             }
         }
     }
 }
 
+/** Jedna stavka donje trake; ikona i naziv čine jednu dodirnu površinu (spojena semantika). */
 @Composable
-private fun BottomBarIconButton(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    bgColor: Color,
-    textColor: Color,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(10.dp)
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val glowAlpha by animateFloatAsState(if (pressed) 0.28f else 0.0f, label = "bottomBarGlow")
-    val elevation by animateDpAsState(if (pressed) 8.dp else 0.dp, label = "bottomBarElev")
-
-    Box(
+private fun BottomBarAction(item: BottomBarItem, enabled: Boolean, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val contentAlpha = if (enabled) 1f else DISABLED_ALPHA
+    Column(
         modifier = modifier
-            .shadow(
-                elevation = elevation,
-                shape = shape,
-                ambientColor = bgColor.copy(alpha = glowAlpha),
-                spotColor = bgColor.copy(alpha = glowAlpha)
-            )
-            .clip(shape)
-            .background(bgColor)
-            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
-        contentAlignment = Alignment.Center
+            .clip(MaterialTheme.shapes.medium)
+            .radClickable(enabled = enabled, onClick = item.onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = textColor,
-            modifier = Modifier.size(23.dp)
+        Box(
+            modifier = Modifier
+                .height(BOTTOM_BAR_ICON_HEIGHT_DP.dp)
+                .fillMaxWidth()
+                .background(item.containerColor ?: Color.Transparent, MaterialTheme.shapes.medium),
+            contentAlignment = Alignment.Center
+        ) {
+            // Naziv ispod je deo iste dodirne površine, pa ikona nema poseban opis.
+            Icon(
+                imageVector = item.icon,
+                contentDescription = null,
+                tint = item.iconColor.copy(alpha = contentAlpha),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        AutoSizeText(
+            text = item.label,
+            color = scheme.onSurfaceVariant.copy(alpha = contentAlpha),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
+            ),
+            maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+            // sp raste sa sistemskim fontom, pa nizak minimum čuva ceo naziv i na fontu 1.5.
+            minFontSize = BOTTOM_BAR_LABEL_MIN_SP.sp,
+            maxLines = 1,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 2.dp)
         )
     }
 }
+
+private const val BOTTOM_BAR_ICON_HEIGHT_DP = 32
+private const val BOTTOM_BAR_LABEL_MIN_SP = 9
+
+/** M3 vrednost za onemogućen sadržaj. */
+private const val DISABLED_ALPHA = 0.38f
 
 internal data class BottomBarButtonLabels(
     val autoFill: String,
@@ -377,7 +403,7 @@ internal fun bottomBarButtonSpecs(): BottomBarButtonSpecs {
     return BottomBarButtonSpecs(
         autoFill = BottomBarButtonSpec(icon = AppIcons.today, label = "Popuni"),
         sickVacation = BottomBarButtonSpec(icon = AppIcons.sickLeave, label = "Bol/GO"),
-        basePay = BottomBarButtonSpec(icon = AppIcons.pay, label = "Satnica"),
+        basePay = BottomBarButtonSpec(icon = AppIcons.pay, label = "Lista"),
         holidays = BottomBarButtonSpec(icon = AppIcons.sick, label = BLOOD_DONATION_BOTTOM_BAR_LABEL),
         options = BottomBarButtonSpec(icon = AppIcons.settings, label = "Opcije"),
         deleteMonth = BottomBarButtonSpec(icon = AppIcons.delete, label = "Briši")
@@ -391,9 +417,10 @@ private data class StatItem(
     val onClick: (() -> Unit)? = null
 )
 
-private data class Quad(
+private data class BottomBarItem(
     val icon: ImageVector,
     val label: String,
-    val color: Color,
+    val iconColor: Color,
+    val containerColor: Color?,
     val onClick: () -> Unit
 )

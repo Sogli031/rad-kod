@@ -3,29 +3,34 @@ package com.rad.shifttracker
 import androidx.compose.ui.graphics.Color
 
 object UI {
-    const val buttonHeight = 46
-    const val iconButtonSize = 44
-    const val saveButtonHeight = 55
-    const val cardRadius = 8
-    const val cardPadding = 12
-    const val headerHeight = 60
-    const val statCardHeight = 80
+    const val buttonHeight = 48
+    const val iconButtonSize = 48
+    const val saveButtonHeight = 52
+    const val cardRadius = 12
+    const val cardPadding = 16
+    const val headerHeight = 52
+    const val statCardHeight = 62
     const val totalCardHeight = 82
-    const val compTimeBarHeight = 50
-    const val weekdayHeaderHeight = 32
-    const val dayButtonHeight = 62
-    const val bottomBarHeight = 95
-    const val popupWidthRatio = 0.95f
+    const val compTimeBarHeight = 62
+    const val weekdayHeaderHeight = 24
+    const val dayButtonHeight = 58
+    const val bottomBarHeight = 80
+    const val popupWidthRatio = 1.0f
     const val popupMaxHeight = 760
     const val popupEdgePadding = 28
-    const val popupBottomSafePadding = 84
+    const val popupBottomSafePadding = 0
     const val defaultSpacing = 8
-    const val largeSpacing = 12
+    const val largeSpacing = 10
     const val smallSpacing = 4
-    const val indicatorDotSize = 8
-    const val indicatorBarHeight = 4
+    const val indicatorDotSize = 6
+    const val indicatorBarHeight = 3
+
+    /** Najveća širina sadržaja: na tabletu/preklopljenom telefonu se ne razvlači preko cele širine. */
+    const val contentMaxWidth = 600
 }
 
+// Ista plavo-siva paleta, pročišćena: jedan akcenat (cijan), boje smena zadržane.
+// Treća smena i bolovanje su posvetljene da budu čitljive kao TEKST na toniranoj ćeliji.
 data class ModernTheme(
     val bgDark: Color = Color(0xFF0D1117),
     val bgPrimary: Color = Color(0xFF111827),
@@ -42,13 +47,16 @@ data class ModernTheme(
     val textPrimary: Color = Color(0xFFF8FAFC),
     val textSecondary: Color = Color(0xFFCBD5E1),
     val textMuted: Color = Color(0xFF94A3B8),
+    val textFaint: Color = Color(0xFF8494AA),
+    /** M3 `outline`: ivice polja i prekidača, >= 3:1 na svim površinama. */
+    val outline: Color = Color(0xFF708199),
     val textDark: Color = Color(0xFF0F172A),
     val shadow: Color = Color(0xFF000000),
     val shift1: Color = Color(0xFF38BDF8),
     val shift2: Color = Color(0xFF86EFAC),
-    val shift3: Color = Color(0xFF7C3AED),
-    val sick: Color = Color(0xFFEF4444),
-    val vacation: Color = Color(0xFFF59E0B),
+    val shift3: Color = Color(0xFFA78BFA),
+    val sick: Color = Color(0xFFF87171),
+    val vacation: Color = Color(0xFFFBBF24),
     val off: Color = Color(0xFF334155),
     val empty: Color = Color(0xFF1E293B),
     val doubleShift: Color = Color(0xFFF97316),
@@ -79,8 +87,7 @@ data class PayConfig(
     val difficultWorkConditionsPercent: Double = 0.0,
     val defaultEmployeeContributionsPercent: Double = 19.9,
     val defaultTaxRelief: Double = 34_221.0,
-    val defaultTaxPercent: Double = 10.0,
-    val defaultUnionDuesRate: Double = DEFAULT_UNION_DUES_RATE
+    val defaultTaxPercent: Double = 10.0
 )
 
 data class AppConfig(

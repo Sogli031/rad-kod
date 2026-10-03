@@ -1,6 +1,7 @@
 package com.rad.shifttracker.data.backup
 
 import com.rad.shifttracker.MonthKey
+import java.util.Locale
 
 /**
  * Imenovanje i metapodaci verzionisanih backup fajlova. Svaka verzija je zaseban
@@ -25,6 +26,7 @@ object BackupMetadata {
     private const val KEY_SCHEMA = "radSchema"
     private const val KEY_APP = "radApp"
     private const val KEY_FLAGGED = "radFlagged"
+    private const val KEY_SAFETY = "radSafety"
     private const val KEY_RECORDS = "radRecords"
     private const val KEY_MONTHS = "radMonths"
     private const val KEY_WORK_MINUTES = "radWorkMinutes"
@@ -48,7 +50,8 @@ object BackupMetadata {
         stats: BackupStats,
         flagged: Boolean,
         appVersion: String?,
-        schemaVersion: Int = CURRENT_SCHEMA_VERSION
+        schemaVersion: Int = CURRENT_SCHEMA_VERSION,
+        safety: Boolean = false
     ): Map<String, String> {
         val props = linkedMapOf(
             KEY_CREATED_AT to createdAtMillis.toString(),
@@ -59,6 +62,7 @@ object BackupMetadata {
             KEY_WORK_MINUTES to stats.totalWorkMinutes.toString()
         )
         appVersion?.let { props[KEY_APP] = it }
+        if (safety) props[KEY_SAFETY] = "1"
         stats.earliestMonth?.let { props[KEY_EARLIEST] = formatMonth(it) }
         stats.latestMonth?.let { props[KEY_LATEST] = formatMonth(it) }
         return props
@@ -80,6 +84,8 @@ object BackupMetadata {
     }
 
     fun flaggedFromProperties(props: Map<String, String>?): Boolean = props?.get(KEY_FLAGGED) == "1"
+
+    fun safetyFromProperties(props: Map<String, String>?): Boolean = props?.get(KEY_SAFETY) == "1"
 
     fun createdAtFromProperties(props: Map<String, String>?): Long? =
         props?.get(KEY_CREATED_AT)?.toLongOrNull()
@@ -111,12 +117,14 @@ object BackupMetadata {
             flagged = flaggedFromProperties(props),
             stats = statsFromProperties(props),
             schemaVersion = schemaFromProperties(props),
-            appVersion = appVersionFromProperties(props)
+            appVersion = appVersionFromProperties(props),
+            safety = safetyFromProperties(props)
         )
     }
 
+    // Locale.ROOT: appProperties se čitaju nazad, pa cifre moraju biti ASCII
     private fun formatMonth(month: MonthKey): String =
-        "%04d-%02d".format(month.year, month.month)
+        String.format(Locale.ROOT, "%04d-%02d", month.year, month.month)
 
     private fun parseMonth(value: String?): MonthKey? {
         if (value == null) return null

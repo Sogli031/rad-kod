@@ -31,6 +31,7 @@ private const val APP_DATA_FOLDER = "appDataFolder"
 private const val PREFS_NAME = "rad_backup_prefs"
 private const val KEY_FIRST_LAUNCH_DONE = "first_launch_done"
 private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+private const val KEY_CLOUD_ADOPTED = "cloud_adopted"
 private const val NETWORK_TIMEOUT_MS = 30_000L
 
 class GoogleDriveBackup(private val context: Context) {
@@ -175,6 +176,57 @@ class GoogleDriveBackup(private val context: Context) {
     }
 
     // ---------------------------------------------------------------------------
+    // „Usvojen oblak": uređaj sme AUTOMATSKI da šalje backup tek kad je njegovo
+    // stanje nastavak onoga što je u oblaku — ili je sam napravio prvi backup, ili
+    // je uradio Restore, ili je korisnik izričito rekao da zadrži lokalne podatke.
+    // Bez ovoga nova instalacija (prazna podešavanja + sveža auto-popuna smena)
+    // posle prijave pregazi tekuće mesece i podešavanja u najnovijoj verziji.
+    // ---------------------------------------------------------------------------
+
+    fun isCloudAdopted(): Boolean {
+        if (!prefs.contains(KEY_CLOUD_ADOPTED)) {
+            // Migracija: uređaj koji je već uspešno slao backup je nastavak oblaka.
+            // Android auto-backup je isključen, pa prefs ne preživljavaju reinstalaciju.
+            val adopted = prefs.getLong(KEY_LAST_SYNC_TIME, 0L) > 0L
+            prefs.edit().putBoolean(KEY_CLOUD_ADOPTED, adopted).apply()
+        }
+        return prefs.getBoolean(KEY_CLOUD_ADOPTED, false)
+    }
+
+    fun markCloudAdopted() {
+        prefs.edit().putBoolean(KEY_CLOUD_ADOPTED, true).apply()
+    }
+
+    /**
+     * Odluka za pozadinski backup. Ako uređaj još nije usvojio oblak, a u oblaku
+     * već postoji redovna verzija, auto-backup se preskače dok korisnik ne odluči
+     * (Restore ili „zadrži lokalno"). Prazan oblak se usvaja odmah.
+     */
+    suspend fun autoBackupGate(): AutoBackupGate {
+        if (isCloudAdopted()) return AutoBackupGate.ALLOWED
+        val versions = cloudVersionsOrNull() ?: return AutoBackupGate.UNKNOWN
+        if (VersionedBackupPlanner.latest(versions) != null) return AutoBackupGate.NEEDS_USER_DECISION
+        markCloudAdopted()
+        return AutoBackupGate.ALLOWED
+    }
+
+    /** Kao [listVersions], ali vraća null kad lista nije mogla da se pročita. */
+    suspend fun cloudVersionsOrNull(): List<BackupVersion>? {
+        if (!isNetworkAvailable()) return null
+        return syncMutex.withLock {
+            val drive = ensureValidDriveService() ?: return@withLock null
+            withContext(Dispatchers.IO) {
+                try {
+                    withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(drive) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Cloud versions check failed: ${e.javaClass.simpleName}", e)
+                    null
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------
     // Verzionisani backup: svaka promena ide u NOV fajl rad_backup_<ts>.json sa
     // metapodacima u appProperties, uz detekciju anomalija i deda-otac-sin
     // retenciju. Tako se stare verzije čuvaju i nikad se dobra kopija ne pregazi.
@@ -187,10 +239,12 @@ class GoogleDriveBackup(private val context: Context) {
             val drive = ensureValidDriveService() ?: return@withLock emptyList()
             withContext(Dispatchers.IO) {
                 try {
-                    withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(drive) }.orEmpty()
-                } catch (e: UserRecoverableAuthIOException) {
-                    val refreshed = refreshCredentialsIfNeeded() ?: return@withContext emptyList()
-                    withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(refreshed) }.orEmpty()
+                    try {
+                        withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(drive) }.orEmpty()
+                    } catch (e: UserRecoverableAuthIOException) {
+                        val refreshed = refreshCredentialsIfNeeded() ?: return@withContext emptyList()
+                        withTimeoutOrNull(NETWORK_TIMEOUT_MS) { listVersionsInternal(refreshed) }.orEmpty()
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "List versions failed: ${e.javaClass.simpleName}", e)
                     emptyList()
@@ -204,9 +258,13 @@ class GoogleDriveBackup(private val context: Context) {
      * arhive iz oblaka i vraća sadržaj + otisak koji treba upisati. Ako prethodna
      * verzija postoji ali se ne može pročitati, operacija se PREKIDA bez upisa —
      * da se puna istorija ne pregazi orezanim podacima.
+     *
+     * @param safety true za sigurnosnu kopiju pre vraćanja: obeležava se u
+     *   metapodacima, ne postaje „najnovija verzija" i ne usvaja oblak.
      */
     suspend fun backupVersioned(
         appVersion: String?,
+        safety: Boolean = false,
         build: (existingJson: String?) -> CloudBackupContent
     ): BackupOutcome {
         if (!isNetworkAvailable()) {
@@ -222,15 +280,20 @@ class GoogleDriveBackup(private val context: Context) {
             withContext(Dispatchers.IO) {
                 try {
                     _syncState.value = SyncState.Syncing
-                    runVersionedBackup(drive, appVersion, build)
-                } catch (e: UserRecoverableAuthIOException) {
-                    Log.w(TAG, "Auth error during versioned backup, refreshing")
-                    val refreshed = refreshCredentialsIfNeeded()
-                    if (refreshed == null) {
-                        _syncState.value = SyncState.Error("Sesija istekla - prijavite se ponovo")
-                        return@withContext BackupOutcome.Failure("Sesija istekla - prijavite se ponovo")
+                    // Ponovni pokušaj posle osvežene prijave je unutar istog try-a: greška drugog
+                    // pokušaja mora da stigne do catch-a ispod, inače izlazi iz backupVersioned
+                    // (posao puca, a stanje ostaje „Syncing").
+                    try {
+                        runVersionedBackup(drive, appVersion, safety, build)
+                    } catch (e: UserRecoverableAuthIOException) {
+                        Log.w(TAG, "Auth error during versioned backup, refreshing")
+                        val refreshed = refreshCredentialsIfNeeded()
+                        if (refreshed == null) {
+                            _syncState.value = SyncState.Error("Sesija istekla - prijavite se ponovo")
+                            return@withContext BackupOutcome.Failure("Sesija istekla - prijavite se ponovo")
+                        }
+                        runVersionedBackup(refreshed, appVersion, safety, build)
                     }
-                    runVersionedBackup(refreshed, appVersion, build)
                 } catch (e: Exception) {
                     Log.e(TAG, "Versioned backup failed: ${e.javaClass.simpleName}", e)
                     val error = "Greska: ${e.message ?: e.javaClass.simpleName}"
@@ -241,62 +304,63 @@ class GoogleDriveBackup(private val context: Context) {
         }
     }
 
-    private sealed class VersionedRunResult {
-        data object ArchiveUnreadable : VersionedRunResult()
-        data class Done(val flagged: Boolean, val reasons: List<String>) : VersionedRunResult()
-    }
+    /** Ono što se čita pre upisa: sve verzije i sadržaj najsvežije (izvor arhive za merge). */
+    private class ExistingArchive(
+        val versions: List<BackupVersion>,
+        val latest: BackupVersion?,
+        val json: String?
+    )
 
     private suspend fun runVersionedBackup(
         drive: Drive,
         appVersion: String?,
+        safety: Boolean,
         build: (existingJson: String?) -> CloudBackupContent
     ): BackupOutcome {
         val nowMillis = System.currentTimeMillis()
-        val result: VersionedRunResult? = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
+
+        // Rok važi samo za čitanje. Drive pozivi su blokirajući i ne mogu da se prekinu, pa bi
+        // rok oko upisa odbacio rezultat posle uspešnog upisa: verzija bi postojala u oblaku, a
+        // prijavilo bi se „Timeout" i pokušalo ponovo (duplikati verzija).
+        val archive = withTimeoutOrNull(NETWORK_TIMEOUT_MS) {
             val versions = listVersionsInternal(drive)
             val latest = VersionedBackupPlanner.latest(versions)
-            val existingJson = latest?.let { downloadContent(drive, it.fileId) }
-            if (latest != null && existingJson == null) {
-                return@withTimeoutOrNull VersionedRunResult.ArchiveUnreadable
-            }
-
-            val content = build(existingJson)
-            val baseline = VersionedBackupPlanner.baselineStats(versions)
-            val verdict = BackupAnomalyGuard.assess(baseline, content.stats)
-            val flagged = verdict.isSuspicious
-
-            val props = BackupMetadata.toProperties(nowMillis, content.stats, flagged, appVersion)
-            val newId = createVersionFile(drive, nowMillis, content.json, props)
-            val newVersion = BackupMetadata.buildVersion(
-                fileId = newId,
-                fileName = BackupMetadata.fileName(nowMillis),
-                driveCreatedAtMillis = nowMillis,
-                props = props
-            )
-            pruneOldVersions(drive, versions + newVersion)
-
-            val reasons = (verdict as? BackupAnomalyGuard.Verdict.Suspicious)?.reasons.orEmpty()
-            VersionedRunResult.Done(flagged, reasons)
+            ExistingArchive(versions, latest, latest?.let { downloadContent(drive, it.fileId) })
+        }
+        if (archive == null) {
+            _syncState.value = SyncState.Error("Timeout - spora mreža")
+            return BackupOutcome.Failure("Timeout - spora mreža")
+        }
+        if (archive.latest != null && archive.json == null) {
+            val error = "Ne mogu da pročitam postojeći backup — prekinuto radi zaštite"
+            _syncState.value = SyncState.Error(error)
+            return BackupOutcome.Failure(error)
         }
 
-        return when (result) {
-            null -> {
-                _syncState.value = SyncState.Error("Timeout - spora mreža")
-                BackupOutcome.Failure("Timeout - spora mreža")
-            }
-            VersionedRunResult.ArchiveUnreadable -> {
-                val error = "Ne mogu da pročitam postojeći backup — prekinuto radi zaštite"
-                _syncState.value = SyncState.Error(error)
-                BackupOutcome.Failure(error)
-            }
-            is VersionedRunResult.Done -> {
-                _lastSyncTime.value = nowMillis
-                prefs.edit().putLong(KEY_LAST_SYNC_TIME, nowMillis).apply()
-                _syncState.value = SyncState.Success
-                Log.d(TAG, "Versioned backup created (flagged=${result.flagged})")
-                BackupOutcome.Success(result.flagged, result.reasons)
-            }
+        val content = build(archive.json)
+        val baseline = VersionedBackupPlanner.baselineStats(archive.versions)
+        val verdict = BackupAnomalyGuard.assess(baseline, content.stats)
+        val flagged = verdict.isSuspicious
+
+        val props = BackupMetadata.toProperties(nowMillis, content.stats, flagged, appVersion, safety = safety)
+        val newId = createVersionFile(drive, nowMillis, content.json, props)
+        val newVersion = BackupMetadata.buildVersion(
+            fileId = newId,
+            fileName = BackupMetadata.fileName(nowMillis),
+            driveCreatedAtMillis = nowMillis,
+            props = props
+        )
+        pruneOldVersions(drive, archive.versions + newVersion)
+
+        if (!safety) {
+            _lastSyncTime.value = nowMillis
+            prefs.edit().putLong(KEY_LAST_SYNC_TIME, nowMillis).apply()
+            markCloudAdopted()
         }
+        _syncState.value = SyncState.Success
+        Log.d(TAG, "Versioned backup created (flagged=$flagged)")
+        val reasons = (verdict as? BackupAnomalyGuard.Verdict.Suspicious)?.reasons.orEmpty()
+        return BackupOutcome.Success(flagged, reasons)
     }
 
     /** Vrati sadržaj najnovije verzije (za standardni „Restore"). */
@@ -422,6 +486,17 @@ sealed class SyncState {
     data object Syncing : SyncState()
     data object Success : SyncState()
     data class Error(val message: String) : SyncState()
+}
+
+/** Da li pozadinski backup sme da krene (vidi [GoogleDriveBackup.autoBackupGate]). */
+enum class AutoBackupGate {
+    ALLOWED,
+
+    /** U oblaku već postoji backup, a ovaj uređaj ga nije preuzeo — čeka se odluka korisnika. */
+    NEEDS_USER_DECISION,
+
+    /** Stanje oblaka nije moglo da se proveri (mreža/sesija) — probaj kasnije. */
+    UNKNOWN
 }
 
 /** Sadržaj jedne verzije backup-a + njen otisak (za metapodatke i anomalije). */

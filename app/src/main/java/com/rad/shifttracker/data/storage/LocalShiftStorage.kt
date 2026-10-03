@@ -5,10 +5,18 @@ import android.util.AtomicFile
 import java.io.File
 import java.io.FileOutputStream
 
+/** Lokalni fajl sa podacima; izdvojeno da se čuvanje i učitavanje mogu testirati bez Android okruženja. */
+internal interface LocalDataStore {
+    fun save(context: Context, json: String): Boolean
+    fun load(context: Context): String?
+    fun hasData(context: Context): Boolean
+    fun quarantineCorrupt(context: Context): Boolean
+}
+
 internal class LocalShiftStorage(
     private val fileName: String = LOCAL_BACKUP_FILE
-) {
-    fun save(context: Context, json: String): Boolean {
+) : LocalDataStore {
+    override fun save(context: Context, json: String): Boolean {
         val atomicFile = AtomicFile(File(context.filesDir, fileName))
         var stream: FileOutputStream? = null
         return try {
@@ -22,32 +30,40 @@ internal class LocalShiftStorage(
         }
     }
 
-    fun load(context: Context): String? {
+    override fun load(context: Context): String? {
         val atomicFile = AtomicFile(File(context.filesDir, fileName))
         return runCatching {
             atomicFile.readFully().toString(Charsets.UTF_8)
         }.getOrNull()
     }
 
-    fun hasData(context: Context): Boolean {
+    override fun hasData(context: Context): Boolean {
         return load(context)?.isNotEmpty() == true
     }
 
     /**
      * Kopira neispravan (neparsiv) fajl u karantin pre nego što ga prvi
      * sledeći autosave pregazi skoro praznim stanjem — da podaci ostanu
-     * dostupni za ručni oporavak.
+     * dostupni za ručni oporavak. Svaki put nova kopija (sa vremenom), da drugi
+     * neispravan fajl ne pregazi prvi; čuva se poslednjih [KEEP_QUARANTINED].
      */
-    fun quarantineCorrupt(context: Context): Boolean {
+    override fun quarantineCorrupt(context: Context): Boolean {
         val source = File(context.filesDir, fileName)
         if (!source.exists()) return false
         return runCatching {
-            source.copyTo(File(context.filesDir, "$fileName$CORRUPT_SUFFIX"), overwrite = true)
+            val target = File(context.filesDir, "$fileName$CORRUPT_SUFFIX.${System.currentTimeMillis()}")
+            source.copyTo(target, overwrite = true)
+            context.filesDir.listFiles { file -> file.name.startsWith("$fileName$CORRUPT_SUFFIX") }
+                .orEmpty()
+                .sortedByDescending { it.lastModified() }
+                .drop(KEEP_QUARANTINED)
+                .forEach { it.delete() }
         }.isSuccess
     }
 
     companion object {
         const val LOCAL_BACKUP_FILE = "rad_local_data.json"
         const val CORRUPT_SUFFIX = ".corrupt"
+        private const val KEEP_QUARANTINED = 3
     }
 }

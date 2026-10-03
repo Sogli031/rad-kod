@@ -59,7 +59,7 @@ internal class DailyPayCategoryBreakdownCalculator(
         return when (record?.shift) {
             null -> emptyDay(date, hasAnyMonthRecord)
             Shift.OFF -> offDay(record, brigadeType)
-            Shift.SICK -> if (record.isBloodDonationLeave) {
+            Shift.SICK -> if (record.isPaidLeave) {
                 paidAbsenceDay(record, brigadeType, "paidLeave")
             } else {
                 paidAbsenceDay(record, brigadeType, "sickLeave")
@@ -107,8 +107,8 @@ internal class DailyPayCategoryBreakdownCalculator(
         addPositiveCategory(paidMinutes, category, categories)
         addWorkBalanceCategories(record, brigadeType, categories)
         return DailyPayCategoryBreakdown(
-            sickLeaveMinutes = if (record.shift == Shift.SICK && !record.isBloodDonationLeave) paidMinutes else 0,
-            paidLeaveMinutes = if (record.isBloodDonationLeave) paidMinutes else 0,
+            sickLeaveMinutes = if (record.shift == Shift.SICK && !record.isPaidLeave) paidMinutes else 0,
+            paidLeaveMinutes = if (record.isPaidLeave) paidMinutes else 0,
             vacationMinutes = if (record.shift == Shift.VACATION) paidMinutes else 0,
             absenceMinutes = record.hoursDeficitMinutesFor(brigadeType),
             countsIntoWorkBalance = record.netCompChangeMinutesFor(brigadeType) != 0,
@@ -126,7 +126,9 @@ internal class DailyPayCategoryBreakdownCalculator(
         val overtimeMinutes = overtimeMinutes(record, brigadeType, monthlyOvertimeMinutes, paidWorkMinutes)
         val sundayMinutes = sundayWorkMinutes(record, brigadeType)
         val nightMinutes = nightWorkMinutes(record)
-        val holidayWorkMinutes = if (record.workedOnHoliday) paidWorkMinutes else 0
+        val holidayWorkMinutes = paidWorkMinuteSegments(record).sumOf { (shift, minutes) ->
+            record.holidayPremiumMinutes(shift, minutes)
+        }
         val difficultMinutes = if (difficultConditionsPercent > 0.0) paidWorkMinutes else 0
         val categories = workDayCategories(
             regularMinutes = paidWorkMinutes - overtimeMinutes,

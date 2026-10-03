@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,78 +37,62 @@ fun VacationBalanceDialog(
     val summary = repo.getVacationBalanceSummary(year, today)
     val savedBalance = repo.getVacationYearBalance(year)
     val beforeJuly = today.isBefore(summary.currentYearAvailableFrom)
-    val setupFieldLabels = vacationSetupFieldLabels(beforeJuly)
+    val setupFieldLabels = vacationSetupFieldLabels(year)
     val currentYearAvailableFrom = formatVacationDate(summary.currentYearAvailableFrom)
     val currentYearExpiresOn = formatVacationDate(summary.currentYearExpiresOn)
-    var carryoverInput by remember {
-        mutableStateOf(formatVacationInput(savedBalance?.carryoverDaysInitial ?: summary.carryoverRemaining))
-    }
+    val initialInputs = vacationSetupInitialInputs(savedBalance, summary)
+    // Skriveno polje zadržava početnu vrednost (sačuvanu ili izračunatu), pa se čuva nepromenjeno.
+    val visibility = vacationSetupVisibility(
+        year = year,
+        today = today,
+        saved = savedBalance,
+        carryoverAutomatic = repo.isVacationCarryoverAutomatic(year),
+        monthsWithoutData = repo.getVacationMonthsWithoutData(year, today)
+    )
+    var carryoverInput by remember { mutableStateOf(initialInputs[0]) }
+    // Prazno pravo se popunjava predlogom po ugovoru; broj sa rešenja se upisuje preko njega.
     var currentYearTotalInput by remember {
-        mutableStateOf(formatVacationInput(savedBalance?.currentYearDaysTotal ?: summary.currentYearTotal))
+        mutableStateOf(initialInputs[1].ifBlank { repo.getAnnualLeaveEntitlement(year).breakdown.totalDays.toString() })
     }
-    var usedBeforeAvailabilityInput by remember {
-        mutableStateOf(
-            formatVacationInput(savedBalance?.currentYearDaysUsedBeforeAvailability ?: summary.currentYearUsed)
-        )
-    }
-    var remainingAfterJulyInput by remember {
-        mutableStateOf(formatVacationInput(summary.currentYearRemaining))
-    }
+    var usedOutsideAppInput by remember { mutableStateOf(initialInputs[2]) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    fun saveVacationBalance(blankAsZero: Boolean): Boolean {
-        val balance = if (beforeJuly) {
-            val carryover = carryoverInput.toDoubleOrNull() ?: if (blankAsZero) 0.0 else null
-            val currentTotal = currentYearTotalInput.toDoubleOrNull() ?: if (blankAsZero) 0.0 else null
-            val usedBefore = usedBeforeAvailabilityInput.toDoubleOrNull() ?: if (blankAsZero) 0.0 else null
-            if (
-                carryover == null ||
-                currentTotal == null ||
-                usedBefore == null ||
-                carryover < 0.0 ||
-                currentTotal < 0.0 ||
-                usedBefore < 0.0
-            ) {
-                errorMessage = "Unesite ispravan broj dana."
-                return false
-            }
+    // Potrošeno se računa od 01.01. iz listića i kalendara; ručno se unosi samo pravo, prenos i ono čega nema nigde.
+    fun saveVacationBalance(): Boolean {
+        val carryover = carryoverInput.ifBlank { "0" }.toDoubleOrNull()
+        val currentTotal = currentYearTotalInput.toDoubleOrNull()
+        val usedOutsideApp = usedOutsideAppInput.ifBlank { "0" }.toDoubleOrNull()
+        if (
+            carryover == null ||
+            currentTotal == null ||
+            usedOutsideApp == null ||
+            carryover < 0.0 ||
+            currentTotal < 0.0 ||
+            usedOutsideApp < 0.0
+        ) {
+            errorMessage = "Unesite ispravan broj dana."
+            return false
+        }
+        repo.setVacationYearBalance(
             VacationYearBalance(
                 year = year,
-                trackingStartDate = today,
+                trackingStartDate = LocalDate.of(year, 1, 1),
                 carryoverDaysInitial = carryover,
                 currentYearDaysTotal = currentTotal,
-                currentYearDaysUsedBeforeAvailability = usedBefore,
+                currentYearDaysUsedBeforeAvailability = usedOutsideApp,
                 currentYearAvailableFrom = currentYearVacationAvailableFrom(year),
                 manualBaseline = true
             )
-        } else {
-            val remaining = remainingAfterJulyInput.toDoubleOrNull() ?: if (blankAsZero) 0.0 else null
-            if (remaining == null || remaining < 0.0) {
-                errorMessage = "Unesite ispravan broj dana."
-                return false
-            }
-            VacationYearBalance(
-                year = year,
-                trackingStartDate = today,
-                carryoverDaysInitial = 0.0,
-                currentYearDaysTotal = remaining,
-                currentYearDaysUsedBeforeAvailability = 0.0,
-                currentYearAvailableFrom = currentYearVacationAvailableFrom(year),
-                manualBaseline = true
-            )
-        }
-        repo.setVacationYearBalance(balance)
+        )
         return true
     }
 
     PopupDialog(
         title = "Godi\u0161nji odmor",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.vacation
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.vacation) {
+        PopupCard {
             SectionLabel(text = "Stanje")
             if (beforeJuly) {
                 VacationStateRow("Stari odmor:", "${formatVacationInput(summary.availableNow)} dana", THEME.vacation)
@@ -145,7 +129,7 @@ fun VacationBalanceDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(THEME.danger.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                        .background(THEME.danger.copy(alpha = 0.2f), MaterialTheme.shapes.small)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -164,34 +148,57 @@ fun VacationBalanceDialog(
         }
 
         PopupCard {
+            SectionLabel(text = "Iskorišćeno $year.")
+            if (summary.usageByMonth.isEmpty() && summary.carryoverUsed == 0.0) {
+                Text(
+                    text = "Nema godišnjeg ni na listama ni u kalendaru.",
+                    color = THEME.textMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            summary.usageByMonth.forEach { usage ->
+                VacationStateRow("${MONTH_NAMES[usage.month]}:", vacationMonthUsageText(usage), THEME.textPrimary)
+            }
+            savedBalance?.currentYearDaysUsedBeforeAvailability?.takeIf { it > 0.0 }?.let { outside ->
+                VacationStateRow("Van aplikacije:", "${formatVacationInput(outside)} dana", THEME.textPrimary)
+            }
+        }
+
+        VacationPayslipScanCard()
+
+        if (SHOW_ANNUAL_LEAVE_ENTITLEMENT_CARD) {
+            AnnualLeaveEntitlementCard(year = year, repo = repo, enteredTotal = currentYearTotalInput) {
+                currentYearTotalInput = it
+                errorMessage = null
+            }
+        }
+
+        PopupCard {
             SectionLabel(text = "Početno stanje")
-            if (beforeJuly) {
-                VacationNumberInput(setupFieldLabels[0], carryoverInput) {
+            if (visibility.carryover) {
+                VacationNumberInput(setupFieldLabels[0], carryoverInput, ImeAction.Next) {
                     carryoverInput = filterDecimalInput(it)
                     errorMessage = null
                 }
-                VacationNumberInput(setupFieldLabels[1], currentYearTotalInput) {
-                    currentYearTotalInput = filterDecimalInput(it)
-                    errorMessage = null
-                }
-                VacationNumberInput(setupFieldLabels[2], usedBeforeAvailabilityInput) {
-                    usedBeforeAvailabilityInput = filterDecimalInput(it)
-                    errorMessage = null
-                }
-            } else {
-                VacationNumberInput(setupFieldLabels[0], remainingAfterJulyInput) {
-                    remainingAfterJulyInput = filterDecimalInput(it)
+            }
+            val totalImeAction = if (visibility.usedOutsideApp) ImeAction.Next else ImeAction.Done
+            VacationNumberInput(setupFieldLabels[1], currentYearTotalInput, totalImeAction) {
+                currentYearTotalInput = filterDecimalInput(it)
+                errorMessage = null
+            }
+            if (visibility.usedOutsideApp) {
+                VacationNumberInput(setupFieldLabels[2], usedOutsideAppInput, ImeAction.Done) {
+                    usedOutsideAppInput = filterDecimalInput(it)
                     errorMessage = null
                 }
             }
+            Text(
+                text = VACATION_SETUP_HINT,
+                color = THEME.textMuted,
+                style = MaterialTheme.typography.bodySmall
+            )
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = THEME.danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                FormErrorText(message = message)
             }
         }
 
@@ -200,11 +207,9 @@ fun VacationBalanceDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.vacation,
-            textColor = THEME.textDark,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
-                if (saveVacationBalance(blankAsZero = false)) {
+                if (saveVacationBalance()) {
                     onDismiss()
                 }
             }
@@ -239,20 +244,15 @@ private fun VacationStateRow(label: String, value: String, valueColor: Color) {
 private fun VacationNumberInput(
     label: String,
     value: String,
+    imeAction: ImeAction,
     onValueChange: (String) -> Unit
 ) {
-    Text(
-        text = label,
-        color = THEME.textSecondary,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
     ModernTextField(
         value = value,
         onValueChange = onValueChange,
         hintText = "Broj dana",
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        label = label,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = imeAction),
         modifier = Modifier.fillMaxWidth()
     )
 }

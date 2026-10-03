@@ -42,6 +42,7 @@ data class MonthlyNetPayBreakdown(
     val mealEntitlementCalculation: MealEntitlementCalculation,
     val netRegressAddition: Double,
     val netBonusAddition: Double,
+    /** Obustave u % zarade (sindikat, fond...) za ovaj mesec — sa liste meseca ili procentom × neto. */
     val unionDuesNet: Double,
     val netDeductionsTotal: Double,
     val displayPay: Double,
@@ -579,12 +580,15 @@ fun resolvePayBasesForMonth(
     monthlyBases: Map<MonthKey, MonthlyPayBases>,
     defaults: PayBaseDefaults = PayBaseDefaults(),
     calculatedBase: RollingPayBaseCalculation? = null,
-    defaultSelectionMode: PayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS,
-    sickBaseOverride: Double? = null
+    defaultSelectionMode: PayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
 ): ResolvedPayBases {
     val target = MonthKey(year, month)
     val selectedMode = effectivePayBaseSelectionMode(monthlyBases[target], defaultSelectionMode)
-    val resolved = resolvePayBasesForMode(
+    // Bolovanje nema svoju osnovicu: po KU čl. 66 plaća se 65% (ili 100%) ISTE osnovice
+    // kao GO i praznik (čl. 65 st. 3 — prosek prethodnih 12 meseci). 918,81 sa listića
+    // 03/2026 (23.888,93 / 40 h / 0,65) je prosto martovski prosek, u nizu sa 923,07 (feb)
+    // i 953,18 (apr); ranije zakucana vrednost bi sledeće bolovanje potcenila.
+    return resolvePayBasesForMode(
         selectedMode = selectedMode,
         year = year,
         month = month,
@@ -592,16 +596,6 @@ fun resolvePayBasesForMonth(
         defaults = defaults,
         calculatedBase = calculatedBase
     )
-    // Osnovica za bolovanje je zasebna kategorija na listiću i ne prati prosek za
-    // GO/praznik. Listić 03/2026: 23.888,93 / 40 h = 597,22 = 65% × 918,81, dok je
-    // istovremeno osnovica za GO 950,58. Zato podešena osnovica bolovanja ima
-    // prednost nad izračunatim prosekom; u ručnom režimu ionako već važi.
-    val override = sickBaseOverride.takeIf { it.isPositiveFinite() }
-    return if (selectedMode != PayBaseSelectionMode.MANUAL && override != null) {
-        resolved.copy(sickHourlyBase = ResolvedPayBase(override, PayBaseSource.DEFAULT))
-    } else {
-        resolved
-    }
 }
 
 private fun resolvePayBasesForMode(

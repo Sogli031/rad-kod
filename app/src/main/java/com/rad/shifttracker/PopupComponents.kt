@@ -1,5 +1,40 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.ZeroCornerSize
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,99 +53,144 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.rad.shifttracker.ui.components.AutoSizeText
 
+/** Scrim: M3 koristi crnu boju; na tamnoj pozadini je 60% da bi se list jasno odvojio. */
+private const val SCRIM_ALPHA = 0.6f
+
+/** List se zatvara kad se povuče dalje od ovoga (ili brzim potezom nadole). */
+private const val DISMISS_DRAG_DP = 96
+private const val DISMISS_FLING_VELOCITY = 1500f
+
+/** M3 emphasized easing za prelaze: ulaz usporava, izlaz ubrzava (isto koristi prelaz meseca). */
+internal val EmphasizedDecelerateEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+internal val EmphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+private const val SHEET_ENTER_MS = 400
+private const val SHEET_EXIT_MS = 200
+
+/**
+ * Dijalog kao M3 modalni list sa dna: oblik `extraLarge` gore, površina `surfaceContainer`,
+ * ručica za prevlačenje, ulaz/izlaz po M3 emphasized prelazu. Zatvara se nazad-gestom,
+ * dodirom van lista i povlačenjem nadole; [onDismiss] se zove kad izlazna animacija završi.
+ * Ostaje na [Dialog] prozoru (ne na `ModalBottomSheet`) jer je njegovo ponašanje sa
+ * tastaturom i isečkom kamere već podešeno u [DialogEdgeToEdgeWindow].
+ */
 @Composable
 fun PopupDialog(
     title: String,
     onDismiss: () -> Unit,
-    widthRatio: Float = UI.popupWidthRatio,
     scrollable: Boolean = true,
-    accent: Color = THEME.accentPrimary,
     titleTextAlign: TextAlign = TextAlign.Start,
     footer: (@Composable ColumnScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val config = LocalConfiguration.current
-    val popupWidth = config.screenWidthDp.dp * widthRatio
     val overlayInteraction = remember { MutableInteractionSource() }
-    val cardInteraction = remember { MutableInteractionSource() }
+    val scheme = MaterialTheme.colorScheme
+    val sheetShape = MaterialTheme.shapes.extraLarge.copy(
+        bottomStart = ZeroCornerSize,
+        bottomEnd = ZeroCornerSize
+    )
+    val scope = rememberCoroutineScope()
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
+    val dragOffset = remember { Animatable(0f) }
+    val dismissDragPx = with(LocalDensity.current) { DISMISS_DRAG_DP.dp.toPx() }
+    val requestDismiss: () -> Unit = { visibleState.targetState = false }
+    // Pozivalac se obaveštava tek kad je izlazna animacija gotova (ili odmah ako je list uklonjen).
+    LaunchedEffect(visibleState.currentState, visibleState.targetState) {
+        if (!visibleState.currentState && !visibleState.targetState) currentOnDismiss()
+    }
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visibleState.targetState) SCRIM_ALPHA else 0f,
+        animationSpec = tween(if (visibleState.targetState) SHEET_ENTER_MS else SHEET_EXIT_MS),
+        label = "scrim"
+    )
+    val dragState = rememberDraggableState { delta ->
+        scope.launch { dragOffset.snapTo((dragOffset.value + delta).coerceAtLeast(0f)) }
+    }
 
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        onDismissRequest = requestDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
+        DialogEdgeToEdgeWindow()
         BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(THEME.bgDark.copy(alpha = 0.94f))
-                .clickable(
-                    interactionSource = overlayInteraction,
-                    indication = null,
-                    onClick = onDismiss
-                )
-                .padding(WindowInsets.safeDrawing.asPaddingValues())
-                .padding(
-                    top = UI.popupEdgePadding.dp,
-                    bottom = UI.popupBottomSafePadding.dp
-                ),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
         ) {
-            val popupHeight = UI.popupMaxHeight.dp.coerceAtMost(
-                maxHeight - UI.popupEdgePadding.dp - UI.popupBottomSafePadding.dp
-            )
-            val popupSizeModifier = Modifier.heightIn(max = popupHeight)
-            val popupContentModifier = Modifier.fillMaxWidth().wrapContentHeight()
-
-            GlassCard(
+            // Scrim je poseban sloj iza lista: dodir van lista zatvara dijalog, a čitač ekrana ga
+            // ne fokusira (neimenovana klikabilna površina); zatvaranje nudi ručica lista („Zatvori“).
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = popupWidth)
-                    .then(popupSizeModifier)
+                    .fillMaxSize()
+                    .background(scheme.scrim.copy(alpha = scrimAlpha))
+                    // Mora stajati PRE clickable: čisti semantiku ostalih modifiera na istom elementu.
+                    .clearAndSetSemantics { }
                     .clickable(
-                        interactionSource = cardInteraction,
+                        interactionSource = overlayInteraction,
                         indication = null,
-                        onClick = {}
+                        onClick = requestDismiss
                     )
+            )
+            val insets = WindowInsets.safeDrawing.asPaddingValues()
+            // List ne sme da zađe ispod status bara / isečka kamere na nižim ekranima.
+            val sheetMaxHeight = UI.popupMaxHeight.dp.coerceAtMost(
+                maxHeight - insets.calculateTopPadding() - UI.popupEdgePadding.dp
+            )
+
+            AnimatedVisibility(
+                visibleState = visibleState,
+                modifier = Modifier.fillMaxWidth(),
+                enter = slideInVertically(tween(SHEET_ENTER_MS, easing = EmphasizedDecelerateEasing)) { it },
+                exit = slideOutVertically(tween(SHEET_EXIT_MS, easing = EmphasizedAccelerateEasing)) { it }
             ) {
                 Column(
-                    modifier = popupContentModifier.padding(UI.cardPadding.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset { IntOffset(0, dragOffset.value.roundToInt()) }
+                        .semantics { paneTitle = title }
+                        .heightIn(max = sheetMaxHeight)
+                        .clip(sheetShape)
+                        .background(scheme.surfaceContainer, sheetShape)
+                        // Guta dodire iznad lista (bez semantike), da ne zatvore dijalog preko scrim-a.
+                        .pointerInput(Unit) { detectTapGestures { } }
+                        .padding(bottom = insets.calculateBottomPadding())
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .wrapContentHeight(),
                     verticalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
                 ) {
-                    AutoSizeText(
-                        text = title,
-                        color = THEME.textPrimary,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            textAlign = titleTextAlign
-                        ),
-                        maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                        minFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                        maxLines = 1,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .background(accent.copy(alpha = 0.9f))
+                    SheetHeader(
+                        title = title,
+                        titleTextAlign = titleTextAlign,
+                        dragState = dragState,
+                        onDragStopped = { velocity ->
+                            if (dragOffset.value > dismissDragPx || velocity > DISMISS_FLING_VELOCITY) {
+                                requestDismiss()
+                            } else {
+                                dragOffset.animateTo(0f)
+                            }
+                        },
+                        onClose = requestDismiss
                     )
                     if (scrollable) {
                         val scrollState = rememberScrollState()
@@ -133,7 +213,9 @@ fun PopupDialog(
                     }
                     footer?.let { footerContent ->
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
                             verticalArrangement = Arrangement.spacedBy(UI.defaultSpacing.dp)
                         ) {
                             footerContent()
@@ -141,23 +223,130 @@ fun PopupDialog(
                     }
                 }
             }
+
+            // Dijalog je poseban prozor: poruka glavnog ekrana bi ostala ispod njega, pa je prikazujemo ovde.
+            LocalAppSnackbar.current?.let { host ->
+                SnackbarHost(
+                    hostState = host,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = insets.calculateTopPadding() + 8.dp, start = 16.dp, end = 16.dp)
+                )
+            }
         }
     }
 }
 
+/** Zaglavlje lista: ručica i naslov; cela površina se može povući nadole da se list zatvori. */
+@Composable
+private fun SheetHeader(
+    title: String,
+    titleTextAlign: TextAlign,
+    dragState: DraggableState,
+    onDragStopped: suspend (velocity: Float) -> Unit,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Vertical,
+                onDragStopped = { velocity -> onDragStopped(velocity) }
+            ),
+        verticalArrangement = Arrangement.spacedBy(UI.smallSpacing.dp)
+    ) {
+        SheetDragHandle(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            onClose = onClose
+        )
+        AutoSizeText(
+            text = title,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                textAlign = titleTextAlign
+            ),
+            maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+            minFontSize = MaterialTheme.typography.titleMedium.fontSize,
+            maxLines = 1,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 2.dp)
+                .semantics { heading() }
+        )
+    }
+}
+
+/** M3 ručica lista (32x4dp, `onSurfaceVariant` 40%); čitaču ekrana nudi radnju „Zatvori“. */
+@Composable
+private fun SheetDragHandle(modifier: Modifier = Modifier, onClose: () -> Unit) {
+    Box(
+        modifier = modifier
+            .height(SHEET_HANDLE_AREA_DP.dp)
+            .width(SHEET_HANDLE_AREA_WIDTH_DP.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Ručica lista, prevuci nadole da zatvoriš"
+                customActions = listOf(CustomAccessibilityAction("Zatvori") { onClose(); true })
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(32.dp)
+                .height(4.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+        )
+    }
+}
+
+private const val SHEET_HANDLE_AREA_DP = 28
+private const val SHEET_HANDLE_AREA_WIDTH_DP = 64
+
+/**
+ * Prozor dijaloga preko celog ekrana, kao i MainActivity. Bez ovoga Android (npr. Pixel 9)
+ * ograniči prozor na prostor između status i navigacione trake, a Compose sadržaj izmeri
+ * na punu visinu ekrana — dno lista ode ispod ivice. Razmak od traka daju safeDrawing insets.
+ */
+@Composable
+private fun DialogEdgeToEdgeWindow() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
+    SideEffect {
+        // Tastatura: bez resize Android pomeri ceo prozor nagore (naslov ode pod status bar);
+        // sa resize list dobije ime inset kroz safeDrawing i stane iznad tastature.
+        @Suppress("DEPRECATION")
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        val attrs = window.attributes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            attrs.fitInsetsTypes = 0
+            attrs.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else {
+            attrs.flags = attrs.flags or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                attrs.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        window.attributes = attrs
+    }
+}
+
+/** Grupa unutar lista: tamnija površina (`surfaceContainerLowest`) i tanka linija `outlineVariant`. */
 @Composable
 fun PopupCard(
     modifier: Modifier = Modifier,
-    bgColor: Color = THEME.bgCard,
-    borderColor: Color = THEME.glassBorder,
     spacing: Dp = UI.defaultSpacing.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    GlassCard(modifier = modifier, bgColor = bgColor, borderColor = borderColor) {
+    GlassCard(
+        modifier = modifier,
+        bgColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(spacing)
         ) {
             content()
@@ -177,9 +366,7 @@ fun HoursPickerDialog(
     PopupDialog(
         title = title,
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = false,
-        accent = accent
+        scrollable = false
     ) {
         val hours = (minHours..CONFIG.pay.defaultHours).toList()
         val rows = hours.chunked(4)
@@ -199,7 +386,7 @@ fun HoursPickerDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(UI.buttonHeight.dp),
-                            bgColor = if (isSelected) accent else THEME.bgCard,
+                            bgColor = if (isSelected) accent else THEME.bgDark,
                             textColor = if (isSelected) THEME.textDark else THEME.textPrimary,
                             textStyle = MaterialTheme.typography.titleLarge,
                             bold = true,
@@ -224,9 +411,7 @@ fun ShortageMinutesDialog(
     PopupDialog(
         title = "Minuti",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = false,
-        accent = THEME.accentPrimary
+        scrollable = false
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -239,7 +424,7 @@ fun ShortageMinutesDialog(
                     modifier = Modifier
                         .weight(1f)
                         .height(UI.buttonHeight.dp),
-                    bgColor = if (isSelected) THEME.accentPrimary else THEME.bgCard,
+                    bgColor = if (isSelected) THEME.accentPrimary else THEME.bgDark,
                     textColor = if (isSelected) THEME.textDark else THEME.textPrimary,
                     textStyle = MaterialTheme.typography.titleMedium,
                     bold = true,
@@ -267,9 +452,7 @@ fun CompUsedDialog(
     PopupDialog(
         title = "Iskoristi zara\u0111ene sate",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.compTimeUsed
+        scrollable = true
     ) {
         AutoSizeText(
             text = "Dostupno: ${formatHours(availableHours)}",
@@ -295,7 +478,7 @@ fun CompUsedDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(UI.buttonHeight.dp),
-                            bgColor = if (isSelected) THEME.compTimeUsed else THEME.bgCard,
+                            bgColor = if (isSelected) THEME.compTimeUsed else THEME.bgDark,
                             textColor = THEME.textPrimary,
                             textStyle = MaterialTheme.typography.titleLarge,
                             bold = true,

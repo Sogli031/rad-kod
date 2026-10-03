@@ -12,6 +12,7 @@ import com.rad.shifttracker.MonthlyNetPayBreakdown
 import com.rad.shifttracker.MonthlyPayDetails
 import com.rad.shifttracker.MonthlyReceipt
 import com.rad.shifttracker.PayCalculator
+import com.rad.shifttracker.PercentDeductions
 import com.rad.shifttracker.RecentNetPayAverage
 import com.rad.shifttracker.RecentNetPayMonth
 import com.rad.shifttracker.ResolvedPayBases
@@ -19,7 +20,6 @@ import com.rad.shifttracker.RollingPayBaseCalculation
 import com.rad.shifttracker.Shift
 import com.rad.shifttracker.calculateAnnualNetPayAverages
 import com.rad.shifttracker.calculateMonthlyFundHours
-import com.rad.shifttracker.calculateMealEntitlementForAccountingMonth
 import com.rad.shifttracker.calculateMonthlyNetPayBreakdown
 import com.rad.shifttracker.calculateMonthlyReceipt
 import com.rad.shifttracker.calculateRecentNetPayAverage
@@ -29,7 +29,6 @@ import com.rad.shifttracker.previousMonthKey
 import com.rad.shifttracker.recentNetPayAverageMonthKeys
 import com.rad.shifttracker.resolveHourlyValueForMonth
 import java.time.LocalDate
-import java.time.YearMonth
 
 internal class RepositoryPayQueries(
     private val config: AppConfig,
@@ -39,7 +38,8 @@ internal class RepositoryPayQueries(
     private val getCompBalanceMinutesAtMonthStartUnsafe: (Int, Int) -> Int,
     private val getCompBalanceAtMonthStartReadOnly: (Int, Int) -> Int,
     private val getCompBalanceMinutesAtMonthStartReadOnly: (Int, Int) -> Int,
-    private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int
+    private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int,
+    private val percentDeductionsForMonthUnsafe: (MonthKey) -> PercentDeductions?
 ) {
     private val payBaseResolver = RepositoryPayBaseResolver(
         config = config,
@@ -153,32 +153,14 @@ internal class RepositoryPayQueries(
             summaryMonth = month,
             payBases = payBaseResolver.resolvedPayBasesForWorkMonth(year, month)
         )
-        val mealEntitlement = calculateMealEntitlementForAccountingMonth(
-            records = foodAccountingCandidateRecords(year, month, monthRecords),
-            month = monthKey,
-            pricePeriods = payState.mealPricePeriods(),
+        summary.applyMealEntitlement(
+            monthKey = monthKey,
+            monthRecords = monthRecords,
+            recordStore = recordStore,
+            payState = payState,
             defaultWorkHours = config.pay.defaultHours
         )
-        summary.mealEntitlementCalculation = mealEntitlement
-        summary.foodAllowance = mealEntitlement.mealEntitlementNet.toDouble()
         return summary
-    }
-
-    private fun foodAccountingCandidateRecords(
-        year: Int,
-        month: Int,
-        monthRecords: List<DayRecord>
-    ): List<DayRecord> {
-        if (year <= 0 || month !in 1..12) return monthRecords
-        val monthStart = YearMonth.of(year, month)
-        val previousMonthEnd = monthStart.minusMonths(1).atEndOfMonth()
-        val previousMonthLastRecord = recordStore.get(
-            previousMonthEnd.year,
-            previousMonthEnd.monthValue,
-            previousMonthEnd.dayOfMonth
-        )
-        return (listOfNotNull(previousMonthLastRecord) + monthRecords)
-            .distinctBy { record -> record.key }
     }
 
     fun calculateDailyPayUnsafe(record: DayRecord): Double {
@@ -228,9 +210,7 @@ internal class RepositoryPayQueries(
         taxPercent: Double = payState.taxPercent,
         grossAdditions: MonthlyGrossAdditions = monthlyGrossAdditionsUnsafe(year, month),
         includeRegress: Boolean = true,
-        includeHourlyValue: Boolean = false,
-        unionMember: Boolean = payState.unionMember,
-        unionDuesRate: Double = payState.unionDuesRate
+        includeHourlyValue: Boolean = false
     ): MonthlyNetPayBreakdown {
         val breakdown = calculateMonthlyNetPayBreakdown(
             summary = summary,
@@ -241,8 +221,9 @@ internal class RepositoryPayQueries(
             taxPercent = taxPercent,
             grossAdditions = grossAdditions,
             includeRegress = includeRegress,
-            unionMember = unionMember,
-            unionDuesRate = unionDuesRate
+            percentDeductions = percentDeductionsForMonthUnsafe(MonthKey(year, month)),
+            regressNet = payState.regressNetForMonth(MonthKey(year, month)),
+            regressPaidInMonth = payState.regressPaidInMonth(MonthKey(year, month))
         )
         return if (includeHourlyValue) withHourlyValueUnsafe(year, month, breakdown) else breakdown
     }
@@ -315,6 +296,7 @@ internal class RepositoryPayQueries(
             payBases = payBaseResolver.resolvedPayBasesForWorkMonth(year, month),
             startingCompBalanceMinutes = getCompBalanceMinutesAtMonthStartUnsafe(year, month)
         )
+        summary.applyMealEntitlement(MonthKey(year, month), monthRecords, recordStore, payState, config.pay.defaultHours)
         return calculateMonthlyNetPayBreakdownUnsafe(
             year = year,
             month = month,
@@ -468,7 +450,8 @@ private fun DayRecord.withoutThirdShift(): DayRecord {
         holidayOverride = holidayOverride,
         balanceExempt = balanceExempt,
         sickPayRate = sickPayRate,
-        regularShortageMinutes = regularShortageMinutes
+        regularShortageMinutes = regularShortageMinutes,
+        source = source
     )
 }
 

@@ -1,6 +1,8 @@
 package com.rad.shifttracker.data.repository
 
+import com.rad.shifttracker.CONFIG
 import com.rad.shifttracker.MonthKey
+import com.rad.shifttracker.shortageMinutesCoveredByExtraWork
 
 private const val MINUTES_PER_HOUR = 60
 
@@ -34,8 +36,7 @@ internal class RepositoryCompBalanceCalculator(
         }
 
         for (i in startIndex until priorMonths.size) {
-            val monthRecords = recordStore.getMonthRecords(priorMonths[i])
-            balance += monthRecords.sumOf { it.netCompChangeMinutesFor(payState.brigadeType) }
+            balance += monthNetChangeMinutes(priorMonths[i])
             if (balance < 0) balance = 0
         }
 
@@ -52,10 +53,22 @@ internal class RepositoryCompBalanceCalculator(
         val priorMonths = recordStore.getAllMonthsSorted().filter { it < target }
         var balance = payState.initialCompBalanceMinutes
         for (priorMonth in priorMonths) {
-            val monthRecords = recordStore.getMonthRecords(priorMonth)
-            balance += monthRecords.sumOf { it.netCompChangeMinutesFor(payState.brigadeType) }
+            balance += monthNetChangeMinutes(priorMonth)
             if (balance < 0) balance = 0
         }
         return balance
+    }
+
+    /** Isto kao MonthSummary.compTimeNetMinutes: manjak pokriven „Odradom" ne skida saldo. */
+    private fun monthNetChangeMinutes(month: MonthKey): Int {
+        val monthRecords = recordStore.getMonthRecords(month)
+        return monthRecords.sumOf { it.netCompChangeMinutesFor(payState.brigadeType) } +
+            shortageMinutesCoveredByExtraWork(
+                records = monthRecords,
+                year = month.year,
+                month = month.month,
+                brigadeType = payState.brigadeType,
+                defaultHours = CONFIG.pay.defaultHours
+            )
     }
 }

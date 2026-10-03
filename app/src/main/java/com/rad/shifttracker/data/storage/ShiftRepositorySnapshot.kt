@@ -4,7 +4,6 @@ import com.rad.shifttracker.AnnualLeaveCalculationInput
 import com.rad.shifttracker.BloodDonationLeaveState
 import com.rad.shifttracker.BrigadeType
 import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.KnownPayBaseAnchor
 import com.rad.shifttracker.MonthKey
 import com.rad.shifttracker.MonthlyGrossAdditions
 import com.rad.shifttracker.MonthlyNetAdjustments
@@ -22,11 +21,6 @@ internal data class ShiftRepositorySnapshot(
     val hourlyValueChanges: Map<MonthKey, Double>,
     val foodPerDay: Double,
     val transportDailyAmount: Double,
-    val creditDeductionEnabled: Boolean,
-    val monthlyCreditDeductionAmount: Double,
-    val unionMember: Boolean,
-    val unionDuesRate: Double,
-    val foodReceiptReminderEnabled: Boolean,
     val autoAdvanceImportEnabled: Boolean,
     val notificationAccessPromptSuppressed: Boolean,
     val lastBloodDonationDate: LocalDate?,
@@ -53,17 +47,29 @@ internal data class ShiftRepositorySnapshot(
     val monthlyPayBases: Map<MonthKey, MonthlyPayBases>,
     val monthlyGrossAdditions: Map<MonthKey, MonthlyGrossAdditions>,
     val monthlyNetAdjustments: Map<MonthKey, MonthlyNetAdjustments>,
-    val knownPayBaseAnchor: KnownPayBaseAnchor?,
+    val knownPayBaseAnchors: Map<MonthKey, Double>,
     val annualLeaveCalculationInput: AnnualLeaveCalculationInput?,
     val annualLeaveLastCalculatedDays: Int,
     val records: List<DayRecord>,
     val foodPerDayChanges: Map<MonthKey, Double> = emptyMap(),
+    /** Neto regres od meseca, sa obračuna regresa. */
+    val regressNetChanges: Map<MonthKey, Double> = emptyMap(),
     /**
      * Meseci koje je korisnik izričito obrisao (tombstone). Bez ovoga bi
      * spajanje sa arhivom u oblaku vratilo obrisani najstariji mesec —
      * granica merge-a se pomeri naviše pa ga arhiva ponovo isporuči.
      */
     val deletedMonths: List<MonthKey> = emptyList(),
-    /** Da li kartice ispod kalendara („Plata za…", „Primanja u ovom mesecu") uključuju prevoz. */
-    val mainPayIncludesTransport: Boolean = true
+    /**
+     * Satnice koje je korisnik izričito obrisao (tombstone). Oblak spaja satnice
+     * iz arhive i trenutnog stanja da se ručni unos nikad ne izgubi, pa bez
+     * ovoga obrisana satnica ne bi mogla da ostane obrisana.
+     */
+    val deletedHourlyValueMonths: List<MonthKey> = emptyList(),
+    /** Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru") uključuju prevoz. */
+    val mainPayIncludesTransport: Boolean = true,
+    /** Sačuvani platni listići po mesecu (JSON listića) za „Uporedi“. */
+    val savedPayslips: Map<MonthKey, String> = emptyMap(),
+    /** Listići koje je korisnik izričito obrisao (tombstone); oblak ih inače spaja kao uniju. */
+    val deletedPayslipMonths: List<MonthKey> = emptyList()
 )

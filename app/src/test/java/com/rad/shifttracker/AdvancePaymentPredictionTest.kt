@@ -14,8 +14,7 @@ class AdvancePaymentPredictionTest {
             previousPaymentMonth = MonthKey(2026, 5),
             isPreviousMonthNetPayAvailable = true,
             previousMonthAdvanceNet = 30_000.0,
-            previousMonthFinalNet = 38_580.48,
-            previousMonthRegressNet = 0.0
+            previousMonthFinalNet = 38_580.48
         )
 
         assertTrue(prediction.isAvailable)
@@ -32,8 +31,7 @@ class AdvancePaymentPredictionTest {
             previousPaymentMonth = MonthKey(2026, 7),
             isPreviousMonthNetPayAvailable = true,
             previousMonthAdvanceNet = 37_080.0,
-            previousMonthFinalNet = 0.0,
-            previousMonthRegressNet = 0.0
+            previousMonthFinalNet = 0.0
         )
 
         assertTrue(prediction.isAvailable)
@@ -41,32 +39,20 @@ class AdvancePaymentPredictionTest {
     }
 
     @Test
-    fun `regress paid in previous month raises the minimum`() {
-        val withoutRegress = calculateAdvancePaymentPrediction(
-            paymentMonth = MonthKey(2026, 7),
-            previousPaymentMonth = MonthKey(2026, 6),
-            isPreviousMonthNetPayAvailable = true,
-            previousMonthAdvanceNet = 33_521.0,
-            previousMonthFinalNet = 38_580.48,
-            previousMonthRegressNet = 0.0
-        )
+    fun `regress is not part of the base - september 2026`() {
+        // U avgustu je leglo: akontacija za jul 14.837 + konačna za jul 68.357,75 (+ regres 20.000).
+        // Firma je za avgust isplatila 38.942: iznad 40% bez regresa (33.278), ispod sa njim (41.278).
         val prediction = calculateAdvancePaymentPrediction(
-            paymentMonth = MonthKey(2026, 7),
-            previousPaymentMonth = MonthKey(2026, 6),
+            paymentMonth = MonthKey(2026, 9),
+            previousPaymentMonth = MonthKey(2026, 8),
             isPreviousMonthNetPayAvailable = true,
-            previousMonthAdvanceNet = 33_521.0,
-            previousMonthFinalNet = 38_580.48,
-            previousMonthRegressNet = 20_000.0
+            previousMonthAdvanceNet = 14_837.0,
+            previousMonthFinalNet = 68_357.75
         )
 
-        assertEquals(
-            withoutRegress.previousMonthPaidTotalNet + 20_000.0,
-            prediction.previousMonthPaidTotalNet,
-            0.001
-        )
-        assertTrue(prediction.minimumAdvanceNet > withoutRegress.minimumAdvanceNet)
+        assertEquals(33_278.0, prediction.minimumAdvanceNet, 0.001)
+        assertTrue(prediction.minimumAdvanceNet <= 38_942.0)
     }
-
     @Test
     fun `unavailable when previous month net pay is not calculated`() {
         val prediction = calculateAdvancePaymentPrediction(
@@ -74,8 +60,7 @@ class AdvancePaymentPredictionTest {
             previousPaymentMonth = MonthKey(2026, 5),
             isPreviousMonthNetPayAvailable = false,
             previousMonthAdvanceNet = 30_000.0,
-            previousMonthFinalNet = 40_000.0,
-            previousMonthRegressNet = 0.0
+            previousMonthFinalNet = 40_000.0
         )
 
         assertFalse(prediction.isAvailable)
@@ -90,8 +75,7 @@ class AdvancePaymentPredictionTest {
             previousPaymentMonth = MonthKey(2026, 5),
             isPreviousMonthNetPayAvailable = true,
             previousMonthAdvanceNet = 0.0,
-            previousMonthFinalNet = 0.0,
-            previousMonthRegressNet = 0.0
+            previousMonthFinalNet = 0.0
         )
 
         assertFalse(noPreviousMonth.isAvailable)
@@ -105,12 +89,11 @@ class AdvancePaymentPredictionTest {
             previousPaymentMonth = MonthKey(2026, 5),
             isPreviousMonthNetPayAvailable = true,
             previousMonthAdvanceNet = Double.NaN,
-            previousMonthFinalNet = -500.0,
-            previousMonthRegressNet = 50_000.0
+            previousMonthFinalNet = -500.0
         )
 
-        assertTrue(prediction.isAvailable)
-        assertEquals(50_000.0, prediction.previousMonthPaidTotalNet, 0.001)
-        assertEquals(20_000.0, prediction.minimumAdvanceNet, 0.001)
+        assertFalse(prediction.isAvailable)
+        assertEquals(0.0, prediction.previousMonthPaidTotalNet, 0.001)
+        assertEquals(0.0, prediction.minimumAdvanceNet, 0.001)
     }
 }

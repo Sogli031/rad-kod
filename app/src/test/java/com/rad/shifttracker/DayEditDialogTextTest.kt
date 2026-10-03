@@ -17,18 +17,23 @@ class DayEditDialogTextTest {
     fun shiftSelectorsUseRequestedCompactMinimumHeight() {
         val source = dayEditDialogSource()
 
-        assertEquals(50, source.constantValue("DAY_EDIT_SHIFT_CHOICE_HEIGHT"))
+        // Redizajn: jedan zajednički selektor smene, dugmad kroz DayEditChoiceButton (heightIn min).
+        // 48dp = M3 minimum dodirne površine.
+        assertEquals(48, source.constantValue("DAY_EDIT_SHIFT_CHOICE_HEIGHT"))
         assertEquals(0, Regex("""\.height\(DAY_EDIT_SHIFT_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(4, Regex("""\.heightIn\(min = DAY_EDIT_SHIFT_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
+        assertEquals(1, Regex("""minHeight = DAY_EDIT_SHIFT_CHOICE_HEIGHT""").findAll(source).count())
+        assertEquals(true, source.contains(".heightIn(min = minHeight.dp)"))
     }
 
     @Test
     fun overtimeTypeSelectorsUseAdaptiveMinimumHeight() {
         val source = dayEditDialogSource()
 
-        assertEquals(50, source.constantValue("OVERTIME_TYPE_CHOICE_HEIGHT"))
+        assertEquals(48, source.constantValue("OVERTIME_TYPE_CHOICE_HEIGHT"))
         assertEquals(0, Regex("""\.height\(OVERTIME_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(10, Regex("""\.heightIn\(min = OVERTIME_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
+        // Plaćeno i Za sate u selektoru prekovremenog + izbor procenta bolovanja.
+        assertEquals(3, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
+        assertEquals(true, source.contains(".heightIn(min = minHeight.dp)"))
     }
 
     @Test
@@ -36,13 +41,13 @@ class DayEditDialogTextTest {
         val source = dayEditDialogSource()
 
         assertEquals(0, Regex("""\.height\(DAY_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(6, Regex("""\.heightIn\(min = DAY_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
+        assertEquals(5, Regex("""minHeight = DAY_TYPE_CHOICE_HEIGHT""").findAll(source).count())
         assertEquals(false, source.contains(".height(UI.buttonHeight.dp)"))
         assertEquals(false, source.contains(".height(UI.saveButtonHeight.dp)"))
         assertEquals(true, source.contains(".heightIn(min = UI.buttonHeight.dp)"))
         assertEquals(true, source.contains(".heightIn(min = UI.saveButtonHeight.dp)"))
         assertEquals(false, source.contains(".height(44.dp)"))
-        assertEquals(true, source.contains(".heightIn(min = 44.dp)"))
+        assertEquals(true, source.contains(".heightIn(min = minHeight.dp)"))
     }
 
     @Test
@@ -112,12 +117,10 @@ class DayEditDialogTextTest {
     fun calendarDayTextShrinksHolidayLabelWithoutForcingSingleLineCells() {
         val source = appSource("ShiftCalendar.kt")
 
-        assertEquals(true, source.contains("CalendarDayText("))
-        assertEquals(false, source.contains("softWrap = false"))
-        assertEquals(true, source.contains("detailFontSize * detailTextScale"))
-        assertEquals(true, source.contains("MIN_CALENDAR_DETAIL_TEXT_SCALE"))
-        assertEquals(true, source.contains("detailText == \"Praznik\""))
-        assertEquals(true, source.contains("result.lineCount > expectedCalendarDayTextLines(detailText)"))
+        // Detalj dana se prvo smanjuje (AutoSizeText), a ne seče odmah.
+        assertEquals(true, source.contains("AutoSizeText("))
+        assertEquals(true, source.contains("text = detailLines[0]"))
+        assertEquals(true, source.contains("minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp"))
     }
 
     @Test
@@ -131,7 +134,8 @@ class DayEditDialogTextTest {
     fun popupsUseSharedMaximumHeight() {
         assertEquals(760, UI.popupMaxHeight)
         assertEquals(28, UI.popupEdgePadding)
-        assertEquals(84, UI.popupBottomSafePadding)
+        // List sa dna pokriva donju traku, pa mu ne treba dodatni razmak iznad nje.
+        assertEquals(0, UI.popupBottomSafePadding)
     }
 
     @Test
@@ -139,6 +143,14 @@ class DayEditDialogTextTest {
         assertEquals(Shift.SECOND, defaultOvertimeShiftAfter(Shift.FIRST))
         assertEquals(Shift.THIRD, defaultOvertimeShiftAfter(Shift.SECOND))
         assertEquals(Shift.FIRST, defaultOvertimeShiftAfter(Shift.THIRD))
+    }
+
+    @Test
+    fun overtimeShiftMustBeLaterThanRegularShift() {
+        assertEquals(listOf(Shift.SECOND, Shift.THIRD), overtimeShiftsAfter(Shift.FIRST))
+        assertEquals(listOf(Shift.THIRD), overtimeShiftsAfter(Shift.SECOND))
+        assertEquals(listOf(Shift.FIRST), overtimeShiftsAfter(Shift.THIRD))
+        assertEquals(emptyList<Shift>(), overtimeShiftsAfter(Shift.OFF))
     }
 
     @Test
@@ -217,7 +229,7 @@ class DayEditDialogTextTest {
     fun sickDayEditShowsOnlyPayRateChoices() {
         val source = dayEditDialogSource()
         val sickBranch = source.substring(
-            source.indexOf("Shift.SICK -> DayEditSickControls("),
+            source.indexOf("Shift.SICK -> "),
             source.indexOf("Shift.VACATION -> DayEditVacationControls(")
         )
         val sickControls = functionSource(source, "private fun DayEditSickControls(")
@@ -256,7 +268,8 @@ class DayEditDialogTextTest {
 
         assertEquals(true, saveButton.contains("val isSaveEnabled = saveState.shift1 != Shift.VACATION || vacationValidation.isAllowed"))
         assertEquals(true, saveButton.contains("enabled = isSaveEnabled"))
-        assertEquals(true, saveButton.contains("bgColor = if (isSaveEnabled) THEME.success else THEME.empty"))
+        // GlowButton je M3 Button: onemogućeno stanje (container 12%, sadržaj 38%) rešava on sam.
+        assertEquals(true, saveButton.contains("GlowButton("))
         assertEquals(true, saveButton.contains("if (!isSaveEnabled) {"))
         assertEquals(true, saveButton.contains("return@GlowButton"))
     }
@@ -265,9 +278,9 @@ class DayEditDialogTextTest {
     fun dayEditPopupContainsRegularShortageSelector() {
         val source = dayEditDialogSource()
 
-        assertEquals(true, source.contains("Minuti: "))
+        assertEquals(true, source.contains("label = \"Minuti\""))
         assertEquals(true, source.contains("regularShortageMinutes"))
-        assertEquals(true, source.contains("enabled = shortageMinutesAllowed"))
+        assertEquals(true, source.contains("enabled = state.shortageMinutesAllowed"))
         assertEquals(true, source.contains("effectiveRegularShortageMinutes"))
         assertEquals(false, source.contains("Prekovremeni minuti"))
     }
@@ -349,7 +362,7 @@ class DayEditDialogTextTest {
         assertEquals(true, autoHolidayIndex > lockReturnIndex)
         assertEquals(true, statusIndex > lockedDialogIndex)
         assertEquals(true, lockedDialogIndex < normalPopupIndex)
-        assertEquals(true, fullSource.contains("PONIŠTI DANE"))
+        assertEquals(true, fullSource.contains("Poništi dane"))
     }
 
     @Test
@@ -357,7 +370,7 @@ class DayEditDialogTextTest {
         val source = dayEditDialogSource()
 
         assertEquals(true, source.contains("private fun DayEditSectionCard("))
-        assertEquals(true, source.contains("private fun DayEditChoiceHeader("))
+        assertEquals(true, source.contains("internal fun DayEditChoiceHeader("))
         assertEquals(true, source.contains("DayEditSectionCard("))
         assertEquals(true, source.contains("DayEditChoiceHeader("))
         assertEquals(
@@ -401,15 +414,15 @@ class DayEditDialogTextTest {
     }
 
     @Test
-    fun absenceDialogChoiceButtonsUseExpandedMinimumHeights() {
+    fun absenceDialogChoiceButtonsMatchDayEditDialog() {
         val source = appSource("AbsenceDialog.kt")
 
-        assertEquals(58, source.constantValue("ABSENCE_TYPE_CHOICE_HEIGHT"))
-        assertEquals(58, source.constantValue("ABSENCE_RATE_CHOICE_HEIGHT"))
-        assertEquals(0, Regex("""\.height\(ABSENCE_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(0, Regex("""\.height\(ABSENCE_RATE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(3, Regex("""\.heightIn\(min = ABSENCE_TYPE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(2, Regex("""\.heightIn\(min = ABSENCE_RATE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
+        // Bolovanje/Godišnji i procenat izgledaju kao izbori u prozoru dana.
+        assertEquals(2, Regex("""minHeight = DAY_TYPE_CHOICE_HEIGHT""").findAll(source).count())
+        assertEquals(1, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
+        assertEquals(true, source.contains("text = \"Bolovanje\""))
+        assertEquals(false, source.contains("BOLOVANJE"))
+        assertEquals(false, source.contains("THEME.sick"))
     }
 
     @Test
@@ -437,12 +450,15 @@ class DayEditDialogTextTest {
 
     @Test
     fun totalCardUsesMonthlyReceiptLabel() {
-        assertEquals("Primanja u ovom mesecu", TOTAL_CARD_LABEL)
+        assertEquals("Primanja u Septembru", totalCardLabel(2026, 9))
+        assertEquals("Primanja u Martu", totalCardLabel(2026, 3))
     }
 
     @Test
     fun salaryCardUsesSelectedMonthName() {
-        assertEquals("Plata za Jul", salaryCardLabel(7))
+        assertEquals("Julska plata", salaryCardLabel(7))
+        assertEquals("Septembarska plata", salaryCardLabel(9))
+        assertEquals("Martovska plata", salaryCardLabel(3))
     }
 
     @Test
@@ -582,7 +598,7 @@ private fun appSource(fileName: String): String {
 }
 
 private fun String.constantValue(name: String): Int {
-    val match = Regex("""private const val $name = (\d+)""").find(this)
+    val match = Regex("""(?:private|internal) const val $name = (\d+)""").find(this)
         ?: error("Missing constant $name")
     return match.groupValues[1].toInt()
 }

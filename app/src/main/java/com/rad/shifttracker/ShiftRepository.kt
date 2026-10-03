@@ -17,13 +17,18 @@ import com.rad.shifttracker.data.repository.RepositoryVacationTracker
 import com.rad.shifttracker.data.repository.RollingPayBaseMonthSimulator
 import com.rad.shifttracker.data.repository.ShiftRecordStore
 import com.rad.shifttracker.data.storage.CloudArchiveMerger
+import com.rad.shifttracker.data.storage.LocalDataStore
 import com.rad.shifttracker.data.storage.LocalShiftStorage
 import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
+import com.rad.shifttracker.data.storage.SnapshotDecodeResult
+import com.rad.shifttracker.data.storage.SnapshotRejection
 import java.math.BigDecimal
+import java.time.Clock
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlin.math.abs
 
 data class BatchRecord(
     val year: Int,
@@ -33,7 +38,10 @@ data class BatchRecord(
     val hours: Int,
     val sickPayRate: Double? = null,
     val balanceExempt: Boolean = false,
-    val source: DayRecordSource = DayRecordSource.MANUAL
+    val source: DayRecordSource = DayRecordSource.MANUAL,
+    /** Praznik koji je korisnik sam uključio (true) ili isključio (false) za taj datum. */
+    val holidayOverride: Boolean? = null,
+    val holidayWorkOverride: Boolean? = null
 )
 
 data class AbsenceRangeNetImpact(
@@ -46,21 +54,12 @@ data class AbsenceRangeNetImpact(
     val replacedNightHours: Int
 )
 
-enum class AdvancePaymentNotificationImportDecision {
-    IMPORTED,
-    SKIPPED_EXISTING_ADVANCE,
-    SKIPPED_INVALID,
-    SKIPPED_DISABLED
-}
-
-data class AdvancePaymentNotificationImportResult(
-    val decision: AdvancePaymentNotificationImportDecision,
-    val month: MonthKey,
-    val amount: Double
-)
-
 @Suppress("TooManyFunctions", "LargeClass")
-class ShiftRepository(private val config: AppConfig = CONFIG) {
+class ShiftRepository(
+    private val config: AppConfig = CONFIG,
+    /** Izvor „danas“; testovi ga fiksiraju (ponoć, promena godine). */
+    private val clock: Clock = Clock.systemDefaultZone()
+) {
     // Thread safety: All access to mutable repository state must be synchronized on `lock`
     private val lock = Any()
     private val recordStore = ShiftRecordStore(::invalidateSummaryUnsafe)
@@ -78,7 +77,12 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         payState = payState,
         invalidateSummaryAndRollingDependents = ::invalidateSummaryAndRollingDependentsUnsafe
     )
-    private val vacationTracker = RepositoryVacationTracker(recordStore, ::calculateYearsOfServiceUnsafe)
+    private val vacationTracker = RepositoryVacationTracker(
+        recordStore,
+        ::calculateYearsOfServiceUnsafe,
+        ::payslipVacationDaysByMonthUnsafe,
+        clock
+    )
     private val payQueries = RepositoryPayQueries(
         config = config,
         payState = payState,
@@ -87,15 +91,16 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         getCompBalanceMinutesAtMonthStartUnsafe = compBalanceCalculator::minutesAtMonthStart,
         getCompBalanceAtMonthStartReadOnly = compBalanceCalculator::hoursAtMonthStartReadOnly,
         getCompBalanceMinutesAtMonthStartReadOnly = compBalanceCalculator::minutesAtMonthStartReadOnly,
-        calculateYearsOfServiceUnsafe = ::calculateYearsOfServiceUnsafe
+        calculateYearsOfServiceUnsafe = ::calculateYearsOfServiceUnsafe,
+        percentDeductionsForMonthUnsafe = { month -> percentDeductionsForMonth(month, savedPayslipsUnsafe()) }
     )
     private val absenceSimulator = RepositoryAbsenceSimulator(
         config = config,
         recordStore = recordStore,
         payQueries = payQueries
     )
-    private var foodReceiptReminderEnabledState = false
-    private var autoAdvanceImportEnabledState = true
+    // Nova instalacija: čitanje akontacije iz obaveštenja je isključeno dok ga korisnik ne uključi.
+    private var autoAdvanceImportEnabledState = false
     private var notificationAccessPromptSuppressedState = false
     private var mainPayIncludesTransportState = true
     private var lastBloodDonationDateState: LocalDate? = null
@@ -106,8 +111,29 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     // Meseci koje je korisnik izričito obrisao — čuva se u snapshot-u da ih
     // merge sa cloud arhivom ne bi vaskrsao (vidi CloudArchiveMerger).
     private var deletedMonthTombstones: MutableSet<MonthKey> = linkedSetOf()
-    private val jsonCodec = ShiftRepositoryJsonCodec(config)
-    private val localStorage = LocalShiftStorage()
+
+    // Izričito obrisane satnice — isti razlog kao gore, samo za hourly_value_changes.
+    private var deletedHourlyValueTombstones: MutableSet<MonthKey> = linkedSetOf()
+
+    // Izričito obrisani listići — oblak spaja listiće kao uniju, pa bi se bez ovoga vratili.
+    private var deletedPayslipTombstones: MutableSet<MonthKey> = linkedSetOf()
+
+    // Platni listići po mesecu (JSON listića) za „Uporedi“; ne orezuju se kao zapisi.
+    private val savedPayslipJsonByMonth: MutableMap<MonthKey, String> = mutableMapOf()
+
+    // Dani godišnjeg po listiću, uz JSON iz kog su izračunati (da se listić ne parsira pri svakom crtanju).
+    private val payslipVacationDaysCache: MutableMap<MonthKey, Pair<String, Double>> = mutableMapOf()
+
+    // Pročitani listići uz JSON iz kog su nastali — obustave u % se traže pri svakom obračunu neta.
+    private val parsedPayslipCache: MutableMap<MonthKey, Pair<String, ParsedPayslip?>> = mutableMapOf()
+    private val jsonCodec = ShiftRepositoryJsonCodec(config, clock)
+
+    /** Zamenljivo u testovima; produkcija piše u `filesDir`. */
+    internal var localStorage: LocalDataStore = LocalShiftStorage()
+
+    /** Lokalni fajl je pisala novija verzija aplikacije: ne sme se pregaziti starijom. */
+    @Volatile
+    private var localWriteBlockedBySchema = false
 
     private val changeNotifier = ChangeNotificationManager(TAG)
 
@@ -123,7 +149,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         private const val MAX_COMP_BALANCE = 1000
         private const val MINUTES_PER_HOUR = 60
         private const val MAX_COMP_BALANCE_MINUTES = MAX_COMP_BALANCE * MINUTES_PER_HOUR
-        private const val HISTORY_RETENTION_LOOKBACK_MONTHS = 24L
+        private const val NIGHT_WORK_PAYSLIP_CODE = 20
+        private const val ADVANCE_SAME_AMOUNT_TOLERANCE = 0.005
     }
 
     /**
@@ -154,12 +181,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             hourlyValueChanges = payState.hourlyValueChanges.toMap(),
             foodPerDay = payState.foodPerDay,
             foodPerDayChanges = payState.foodPerDayChanges.toMap(),
+            regressNetChanges = payState.regressNetChanges.toMap(),
             transportDailyAmount = payState.transportDailyAmount,
-            creditDeductionEnabled = payState.creditDeductionEnabled,
-            monthlyCreditDeductionAmount = payState.monthlyCreditDeductionAmount,
-            unionMember = payState.unionMember,
-            unionDuesRate = payState.unionDuesRate,
-            foodReceiptReminderEnabled = foodReceiptReminderEnabledState,
             autoAdvanceImportEnabled = autoAdvanceImportEnabledState,
             notificationAccessPromptSuppressed = notificationAccessPromptSuppressedState,
             mainPayIncludesTransport = mainPayIncludesTransportState,
@@ -187,14 +210,20 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             monthlyPayBases = payState.monthlyPayBases.toMap(),
             monthlyGrossAdditions = payState.monthlyGrossAdditions.toMap(),
             monthlyNetAdjustments = payState.monthlyNetAdjustments.toMap(),
-            knownPayBaseAnchor = payState.knownPayBaseAnchor,
+            knownPayBaseAnchors = payState.knownPayBaseAnchors.toMap(),
             annualLeaveCalculationInput = vacationTracker.snapshotAnnualLeaveCalculationInput(),
             annualLeaveLastCalculatedDays = vacationTracker.snapshotAnnualLeaveLastCalculatedDays(),
             records = recordStore.allRecords.toList(),
             // Tombstone se automatski neutrališe ako mesec ponovo dobije zapise.
-            deletedMonths = deletedMonthTombstones.filter { recordStore.getMonthRecords(it).isEmpty() }
+            deletedMonths = deletedMonthTombstones.filter { recordStore.getMonthRecords(it).isEmpty() },
+            deletedHourlyValueMonths = deletedHourlyValueTombstones.filter { it !in payState.hourlyValueChanges },
+            savedPayslips = savedPayslipJsonByMonth.toMap(),
+            deletedPayslipMonths = deletedPayslipTombstones.filter { it !in savedPayslipJsonByMonth }
         )
     }
+
+    /** Tekući mesec za granicu brisanja istorije; testovi ga pomeraju. */
+    internal var retentionClock: () -> YearMonth = { YearMonth.now(clock) }
 
     fun pruneIrrelevantHistory(): Boolean {
         val changed = synchronized(lock) {
@@ -210,13 +239,17 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val plan = historyRetentionPlanUnsafe() ?: return false
 
         var changed = false
+        // Pre ikakvog brisanja: prenos godišnjeg se računa dok su podaci prošle godine još celi.
+        changed = vacationTracker.freezeCarryover(firstFullyRetainedYear(plan.cutoff)) || changed
         val protectedPayBaseMonths = materializePayBaseAnchorsUnsafe(plan.cutoff, plan.retainedMonths)
         changed = protectedPayBaseMonths.changed || changed
         changed = resetInitialCompBalanceForRetentionUnsafe(plan) || changed
         changed = removeOldRecordsUnsafe(plan.cutoff) || changed
-        changed = pruneHourlyValueChangesUnsafe(plan.cutoff, plan.hourlyValueAtCutoff) || changed
+        // Satnice se NAMERNO ne orezuju: to je ručno unet podatak (par brojeva),
+        // a orezivanje bi ga izbrisalo iz memorije pre nego što stigne u oblak.
         changed = pruneMonthScopedDataUnsafe(plan.cutoff, protectedPayBaseMonths.months) || changed
-        changed = pruneVacationYearBalancesUnsafe() || changed
+        // Godišnji starijih godina je već obrisan u freezeCarryover (posle zamrzavanja prenosa).
+        changed = savedPayslipJsonByMonth.keys.removeAll { it < plan.cutoff } || changed
 
         if (changed) {
             invalidateRetentionCachesUnsafe()
@@ -227,8 +260,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     private data class HistoryRetentionPlan(
         val cutoff: MonthKey,
         val retainedMonths: List<MonthKey>,
-        val compBalanceAtCutoff: Int,
-        val hourlyValueAtCutoff: Double
+        val compBalanceAtCutoff: Int
     )
 
     private data class RetentionPayBaseAnchors(
@@ -238,7 +270,11 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
 
     private fun historyRetentionPlanUnsafe(): HistoryRetentionPlan? {
         val recordMonths = recordStore.getAllMonthsSorted()
-        val latestMonth = recordMonths.maxOrNull() ?: return null
+        val latestRecorded = recordMonths.maxOrNull() ?: return null
+        // Smene popunjene unapred nisu stvarni podaci: granica ide od tekućeg meseca, inače bi popuna
+        // 12 meseci unapred obrisala i prave listiće i godišnji prošle godine.
+        val now = retentionClock().let { MonthKey(it.year, it.monthValue) }
+        val latestMonth = minOf(latestRecorded, now)
         val cutoff = latestMonth.minusMonthsForRetention(HISTORY_RETENTION_LOOKBACK_MONTHS)
         if (!hasHistoryRetentionWorkUnsafe(cutoff, recordMonths)) return null
 
@@ -248,17 +284,17 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         return HistoryRetentionPlan(
             cutoff = cutoff,
             retainedMonths = retainedMonths,
-            compBalanceAtCutoff = compBalanceCalculator.minutesAtMonthStart(cutoff.year, cutoff.month),
-            hourlyValueAtCutoff = hourlyValueUnsafe(cutoff.year, cutoff.month)
+            compBalanceAtCutoff = compBalanceCalculator.minutesAtMonthStart(cutoff.year, cutoff.month)
         )
     }
 
     private fun hasHistoryRetentionWorkUnsafe(cutoff: MonthKey, recordMonths: List<MonthKey>): Boolean {
         return recordMonths.any { it < cutoff } ||
+            savedPayslipJsonByMonth.keys.any { it < cutoff } ||
+            vacationTracker.snapshotVacationYearBalances().keys.any { it < firstFullyRetainedYear(cutoff) } ||
             payState.monthlyGrossAdditions.keys.any { it < cutoff } ||
             payState.monthlyNetAdjustments.keys.any { it < cutoff } ||
-            payState.monthlyPayBases.keys.any { it < cutoff } ||
-            payState.hourlyValueChanges.keys.any { it < cutoff }
+            payState.monthlyPayBases.keys.any { it < cutoff }
     }
 
     private fun materializePayBaseAnchorsUnsafe(
@@ -301,8 +337,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
                 previousTwelveMonthKeys(sourceMonth.year, sourceMonth.month).any { it < cutoff }
             }
             PayBaseSelectionMode.KNOWN_BASE -> {
-                val anchor = payState.knownPayBaseAnchor ?: return false
-                anchor.month < cutoff && anchor.month <= sourceMonth
+                val anchor = payState.knownPayBaseAnchorFor(sourceMonth) ?: return false
+                anchor.month < cutoff
             }
             PayBaseSelectionMode.MANUAL,
             PayBaseSelectionMode.DEFAULT_VALUES -> false
@@ -327,34 +363,12 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         return changed
     }
 
-    private fun pruneHourlyValueChangesUnsafe(cutoff: MonthKey, hourlyValueAtCutoff: Double): Boolean {
-        val oldKeys = payState.hourlyValueChanges.keys.filter { it < cutoff }
-        var changed = false
-        for (key in oldKeys) {
-            payState.hourlyValueChanges.remove(key)
-            changed = true
-        }
-        if (oldKeys.isNotEmpty() && hourlyValueAtCutoff.isFinite() && hourlyValueAtCutoff > 0.0) {
-            val existing = payState.hourlyValueChanges[cutoff]
-            if (existing == null || existing != hourlyValueAtCutoff) {
-                payState.hourlyValueChanges[cutoff] = hourlyValueAtCutoff
-                changed = true
-            }
-        }
-        return changed
-    }
-
     private fun pruneMonthScopedDataUnsafe(cutoff: MonthKey, protectedPayBaseMonths: Set<MonthKey>): Boolean {
         var changed = false
         changed = removeMonthKeysBefore(payState.monthlyGrossAdditions, cutoff) || changed
         changed = removeMonthKeysBefore(payState.monthlyNetAdjustments, cutoff) || changed
         changed = removeMonthKeysBefore(payState.monthlyPayBases, cutoff, protectedPayBaseMonths) || changed
         return changed
-    }
-
-    private fun pruneVacationYearBalancesUnsafe(): Boolean {
-        val retainedYears = recordStore.getAllMonthsSorted().map { it.year }.toSet()
-        return retainedYears.isNotEmpty() && vacationTracker.retainVacationYearBalances(retainedYears)
     }
 
     private fun invalidateRetentionCachesUnsafe() {
@@ -420,123 +434,156 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         }
     }
 
-    fun importFromJson(jsonText: String): Boolean {
-        val snapshot = try {
-            jsonCodec.decode(jsonText)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse import JSON", e)
-            null
-        } ?: return false
+    fun importFromJson(jsonText: String): Boolean = tryImportFromJson(jsonText) == null
 
+    /**
+     * Vraćanje stanja iz JSON-a. Sve provere su PRE brisanja: odbijeni JSON ne menja ništa.
+     * @return null kad je uvezeno, inače razlog odbijanja.
+     */
+    internal fun tryImportFromJson(jsonText: String): SnapshotRejection? {
+        val snapshot = when (val decoded = decodeForImport(jsonText)) {
+            is SnapshotDecodeResult.Decoded -> decoded.snapshot
+            is SnapshotDecodeResult.Rejected -> return decoded.reason
+        }
         synchronized(lock) {
-            recordStore.clear()
-            payState.monthlyPayBases.clear()
-            payState.monthlyGrossAdditions.clear()
-            payState.monthlyNetAdjustments.clear()
-            payState.dirtyMonths.clear()
-            payState.invalidateSummariesRollingAndCompBalance()
-            payState.cachedSummaryCalc = null
-            payState.cachedSummaryCalcFoodPerDay = Double.NaN
-            payState.cachedSummaryCalcSickPayBaseHourly = Double.NaN
-            payState.cachedSummaryCalcDifficultWorkConditionsPercent = Double.NaN
-
-            payState.payCoefficient = if (snapshot.payCoefficient.isFinite() && snapshot.payCoefficient > 0.0) {
-                snapshot.payCoefficient.coerceAtMost(MAX_BASE_PAY)
-            } else {
-                config.pay.defaultCoefficient
+            // Pravi backup ima barem jedan zapis; prazan snapshot nad popunjenim kalendarom je skoro sigurno
+            // pogrešan fajl (ili tek instalirana aplikacija), a uvoz bi tiho obrisao sve zapise.
+            if (snapshot.records.isEmpty() && recordStore.allRecords.isNotEmpty()) {
+                Log.w(TAG, "Uvoz odbijen: snapshot nema zapisa, a lokalno ih ima.")
+                return SnapshotRejection.WOULD_ERASE_EXISTING_RECORDS
             }
-            payState.hourlyValueChanges.clear()
-            payState.hourlyValueChanges.putAll(snapshot.hourlyValueChanges)
-            restoreMealPriceHistoryUnsafe(snapshot)
-            payState.sickPayBaseHourly = if (snapshot.sickPayBaseHourly.isFinite()) {
-                snapshot.sickPayBaseHourly.coerceIn(0.0, MAX_BASE_PAY)
-            } else {
-                config.pay.sickPayBaseHourly
-            }
-            payState.defaultPayBaseSelectionMode = snapshot.defaultPayBaseSelectionMode.toGlobalPayBaseSelectionMode()
-            payState.foodPerDay = if (snapshot.foodPerDay.isFinite()) {
-                snapshot.foodPerDay.coerceIn(0.0, MAX_FOOD_PER_DAY)
-            } else {
-                config.pay.foodPerDay
-            }
-            payState.transportDailyAmount = if (snapshot.transportDailyAmount.isFinite()) {
-                snapshot.transportDailyAmount.coerceIn(0.0, MAX_TRANSPORT_PER_DAY)
-            } else {
-                config.pay.transportPerWorkDay
-            }
-            payState.creditDeductionEnabled = snapshot.creditDeductionEnabled
-            payState.monthlyCreditDeductionAmount = snapshot.monthlyCreditDeductionAmount.sanitizeMonthlyNetAdjustment()
-            payState.unionMember = snapshot.unionMember
-            payState.unionDuesRate = snapshot.unionDuesRate.sanitizeUnionDuesRate()
-            foodReceiptReminderEnabledState = snapshot.foodReceiptReminderEnabled
-            autoAdvanceImportEnabledState = snapshot.autoAdvanceImportEnabled
-            notificationAccessPromptSuppressedState = snapshot.notificationAccessPromptSuppressed
-            mainPayIncludesTransportState = snapshot.mainPayIncludesTransport
-            bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
-            lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
-            bloodDonationCountState = snapshot.bloodDonationCount.coerceAtLeast(bloodDonationHistoryState.size)
-            bloodDonationLeaveStates = normalizeBloodDonationLeaveStates(snapshot.bloodDonationLeaves)
-            payState.employeeContributionsPercent = if (snapshot.employeeContributionsPercent.isFinite()) {
-                snapshot.employeeContributionsPercent.coerceIn(0.0, MAX_PERCENT)
-            } else {
-                config.pay.defaultEmployeeContributionsPercent
-            }
-            payState.taxRelief = if (snapshot.taxRelief.isFinite()) {
-                snapshot.taxRelief.coerceIn(0.0, MAX_TAX_RELIEF)
-            } else {
-                config.pay.defaultTaxRelief
-            }
-            payState.taxPercent = if (snapshot.taxPercent.isFinite()) {
-                snapshot.taxPercent.coerceIn(0.0, MAX_PERCENT)
-            } else {
-                config.pay.defaultTaxPercent
-            }
-            payState.difficultWorkConditionsPercent = if (snapshot.difficultWorkConditionsPercent.isFinite()) {
-                snapshot.difficultWorkConditionsPercent.coerceIn(0.0, MAX_PERCENT)
-            } else {
-                config.pay.difficultWorkConditionsPercent
-            }
-            payState.initialCompBalanceMinutes = snapshot.initialCompBalanceMinutes
-                .coerceIn(MIN_COMP_BALANCE, MAX_COMP_BALANCE_MINUTES)
-            payState.initialCompBalance = payState.initialCompBalanceMinutes / MINUTES_PER_HOUR
-            payState.minuliRadStartYear = snapshot.minuliRadStartYear
-            payState.minuliRadStartMonth = snapshot.minuliRadStartMonth.coerceIn(1, 12)
-            payState.seniorityInputMode = snapshot.seniorityInputMode
-            payState.minuliRadBenefitEnabled = snapshot.minuliRadBenefitEnabled
-            payState.minuliRadIncreaseFactor = snapshot.minuliRadIncreaseFactor
-            payState.minuliRadLastPayslipYear = snapshot.minuliRadLastPayslipYear.coerceAtLeast(0)
-            payState.minuliRadLastPayslipMonth = snapshot.minuliRadLastPayslipMonth.coerceIn(1, 12)
-            payState.minuliRadPayslipPercent = snapshot.minuliRadPayslipPercent
-                .takeIf { it.isFinite() }
-                ?.coerceIn(0.0, MAX_PERCENT)
-                ?: 0.0
-            payState.brigadeType = snapshot.brigadeType
-            vacationTracker.restore(
-                initialVacationBalance = snapshot.initialVacationBalance,
-                vacationYearBalances = snapshot.vacationYearBalances,
-                annualLeaveCalculationInput = snapshot.annualLeaveCalculationInput,
-                annualLeaveLastCalculatedDays = snapshot.annualLeaveLastCalculatedDays
-            )
-            payState.monthlyPayBases.putAll(snapshot.monthlyPayBases)
-            payState.monthlyGrossAdditions.putAll(snapshot.monthlyGrossAdditions)
-            payState.monthlyNetAdjustments.putAll(snapshot.monthlyNetAdjustments)
-            payState.knownPayBaseAnchor = snapshot.knownPayBaseAnchor
-            if (
-                payState.defaultPayBaseSelectionMode == PayBaseSelectionMode.KNOWN_BASE &&
-                payState.knownPayBaseAnchor == null
-            ) {
-                payState.defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
-            }
-
-            deletedMonthTombstones = snapshot.deletedMonths.toMutableSet()
-
-            for (record in snapshot.records) {
-                recordStore.set(record)
-            }
-            pruneIrrelevantHistoryUnsafe()
+            applySnapshotUnsafe(snapshot)
         }
         notifyChange()
-        return true
+        return null
+    }
+
+    private fun decodeForImport(jsonText: String): SnapshotDecodeResult {
+        val decoded = try {
+            jsonCodec.decodeChecked(jsonText)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse import JSON", e)
+            SnapshotDecodeResult.Rejected(SnapshotRejection.UNREADABLE)
+        }
+        if (decoded is SnapshotDecodeResult.Rejected) {
+            Log.w(TAG, "Uvoz odbijen: ${decoded.reason}")
+        }
+        return decoded
+    }
+
+    private fun applySnapshotUnsafe(snapshot: ShiftRepositorySnapshot) {
+        recordStore.clear()
+        payState.monthlyPayBases.clear()
+        payState.monthlyGrossAdditions.clear()
+        payState.monthlyNetAdjustments.clear()
+        payState.dirtyMonths.clear()
+        payState.invalidateSummariesRollingAndCompBalance()
+        payState.cachedSummaryCalc = null
+        payState.cachedSummaryCalcFoodPerDay = Double.NaN
+        payState.cachedSummaryCalcSickPayBaseHourly = Double.NaN
+        payState.cachedSummaryCalcDifficultWorkConditionsPercent = Double.NaN
+
+        payState.payCoefficient = if (snapshot.payCoefficient.isFinite() && snapshot.payCoefficient > 0.0) {
+            snapshot.payCoefficient.coerceAtMost(MAX_BASE_PAY)
+        } else {
+            config.pay.defaultCoefficient
+        }
+        payState.hourlyValueChanges.clear()
+        payState.hourlyValueChanges.putAll(snapshot.hourlyValueChanges)
+        payState.restoreRegressNetChanges(snapshot.regressNetChanges)
+        restoreMealPriceHistoryUnsafe(snapshot)
+        payState.sickPayBaseHourly = if (snapshot.sickPayBaseHourly.isFinite()) {
+            snapshot.sickPayBaseHourly.coerceIn(0.0, MAX_BASE_PAY)
+        } else {
+            config.pay.sickPayBaseHourly
+        }
+        payState.defaultPayBaseSelectionMode = snapshot.defaultPayBaseSelectionMode.toGlobalPayBaseSelectionMode()
+        payState.foodPerDay = if (snapshot.foodPerDay.isFinite()) {
+            snapshot.foodPerDay.coerceIn(0.0, MAX_FOOD_PER_DAY)
+        } else {
+            config.pay.foodPerDay
+        }
+        payState.transportDailyAmount = if (snapshot.transportDailyAmount.isFinite()) {
+            snapshot.transportDailyAmount.coerceIn(0.0, MAX_TRANSPORT_PER_DAY)
+        } else {
+            config.pay.transportPerWorkDay
+        }
+        autoAdvanceImportEnabledState = snapshot.autoAdvanceImportEnabled
+        notificationAccessPromptSuppressedState = snapshot.notificationAccessPromptSuppressed
+        mainPayIncludesTransportState = snapshot.mainPayIncludesTransport
+        bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
+        lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
+        bloodDonationCountState = snapshot.bloodDonationCount.coerceAtLeast(bloodDonationHistoryState.size)
+        bloodDonationLeaveStates = normalizeBloodDonationLeaveStates(snapshot.bloodDonationLeaves)
+        payState.employeeContributionsPercent = if (snapshot.employeeContributionsPercent.isFinite()) {
+            snapshot.employeeContributionsPercent.coerceIn(0.0, MAX_PERCENT)
+        } else {
+            config.pay.defaultEmployeeContributionsPercent
+        }
+        payState.taxRelief = if (snapshot.taxRelief.isFinite()) {
+            snapshot.taxRelief.coerceIn(0.0, MAX_TAX_RELIEF)
+        } else {
+            config.pay.defaultTaxRelief
+        }
+        payState.taxPercent = if (snapshot.taxPercent.isFinite()) {
+            snapshot.taxPercent.coerceIn(0.0, MAX_PERCENT)
+        } else {
+            config.pay.defaultTaxPercent
+        }
+        payState.difficultWorkConditionsPercent = if (snapshot.difficultWorkConditionsPercent.isFinite()) {
+            snapshot.difficultWorkConditionsPercent.coerceIn(0.0, MAX_PERCENT)
+        } else {
+            config.pay.difficultWorkConditionsPercent
+        }
+        payState.initialCompBalanceMinutes = snapshot.initialCompBalanceMinutes
+            .coerceIn(MIN_COMP_BALANCE, MAX_COMP_BALANCE_MINUTES)
+        payState.initialCompBalance = payState.initialCompBalanceMinutes / MINUTES_PER_HOUR
+        payState.minuliRadStartYear = snapshot.minuliRadStartYear
+        payState.minuliRadStartMonth = snapshot.minuliRadStartMonth.coerceIn(1, 12)
+        payState.seniorityInputMode = snapshot.seniorityInputMode
+        payState.minuliRadBenefitEnabled = snapshot.minuliRadBenefitEnabled
+        payState.minuliRadIncreaseFactor = snapshot.minuliRadIncreaseFactor
+        payState.minuliRadLastPayslipYear = snapshot.minuliRadLastPayslipYear.coerceAtLeast(0)
+        payState.minuliRadLastPayslipMonth = snapshot.minuliRadLastPayslipMonth.coerceIn(1, 12)
+        payState.minuliRadPayslipPercent = snapshot.minuliRadPayslipPercent
+            .takeIf { it.isFinite() }
+            ?.coerceIn(0.0, MAX_PERCENT)
+            ?: 0.0
+        payState.brigadeType = snapshot.brigadeType
+        vacationTracker.restore(
+            initialVacationBalance = snapshot.initialVacationBalance,
+            vacationYearBalances = snapshot.vacationYearBalances,
+            annualLeaveCalculationInput = snapshot.annualLeaveCalculationInput,
+            annualLeaveLastCalculatedDays = snapshot.annualLeaveLastCalculatedDays
+        )
+        payState.monthlyPayBases.putAll(snapshot.monthlyPayBases)
+        payState.monthlyGrossAdditions.putAll(snapshot.monthlyGrossAdditions)
+        payState.monthlyNetAdjustments.putAll(snapshot.monthlyNetAdjustments)
+        payState.knownPayBaseAnchors.clear()
+        payState.knownPayBaseAnchors.putAll(snapshot.knownPayBaseAnchors)
+        savedPayslipJsonByMonth.clear()
+        savedPayslipJsonByMonth.putAll(snapshot.savedPayslips)
+        // Listić sačuvan bez osnovice za svoj mesec (npr. stariji „poslednji listić“): osnovica sa njega.
+        for (json in savedPayslipJsonByMonth.values) {
+            payslipFromJsonOrNull(json)?.let(::payslipPayBaseAnchor)?.let { anchor ->
+                payState.knownPayBaseAnchors.putIfAbsent(anchor.month, anchor.grossHourlyBase)
+            }
+        }
+        if (
+            payState.defaultPayBaseSelectionMode == PayBaseSelectionMode.KNOWN_BASE &&
+            payState.knownPayBaseAnchor == null
+        ) {
+            payState.defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+        }
+
+        deletedMonthTombstones = snapshot.deletedMonths.toMutableSet()
+        deletedHourlyValueTombstones = snapshot.deletedHourlyValueMonths.toMutableSet()
+        deletedPayslipTombstones = snapshot.deletedPayslipMonths.toMutableSet()
+
+        for (record in snapshot.records) {
+            recordStore.set(record)
+        }
+        pruneIrrelevantHistoryUnsafe()
     }
 
     private fun invalidateSummaryUnsafe(monthKey: MonthKey) {
@@ -598,7 +645,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         holidayOverride: Boolean? = null,
         sickPayRate: Double? = null,
         balanceExempt: Boolean = false,
-        regularShortageMinutes: Int = 0
+        regularShortageMinutes: Int = 0,
+        source: DayRecordSource = DayRecordSource.MANUAL
     ): Boolean {
         synchronized(lock) {
             val targetDate = LocalDate.of(year, month, day)
@@ -634,7 +682,8 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
                 holidayOverride = holidayOverride,
                 balanceExempt = finalBalanceExempt,
                 sickPayRate = finalSickRate,
-                regularShortageMinutes = regularShortageMinutes
+                regularShortageMinutes = regularShortageMinutes,
+                source = source
             )
             recordStore.set(record)
         }
@@ -980,7 +1029,9 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     fun setHourlyValueChange(year: Int, month: Int, value: Double) {
         if (year <= 0 || month !in 1..12 || !value.isFinite() || value <= 0.0) return
         synchronized(lock) {
-            paySettingsUpdater.setHourlyValueChange(MonthKey(year, month), value.coerceAtMost(MAX_BASE_PAY))
+            val key = MonthKey(year, month)
+            paySettingsUpdater.setHourlyValueChange(key, value.coerceAtMost(MAX_BASE_PAY))
+            deletedHourlyValueTombstones.remove(key)
         }
         notifyChange()
     }
@@ -988,7 +1039,10 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     fun removeHourlyValueChange(year: Int, month: Int) {
         if (year <= 0 || month !in 1..12) return
         val removed = synchronized(lock) {
-            paySettingsUpdater.removeHourlyValueChange(MonthKey(year, month))
+            val key = MonthKey(year, month)
+            paySettingsUpdater.removeHourlyValueChange(key).also { wasRemoved ->
+                if (wasRemoved) deletedHourlyValueTombstones.add(key)
+            }
         }
         if (removed) notifyChange()
     }
@@ -1019,11 +1073,11 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     // Kept for legacy callers that expect a single base-gross pay value.
     var grossHourlyRateValue: Double
         get() {
-            val today = LocalDate.now()
+            val today = LocalDate.now(clock)
             return getGrossHourlyRateForMonth(today.year, today.monthValue)
         }
         set(value) {
-            val today = LocalDate.now()
+            val today = LocalDate.now(clock)
             val hourlyValue = getHourlyValueForMonth(today.year, today.monthValue)
             payCoefficientValue = if (hourlyValue > 0.0) {
                 value / hourlyValue
@@ -1100,8 +1154,103 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         notifyChange()
     }
 
+    /** Listić sačuvan za radni mesec („Uporedi“), ili null ako ga nema. */
+    internal fun getSavedPayslip(year: Int, month: Int): ParsedPayslip? {
+        val key = MonthKey(year, month)
+        val json = synchronized(lock) { savedPayslipJsonByMonth[key] } ?: return null
+        // Listić iz oštećenog backup-a čiji mesec ne odgovara ključu ne prikazuje se pod tuđim mesecom.
+        return payslipFromJsonOrNull(json)?.takeIf { it.month == key }
+    }
+
+    /**
+     * Dani godišnjeg (šifra 10 / 8 h) sa sačuvanih listića za godinu. Listić bez šifre 10 daje 0,
+     * a listić koji ne može da se pročita se preskače (taj mesec se broji po kalendaru).
+     */
+    private fun payslipVacationDaysByMonthUnsafe(year: Int): Map<Int, Double> =
+        savedPayslipJsonByMonth.entries
+            .filter { it.key.year == year }
+            .mapNotNull { (key, json) ->
+                val cached = payslipVacationDaysCache[key]?.takeIf { it.first == json }?.second
+                val days = cached ?: payslipFromJsonOrNull(json)
+                    ?.takeIf { it.month == key }
+                    ?.let(::payslipVacationDays)
+                    ?.also { payslipVacationDaysCache[key] = json to it }
+                days?.let { key.month to it }
+            }
+            .toMap()
+
+    /** Listić meseca je korisnik obrisao („Obriši listu“), pa se ne upisuje ponovo sam od sebe. */
+    internal fun isPayslipDeleted(month: MonthKey): Boolean = synchronized(lock) { month in deletedPayslipTombstones }
+
+    /** Mesec najnovijeg sačuvanog listića, ili null ako nijedan nije sačuvan. */
+    internal fun getLatestSavedPayslipMonth(): MonthKey? = synchronized(lock) { savedPayslipJsonByMonth.keys.maxOrNull() }
+
+    /** Meseci svih sačuvanih listića, od najstarijeg. */
+    internal fun getSavedPayslipMonths(): List<MonthKey> = synchronized(lock) { savedPayslipJsonByMonth.keys.sorted() }
+
+    /**
+     * Čuva listić pod njegovim mesecem (zamenjuje raniji za isti mesec); ide i u backup.
+     * Ako za taj mesec nije uneta osnovica, uzima se sa listića (GO, PO, praznik, bolovanje).
+     */
+    /** [withPayBase] = false: listić se samo čuva, osnovica sa njega se ne upisuje (stariji listići). */
+    internal fun savePayslip(payslip: ParsedPayslip, withPayBase: Boolean = true) {
+        val json = payslipToJson(payslip)
+        val changed = synchronized(lock) {
+            deletedPayslipTombstones.remove(payslip.month)
+            savedPayslipJsonByMonth.put(payslip.month, json) != json
+        }
+        val anchor = payslipPayBaseAnchor(payslip)?.takeIf { withPayBase }
+        if (anchor != null && getKnownPayBaseAnchors().none { it.month == anchor.month }) {
+            setKnownPayBaseAnchor(anchor.month.year, anchor.month.month, anchor.grossHourlyBase)
+            ensureKnownPayBaseMode(this)
+        } else if (changed) {
+            notifyChange()
+        }
+    }
+
+    /**
+     * Briše sačuvan listić meseca (i iz backup-a, preko tombstone-a). Podešavanja koja su
+     * ranije upisana sa listića (koeficijent, osnovica, porez...) ostaju kakva jesu.
+     */
+    internal fun deletePayslip(month: MonthKey) {
+        val removed = synchronized(lock) {
+            (savedPayslipJsonByMonth.remove(month) != null).also { wasRemoved ->
+                if (wasRemoved) {
+                    deletedPayslipTombstones.add(month)
+                    payslipVacationDaysCache.remove(month)
+                }
+            }
+        }
+        if (removed) notifyChange()
+    }
+
+    /** Najnovije uneto sidro; sva sidra daje [getKnownPayBaseAnchors]. */
     fun getKnownPayBaseAnchor(): KnownPayBaseAnchor? = synchronized(lock) {
         payState.knownPayBaseAnchor
+    }
+
+    fun getKnownPayBaseAnchors(): List<KnownPayBaseAnchor> = synchronized(lock) {
+        payState.knownPayBaseAnchors.map { (month, base) -> KnownPayBaseAnchor(month, base) }
+    }
+
+    /** Sidro po kome se računa osnovica radnog meseca (najnovije koje nije posle njega, inače prvo kasnije). */
+    fun getKnownPayBaseAnchorForWorkMonth(year: Int, month: Int): KnownPayBaseAnchor? = synchronized(lock) {
+        payState.knownPayBaseAnchorFor(MonthKey(year, month))
+    }
+
+    fun removeKnownPayBaseAnchor(year: Int, month: Int) {
+        val removed = synchronized(lock) {
+            val removed = paySettingsUpdater.removeKnownPayBaseAnchor(MonthKey(year, month))
+            if (
+                removed &&
+                payState.knownPayBaseAnchors.isEmpty() &&
+                payState.defaultPayBaseSelectionMode == PayBaseSelectionMode.KNOWN_BASE
+            ) {
+                payState.defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+            }
+            removed
+        }
+        if (removed) notifyChange()
     }
 
     fun setMonthlyPayBases(year: Int, month: Int, bases: MonthlyPayBases) {
@@ -1192,33 +1341,51 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         notifyChange()
     }
 
-    fun recordAdvancePaymentNotificationImport(
-        candidate: RadAdvanceImportCandidate
-    ): AdvancePaymentNotificationImportResult {
-        val decision = synchronized(lock) {
-            if (!autoAdvanceImportEnabledState) {
-                return@synchronized AdvancePaymentNotificationImportDecision.SKIPPED_DISABLED
+    /**
+     * Akontacija za [month] sa obračuna akontacije (iznos uplaćen na račun). Obračun je tačniji od
+     * ručnog unosa, pa ga zamenjuje; true ako je iznos promenjen.
+     */
+    fun recordAdvancePaymentFromPayslip(month: MonthKey, amount: Double): Boolean {
+        val changed = synchronized(lock) {
+            if (!autoAdvanceImportEnabledState) return@synchronized false
+            if (month.year <= 0 || month.month !in 1..12 || amount <= 0.0 || !amount.isFinite()) {
+                return@synchronized false
             }
-            val year = candidate.month.year
-            val month = candidate.month.month
-            if (year <= 0 || month !in 1..12 || candidate.amount <= 0.0 || !candidate.amount.isFinite()) {
-                return@synchronized AdvancePaymentNotificationImportDecision.SKIPPED_INVALID
-            }
-            val current = monthlyAdjustments.getMonthlyNetAdjustments(year, month)
-            if (current.advancePaymentNet > 0.0) {
-                return@synchronized AdvancePaymentNotificationImportDecision.SKIPPED_EXISTING_ADVANCE
-            }
-            monthlyAdjustments.setMonthlyAdvancePaymentNet(year, month, candidate.amount)
-            AdvancePaymentNotificationImportDecision.IMPORTED
+            val current = monthlyAdjustments.getMonthlyNetAdjustments(month.year, month.month)
+            if (abs(current.advancePaymentNet - amount) < ADVANCE_SAME_AMOUNT_TOLERANCE) return@synchronized false
+            monthlyAdjustments.setMonthlyAdvancePaymentNet(month.year, month.month, amount)
+            true
         }
-        if (decision == AdvancePaymentNotificationImportDecision.IMPORTED) {
-            notifyChange()
+        if (changed) notifyChange()
+        return changed
+    }
+
+    /** Neto regres koji važi za [month] (poslednji sa obračuna regresa, inače 20.000). */
+    fun getRegressNetForMonth(month: MonthKey): Double = synchronized(lock) { payState.regressNetForMonth(month) }
+
+    fun isRegressPaidInMonth(month: MonthKey): Boolean = synchronized(lock) { payState.regressPaidInMonth(month) }
+
+    /**
+     * Regres sa obračuna regresa za mesec [month] (iznos uplaćen na račun). Mesec se pamti uvek, pa se
+     * regres računa u tom mesecu i kad nije 2/5/8/11 (npr. dve rate 20.000 u oktobru i novembru);
+     * iznos važi i za kasnije mesece. True samo kad se iznos razlikuje od onog koji je za mesec važio.
+     */
+    fun recordRegressFromPayslip(month: MonthKey, amount: Double): Boolean {
+        var amountChanged = false
+        val changed = synchronized(lock) {
+            if (month.year <= 0 || month.month !in 1..12 || amount <= 0.0 || !amount.isFinite()) {
+                return@synchronized false
+            }
+            amountChanged = abs(payState.regressNetForMonth(month) - amount) >= ADVANCE_SAME_AMOUNT_TOLERANCE
+            val stored = payState.regressNetChanges[month]
+            if (!amountChanged && stored != null && abs(stored - amount) < ADVANCE_SAME_AMOUNT_TOLERANCE) {
+                return@synchronized false
+            }
+            payState.regressNetChanges[month] = amount
+            true
         }
-        return AdvancePaymentNotificationImportResult(
-            decision = decision,
-            month = candidate.month,
-            amount = candidate.amount
-        )
+        if (changed) notifyChange()
+        return amountChanged
     }
 
     fun getMonthlyNetAdjustments(year: Int, month: Int): MonthlyNetAdjustments = synchronized(lock) {
@@ -1484,12 +1651,18 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val key = MonthKey(year, month)
         val receipt = payQueries.calculateMonthlyReceiptUnsafe(year, month)
         val adjustments = payState.monthlyNetAdjustments[key] ?: MonthlyNetAdjustments(year, month)
+        // Obustave u % su već skinute sa neto plate meseca; ovde se prikazuju među obustavama.
+        val percentDeductions = if (receipt.isSalaryAvailable) percentDeductionsFromSalaryUnsafe(receipt.salaryMonth) else emptyList()
         calculateMonthlyFinalPaymentBreakdown(
             month = key,
             isNetPayAvailable = receipt.isSalaryAvailable,
-            netPayBeforeAdvance = receipt.salaryNetPay,
+            netPayBeforeAdvance = receipt.salaryNetPay + percentDeductions.sumOf { it.amountNet },
             advancePaymentNet = adjustments.advancePaymentNet,
-            loanDeductionNet = currentCreditDeductionSettingsUnsafe().activeDeductionNet,
+            deductions = if (receipt.isSalaryAvailable) {
+                finalPaymentDeductionsUnsafe(receipt.salaryMonth) + percentDeductions
+            } else {
+                emptyList()
+            },
             remainingRegressNetPay = receipt.regressNetPay
         )
     }
@@ -1498,41 +1671,83 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         val paymentMonth = MonthKey(year, month)
         val previousMonth = previousMonthKey(year, month)
             ?: return@synchronized unavailableAdvancePaymentPrediction(paymentMonth)
+        // U prethodnom mesecu su legle akontacija i konačna isplata za mesec pre njega: kad je ta lista
+        // sačuvana, uzima se šta je stvarno isplaćeno (i za mesece čije smene nisu popunjene).
+        val salaryMonth = previousMonthKey(previousMonth.year, previousMonth.month)
+        val payslip = salaryMonth?.let { getSavedPayslip(it.year, it.month) }
+        val payslipPaid = payslip?.paidNet
+        val payslipAdvance = payslip?.let(::payslipAdvanceOnlyNet)
+        if (payslipAdvance != null && payslipPaid != null) {
+            // Akontacija upisana iz obračuna akontacije je tačan iznos; lista je rezerva.
+            val recordedAdvance = payState.monthlyNetAdjustments[previousMonth]?.advancePaymentNet ?: 0.0
+            return@synchronized calculateAdvancePaymentPrediction(
+                paymentMonth = paymentMonth,
+                previousPaymentMonth = previousMonth,
+                isPreviousMonthNetPayAvailable = true,
+                previousMonthAdvanceNet = if (recordedAdvance > 0.0) recordedAdvance else payslipAdvance,
+                previousMonthFinalNet = payslipPaid.toDouble()
+            )
+        }
         val previousBreakdown = getMonthlyFinalPaymentBreakdown(previousMonth.year, previousMonth.month)
         calculateAdvancePaymentPrediction(
             paymentMonth = paymentMonth,
             previousPaymentMonth = previousMonth,
             isPreviousMonthNetPayAvailable = previousBreakdown.isNetPayAvailable,
             previousMonthAdvanceNet = previousBreakdown.advancePaymentNet,
-            previousMonthFinalNet = previousBreakdown.finalRemainingNetPay,
-            previousMonthRegressNet = previousBreakdown.remainingRegressNetPay
+            previousMonthFinalNet = previousBreakdown.finalRemainingNetPay
         )
     }
 
-    private fun currentCreditDeductionSettingsUnsafe(): CreditDeductionSettings {
-        return CreditDeductionSettings(
-            creditDeductionEnabled = payState.creditDeductionEnabled,
-            monthlyCreditDeductionAmount = payState.monthlyCreditDeductionAmount
-        ).sanitized()
+    /**
+     * Akontacija sa liste: kolona „ISPLAĆENO“ sadrži sve isplaćeno pre konačne, pa i regres isplaćen
+     * posebno krajem meseca (08/2026: 58.942 = akontacija 38.942 + regres 20.000); regres se oduzima.
+     */
+    internal fun payslipAdvanceNet(payslip: ParsedPayslip): Double? = synchronized(lock) { payslipAdvanceOnlyNet(payslip) }
+
+    private fun payslipAdvanceOnlyNet(payslip: ParsedPayslip): Double? {
+        val paidBefore = payslip.advanceNet?.toDouble() ?: return null
+        val regress = if (payslip.extras.any { it.label == "Regres" }) payState.regressNetForMonth(payslip.month) else 0.0
+        return (paidBefore - regress).coerceAtLeast(0.0)
     }
 
-    private fun currentUnionDuesSettingsUnsafe(): UnionDuesSettings {
-        return UnionDuesSettings(
-            unionMember = payState.unionMember,
-            unionDuesRate = payState.unionDuesRate
-        ).sanitized()
+    private fun finalPaymentDeductionsUnsafe(salaryMonth: MonthKey): List<FinalPaymentDeduction> =
+        finalPaymentDeductions(salaryMonth, savedPayslipsUnsafe())
+
+    /** Obustave u % meseca rada, pod nazivom sa liste, istim iznosom koji je skinut sa neto plate. */
+    private fun percentDeductionsFromSalaryUnsafe(salaryMonth: MonthKey): List<FinalPaymentDeduction> {
+        val percentDeductions = percentDeductionsForMonth(salaryMonth, savedPayslipsUnsafe()) ?: return emptyList()
+        val breakdown = payQueries.calculateAnnualMonthNetPayUnsafe(
+            year = salaryMonth.year,
+            month = salaryMonth.month,
+            monthRecords = recordStore.getMonthRecords(salaryMonth),
+            includeRegress = false
+        )
+        if (breakdown.unionDuesNet <= 0.0) return emptyList()
+        return percentDeductions.deductions(breakdown.netPayBeforeDeductions).filter { it.amountNet > 0.0 }
+    }
+
+    /** Svi sačuvani listići, svaki pod svojim mesecem; oštećen ili pod tuđim mesecom se preskače. */
+    private fun savedPayslipsUnsafe(): List<ParsedPayslip> {
+        parsedPayslipCache.keys.retainAll(savedPayslipJsonByMonth.keys)
+        return savedPayslipJsonByMonth.mapNotNull { (key, json) ->
+            val cached = parsedPayslipCache[key]?.takeIf { it.first == json }
+            val payslip = if (cached != null) {
+                cached.second
+            } else {
+                payslipFromJsonOrNull(json)?.takeIf { it.month == key }.also { parsedPayslipCache[key] = json to it }
+            }
+            payslip
+        }
     }
 
     private fun getMonthlyFoodSpendingBreakdownUnsafe(month: MonthKey): MonthlyFoodSpendingBreakdown {
         val additions = payState.monthlyGrossAdditions[month]
-        val manualFoodSpent = additions
-            ?.mealSpentNet
-            .sanitizeMonthlyNetOverrideOrNull()
         val foodAllowance = getSummary(month.year, month.month).foodAllowance
+        // Ručni unos potrošnje za hranu je ukinut: pojedeno = pripada (vidi MonthlyNetPayBreakdownCalculator).
         return calculateMonthlyFoodSpendingBreakdown(
             month = month,
             foodAllowanceNet = foodAllowance,
-            manualFoodSpentNet = manualFoodSpent,
+            manualFoodSpentNet = null,
             confirmedEntitlementNetOverride = additions?.mealEntitlementNetOverride?.toDouble()
         )
     }
@@ -1705,101 +1920,12 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             notifyChange()
         }
 
-    var creditDeductionEnabledValue: Boolean
-        get() = synchronized(lock) { payState.creditDeductionEnabled }
-        set(value) {
-            val changed = synchronized(lock) {
-                if (payState.creditDeductionEnabled == value) {
-                    false
-                } else {
-                    payState.creditDeductionEnabled = value
-                    true
-                }
-            }
-            if (changed) {
-                notifyChange()
-            }
-        }
-
-    var monthlyCreditDeductionAmountValue: Double
-        get() = synchronized(lock) { payState.monthlyCreditDeductionAmount }
-        set(value) {
-            val sanitized = value.sanitizeMonthlyNetAdjustment()
-            val changed = synchronized(lock) {
-                if (payState.monthlyCreditDeductionAmount == sanitized) {
-                    false
-                } else {
-                    payState.monthlyCreditDeductionAmount = sanitized
-                    true
-                }
-            }
-            if (changed) {
-                notifyChange()
-            }
-        }
-
-    fun setCreditDeductionSettings(enabled: Boolean, monthlyAmount: Double) {
-        val sanitizedAmount = monthlyAmount.sanitizeMonthlyNetAdjustment()
-        val changed = synchronized(lock) {
-            val changed = payState.creditDeductionEnabled != enabled ||
-                payState.monthlyCreditDeductionAmount != sanitizedAmount
-            if (changed) {
-                payState.creditDeductionEnabled = enabled
-                payState.monthlyCreditDeductionAmount = sanitizedAmount
-            }
-            changed
-        }
-        if (changed) {
-            notifyChange()
-        }
-    }
-
-    fun getCreditDeductionSettings(): CreditDeductionSettings = synchronized(lock) {
-        currentCreditDeductionSettingsUnsafe()
-    }
-
-    fun setUnionDuesSettings(unionMember: Boolean, unionDuesRate: Double) {
-        val sanitizedRate = unionDuesRate.sanitizeUnionDuesRate()
-        val changed = synchronized(lock) {
-            val changed = payState.unionMember != unionMember ||
-                payState.unionDuesRate != sanitizedRate
-            if (changed) {
-                payState.unionMember = unionMember
-                payState.unionDuesRate = sanitizedRate
-            }
-            changed
-        }
-        if (changed) {
-            notifyChange()
-        }
-    }
-
-    fun getUnionDuesSettings(): UnionDuesSettings = synchronized(lock) {
-        currentUnionDuesSettingsUnsafe()
-    }
-
-    var foodReceiptReminderEnabled: Boolean
-        get() = synchronized(lock) { foodReceiptReminderEnabledState }
-        set(value) {
-            val changed = synchronized(lock) {
-                if (foodReceiptReminderEnabledState == value) {
-                    false
-                } else {
-                    foodReceiptReminderEnabledState = value
-                    true
-                }
-            }
-            if (changed) {
-                notifyChange()
-            }
-        }
-
     /**
      * Glavni prekidač za automatski upis akontacije iz NLB obaveštenja.
      * Kad je isključen, servis ne upisuje ništa i nema pitanja za pristup obaveštenjima.
      */
     /**
-     * Da li kartice ispod kalendara („Plata za…", „Primanja u ovom mesecu")
+     * Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru")
      * prikazuju neto platu (i regres) zajedno sa prevozom. Isključeno = samo
      * neto plata; detalji plate i dalje prikazuju prevoz kao zasebnu stavku.
      */
@@ -1827,11 +1953,6 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
                     false
                 } else {
                     autoAdvanceImportEnabledState = value
-                    // Ponovno uključivanje znači da korisnik opet želi funkciju,
-                    // pa se "ne pitaj više" resetuje da dozvola može da se traži.
-                    if (value) {
-                        notificationAccessPromptSuppressedState = false
-                    }
                     true
                 }
             }
@@ -1946,6 +2067,16 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     val bloodDonationLeaveStartDate: LocalDate?
         get() = synchronized(lock) { bloodDonationLeaveStates.firstOrNull()?.firstDay }
 
+    /** Poslednje korišćenje dana za krv: najnoviji par plaćenog odsustva u kalendaru ili ručni upis. */
+    internal val lastBloodDonationLeaveUsage: BloodDonationLeaveUsage?
+        get() = synchronized(lock) {
+            val paidLeaveDates = recordStore.getAllMonthsSorted()
+                .flatMap { recordStore.getMonthRecords(it) }
+                .filter { it.isPaidLeave }
+                .map { it.date }
+            lastBloodDonationLeaveUsage(latestPaidLeavePair(paidLeaveDates), bloodDonationLeaveStates.firstOrNull()?.firstDay)
+        }
+
     fun applyBloodDonationLeave(firstDay: LocalDate): Boolean {
         synchronized(lock) {
             clearBloodDonationLeaveEntryForDateUnsafe(firstDay)
@@ -2051,7 +2182,7 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
      */
     private fun calculateYearsOfServiceUnsafe(): Int {
         if (payState.minuliRadStartYear <= 0) return 0
-        val now = LocalDate.now()
+        val now = LocalDate.now(clock)
         return calculateYearsOfServiceUnsafe(now.year, now.monthValue)
     }
 
@@ -2089,6 +2220,15 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
 
     val yearsOfServiceValue: Int
         get() = synchronized(lock) { calculateYearsOfServiceUnsafe() }
+
+    /** Staž 0 god. je ispravan za novog radnika; upozorava se samo kad početak uopšte nije unet. */
+    val isSeniorityConfiguredValue: Boolean
+        get() = synchronized(lock) {
+            when (payState.seniorityInputMode) {
+                SeniorityInputMode.KNOWN_START -> payState.minuliRadStartYear > 0
+                SeniorityInputMode.PAYSLIP_PERCENT -> payState.minuliRadLastPayslipYear > 0
+            }
+        }
 
     var seniorityInputModeValue: SeniorityInputMode
         get() = synchronized(lock) { payState.seniorityInputMode }
@@ -2228,10 +2368,62 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
         vacationTracker.getVacationYearBalance(year)
     }
 
-    fun getVacationBalanceSummary(year: Int, today: LocalDate = LocalDate.now()): VacationBalanceSummary =
+    fun getVacationBalanceSummary(year: Int, today: LocalDate = LocalDate.now(clock)): VacationBalanceSummary =
         synchronized(lock) {
             vacationTracker.getVacationBalanceSummary(year, today)
         }
+
+    /**
+     * Pravo na godišnji za [year] po KU čl. 29. Staž na 01.01. je sa sačuvanih listića
+     * („Ukupni radni staž“, a za 35 godina kod poslodavca „Radni staž za MR“), bez listića iz
+     * podešavanja minulog rada. Noćni rad: četvorobrigada ili treća smena / šifra 20 u podacima;
+     * vikend samo četvorobrigada. Ostalo su ručni odgovori ([setAnnualLeaveCalculation]).
+     */
+    internal fun getAnnualLeaveEntitlement(year: Int): AnnualLeaveEntitlement = synchronized(lock) {
+        val payslips = savedPayslipsUnsafe()
+        val totalPoints = payslips.mapNotNull { slip ->
+            (slip.totalSeniorityYears ?: slip.seniorityYears)?.let { PayslipSeniorityPoint(slip.month, it) }
+        }
+        val employerPoints = payslips.mapNotNull { slip -> slip.seniorityYears?.let { PayslipSeniorityPoint(slip.month, it) } }
+        val fourBrigade = payState.brigadeType == BrigadeType.CETVOROBRIGADA
+        val nightWork = fourBrigade ||
+            payslips.any { (it.items[NIGHT_WORK_PAYSLIP_CODE]?.hours?.signum() ?: 0) > 0 } ||
+            recordStore.allRecords.any { it.shift == Shift.THIRD || it.shift2 == Shift.THIRD }
+        val manual = vacationTracker.getAnnualLeaveCalculationInput(year)
+        annualLeaveEntitlement(
+            // „Beneficirani staž“ na listiću = uvećan rizik (KU čl. 29), bez ručnog prekidača.
+            manual = if (payslips.any { it.benefitedSeniority }) {
+                manual.copy(hasIncreasedRiskOrBenefitedSeniority = true)
+            } else {
+                manual
+            },
+            totalSeniority = seniorityOnJanuaryFirst(totalPoints, year),
+            employerSeniority = seniorityOnJanuaryFirst(employerPoints, year),
+            fallbackSeniorityYears = calculateYearsOfServiceUnsafe(year, 1),
+            worksNightShifts = nightWork,
+            worksWeekendShifts = fourBrigade
+        )
+    }
+
+    /** Da li se „preneto iz prošle godine“ računa samo (prošla godina je praćena u aplikaciji). */
+    fun isVacationCarryoverAutomatic(year: Int): Boolean = synchronized(lock) {
+        vacationTracker.isCarryoverAutomatic(year)
+    }
+
+    /**
+     * Završeni meseci godine (do [today]) za koje aplikacija nema ni listić ni jedan upisan dan —
+     * samo za njih ima smisla „potrošeno van aplikacije“.
+     */
+    fun getVacationMonthsWithoutData(year: Int, today: LocalDate = LocalDate.now(clock)): List<Int> = synchronized(lock) {
+        val lastCompletedMonth = when {
+            year < today.year -> 12
+            year == today.year -> today.monthValue - 1
+            else -> 0
+        }
+        (1..lastCompletedMonth).filter { month ->
+            MonthKey(year, month) !in savedPayslipJsonByMonth && recordStore.getMonthRecords(year, month).isEmpty()
+        }
+    }
 
     fun getVacationDaysUsed(): Int = synchronized(lock) {
         vacationTracker.getVacationDaysUsed()
@@ -2250,6 +2442,10 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
     // =========================================================================
 
     fun saveToLocal(context: Context): Boolean {
+        if (localWriteBlockedBySchema) {
+            Log.e(TAG, "Čuvanje blokirano: lokalni fajl je pisala novija verzija aplikacije")
+            return false
+        }
         val saved = localStorage.save(context, exportJson())
         if (saved) {
             Log.d(TAG, "Saved to local storage")
@@ -2269,14 +2465,18 @@ class ShiftRepository(private val config: AppConfig = CONFIG) {
             Log.d(TAG, "Local backup file is empty")
             return false
         }
-        val imported = importFromJson(json)
+        // „{}" i tuđ JSON imaju odbijen uvoz (nema prepoznatih ključeva): fajl ide u karantin kao i neparsiv.
+        val rejection = tryImportFromJson(json)
+        val imported = rejection == null
         if (imported) {
             Log.d(TAG, "Loaded from local storage")
         } else {
-            // Fajl postoji ali se ne može parsirati — sačuvaj ga u karantin
+            // Fajl postoji ali se ne može uvesti — sačuvaj ga u karantin
             // pre nego što ga prvi autosave pregazi praznim stanjem.
             val quarantined = localStorage.quarantineCorrupt(context)
-            Log.e(TAG, "Failed to import local backup data (quarantined: $quarantined)")
+            // Novija verzija aplikacije je pisala fajl: ne pregazi ga ni posle karantina (zaštita od downgrade-a).
+            localWriteBlockedBySchema = rejection == SnapshotRejection.NEWER_SCHEMA
+            Log.e(TAG, "Failed to import local backup data ($rejection, quarantined: $quarantined)")
         }
         return imported
     }
@@ -2291,7 +2491,16 @@ private fun nextCalendarMonthKey(monthKey: MonthKey): MonthKey {
     return MonthKey(nextMonth.year, nextMonth.monthValue)
 }
 
-private fun MonthKey.minusMonthsForRetention(months: Long): MonthKey {
+/**
+ * Lokalno se čuva ~24 meseca istorije (od najnovijeg upisanog meseca). Isto važi i za sačuvane
+ * listiće, lokalno i u oblaku: listić stariji od dana sa kojima se poredi ne služi ničemu.
+ */
+internal const val HISTORY_RETENTION_LOOKBACK_MONTHS = 24L
+
+/** Prva godina čiji su svi meseci posle granice brisanja (januar je unutar prozora). */
+private fun firstFullyRetainedYear(cutoff: MonthKey): Int = if (cutoff.month == 1) cutoff.year else cutoff.year + 1
+
+internal fun MonthKey.minusMonthsForRetention(months: Long): MonthKey {
     val result = YearMonth.of(year, month).minusMonths(months)
     return MonthKey(result.year, result.monthValue)
 }

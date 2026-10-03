@@ -1,17 +1,17 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
@@ -44,10 +46,9 @@ fun HolidayManagementDialog(
     PopupDialog(
         title = "Praznici $year",
         onDismiss = onDismiss,
-        scrollable = true,
-        accent = THEME.warning
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated) {
+        PopupCard {
             SectionLabel(text = "Dodaj ručni praznik")
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -57,15 +58,17 @@ fun HolidayManagementDialog(
                 ModernTextField(
                     value = dayInput,
                     onValueChange = { dayInput = filterDigits(it).take(2) },
-                    hintText = "Dan",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    hintText = "1-31",
+                    label = "Dan",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     modifier = Modifier.weight(1f)
                 )
                 ModernTextField(
                     value = monthInput,
                     onValueChange = { monthInput = filterDigits(it).take(2) },
-                    hintText = "Mesec",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    hintText = "1-12",
+                    label = "Mesec",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     modifier = Modifier.weight(1f)
                 )
                 RoundedButton(
@@ -102,13 +105,7 @@ fun HolidayManagementDialog(
                 )
             }
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = THEME.danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                FormErrorText(message = message)
             }
         }
 
@@ -144,24 +141,20 @@ private fun HolidayEntryRow(
         HolidayEntrySource.MANUAL -> "Ručni"
     }
     val stateColor = if (entry.isActive) THEME.warning else THEME.textMuted
-    Row(
+    LabeledCheckboxRow(
+        checked = entry.isActive,
+        onCheckedChange = onActiveChange,
         modifier = Modifier
-            .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .background(THEME.bgCardElevated.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(MaterialTheme.shapes.medium)
+            .background(THEME.bgCardElevated.copy(alpha = 0.72f)),
+        checkboxColors = CheckboxDefaults.colors(
+            checkedColor = THEME.warning,
+            uncheckedColor = THEME.textMuted,
+            checkmarkColor = THEME.textDark
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Checkbox(
-            checked = entry.isActive,
-            onCheckedChange = onActiveChange,
-            colors = CheckboxDefaults.colors(
-                checkedColor = THEME.warning,
-                uncheckedColor = THEME.textMuted,
-                checkmarkColor = THEME.textDark
-            )
-        )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -185,9 +178,11 @@ private fun HolidayEntryRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
+        // „Da/Ne“ samo ponavlja stanje potvrdnog polja, pa je skrivena od čitača ekrana.
         Box(
             modifier = Modifier
-                .background(stateColor.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
+                .clearAndSetSemantics { }
+                .background(stateColor.copy(alpha = 0.18f), MaterialTheme.shapes.small)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(

@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,25 +37,10 @@ fun AdvancePaymentDialog(
     PopupDialog(
         title = ADVANCE_PAYMENT_DIALOG_TITLE,
         onDismiss = onDismiss,
-        scrollable = true,
-        accent = THEME.warning
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+        PopupCard {
             SectionLabel(text = monthYearText(MonthKey(year, month)))
-            Text(
-                text = ADVANCE_PAYMENT_EXPLANATION_TEXT,
-                color = THEME.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 5,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "$ADVANCE_PAYMENT_NET_LABEL (${CONFIG.pay.currency})",
-                color = THEME.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
             ModernTextField(
                 value = advanceInput,
                 onValueChange = {
@@ -62,30 +48,19 @@ fun AdvancePaymentDialog(
                     errorMessage = null
                 },
                 hintText = "0",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                label = "$ADVANCE_PAYMENT_NET_LABEL (${CONFIG.pay.currency})",
+                isError = errorMessage != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth()
             )
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = THEME.danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                FormErrorText(message = message)
             }
         }
 
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentPrimary) {
+        PopupCard {
             SectionLabel(text = ADVANCE_PREDICTION_SECTION_LABEL)
             if (prediction.isAvailable) {
-                Text(
-                    text = ADVANCE_PREDICTION_EXPLANATION_TEXT,
-                    color = THEME.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
-                )
                 PredictionValueRow(
                     label = ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL,
                     value = predictionMoneyText(prediction.previousMonthPaidTotalNet),
@@ -139,8 +114,6 @@ fun AdvancePaymentDialog(
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
-                bgColor = THEME.warning,
-                textColor = THEME.textDark,
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = {
                     val value = advanceInput.ifBlank { "0" }.toDoubleOrNull()

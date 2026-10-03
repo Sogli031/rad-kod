@@ -17,16 +17,18 @@ class ScreenSafeAreaTest {
     fun `generic popup dialogs stay inside safe drawing insets`() {
         val source = popupComponentsSource()
 
+        // Popup je list sa dna: donji inset kao padding, gornji ulazi u maksimalnu visinu.
         assertTrue(source.contains("WindowInsets.safeDrawing.asPaddingValues()"))
-        assertTrue(source.contains("bottom = UI.popupBottomSafePadding.dp"))
+        assertTrue(source.contains(".padding(bottom = insets.calculateBottomPadding())"))
+        assertTrue(source.contains("maxHeight - insets.calculateTopPadding() - UI.popupEdgePadding.dp"))
     }
 
     @Test
     fun `generic popup dialogs wrap content when height is not fixed`() {
         val source = popupComponentsSource()
 
-        assertTrue(source.contains("popupContentModifier"))
-        assertTrue(source.contains("Modifier.fillMaxWidth().wrapContentHeight()"))
+        assertTrue(source.contains(".wrapContentHeight()"))
+        assertTrue(source.contains("contentAlignment = Alignment.BottomCenter"))
     }
 
     @Test
@@ -35,10 +37,9 @@ class ScreenSafeAreaTest {
 
         assertFalse(source.substringAfter("fun PopupDialog(").substringBefore(") {").contains("height"))
         assertTrue(source.contains("UI.popupMaxHeight.dp"))
-        assertTrue(source.contains("maxHeight - UI.popupEdgePadding.dp - UI.popupBottomSafePadding.dp"))
-        assertTrue(source.contains("Modifier.heightIn(max = popupHeight)"))
+        assertTrue(source.contains(".heightIn(max = sheetMaxHeight)"))
         assertTrue(source.contains(".weight(1f, fill = false)"))
-        assertFalse(source.contains("Modifier.height(popupHeight)"))
+        assertFalse(source.contains("Modifier.height(sheetMaxHeight)"))
         assertFalse(source.contains(".weight(1f, fill = true)"))
     }
 
@@ -50,43 +51,59 @@ class ScreenSafeAreaTest {
     }
 
     @Test
-    fun `shared text buttons use adaptive text instead of fixed Text`() {
+    fun `shared text buttons are Material buttons with adaptive text`() {
         val source = appSource("UiComponents.kt")
         val roundedButton = functionSource(source, "fun RoundedButton(")
         val glowButton = functionSource(source, "fun GlowButton(")
+        val label = functionSource(source, "private fun RadButtonLabel(")
 
-        assertTrue(roundedButton.contains("AutoSizeText("))
-        assertTrue(glowButton.contains("AutoSizeText("))
-        assertFalse(roundedButton.contains("\n        Text(\n            text = text"))
-        assertFalse(glowButton.contains("\n        Text(\n            text = text"))
+        // M3 Button daje ripple, ulogu dugmeta, dodirnu površinu 48dp i stanja.
+        assertTrue(roundedButton.contains("Button("))
+        assertTrue(glowButton.contains("Button("))
+        assertTrue(roundedButton.contains("RadButtonLabel("))
+        assertTrue(glowButton.contains("RadButtonLabel("))
+        assertTrue(label.contains("AutoSizeText("))
+        assertFalse(label.contains("\n        Text(\n            text = text"))
     }
 
     @Test
     fun `shared text buttons keep single line recognizable labels`() {
         val source = appSource("UiComponents.kt")
-        val roundedButton = functionSource(source, "fun RoundedButton(")
-        val glowButton = functionSource(source, "fun GlowButton(")
+        val label = functionSource(source, "private fun RadButtonLabel(")
 
-        assertTrue(roundedButton.contains("maxLines = 1"))
-        assertTrue(glowButton.contains("maxLines = 1"))
-        assertTrue(roundedButton.contains("minFontSize = MaterialTheme.typography.labelSmall.fontSize"))
-        assertTrue(glowButton.contains("minFontSize = MaterialTheme.typography.labelSmall.fontSize"))
+        assertTrue(label.contains("maxLines = 1"))
+        assertTrue(label.contains("minFontSize = MaterialTheme.typography.labelSmall.fontSize"))
     }
 
     @Test
-    fun `shared glow button supports disabled visual state`() {
+    fun `shared glow button supports disabled and destructive states from the theme`() {
         val source = appSource("UiComponents.kt")
         val glowButton = functionSource(source, "fun GlowButton(")
+        val colors = functionSource(source, "private fun radButtonColors(")
 
         assertTrue(glowButton.contains("enabled: Boolean = true"))
-        assertTrue(glowButton.contains("val resolvedBackground = if (enabled) bgColor else THEME.empty"))
-        assertTrue(glowButton.contains("val resolvedTextColor = if (enabled) textColor else THEME.textMuted"))
         assertTrue(glowButton.contains("enabled = enabled"))
+        assertTrue(glowButton.contains("destructive: Boolean = false"))
+        assertTrue(glowButton.contains("scheme.error"))
+        assertTrue(glowButton.contains("scheme.primary"))
+        assertTrue(colors.contains("disabledContainerColor"))
+        assertTrue(colors.contains("disabledContentColor"))
+    }
+
+    @Test
+    fun `shared controls use M3 theme tokens instead of fixed palette`() {
+        val source = appSource("UiComponents.kt")
+
+        assertTrue(functionSource(source, "fun GlassCard(").contains("MaterialTheme.colorScheme.surfaceContainer"))
+        assertTrue(functionSource(source, "fun GlassCard(").contains("MaterialTheme.shapes.medium"))
+        // Ivica polja mora imati kontrast >= 3:1 (outline), ne ukrasnu outlineVariant liniju.
+        assertTrue(functionSource(source, "fun ModernTextField(").contains("unfocusedBorderColor = scheme.outline"))
+        assertTrue(source.contains("role = Role.Button"))
     }
 
     @Test
     fun `bottom bar action dialogs do not provide custom popup heights`() {
-        listOf("AutoFillDialog.kt", "AbsenceDialog.kt", "BasePayDialog.kt", "HolidayManagementDialog.kt")
+        listOf("AutoFillDialog.kt", "AbsenceDialog.kt", "PayslipReaderDialog.kt", "HolidayManagementDialog.kt")
             .forEach { fileName ->
                 val source = appSource(fileName)
 

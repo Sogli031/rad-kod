@@ -361,6 +361,7 @@ private fun settingsSnapshotMap(repo: ShiftRepository, target: MonthKey): Map<St
             ?.let { monthlyPayBasesMap(it) },
         "resolvedPayBases" to resolvedPayBasesMap(resolvedPayBases),
         "knownPayBaseAnchor" to repo.getKnownPayBaseAnchor()?.let { knownPayBaseAnchorMap(it) },
+        "knownPayBaseAnchors" to repo.getKnownPayBaseAnchors().map { knownPayBaseAnchorMap(it) },
         "payBaseResolutionDebug" to payBaseResolutionDebugMap(repo, target, payBaseSourceMonth, resolvedPayBases),
         "rollingPayBaseCalculation" to repo.getRollingPayBaseCalculationForWorkMonth(target.year, target.month)?.let {
             rollingPayBaseCalculationMap(it)
@@ -608,6 +609,8 @@ private fun monthlyGrossAdditionsMap(additions: MonthlyGrossAdditions): Map<Stri
 private fun payrollShiftDisplayName(record: DayRecord): String {
     return if (record.isBloodDonationLeave) {
         "Plaćeno odsustvo – dobrovoljno davanje krvi"
+    } else if (record.isPaidLeave) {
+        "Plaćeno odsustvo"
     } else {
         record.shift.fullName
     }

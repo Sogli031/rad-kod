@@ -31,6 +31,8 @@ data class MonthSummary(
     var compTimeEndingMinutes: Int = 0,
     var coveredDeficitMinutes: Int = 0,
     var uncoveredDeficitMinutes: Int = 0,
+    /** Četvorobrigada: sati do mesečnog fonda koje firma plaća kao rad u režiji (01). */
+    var fundTopUpMinutes: Int = 0,
     var yearsOfService: Int = 0,
     var seniorityEligibleWorkMinutes: Int = 0,
     var minuliRadBonus: Double = 0.0,

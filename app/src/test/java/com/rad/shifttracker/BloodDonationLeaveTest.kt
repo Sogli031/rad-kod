@@ -9,6 +9,24 @@ import org.junit.Test
 
 class BloodDonationLeaveTest {
     @Test
+    fun `poslednje koriscenje je najnoviji par placenog odsustva u kalendaru`() {
+        val d = { m: Int, day: Int -> LocalDate.of(2026, m, day) }
+        // Jedan dan sam nije par; petak + ponedeljak jeste.
+        val pair = latestPaidLeavePair(listOf(d(3, 10), d(3, 11), d(6, 3), d(8, 7), d(8, 10)))
+        assertEquals(BloodDonationLeaveUsage(d(8, 7), d(8, 10)), pair)
+        assertNull(latestPaidLeavePair(listOf(d(6, 3), d(6, 5))))
+
+        // Ručni upis važi samo ako je noviji od para u kalendaru.
+        assertEquals(pair, lastBloodDonationLeaveUsage(pair, d(3, 10)))
+        assertEquals(BloodDonationLeaveUsage(d(9, 1), d(9, 2)), lastBloodDonationLeaveUsage(pair, d(9, 1)))
+        assertEquals(
+            "Poslednje korišćenje dana: ${d(8, 7).formatBloodDonationDate()} i ${d(8, 10).formatBloodDonationDate()}",
+            bloodDonationLeaveUsageText(pair)
+        )
+        assertEquals(d(11, 11), pair!!.nextAllowed)
+    }
+
+    @Test
     fun `tekstovi prikazuju poslednje i sledece koriscenje krvnih dana`() {
         val firstDay = LocalDate.of(2026, 5, 4)
 
@@ -40,7 +58,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `upis krvnih dana pravi bolovanje sto posto sa posebnim izvorom`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
 
         assertTrue(repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4)))
 
@@ -52,12 +70,12 @@ class BloodDonationLeaveTest {
         assertEquals(Shift.SICK, first?.shift)
         assertEquals(8, first?.hours)
         assertNull(first?.sickPayRate)
-        assertEquals("Krv", calendarDayDetailText(first, isHolidayDay = false, workedHoliday = false))
+        assertEquals("Plaćeno\nodsustvo", calendarDayDetailText(first, isHolidayDay = false, workedHoliday = false))
     }
 
     @Test
     fun `krvni dani se obracunavaju kao placeno odsustvo sto posto`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.grossHourlyRateValue = 1_000.0
         repo.setMonthlyPayBases(
             2026,
@@ -76,7 +94,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `ponistavanje krvnih dana vraca prethodno stanje`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.FIRST, 8)
         repo.set(2026, 5, 5, Shift.VACATION, 8)
 
@@ -90,7 +108,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `brisanje jednog krvnog dana ponistava oba krvna dana`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.FIRST, 8)
 
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
@@ -103,7 +121,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `postavljanje jednog krvnog dana na neradni ponistava oba krvna dana`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.FIRST, 8)
 
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
@@ -116,7 +134,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `izmena jednog krvnog dana ponistava krvni par i snima rucnu izmenu`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.FIRST, 8)
 
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
@@ -130,7 +148,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `novi unos krvnih dana dodaje dane bez brisanja prethodnih`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
 
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 21))
         repo.applyBloodDonationLeave(LocalDate.of(2026, 8, 23))
@@ -145,7 +163,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `krvni dani preskacu vikend pri upisu odsustva`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
 
         // 08.05.2026. je petak — drugi dan (subota) se ne upisuje
         assertTrue(repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 8)))
@@ -157,7 +175,7 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `brisanje davanja krvi cuva rucno unet veci brojac`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         assertTrue(
             repo.importFromJson(
                 """{"blood_donation_count":30,"blood_donation_history":["2026-04-12","2026-01-10"]}"""
@@ -171,10 +189,10 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `krvni dani i backup se cuvaju kroz export import`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.THIRD, 8)
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
-        val restored = ShiftRepository()
+        val restored = testRepository()
 
         assertTrue(restored.importFromJson(repo.exportJson()))
 
@@ -186,10 +204,10 @@ class BloodDonationLeaveTest {
 
     @Test
     fun `vise unosa krvnih dana se cuva kroz export import`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 21))
         repo.applyBloodDonationLeave(LocalDate.of(2026, 8, 23))
-        val restored = ShiftRepository()
+        val restored = testRepository()
 
         assertTrue(restored.importFromJson(repo.exportJson()))
 
@@ -219,7 +237,7 @@ class BloodDonationLeaveTest {
 
         assertTrue(isDayEditLockedByBloodDonation(bloodLeave))
         assertTrue(source.contains("BloodDonationLockedDayDialog"))
-        assertTrue(source.contains("PONIŠTI DANE"))
+        assertTrue(source.contains("Poništi dane"))
         assertTrue(source.contains("repo.clearBloodDonationLeaveForDate(date)"))
     }
 }

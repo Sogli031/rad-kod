@@ -6,14 +6,15 @@ import org.junit.Test
 
 class ReleaseSigningConfigurationTest {
     @Test
-    fun `release cuva lokalni debug potpis dok pravi kljuc nije konfigurisan`() {
+    fun `release se potpisuje zajednickim kljucem preko debug konfiguracije`() {
         val source = listOf(
             java.io.File("build.gradle.kts"),
             java.io.File("app/build.gradle.kts")
         ).first { it.exists() }.readText()
 
         assertFalse(source.contains("allowDebugReleaseSigning"))
-        assertTrue(source.contains("releaseSigningConfigured -> signingConfigs.getByName(\"release\")"))
-        assertTrue(source.contains("else -> signingConfigs.getByName(\"debug\")"))
+        // keystore/signing.gradle prepisuje signingConfigs.debug zajedničkim ključem za sve aplikacije.
+        assertTrue(source.contains("rootProject.file(\"../keystore/signing.gradle\")"))
+        assertTrue(source.contains("signingConfig = signingConfigs.getByName(\"debug\")"))
     }
 }

@@ -1,5 +1,7 @@
 <resources>
-    <style name="Theme.Rad" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Rad" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/rad_background</item>
+        <item name="android:colorBackground">@color/rad_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>

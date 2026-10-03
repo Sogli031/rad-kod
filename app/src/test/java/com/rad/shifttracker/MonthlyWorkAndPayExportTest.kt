@@ -20,7 +20,7 @@ class MonthlyWorkAndPayExportTest {
 
     @Test
     fun `export is exactly one JSON object with no trailing data`() {
-        val json = ShiftRepository().exportSelectedMonthWorkAndPayJson(
+        val json = testRepository().exportSelectedMonthWorkAndPayJson(
             selectedYear = 2026,
             selectedMonth = 5,
             appName = "Rad",
@@ -47,7 +47,7 @@ class MonthlyWorkAndPayExportTest {
 
     @Test
     fun `export uses selected month even when previous payroll month is missing`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
 
         val json = JSONObject(
             repo.exportSelectedMonthWorkAndPayJson(
@@ -84,16 +84,16 @@ class MonthlyWorkAndPayExportTest {
 
     @Test
     fun `known pay base anchor for selected month drives absence pay and export diagnostics`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.setKnownPayBaseAnchor(2026, 5, 950.58)
         repo.setDefaultPayBaseSelection(PayBaseSelectionMode.KNOWN_BASE)
         repo.set(2026, 5, 4, Shift.SICK, 8, sickPayRate = 1.0, holidayOverride = false)
         repo.set(2026, 5, 5, Shift.SICK, 8, sickPayRate = 1.0, holidayOverride = false)
 
         val resolved = repo.getResolvedPayBasesForWorkMonth(2026, 5)
-        // Bolovanje ima svoju osnovicu i ne prati poznatu osnovicu za GO/praznik.
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.001)
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        // Bolovanje prati istu osnovicu kao GO i praznik (KU čl. 66).
+        assertEquals(950.58, resolved.sickHourlyBase.value, 0.001)
+        assertEquals(PayBaseSource.KNOWN_BASE, resolved.sickHourlyBase.source)
         assertEquals(2026, resolved.vacationHourlyBase.sourceYear)
         assertEquals(5, resolved.vacationHourlyBase.sourceMonth)
         assertEquals(950.58, resolved.vacationHourlyBase.value, 0.001)
@@ -107,13 +107,13 @@ class MonthlyWorkAndPayExportTest {
         val settingsSickBase = settingsResolved.getJSONObject("sickHourlyBase")
         assertEquals(2026, settings.getInt("payBaseSourceYear"))
         assertEquals(5, settings.getInt("payBaseSourceMonth"))
-        assertEquals(918.81, settingsSickBase.getDouble("value"), 0.001)
-        assertEquals("DEFAULT", settingsSickBase.getString("source"))
+        assertEquals(950.58, settingsSickBase.getDouble("value"), 0.001)
+        assertEquals("KNOWN_BASE", settingsSickBase.getString("source"))
 
         val raw = json.getJSONObject("rawCalculationDebug")
         assertEquals(2026, raw.getInt("selectedYear"))
         assertEquals(5, raw.getInt("selectedMonth"))
-        assertEquals(918.81, raw.getDouble("sickPayBaseHourly"), 0.001)
+        assertEquals(950.58, raw.getDouble("sickPayBaseHourly"), 0.001)
         val resolution = raw.getJSONObject("payBaseResolution")
         assertEquals("KNOWN_BASE", resolution.getString("sourceUsed"))
         assertTrue(resolution.getBoolean("knownPayBaseAnchorFound"))
@@ -129,12 +129,12 @@ class MonthlyWorkAndPayExportTest {
 
         val payDetails = json.getJSONObject("monthlySummary").getJSONObject("payDetails")
         assertEquals(16, payDetails.getInt("sickHours"))
-        assertEquals(14_700.96, payDetails.getDouble("grossSickPay"), 0.01)
+        assertEquals(16 * 950.58, payDetails.getDouble("grossSickPay"), 0.01)
     }
 
     @Test
     fun `absence pay falls back to default only when no applicable anchor exists`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 5, 4, Shift.SICK, 8, sickPayRate = 1.0, holidayOverride = false)
 
         val resolved = repo.getResolvedPayBasesForWorkMonth(2026, 5)
@@ -157,7 +157,7 @@ class MonthlyWorkAndPayExportTest {
 
     @Test
     fun `export includes holiday weekend and shorter shift daily breakdowns`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 4, 1, Shift.FIRST, 8)
         repo.set(2026, 5, 1, Shift.FIRST, 8)
         repo.set(2026, 5, 2, Shift.SECOND, 5)
@@ -240,7 +240,7 @@ class MonthlyWorkAndPayExportTest {
     }
 
     @Test
-    fun `daily breakdown keeps extra minutes in night and Sunday work`() {
+    fun `daily breakdown keeps extra minutes in Sunday work and full night hours`() {
         val records = listOf(
             DayRecord(2026, 7, 31, Shift.THIRD, 4, regularShortageMinutes = 30),
             DayRecord(2026, 7, 5, Shift.FIRST, 4, regularShortageMinutes = 30)
@@ -257,7 +257,8 @@ class MonthlyWorkAndPayExportTest {
 
         val friday = breakdowns.getValue(DayKey(2026, 7, 31))
         assertEquals(270, friday.regularWorkMinutes)
-        assertEquals(270, friday.nightWorkMinutes)
+        // Listić 07/2026: noćni rad samo za pune sate (4h30 rada → 4h noćnog).
+        assertEquals(240, friday.nightWorkMinutes)
 
         val sunday = breakdowns.getValue(DayKey(2026, 7, 5))
         assertEquals(270, sunday.overtimeMinutes)
@@ -387,8 +388,8 @@ class MonthlyWorkAndPayExportTest {
     }
 
     @Test
-    fun `junski eksport cuva automatsko pravo i rucnu potrosnju odvojeno`() {
-        val repo = ShiftRepository().apply {
+    fun `junski eksport cuva staru rucnu potrosnju ali obracun skida celo pravo`() {
+        val repo = testRepository().apply {
             employeeContributionsPercentValue = 19.9
             taxReliefValue = 34_221.0
             taxPercentValue = 10.0
@@ -432,9 +433,9 @@ class MonthlyWorkAndPayExportTest {
         assertFalse(settingsAdditions.has("mealSettlementAdjustmentNet"))
         assertEquals("AUTO_FROM_NET", grossBreakdown.getString("mealGrossSource"))
         assertEquals(5_477.89, grossBreakdown.getDouble("mealGrossApplied"), 0.01)
-        assertEquals(3_620.0, netBreakdown.getDouble("mealNetDeduction"), 0.01)
-        assertEquals(3_620.0, monthlySummary.getDouble("netDeductionsTotal"), 0.01)
-        assertEquals(3_620.0, netBreakdown.getDouble("totalNetDeductions"), 0.01)
+        assertEquals(3_840.0, netBreakdown.getDouble("mealNetDeduction"), 0.01)
+        assertEquals(3_840.0, monthlySummary.getDouble("netDeductionsTotal"), 0.01)
+        assertEquals(3_840.0, netBreakdown.getDouble("totalNetDeductions"), 0.01)
         assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, mealBreakdown.getString("mealCalculationMode"))
         assertEquals("CONFIRMED_MONTHLY_OVERRIDE", mealBreakdown.getString("mealEntitlementSource"))
         assertEquals(3_840.0, mealBreakdown.getDouble("mealEntitlementNetOverride"), 0.01)
@@ -445,18 +446,18 @@ class MonthlyWorkAndPayExportTest {
         assertFalse(mealBreakdown.getBoolean("estimateAffectsPayroll"))
         assertEquals(240.0, mealBreakdown.getDouble("mealPriceNetPerMeal"), 0.01)
         assertEquals(3_840.0, mealBreakdown.getDouble("mealEntitlementNet"), 0.01)
-        assertEquals(3_620.0, mealBreakdown.getDouble("mealSpentNetApplied"), 0.01)
+        assertEquals(3_840.0, mealBreakdown.getDouble("mealSpentNetApplied"), 0.01)
         assertEquals(5_477.89, mealBreakdown.getDouble("mealEntitlementGross"), 0.01)
         assertEquals("AUTO_FROM_NET", mealBreakdown.getString("mealGrossSource"))
-        assertEquals(3_620.0, mealBreakdown.getDouble("mealNetDeduction"), 0.01)
-        assertEquals(220.0, mealBreakdown.getDouble("mealUnusedNet"), 0.01)
-        assertFalse(mealBreakdown.getBoolean("mealSpendingDefaultedToEntitlement"))
+        assertEquals(3_840.0, mealBreakdown.getDouble("mealNetDeduction"), 0.01)
+        assertEquals(0.0, mealBreakdown.getDouble("mealUnusedNet"), 0.01)
+        assertTrue(mealBreakdown.getBoolean("mealSpendingDefaultedToEntitlement"))
         assertEquals(MANUAL_SPENDING_SAFE_DEFAULT_MODE, rawDebug.getString("mealCalculationMode"))
         assertEquals("CONFIRMED_MONTHLY_OVERRIDE", rawDebug.getString("mealEntitlementSource"))
         assertEquals(3_840.0, rawDebug.getDouble("mealEntitlementNet"), 0.01)
         assertEquals(5_477.89, rawDebug.getDouble("mealEntitlementGross"), 0.01)
-        assertEquals(3_620.0, rawDebug.getDouble("mealNetDeduction"), 0.01)
-        assertEquals(220.0, rawDebug.getDouble("mealUnusedNet"), 0.01)
+        assertEquals(3_840.0, rawDebug.getDouble("mealNetDeduction"), 0.01)
+        assertEquals(0.0, rawDebug.getDouble("mealUnusedNet"), 0.01)
         assertFalse(mealBreakdown.has("mealGrossOverride"))
         assertFalse(mealBreakdown.has("mealGrossOverridePresent"))
         assertFalse(mealBreakdown.has("mealSettlementAdjustmentNet"))
@@ -525,10 +526,10 @@ class MonthlyWorkAndPayExportTest {
         repo.populateWeekdayWorkDays(2026, 4)
         repo.populateWeekdayWorkDays(2026, 5)
         repo.setMonthlyAdvancePaymentNet(2026, 5, 10_000.0)
-        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
+        repo.savePayslip(payslipWithDeductions(4, "000451 NLB Komercijalna banka 2,920,783.99 62 48,839.50"), withPayBase = false)
         val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 5)
         assertTrue(finalPayment.advancePaymentNet > 0.0)
-        assertTrue(finalPayment.loanDeductionNet > 0.0)
+        assertTrue(finalPayment.deductionsNet > 0.0)
 
         val json = repo.auditJson(2026, 5)
 
@@ -542,7 +543,7 @@ class MonthlyWorkAndPayExportTest {
 }
 
 private fun auditRepo(foodPerDay: Double): ShiftRepository {
-    return ShiftRepository().apply {
+    return testRepository().apply {
         foodPerDayValue = foodPerDay
         employeeContributionsPercentValue = 19.9
         taxReliefValue = 34_221.0

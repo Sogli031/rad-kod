@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +70,7 @@ fun BoxScope.BottomBarIndicator(
             .padding(start = 8.dp, end = 8.dp, bottom = 2.dp)
             .height(UI.indicatorBarHeight.dp)
             .fillMaxWidth()
-            .background(color, RoundedCornerShape(UI.indicatorBarHeight.dp))
+            .background(color, CircleShape)
     )
 }
 

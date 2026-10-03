@@ -116,7 +116,9 @@ internal class RepositoryHolidayRecords(private val recordStore: ShiftRecordStor
             holidayOverride = holidayOverride,
             balanceExempt = balanceExempt,
             sickPayRate = sickPayRate,
-            regularShortageMinutes = regularShortageMinutes
+            regularShortageMinutes = regularShortageMinutes,
+            // Bez ovoga dan davanja krvi posle promene praznika postaje obično bolovanje (65%).
+            source = source
         )
     }
 

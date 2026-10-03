@@ -38,7 +38,6 @@ i lozinke svog release keystore-a; tada Gradle automatski koristi taj ključ.
 - `app/src/main/java/com/rad/shifttracker/` — izvorni kod
 - `app/src/test/` — unit testovi
 - `docs/` — dokumentacija
-- `AUDIT_PLATA_KALKULACIJA.md` — analiza obračuna plate
 - `project-map.md` — mapa projekta
 
 ## Obračun plate (srpski radni zakon)

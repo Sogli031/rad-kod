@@ -4,9 +4,7 @@ import android.util.Log
 import com.rad.shifttracker.AnnualLeaveCalculationInput
 import com.rad.shifttracker.AppConfig
 import com.rad.shifttracker.BrigadeType
-import com.rad.shifttracker.DEFAULT_UNION_DUES_RATE
 import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.KnownPayBaseAnchor
 import com.rad.shifttracker.MAX_BASE_PAY
 import com.rad.shifttracker.MonthKey
 import com.rad.shifttracker.MonthlyGrossAdditions
@@ -27,13 +25,14 @@ import com.rad.shifttracker.sanitizeMonthlyGrossPenalty
 import com.rad.shifttracker.sanitizeMonthlySignedAdjustment
 import com.rad.shifttracker.sanitizeMonthlyNetAdjustment
 import com.rad.shifttracker.sanitizePayBaseOrNull
-import com.rad.shifttracker.sanitizeUnionDuesRate
 import com.rad.shifttracker.toMealMoney
 import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
+import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.Locale
 import java.util.TreeMap
 
 private const val TAG = "ShiftRepositoryJsonCodec"
@@ -46,18 +45,64 @@ private const val MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY = "meal_settlement_adjustme
 private const val BONUS_NET_KEY = "bonus_net"
 private const val ABSENCE_PENALTY_GROSS_KEY = "absence_penalty_gross"
 
-internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
+// Kodek preslikava celu šemu zapisa jedan-na-jedan (po jedna funkcija po polju); deljenje bi samo razvuklo šemu.
+@Suppress("LargeClass", "TooManyFunctions")
+internal class ShiftRepositoryJsonCodec(
+    private val config: AppConfig,
+    private val clock: Clock = Clock.systemDefaultZone(),
+    private val migrations: SchemaMigrations = SchemaMigrations()
+) {
 
     fun encode(snapshot: ShiftRepositorySnapshot): String {
         return JsonWriter.write(buildDataMap(snapshot))
     }
 
+    /** Kao [decodeChecked], ali odbijen JSON baca [SnapshotRejectedException]. */
     fun decode(jsonText: String): ShiftRepositorySnapshot {
-        return parseJson(JSONObject(jsonText))
+        return when (val result = decodeChecked(jsonText)) {
+            is SnapshotDecodeResult.Decoded -> result.snapshot
+            is SnapshotDecodeResult.Rejected -> throw SnapshotRejectedException(result.reason)
+        }
+    }
+
+    /**
+     * Čita JSON tek pošto proveri da liči na podatke ove aplikacije: objekat, razumljiva verzija sheme
+     * i bar jedan ključ koji aplikacija piše. Inače bi `{"x":1}` dao „prazan“ snapshot sa podrazumevanim
+     * vrednostima koji bi pri vraćanju obrisao sve.
+     */
+    fun decodeChecked(jsonText: String): SnapshotDecodeResult {
+        val json = runCatching { JSONObject(jsonText) }.getOrNull()
+            ?: return SnapshotDecodeResult.Rejected(SnapshotRejection.UNREADABLE)
+        val version = readSchemaVersion(json)
+            ?: return SnapshotDecodeResult.Rejected(SnapshotRejection.INVALID_SCHEMA_VERSION)
+        if (version > migrations.currentVersion) {
+            return SnapshotDecodeResult.Rejected(SnapshotRejection.NEWER_SCHEMA)
+        }
+        if (!hasRecognizedData(json)) {
+            return SnapshotDecodeResult.Rejected(SnapshotRejection.NO_RECOGNIZED_DATA)
+        }
+        migrations.migrate(json, version.toInt())
+        val snapshot = parseJson(json).copy(
+            savedPayslips = SavedPayslipsJsonCodec.parse(json),
+            deletedPayslipMonths = parseDeletedMonths(json.optJSONArray(DELETED_PAYSLIP_MONTHS_KEY))
+        )
+        return SnapshotDecodeResult.Decoded(snapshot, version.toInt())
+    }
+
+    private fun hasRecognizedData(json: JSONObject): Boolean {
+        val keys = json.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            if (key in RECOGNIZED_KEYS) return true
+            val year = key.toIntOrNull()
+            if (year != null && year in 1900..2200 && json.optJSONObject(key) != null) return true
+        }
+        return false
     }
 
     private fun buildDataMap(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
         val data = TreeMap<String, Any>()
+        data[SCHEMA_VERSION_KEY] = migrations.currentVersion
         data[PAY_COEFFICIENT_KEY] = snapshot.payCoefficient
         if (snapshot.hourlyValueChanges.isNotEmpty()) {
             data[HOURLY_VALUE_CHANGES_KEY] = buildHourlyValueChangesMapUnsafe(snapshot)
@@ -65,23 +110,17 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         if (snapshot.foodPerDayChanges.isNotEmpty()) {
             data[FOOD_PER_DAY_CHANGES_KEY] = buildFoodPerDayChangesMapUnsafe(snapshot)
         }
+        RegressNetChangesJsonCodec.write(snapshot.regressNetChanges, data)
         data[SICK_PAY_BASE_HOURLY_KEY] = snapshot.sickPayBaseHourly
         data[DEFAULT_PAY_BASE_SELECTION_MODE_KEY] = snapshot.defaultPayBaseSelectionMode.name
-        snapshot.knownPayBaseAnchor?.let { anchor ->
-            data[KNOWN_PAY_BASE_MONTH_KEY] = "%04d-%02d".format(anchor.month.year, anchor.month.month)
-            data[KNOWN_PAY_BASE_GROSS_HOURLY_KEY] = anchor.grossHourlyBase
-        }
+        KnownPayBaseAnchorsJsonCodec.write(snapshot.knownPayBaseAnchors, data)
+        SavedPayslipsJsonCodec.write(snapshot.savedPayslips, data)
         data[EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY] = snapshot.employeeContributionsPercent
         data[TAX_RELIEF_KEY] = snapshot.taxRelief
         data[TAX_PERCENT_KEY] = snapshot.taxPercent
         data[DIFFICULT_WORK_CONDITIONS_PERCENT_KEY] = snapshot.difficultWorkConditionsPercent
         data[FOOD_PER_DAY_KEY] = snapshot.foodPerDay
         data[TRANSPORT_DAILY_AMOUNT_KEY] = snapshot.transportDailyAmount
-        data[CREDIT_DEDUCTION_ENABLED_KEY] = snapshot.creditDeductionEnabled
-        data[MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY] = snapshot.monthlyCreditDeductionAmount
-        data[UNION_MEMBER_KEY] = snapshot.unionMember
-        data[UNION_DUES_RATE_KEY] = snapshot.unionDuesRate
-        data[FOOD_RECEIPT_REMINDER_ENABLED_KEY] = snapshot.foodReceiptReminderEnabled
         data[AUTO_ADVANCE_IMPORT_ENABLED_KEY] = snapshot.autoAdvanceImportEnabled
         data[NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY] = snapshot.notificationAccessPromptSuppressed
         data[MAIN_PAY_INCLUDES_TRANSPORT_KEY] = snapshot.mainPayIncludesTransport
@@ -98,7 +137,17 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         if (snapshot.deletedMonths.isNotEmpty()) {
             data[DELETED_MONTHS_KEY] = snapshot.deletedMonths
                 .sorted()
-                .map { "%04d-%02d".format(it.year, it.month) }
+                .map { String.format(Locale.ROOT, "%04d-%02d", it.year, it.month) }
+        }
+        if (snapshot.deletedHourlyValueMonths.isNotEmpty()) {
+            data[DELETED_HOURLY_VALUE_MONTHS_KEY] = snapshot.deletedHourlyValueMonths
+                .sorted()
+                .map { String.format(Locale.ROOT, "%04d-%02d", it.year, it.month) }
+        }
+        if (snapshot.deletedPayslipMonths.isNotEmpty()) {
+            data[DELETED_PAYSLIP_MONTHS_KEY] = snapshot.deletedPayslipMonths
+                .sorted()
+                .map { String.format(Locale.ROOT, "%04d-%02d", it.year, it.month) }
         }
         data[INITIAL_COMP_BALANCE_KEY] = snapshot.initialCompBalance
         data[INITIAL_COMP_BALANCE_MINUTES_KEY] = snapshot.initialCompBalanceMinutes
@@ -131,8 +180,9 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
 
         for (record in snapshot.records) {
             val yearKey = record.year.toString()
-            val monthKey = "%02d".format(record.month)
-            val dayKey = "%02d".format(record.day)
+            // Locale.ROOT: ključevi moraju imati ASCII cifre i na npr. arapskom jeziku sistema
+            val monthKey = String.format(Locale.ROOT, "%02d", record.month)
+            val dayKey = String.format(Locale.ROOT, "%02d", record.day)
 
             @Suppress("UNCHECKED_CAST")
             val yearMap = data.getOrPut(yearKey) { TreeMap<String, Any>() } as TreeMap<String, Any>
@@ -161,7 +211,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
                 }
             }
             ?: PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
-        val parsedKnownPayBaseAnchor = parseKnownPayBaseAnchor(json)
+        val parsedKnownPayBaseAnchors = KnownPayBaseAnchorsJsonCodec.parse(json)
         val parsedEmployeeContributionsPercent = json.optDouble(
             EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY,
             config.pay.defaultEmployeeContributionsPercent
@@ -177,12 +227,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             TRANSPORT_DAILY_AMOUNT_KEY,
             config.pay.transportPerWorkDay
         )
-        val parsedCreditDeductionEnabled = json.optBoolean(CREDIT_DEDUCTION_ENABLED_KEY, false)
-        val parsedMonthlyCreditDeductionAmount =
-            json.optDouble(MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY, 0.0).sanitizeMonthlyNetAdjustment()
-        val parsedUnionMember = json.optBoolean(UNION_MEMBER_KEY, false)
-        val parsedUnionDuesRate =
-            json.optDouble(UNION_DUES_RATE_KEY, DEFAULT_UNION_DUES_RATE).sanitizeUnionDuesRate()
+        // „unionMember“ i „unionDuesRate“ iz starijih backup-a se ne čitaju: obustave u % su samo sa listića.
         val parsedAutoAdvanceImport = parseAutoAdvanceImportFlags(json)
         val parsedLastBloodDonationDate = json.optLocalDateOrNull(BLOOD_DONATION_LAST_DATE_KEY)
         val parsedBloodDonationHistory = parseBloodDonationHistory(
@@ -198,7 +243,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         } else {
             val oldYears = json.optInt(YEARS_OF_SERVICE_KEY, 0)
             if (oldYears > 0) {
-                val now = LocalDate.now()
+                val now = LocalDate.now(clock)
                 if (now.monthValue >= 2) now.year - oldYears else now.year - 1 - oldYears
             } else {
                 0
@@ -232,8 +277,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val parsedHourlyValueChanges = parseHourlyValueChanges(json.optJSONObject(HOURLY_VALUE_CHANGES_KEY))
         val parsedFoodPerDayChanges = parseFoodPerDayChanges(json.optJSONObject(FOOD_PER_DAY_CHANGES_KEY))
 
-        val parsedDeletedMonths = parseDeletedMonths(json.optJSONArray(DELETED_MONTHS_KEY))
-
         val parsedRecords = parseDayRecords(json)
         val representativeImportMonth = parsedRecords
             .minWithOrNull(compareBy<DayRecord> { it.year }.thenBy { it.month })
@@ -245,11 +288,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             payCoefficient = parsedCoefficient,
             foodPerDay = parsedFoodPerDay,
             transportDailyAmount = parsedTransportDailyAmount,
-            creditDeductionEnabled = parsedCreditDeductionEnabled,
-            monthlyCreditDeductionAmount = parsedMonthlyCreditDeductionAmount,
-            unionMember = parsedUnionMember,
-            unionDuesRate = parsedUnionDuesRate,
-            foodReceiptReminderEnabled = json.optBoolean(FOOD_RECEIPT_REMINDER_ENABLED_KEY, false),
             autoAdvanceImportEnabled = parsedAutoAdvanceImport.enabled,
             notificationAccessPromptSuppressed = parsedAutoAdvanceImport.promptSuppressed,
             mainPayIncludesTransport = json.optBoolean(MAIN_PAY_INCLUDES_TRANSPORT_KEY, true),
@@ -273,6 +311,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             defaultPayBaseSelectionMode = parsedDefaultPayBaseSelectionMode,
             hourlyValueChanges = parsedHourlyValueChanges,
             foodPerDayChanges = parsedFoodPerDayChanges,
+            regressNetChanges = RegressNetChangesJsonCodec.read(json),
             employeeContributionsPercent = parsedEmployeeContributionsPercent,
             taxRelief = parsedTaxRelief,
             taxPercent = parsedTaxPercent,
@@ -283,9 +322,10 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             monthlyPayBases = parsedMonthlyPayBases,
             monthlyGrossAdditions = parsedMonthlyGrossAdditions,
             monthlyNetAdjustments = parsedMonthlyNetAdjustments,
-            knownPayBaseAnchor = parsedKnownPayBaseAnchor,
+            knownPayBaseAnchors = parsedKnownPayBaseAnchors,
             records = parsedRecords,
-            deletedMonths = parsedDeletedMonths
+            deletedMonths = parseDeletedMonths(json.optJSONArray(DELETED_MONTHS_KEY)),
+            deletedHourlyValueMonths = parseDeletedMonths(json.optJSONArray(DELETED_HOURLY_VALUE_MONTHS_KEY))
         )
     }
 
@@ -391,23 +431,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         return parsedRecords
     }
 
-    private fun parseKnownPayBaseAnchor(json: JSONObject): KnownPayBaseAnchor? {
-        if (!json.has(KNOWN_PAY_BASE_MONTH_KEY) || !json.has(KNOWN_PAY_BASE_GROSS_HOURLY_KEY)) return null
-        val rawMonth = json.optString(KNOWN_PAY_BASE_MONTH_KEY)
-        val month = runCatching { YearMonth.parse(rawMonth) }.getOrNull()
-            ?: run {
-                Log.w(TAG, "Nevažeća vrednost za $KNOWN_PAY_BASE_MONTH_KEY: '$rawMonth' — sidro odbačeno.")
-                return null
-            }
-        val grossHourlyBase = json.optDouble(KNOWN_PAY_BASE_GROSS_HOURLY_KEY, Double.NaN)
-            .sanitizePayBaseOrNull()
-            ?: return null
-        return KnownPayBaseAnchor(
-            month = MonthKey(month.year, month.monthValue),
-            grossHourlyBase = grossHourlyBase
-        )
-    }
-
     private fun buildVacationYearBalancesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
         val root = TreeMap<String, Any>()
         for ((year, balance) in snapshot.vacationYearBalances.toSortedMap()) {
@@ -419,6 +442,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
                 balance.currentYearDaysUsedBeforeAvailability
             data[VACATION_CURRENT_YEAR_AVAILABLE_FROM_KEY] = balance.currentYearAvailableFrom.toString()
             data[VACATION_MANUAL_BASELINE_KEY] = balance.manualBaseline
+            if (balance.carryoverFrozen) data[VACATION_CARRYOVER_FROZEN_KEY] = true
             root[year.toString()] = data
         }
         return root
@@ -445,7 +469,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
                     .optDouble(VACATION_CURRENT_YEAR_USED_BEFORE_AVAILABILITY_KEY, 0.0)
                     .coerceAtLeast(0.0),
                 currentYearAvailableFrom = availableFrom,
-                manualBaseline = data.optBoolean(VACATION_MANUAL_BASELINE_KEY, true)
+                manualBaseline = data.optBoolean(VACATION_MANUAL_BASELINE_KEY, true),
+                carryoverFrozen = data.optBoolean(VACATION_CARRYOVER_FROZEN_KEY, false)
             )
         }
         return parsed
@@ -512,7 +537,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             bases.paidHolidayHourlyBase?.let { monthData[PAID_HOLIDAY_HOURLY_BASE_KEY] = it }
             bases.sickHourlyBase?.let { monthData[SICK_HOURLY_BASE_KEY] = it }
             if (monthData.isNotEmpty()) {
-                yearMap["%02d".format(key.month)] = monthData
+                yearMap[String.format(Locale.ROOT, "%02d", key.month)] = monthData
             }
         }
         return TreeMap(root)
@@ -575,7 +600,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             val sanitized = adjustments.sanitizedFor(key.year, key.month)
             if (!sanitized.hasAny) continue
             val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap["%02d".format(key.month)] = TreeMap<String, Any>().apply {
+            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
                 put(ADVANCE_PAYMENT_NET_KEY, sanitized.advancePaymentNet)
             }
         }
@@ -614,7 +639,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val root = TreeMap<String, TreeMap<String, Any>>()
         for ((key, value) in snapshot.hourlyValueChanges.toSortedMap()) {
             val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap["%02d".format(key.month)] = TreeMap<String, Any>().apply {
+            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
                 put(HOURLY_VALUE_KEY, value)
             }
         }
@@ -650,7 +675,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         val root = TreeMap<String, TreeMap<String, Any>>()
         for ((key, value) in snapshot.foodPerDayChanges.toSortedMap()) {
             val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap["%02d".format(key.month)] = TreeMap<String, Any>().apply {
+            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
                 put(FOOD_PER_DAY_VALUE_KEY, value)
             }
         }
@@ -702,8 +727,6 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val FOOD_PER_DAY_VALUE_KEY = "food_per_day"
         const val SICK_PAY_BASE_HOURLY_KEY = "config_sick_pay_base_hourly"
         const val DEFAULT_PAY_BASE_SELECTION_MODE_KEY = "default_pay_base_selection_mode"
-        const val KNOWN_PAY_BASE_MONTH_KEY = "known_pay_base_month"
-        const val KNOWN_PAY_BASE_GROSS_HOURLY_KEY = "known_pay_base_gross_hourly"
         const val EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY = "config_employee_contributions_percent"
         const val TAX_RELIEF_KEY = "config_tax_relief"
         const val TAX_PERCENT_KEY = "config_tax_percent"
@@ -722,10 +745,13 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val BRIGADE_TYPE_KEY = "brigade_type"
         const val FOOD_PER_DAY_KEY = "config_food_per_day"
         const val TRANSPORT_DAILY_AMOUNT_KEY = "config_transport_per_work_day"
+        // Ručni kredit je ukinut (obustave idu sa listića); ključevi ostaju da se stari backup ne čita kao dan.
         const val CREDIT_DEDUCTION_ENABLED_KEY = "creditDeductionEnabled"
         const val MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY = "monthlyCreditDeductionAmount"
+        // Ukinuto „Član sindikata“ (obustave u % idu sa listića): stari backup ih ima, ne čitaju se.
         const val UNION_MEMBER_KEY = "unionMember"
         const val UNION_DUES_RATE_KEY = "unionDuesRate"
+        /** Ukinut podsetnik za račun hrane: ključ se više ne piše, ali stari JSON ga još ima. */
         const val FOOD_RECEIPT_REMINDER_ENABLED_KEY = "food_receipt_reminder_enabled"
         const val AUTO_ADVANCE_IMPORT_ENABLED_KEY = "auto_advance_import_enabled"
         const val NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY = "notification_access_prompt_suppressed"
@@ -736,6 +762,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
         const val BLOOD_DONATION_HISTORY_KEY = "blood_donation_history"
         const val BLOOD_DONATION_LEAVE_KEY = "blood_donation_leave"
         const val DELETED_MONTHS_KEY = "deleted_months"
+        const val DELETED_HOURLY_VALUE_MONTHS_KEY = "deleted_hourly_value_months"
+        const val DELETED_PAYSLIP_MONTHS_KEY = "deleted_payslip_months"
         const val INITIAL_VACATION_BALANCE_KEY = "initial_vacation_balance"
         const val VACATION_YEAR_BALANCES_KEY = "vacation_year_balances"
         const val ANNUAL_LEAVE_CALCULATION_KEY = "annual_leave_calculation"
@@ -749,6 +777,7 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             "current_year_days_used_before_availability"
         const val VACATION_CURRENT_YEAR_AVAILABLE_FROM_KEY = "current_year_available_from"
         const val VACATION_MANUAL_BASELINE_KEY = "manual_baseline"
+        const val VACATION_CARRYOVER_FROZEN_KEY = "carryover_frozen"
         const val ANNUAL_LEAVE_TOTAL_SENIORITY_YEARS_KEY = "total_seniority_years"
         const val ANNUAL_LEAVE_YEARS_AT_EMPLOYER_KEY = "years_at_employer"
         const val ANNUAL_LEAVE_INCREASED_RISK_KEY = "increased_risk_or_benefited_seniority"
@@ -782,6 +811,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             TRANSPORT_DAILY_AMOUNT_KEY,
             CREDIT_DEDUCTION_ENABLED_KEY,
             MONTHLY_CREDIT_DEDUCTION_AMOUNT_KEY,
+            UNION_MEMBER_KEY,
+            UNION_DUES_RATE_KEY,
             FOOD_RECEIPT_REMINDER_ENABLED_KEY,
             AUTO_ADVANCE_IMPORT_ENABLED_KEY,
             NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY,
@@ -789,6 +820,8 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             BLOOD_DONATION_COUNT_KEY,
             BLOOD_DONATION_LEAVE_KEY,
             DELETED_MONTHS_KEY,
+            DELETED_HOURLY_VALUE_MONTHS_KEY,
+            DELETED_PAYSLIP_MONTHS_KEY,
             INITIAL_VACATION_BALANCE_KEY,
             VACATION_YEAR_BALANCES_KEY,
             ANNUAL_LEAVE_CALCULATION_KEY,
@@ -797,16 +830,26 @@ internal class ShiftRepositoryJsonCodec(private val config: AppConfig) {
             MONTHLY_NET_ADJUSTMENTS_KEY,
             PAY_COEFFICIENT_KEY,
             HOURLY_VALUE_CHANGES_KEY,
+            RegressNetChangesJsonCodec.KEY,
             GROSS_HOURLY_RATE_KEY,
             SICK_PAY_BASE_HOURLY_KEY,
             DEFAULT_PAY_BASE_SELECTION_MODE_KEY,
-            KNOWN_PAY_BASE_MONTH_KEY,
-            KNOWN_PAY_BASE_GROSS_HOURLY_KEY,
+            KnownPayBaseAnchorsJsonCodec.LEGACY_MONTH_KEY,
+            KnownPayBaseAnchorsJsonCodec.LEGACY_GROSS_HOURLY_KEY,
+            KnownPayBaseAnchorsJsonCodec.ANCHORS_KEY,
             EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY,
             TAX_RELIEF_KEY,
             TAX_PERCENT_KEY,
             DIFFICULT_WORK_CONDITIONS_PERCENT_KEY,
             "comp_time_balance"
+        )
+
+        /** Svi ključevi koje aplikacija piše ili je ikad pisala (osim godina sa zapisima i verzije sheme). */
+        val RECOGNIZED_KEYS = METADATA_KEYS + setOf(
+            FOOD_PER_DAY_CHANGES_KEY,
+            MAIN_PAY_INCLUDES_TRANSPORT_KEY,
+            BLOOD_DONATION_HISTORY_KEY,
+            SavedPayslipsJsonCodec.KEY
         )
     }
 }
@@ -830,7 +873,7 @@ private fun buildMonthlyGrossAdditionsMapUnsafe(snapshot: ShiftRepositorySnapsho
         }
         monthData.putIfNonZero(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY, sanitized.mealSettlementAdjustmentNet)
         if (monthData.isNotEmpty()) {
-            yearMap["%02d".format(key.month)] = monthData
+            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = monthData
         }
     }
     return TreeMap(root)

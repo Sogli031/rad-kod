@@ -10,19 +10,14 @@ const val ADVANCE_PAYMENT_MINIMUM_RATE = 0.4
 
 internal const val ADVANCE_PAYMENT_DIALOG_TITLE = "Akontacija"
 internal const val ADVANCE_PAYMENT_NET_LABEL = "Akontacija neto"
-internal const val ADVANCE_PAYMENT_EXPLANATION_TEXT =
-    "Unesi neto iznos akontacije koji je već isplaćen. Ovaj iznos se ne koristi za obračun bruto plate, poreza i doprinosa, već samo umanjuje iznos koji ostaje za konačnu isplatu."
 internal const val ADVANCE_PAYMENT_SAVE_LABEL = "Sačuvaj"
 internal const val ADVANCE_PAYMENT_CANCEL_LABEL = "Otkaži"
 internal const val FINAL_PAYMENT_NET_PAY_LABEL = "Neto plata"
 internal const val FINAL_PAYMENT_ADVANCE_LABEL = "Isplaćena akontacija"
 internal const val FINAL_PAYMENT_DEDUCTIONS_LABEL = "Obustave"
-internal const val FINAL_PAYMENT_OTHER_DEDUCTIONS_LABEL = "Ostale obustave"
 internal const val FINAL_PAYMENT_REMAINING_LABEL = "Preostalo za konačnu isplatu"
 internal const val FINAL_PAYMENT_REMAINING_20_LABEL = "Preostalo 20."
 internal const val FINAL_PAYMENT_REMAINING_REGRESS_LABEL = "Preostalo regres"
-internal const val FINAL_PAYMENT_LOAN_DEDUCTION_LABEL = "Kredit"
-internal const val FINAL_PAYMENT_FOOD_OVERAGE_LABEL = "Hrana prekoračeno"
 internal const val MANUAL_ENTRY_BADGE_TEXT = "ručno uneto"
 internal const val FOOD_NOT_OVERAGE_TEXT = "Hrana nije prekoračena"
 internal const val FOOD_ACTUAL_SPENT_STATUS_LABEL = "Potrošeno"
@@ -37,58 +32,13 @@ internal const val FINAL_PAYMENT_UNAVAILABLE_TEXT =
     "Nije moguće izračunati konačnu isplatu jer mesečna plata nije izračunata."
 internal const val FINAL_PAYMENT_ADVANCE_WARNING_TEXT = "Akontacija je veća od obračunate neto plate."
 internal const val ADVANCE_PREDICTION_SECTION_LABEL = "Predviđanje (KU čl. 91)"
-internal const val ADVANCE_PREDICTION_EXPLANATION_TEXT =
-    "Po kolektivnom ugovoru akontacija ne može biti manja od 40% zarade isplaćene u prethodnom mesecu."
 internal const val ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL = "Isplaćeno u prethodnom mesecu"
 internal const val ADVANCE_PREDICTION_MINIMUM_LABEL = "Minimalna akontacija (40%)"
 internal const val ADVANCE_PREDICTION_USE_MINIMUM_LABEL = "Unesi minimum"
 internal const val ADVANCE_PREDICTION_UNAVAILABLE_TEXT =
     "Predviđanje nije dostupno — nema podataka o isplatama za prethodni mesec."
 
-internal const val CREDIT_DEDUCTION_SECTION_LABEL = "Kredit/obustava"
-internal const val CREDIT_DEDUCTION_ENABLED_LABEL = "Kredit aktivan"
-internal const val MONTHLY_CREDIT_DEDUCTION_AMOUNT_LABEL = "Mesečna rata kredita"
-internal const val CREDIT_DEDUCTION_CURRENCY_LABEL = "RSD"
-
-data class CreditDeductionSettings(
-    val creditDeductionEnabled: Boolean = false,
-    val monthlyCreditDeductionAmount: Double = 0.0
-) {
-    val activeDeductionNet: Double
-        get() = if (creditDeductionEnabled) {
-            monthlyCreditDeductionAmount.sanitizeMonthlyNetAdjustment()
-        } else {
-            0.0
-        }
-
-    fun sanitized(): CreditDeductionSettings {
-        return CreditDeductionSettings(
-            creditDeductionEnabled = creditDeductionEnabled,
-            monthlyCreditDeductionAmount = monthlyCreditDeductionAmount.sanitizeMonthlyNetAdjustment()
-        )
-    }
-}
-
-const val DEFAULT_UNION_DUES_RATE = 0.015
-
-internal const val UNION_DUES_SECTION_LABEL = "Sindikalna članarina"
-internal const val UNION_DUES_ENABLED_LABEL = "Član sindikata"
-internal const val UNION_DUES_RATE_LABEL = "Stopa članarine (%)"
-
-data class UnionDuesSettings(
-    val unionMember: Boolean = false,
-    val unionDuesRate: Double = DEFAULT_UNION_DUES_RATE
-) {
-    val activeRate: Double
-        get() = if (unionMember) unionDuesRate.sanitizeUnionDuesRate() else 0.0
-
-    fun sanitized(): UnionDuesSettings {
-        return UnionDuesSettings(
-            unionMember = unionMember,
-            unionDuesRate = unionDuesRate.sanitizeUnionDuesRate()
-        )
-    }
-}
+internal const val CURRENCY_LABEL = "RSD"
 
 data class MonthlyNetAdjustments(
     val year: Int,
@@ -136,9 +86,8 @@ data class MonthlyFinalPaymentBreakdown(
     val netPayBeforeAdvance: Double,
     val advancePaymentNet: Double,
     val deductionsNet: Double,
-    val loanDeductionNet: Double,
-    val foodOverageDeductionNet: Double,
-    val otherDeductionsNet: Double,
+    /** Obustave sa listića (kredit, članarina...) pod nazivom sa listića; zbir je [deductionsNet]. */
+    val deductions: List<FinalPaymentDeduction>,
     val remainingRegressNetPay: Double,
     val finalRemainingNetPay: Double,
     val advanceExceedsCalculatedNetPay: Boolean
@@ -166,19 +115,15 @@ internal fun calculateMonthlyFinalPaymentBreakdown(
     isNetPayAvailable: Boolean,
     netPayBeforeAdvance: Double,
     advancePaymentNet: Double,
-    loanDeductionNet: Double = 0.0,
-    foodOverageDeductionNet: Double = 0.0,
-    otherDeductionsNet: Double = 0.0,
+    deductions: List<FinalPaymentDeduction> = emptyList(),
     remainingRegressNetPay: Double = 0.0
 ): MonthlyFinalPaymentBreakdown {
-    val safeLoanDeduction = if (isNetPayAvailable) loanDeductionNet.sanitizeMonthlyNetAdjustment() else 0.0
-    val safeFoodOverageDeduction = if (isNetPayAvailable) {
-        foodOverageDeductionNet.sanitizeMonthlyNetAdjustment()
+    val safeDeductions = if (isNetPayAvailable) {
+        deductions.map { it.copy(amountNet = it.amountNet.sanitizeMonthlyNetAdjustment()) }.filter { it.amountNet > 0.0 }
     } else {
-        0.0
+        emptyList()
     }
-    val safeOtherDeductions = if (isNetPayAvailable) otherDeductionsNet.sanitizeMonthlyNetAdjustment() else 0.0
-    val totalDeductions = safeLoanDeduction + safeFoodOverageDeduction + safeOtherDeductions
+    val totalDeductions = safeDeductions.sumOf { it.amountNet }
     val finalPay = if (isNetPayAvailable) {
         calculateFinalNetPayBreakdown(netPayBeforeAdvance, advancePaymentNet, totalDeductions)
     } else {
@@ -190,9 +135,7 @@ internal fun calculateMonthlyFinalPaymentBreakdown(
         netPayBeforeAdvance = finalPay.netPayBeforeAdvance,
         advancePaymentNet = finalPay.advancePaymentNet,
         deductionsNet = finalPay.deductionsNet,
-        loanDeductionNet = safeLoanDeduction,
-        foodOverageDeductionNet = safeFoodOverageDeduction,
-        otherDeductionsNet = safeOtherDeductions,
+        deductions = safeDeductions,
         remainingRegressNetPay = if (isNetPayAvailable) remainingRegressNetPay.sanitizeMonthlyNetAdjustment() else 0.0,
         finalRemainingNetPay = if (isNetPayAvailable) finalPay.finalRemainingNetPay else 0.0,
         advanceExceedsCalculatedNetPay = isNetPayAvailable && finalPay.advanceExceedsCalculatedNetPay
@@ -205,10 +148,6 @@ internal fun Double.sanitizeMonthlyNetAdjustment(): Double {
     } else {
         0.0
     }
-}
-
-internal fun Double.sanitizeUnionDuesRate(): Double {
-    return if (isFinite() && this > 0.0) coerceAtMost(1.0) else DEFAULT_UNION_DUES_RATE
 }
 
 internal fun Double?.sanitizeMonthlyNetOverrideOrNull(): Double? {
@@ -253,9 +192,10 @@ internal fun mealSpentSupportingText(food: MonthlyFoodSpendingBreakdown): String
 
 /**
  * Predviđanje akontacije za mesec isplate [paymentMonth] po KU članu 91: akontacija ne može
- * biti manja od 40% zarade isplaćene u prethodnom mesecu. "Isplaćeno u prethodnom mesecu" je
- * zbir akontacije, konačne isplate i regresa koji su legli u prethodnom kalendarskom mesecu
- * (prevoz nije zarada i ne ulazi u osnovicu).
+ * biti manja od 40% zarade isplaćene u prethodnom mesecu, umanjene za obustave. "Isplaćeno u
+ * prethodnom mesecu" je zbir akontacije i konačne isplate (posle obustava) koje su legle u
+ * prethodnom kalendarskom mesecu. Regres i prevoz ne ulaze: 02/2026 akontacija 22.805 je ispod
+ * 40% sa regresom (26.121), a iznad bez njega (18.121).
  */
 data class AdvancePaymentPrediction(
     val paymentMonth: MonthKey,
@@ -263,7 +203,6 @@ data class AdvancePaymentPrediction(
     val isAvailable: Boolean,
     val previousMonthAdvanceNet: Double,
     val previousMonthFinalNet: Double,
-    val previousMonthRegressNet: Double,
     val previousMonthPaidTotalNet: Double,
     val minimumAdvanceNet: Double
 )
@@ -273,13 +212,11 @@ fun calculateAdvancePaymentPrediction(
     previousPaymentMonth: MonthKey?,
     isPreviousMonthNetPayAvailable: Boolean,
     previousMonthAdvanceNet: Double,
-    previousMonthFinalNet: Double,
-    previousMonthRegressNet: Double
+    previousMonthFinalNet: Double
 ): AdvancePaymentPrediction {
     val safeAdvance = previousMonthAdvanceNet.sanitizeMonthlyNetAdjustment()
     val safeFinal = previousMonthFinalNet.sanitizeMonthlyNetAdjustment()
-    val safeRegress = previousMonthRegressNet.sanitizeMonthlyNetAdjustment()
-    val paidTotal = safeAdvance + safeFinal + safeRegress
+    val paidTotal = safeAdvance + safeFinal
     val available = previousPaymentMonth != null && isPreviousMonthNetPayAvailable && paidTotal > 0.0
     return AdvancePaymentPrediction(
         paymentMonth = paymentMonth,
@@ -287,7 +224,6 @@ fun calculateAdvancePaymentPrediction(
         isAvailable = available,
         previousMonthAdvanceNet = safeAdvance,
         previousMonthFinalNet = safeFinal,
-        previousMonthRegressNet = safeRegress,
         previousMonthPaidTotalNet = paidTotal,
         minimumAdvanceNet = if (available) round(paidTotal * ADVANCE_PAYMENT_MINIMUM_RATE) else 0.0
     )
@@ -299,7 +235,6 @@ internal fun unavailableAdvancePaymentPrediction(paymentMonth: MonthKey): Advanc
         previousPaymentMonth = null,
         isPreviousMonthNetPayAvailable = false,
         previousMonthAdvanceNet = 0.0,
-        previousMonthFinalNet = 0.0,
-        previousMonthRegressNet = 0.0
+        previousMonthFinalNet = 0.0
     )
 }

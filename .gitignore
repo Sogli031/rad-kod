@@ -23,6 +23,9 @@ keystore.properties
 # --- Licni / firmini podaci (ostaju samo lokalno) ---
 work_shifts.json
 *.docx
+# platni listići (JMBG, broj računa)
+liste/
+*.pdf
 
 # --- Generisani izlaz i artefakti alata ---
 graphify-out/
@@ -40,3 +43,5 @@ Thumbs.db
 
 # AI assistant artifacts
 context-snapshot.json
+
+.claude/settings.local.json

@@ -95,12 +95,12 @@ internal const val SATNICA_DIFFICULT_WORK_CONDITIONS_LABEL = "Otežani uslovi ra
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL = "Prevoz po danu"
 internal const val MAIN_PAY_TRANSPORT_SECTION_LABEL = "Prikaz ispod kalendara"
 internal const val MAIN_PAY_TRANSPORT_LABEL = "Prevoz u iznosu za isplatu"
-internal const val MAIN_PAY_TRANSPORT_ENABLED_HINT =
-    "Kartice „Plata za…“ i „Primanja u ovom mesecu“ prikazuju neto platu (i regres) zajedno sa prevozom."
-internal const val MAIN_PAY_TRANSPORT_DISABLED_HINT =
-    "Isključeno — kartice prikazuju samo neto platu (i regres), bez prevoza. Detalji plate i dalje prikazuju prevoz."
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_HINT = "Unesi iznos prevoza po radnom danu"
+
+/** Opcije: otežani uslovi (sa liste) i prevoz (iz obračuna prevoza), samo prikaz. */
+internal const val MANUAL_PAY_SETTINGS_SECTION_LABEL = "Otežani uslovi i prevoz"
+internal const val DIFFICULT_WORK_CONDITIONS_STATUS_LABEL = "Otežani uslovi rada"
 
 internal fun satnicaGrossPreviewText(coefficient: Double, hourlyValue: Double): String {
     return "Bruto satnica: ${formatMoney2(coefficient * hourlyValue)} ${CONFIG.pay.currency}/h"
@@ -284,24 +284,6 @@ private fun monthNameGenitive(month: Int): String {
         11 -> "Novembra"
         12 -> "Decembra"
         else -> "meseca"
-    }
-}
-
-internal fun vacationSetupFieldLabels(today: LocalDate): List<String> {
-    return vacationSetupFieldLabels(beforeCurrentYearVacationAvailability = today.isBefore(
-        currentYearVacationAvailableFrom(today.year)
-    ))
-}
-
-internal fun vacationSetupFieldLabels(beforeCurrentYearVacationAvailability: Boolean): List<String> {
-    return if (beforeCurrentYearVacationAvailability) {
-        listOf(
-            "Ostalo starog odmora",
-            "Ukupno novog odmora",
-            "Već potrošeno novog"
-        )
-    } else {
-        listOf("Preostalo odmora za ovu godinu")
     }
 }
 

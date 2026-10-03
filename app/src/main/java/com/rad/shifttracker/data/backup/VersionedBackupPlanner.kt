@@ -7,9 +7,13 @@ package com.rad.shifttracker.data.backup
  */
 object VersionedBackupPlanner {
 
-    /** Najsvežija verzija (izvor arhive za merge), ili null ako još nema verzija. */
+    /**
+     * Najsvežija REDOVNA verzija (izvor arhive za merge i cilj za „Restore"), ili
+     * null ako još nema verzija. Sigurnosne kopije pre vraćanja se preskaču — one
+     * su dostupne samo kroz listu verzija.
+     */
     fun latest(versions: List<BackupVersion>): BackupVersion? =
-        versions.maxByOrNull { it.createdAtMillis }
+        versions.filterNot { it.safety }.maxByOrNull { it.createdAtMillis }
 
     /**
      * Otisak poslednje poznate DOBRE verzije za poređenje sa novim backup-om:
@@ -17,7 +21,7 @@ object VersionedBackupPlanner {
      * najsvežija verzija sa metapodacima. Null ako nijedna nema otisak (legacy).
      */
     fun baselineStats(versions: List<BackupVersion>): BackupStats? {
-        val newestFirst = versions.sortedByDescending { it.createdAtMillis }
+        val newestFirst = versions.filterNot { it.safety }.sortedByDescending { it.createdAtMillis }
         val good = newestFirst.firstOrNull { !it.flagged && it.stats != null }
         return (good ?: newestFirst.firstOrNull { it.stats != null })?.stats
     }

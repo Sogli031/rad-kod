@@ -1,6 +1,8 @@
 package com.rad.shifttracker.data.storage
 
+import com.rad.shifttracker.HISTORY_RETENTION_LOOKBACK_MONTHS
 import com.rad.shifttracker.MonthKey
+import com.rad.shifttracker.minusMonthsForRetention
 
 /**
  * Spaja postojeću arhivu iz oblaka sa trenutnim (lokalno orezanim) stanjem.
@@ -29,6 +31,7 @@ internal object CloudArchiveMerger {
 
         val boundary = current.records.minOfOrNull { it.monthKey }
             ?: return mergeWithoutCurrentRecords(archive, current, tombstones, deletedMonths)
+                .withPreservedManualEntries(archive, current)
 
         val keptArchiveRecords = archive.records.filter { it.monthKey < boundary && it.monthKey !in tombstones }
         val hasOlderArchiveData = keptArchiveRecords.isNotEmpty()
@@ -36,7 +39,6 @@ internal object CloudArchiveMerger {
         return current.copy(
             records = keptArchiveRecords + current.records,
             deletedMonths = deletedMonths,
-            hourlyValueChanges = mergeOlderThan(archive.hourlyValueChanges, current.hourlyValueChanges, boundary),
             foodPerDayChanges = mergeOlderThan(archive.foodPerDayChanges, current.foodPerDayChanges, boundary),
             monthlyPayBases = mergeOlderThan(
                 archive.monthlyPayBases.minus(tombstones),
@@ -68,6 +70,66 @@ internal object CloudArchiveMerger {
             } else {
                 current.initialVacationBalance
             }
+        ).withPreservedManualEntries(archive, current)
+    }
+
+    /**
+     * Ručno uneti podaci koji ne zavise od prozora zapisa: satnice, davanja krvi i
+     * datum početka rada. Trenutno stanje ume da bude „prazno" bez namere
+     * korisnika (nova instalacija pre restore-a, izmena tokom prvog pokretanja),
+     * pa prazna vrednost NIKAD ne sme da pregazi popunjenu iz arhive.
+     *
+     *  - Satnice: unija arhive i trenutnog stanja (trenutno pobeđuje), bez onih
+     *    koje je korisnik izričito obrisao.
+     *  - Davanja krvi i početak rada: trenutno stanje ako ga ima, inače arhiva.
+     *  - Sačuvani listići: unija arhive i trenutnog stanja, bez starijih od ~24 meseca
+     *    i bez onih koje je korisnik izričito obrisao.
+     */
+    private fun ShiftRepositorySnapshot.withPreservedManualEntries(
+        archive: ShiftRepositorySnapshot,
+        current: ShiftRepositorySnapshot
+    ): ShiftRepositorySnapshot {
+        val deletedHourlyValueMonths = (archive.deletedHourlyValueMonths + current.deletedHourlyValueMonths)
+            .distinct()
+            .filter { it !in current.hourlyValueChanges }
+        val hourlyValueChanges =
+            archive.hourlyValueChanges.minus(deletedHourlyValueMonths.toSet()) + current.hourlyValueChanges
+
+        val currentHasBloodDonations = current.bloodDonationHistory.isNotEmpty() ||
+            current.bloodDonationCount > 0 ||
+            current.lastBloodDonationDate != null
+        val bloodSource = if (currentHasBloodDonations) current else archive
+
+        val currentHasSeniority = current.minuliRadStartYear > 0 || current.minuliRadLastPayslipYear > 0
+        val senioritySource = if (currentHasSeniority) current else archive
+
+        // Listići su spoljni dokumenti: unija, trenutni pobeđuje za isti mesec. Za razliku od dana,
+        // ne čuvaju se zauvek: stariji od ~24 meseca pre najnovijeg upisa se izbacuju i iz oblaka.
+        val payslipCutoff = records.maxOfOrNull { it.monthKey }?.minusMonthsForRetention(HISTORY_RETENTION_LOOKBACK_MONTHS)
+        // Obrisan listić ostaje obrisan; ponovo učitan listić za isti mesec poništava brisanje.
+        val deletedPayslipMonths = (archive.deletedPayslipMonths + current.deletedPayslipMonths)
+            .distinct()
+            .filter { it !in current.savedPayslips }
+        val savedPayslips = (archive.savedPayslips.minus(deletedPayslipMonths.toSet()) + current.savedPayslips)
+            .filterKeys { payslipCutoff == null || it >= payslipCutoff }
+
+        return copy(
+            savedPayslips = savedPayslips,
+            deletedPayslipMonths = deletedPayslipMonths,
+            hourlyValueChanges = hourlyValueChanges,
+            regressNetChanges = archive.regressNetChanges + current.regressNetChanges,
+            deletedHourlyValueMonths = deletedHourlyValueMonths,
+            lastBloodDonationDate = bloodSource.lastBloodDonationDate,
+            bloodDonationCount = bloodSource.bloodDonationCount,
+            bloodDonationHistory = bloodSource.bloodDonationHistory,
+            minuliRadStartYear = senioritySource.minuliRadStartYear,
+            minuliRadStartMonth = senioritySource.minuliRadStartMonth,
+            seniorityInputMode = senioritySource.seniorityInputMode,
+            minuliRadBenefitEnabled = senioritySource.minuliRadBenefitEnabled,
+            minuliRadIncreaseFactor = senioritySource.minuliRadIncreaseFactor,
+            minuliRadLastPayslipYear = senioritySource.minuliRadLastPayslipYear,
+            minuliRadLastPayslipMonth = senioritySource.minuliRadLastPayslipMonth,
+            minuliRadPayslipPercent = senioritySource.minuliRadPayslipPercent
         )
     }
 
@@ -84,7 +146,6 @@ internal object CloudArchiveMerger {
         return current.copy(
             records = archive.records.filter { it.monthKey !in tombstones },
             deletedMonths = deletedMonths,
-            hourlyValueChanges = archive.hourlyValueChanges + current.hourlyValueChanges,
             foodPerDayChanges = archive.foodPerDayChanges + current.foodPerDayChanges,
             monthlyPayBases = archive.monthlyPayBases.minus(tombstones) + current.monthlyPayBases,
             monthlyGrossAdditions = archive.monthlyGrossAdditions.minus(tombstones) + current.monthlyGrossAdditions,

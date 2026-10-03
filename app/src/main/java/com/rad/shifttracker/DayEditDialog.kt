@@ -1,19 +1,20 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,17 +24,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rad.shifttracker.ui.components.ResponsiveInfoRow
+import com.rad.shifttracker.ui.components.AutoSizeText
 import java.time.LocalDate
 
-private const val DAY_TYPE_CHOICE_HEIGHT = 65
-private const val DAY_EDIT_SHIFT_CHOICE_HEIGHT = 50
-private const val OVERTIME_TYPE_CHOICE_HEIGHT = 50
+internal const val DAY_TYPE_CHOICE_HEIGHT = 52
+private const val DAY_EDIT_SHIFT_CHOICE_HEIGHT = 48
+internal const val OVERTIME_TYPE_CHOICE_HEIGHT = 48
+private const val DISABLED_CHOICE_ALPHA = 0.45f
 
 // Existing day-edit flow is intentionally grouped; detekt stays active for newly added methods.
 @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -99,6 +102,9 @@ fun DayEditDialog(
     var sickPayRate by rememberSaveable(year, month, day, recordContentKey) {
         mutableStateOf(initialSickRate)
     }
+    var paidLeave by rememberSaveable(year, month, day, recordContentKey) {
+        mutableStateOf(record?.isPaidLeave == true)
+    }
     val holidayOverride = record?.holidayOverride
     val holidayWorkOverride = record?.holidayWorkOverride
     val preserveBalanceExempt = record?.balanceExempt == true && shift1 == Shift.OFF
@@ -107,6 +113,11 @@ fun DayEditDialog(
 
     val isHolidayEffective = holidayOverride ?: autoHoliday
     val firstShiftAllowsDouble = shift1 in Shift.workShifts()
+    // Stari zapis sa dodatnom smenom van dozvoljenih ostaje vidljiv da može da se ispravi.
+    val secondShiftOptions = overtimeShiftsAfter(shift1).let { allowed ->
+        if (hasDouble && shift2 !in allowed) (allowed + shift2).sortedBy { it.ordinal } else allowed
+    }
+    val showDoubleSwitch = secondShiftOptions.isNotEmpty()
     val hasPrimaryNonRegularAdditionalWork = firstShiftAllowsDouble && (isWeekend || isHolidayEffective)
     val hasPrimaryExtraHours = firstShiftAllowsDouble && workHours1 > CONFIG.pay.defaultHours
     val showPrimaryExtraHoursMode = hasPrimaryExtraHours && !hasDouble && !hasPrimaryNonRegularAdditionalWork
@@ -127,7 +138,8 @@ fun DayEditDialog(
         holidayOverride = holidayOverride,
         balanceExempt = preserveBalanceExempt,
         sickPayRate = sickPayRate,
-        regularShortageMinutes = effectiveRegularShortageMinutes
+        regularShortageMinutes = effectiveRegularShortageMinutes,
+        paidLeave = paidLeave
     )
     val previewRecord = saveState.toDayRecord()
     val vacationValidation = remember(repo, dayDate, shift1, record) {
@@ -164,7 +176,6 @@ fun DayEditDialog(
         title = "$day. ${MONTH_NAMES[month]}",
         onDismiss = onDismiss,
         scrollable = true,
-        titleTextAlign = TextAlign.Center,
         footer = { DayEditSaveButton(saveState, vacationValidation, repo, onDismiss) }
     ) {
         DayEditStatusHeader(record = record, previewRecord = previewRecord, repo = repo)
@@ -173,11 +184,14 @@ fun DayEditDialog(
         DayEditSectionCard(title = "Tip dana") {
             DayEditDayTypeSelector(
                 selectedShift = shift1,
+                paidLeaveSelected = paidLeave,
                 onWorkSelected = {
+                    paidLeave = false
                     if (shift1 !in Shift.workShifts()) {
                         val scheduled = repo.getScheduledShiftForDate(dayDate)
                             ?.takeIf { it in Shift.workShifts() }
                         shift1 = scheduled ?: Shift.FIRST
+                        if (overtimeShiftsAfter(shift1).isEmpty()) hasDouble = false
                     }
                     if (workHours1 == 0) {
                         workHours1 = CONFIG.pay.defaultHours
@@ -188,17 +202,27 @@ fun DayEditDialog(
                 },
                 onSickSelected = {
                     shift1 = Shift.SICK
+                    paidLeave = false
+                    workHours1 = CONFIG.pay.defaultHours
+                    hasDouble = false
+                    regularShortageMinutes = 0
+                },
+                onPaidLeaveSelected = {
+                    shift1 = Shift.SICK
+                    paidLeave = true
                     workHours1 = CONFIG.pay.defaultHours
                     hasDouble = false
                     regularShortageMinutes = 0
                 },
                 onVacationSelected = {
+                    paidLeave = false
                     shift1 = Shift.VACATION
                     workHours1 = CONFIG.pay.defaultHours
                     hasDouble = false
                     regularShortageMinutes = 0
                 },
                 onOffSelected = {
+                    paidLeave = false
                     shift1 = Shift.OFF
                     workHours1 = 0
                     hasDouble = false
@@ -213,12 +237,17 @@ fun DayEditDialog(
                     shift1 = shift1,
                     workHours1 = workHours1,
                     hasDouble = hasDouble,
+                    showDoubleSwitch = showDoubleSwitch,
+                    showOvertimeCard = showDoubleSwitch || hasPrimaryNonRegularAdditionalWork || showPrimaryExtraHoursMode,
                     shortageMinutesAllowed = shortageMinutesAllowed,
                     effectiveRegularShortageMinutes = effectiveRegularShortageMinutes
                 ),
                 onPrimaryShiftSelected = { selected ->
                     shift1 = selected
-                    if (hasDouble) {
+                    val allowed = overtimeShiftsAfter(selected)
+                    if (allowed.isEmpty()) {
+                        hasDouble = false
+                    } else if (shift2 !in allowed) {
                         shift2 = defaultOvertimeShiftAfter(selected)
                     }
                 },
@@ -235,6 +264,7 @@ fun DayEditDialog(
                 onDoubleShiftChanged = { checked ->
                     hasDouble = checked
                     if (checked) {
+                        if (hasPrimaryNonRegularAdditionalWork) overtimeType = weekendOvertimeType
                         shift2 = defaultOvertimeShiftAfter(shift1)
                         if (workHours2 == 0) {
                             workHours2 = defaultOvertimeHours(shift1)
@@ -245,6 +275,7 @@ fun DayEditDialog(
                     DayEditAdditionalWorkControls(
                         state = DayEditAdditionalWorkState(
                             shift2 = shift2,
+                            secondShiftOptions = secondShiftOptions,
                             workHours2 = workHours2,
                             hasDouble = hasDouble,
                             overtimeType = overtimeType,
@@ -257,7 +288,7 @@ fun DayEditDialog(
                             hoursPicker = HoursPickerState(
                                 title = "Izaberi prekovremene sate",
                                 current = workHours2,
-                                accent = THEME.doubleShift,
+                                accent = THEME.accentPrimary,
                                 target = HoursTarget.SHIFT2,
                                 minHours = 1
                             )
@@ -268,10 +299,14 @@ fun DayEditDialog(
                 }
             )
 
-            Shift.SICK -> DayEditSickControls(
-                sickPayRate = sickPayRate,
-                onSickPayRateSelected = { selected -> sickPayRate = selected }
-            )
+            Shift.SICK -> if (paidLeave) {
+                DayEditPaidLeaveControls()
+            } else {
+                DayEditSickControls(
+                    sickPayRate = sickPayRate,
+                    onSickPayRateSelected = { selected -> sickPayRate = selected }
+                )
+            }
 
             Shift.VACATION -> DayEditVacationControls(
                 warningMessage = vacationValidation.message
@@ -335,6 +370,7 @@ fun DayEditDialog(
     }
 }
 
+/** Neto procena kao dva mirna reda (etiketa levo, iznos desno) — bez zelenog okvira. */
 @Composable
 private fun DayEditStatusHeader(
     record: DayRecord?,
@@ -354,29 +390,18 @@ private fun DayEditStatusHeader(
     }
 
     if (estimatedNetDailyPay > 0.0 || netDifferenceText != null) {
-        DayEditSectionCard(
-            title = "Zarada",
-            bgColor = THEME.bgCardElevated,
-            borderColor = THEME.success
-        ) {
-            ResponsiveInfoRow(
-                label = "Neto procena:",
+        PopupCard(spacing = 6.dp) {
+            DayEditValueRow(
+                label = "Neto procena",
                 value = "${formatNumber(estimatedNetDailyPay)} ${CONFIG.pay.currency}",
-                labelStyle = MaterialTheme.typography.bodyMedium,
-                valueStyle = MaterialTheme.typography.bodyLarge,
-                labelColor = THEME.textSecondary,
-                valueColor = THEME.success,
-                valueFontWeight = FontWeight.Bold
+                valueColor = THEME.textPrimary
             )
             netDifferenceText?.let { text ->
-                ResponsiveInfoRow(
-                    label = "Razlika:",
+                HorizontalDivider(color = THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA))
+                DayEditValueRow(
+                    label = "Razlika",
                     value = text.removePrefix("Razlika: "),
-                    labelStyle = MaterialTheme.typography.bodyMedium,
-                    valueStyle = MaterialTheme.typography.bodyLarge,
-                    labelColor = THEME.textSecondary,
-                    valueColor = netDifferenceColor,
-                    valueFontWeight = FontWeight.Bold
+                    valueColor = netDifferenceColor
                 )
             }
         }
@@ -384,108 +409,156 @@ private fun DayEditStatusHeader(
 }
 
 @Composable
+private fun DayEditValueRow(label: String, value: String, valueColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            color = THEME.textMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        AutoSizeText(
+            text = value,
+            color = valueColor,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End
+            ),
+            maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
+            minFontSize = MaterialTheme.typography.bodyMedium.fontSize,
+            maxLines = 1
+        )
+    }
+}
+
+/** Praznik: tonirana žuta traka, bez posebne kartice i naslova. */
+@Composable
 private fun DayEditHolidayWarningStrip(text: String) {
-    DayEditSectionCard(title = "Praznik") {
-        Box(
+    val shape = MaterialTheme.shapes.small
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(THEME.warning.copy(alpha = 0.14f))
+            .border(1.dp, THEME.warning.copy(alpha = 0.35f), shape)
+            .padding(horizontal = 12.dp, vertical = 9.dp)
+    ) {
+        Text(
+            text = text,
+            color = THEME.warning,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Dugme izbora u jednoj boji teme: izabrano = puna plava (kao „Sačuvaj“),
+ * neizabrano = neutralna tamna podloga sa sivim tekstom.
+ */
+@Composable
+internal fun RowScope.DayEditChoiceButton(
+    text: String,
+    selected: Boolean,
+    minHeight: Int,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val shape = MaterialTheme.shapes.small
+    val alpha = if (enabled) 1f else DISABLED_CHOICE_ALPHA
+    val bg = if (selected) THEME.accentPrimary.copy(alpha = alpha) else THEME.bgCardElevated
+    val fg = (if (selected) THEME.textDark else THEME.textSecondary).copy(alpha = alpha)
+    val border = if (selected) THEME.accentPrimary.copy(alpha = alpha) else THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA)
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .heightIn(min = MIN_TOUCH_TARGET)
+            .heightIn(min = minHeight.dp)
+            .clip(shape)
+            .background(bg)
+            .border(1.dp, border, shape)
+            // Izbor se najavljuje kao radio dugme sa stanjem „izabrano“, ne kao običan klik.
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        AutoSizeText(
+            text = text,
+            color = fg,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                textAlign = TextAlign.Center
+            ),
+            maxFontSize = MaterialTheme.typography.labelLarge.fontSize,
+            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+            maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(THEME.warning.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = text,
-                color = THEME.warning,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+        )
     }
 }
 
 @Composable
 private fun DayEditDayTypeSelector(
     selectedShift: Shift,
+    paidLeaveSelected: Boolean,
     onWorkSelected: () -> Unit,
     onSickSelected: () -> Unit,
+    onPaidLeaveSelected: () -> Unit,
     onVacationSelected: () -> Unit,
     onOffSelected: () -> Unit
 ) {
-    Text(
-        text = "Unos za ovaj datum",
-        color = THEME.textMuted,
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-    )
+    val isWorkDaySelected = selectedShift in Shift.workShifts()
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val isWorkDaySelected = selectedShift in Shift.workShifts()
-        RoundedButton(
+        DayEditChoiceButton(
             text = "Radio sam",
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp)
-                .fillMaxHeight(),
-            bgColor = if (isWorkDaySelected) THEME.accentPrimary else THEME.bgCardElevated,
-            textColor = if (isWorkDaySelected) THEME.textDark else THEME.textPrimary,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
+            selected = isWorkDaySelected,
+            minHeight = DAY_TYPE_CHOICE_HEIGHT,
             onClick = onWorkSelected
         )
-        RoundedButton(
+        DayEditChoiceButton(
             text = "Bolovanje",
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp)
-                .fillMaxHeight(),
-            bgColor = if (selectedShift == Shift.SICK) THEME.sick else THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
+            selected = selectedShift == Shift.SICK && !paidLeaveSelected,
+            minHeight = DAY_TYPE_CHOICE_HEIGHT,
             onClick = onSickSelected
         )
     }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        RoundedButton(
+        DayEditChoiceButton(
             text = "Godišnji",
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp)
-                .fillMaxHeight(),
-            bgColor = if (selectedShift == Shift.VACATION) THEME.vacation else THEME.bgCardElevated,
-            textColor = if (selectedShift == Shift.VACATION) THEME.textDark else THEME.textPrimary,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
+            selected = selectedShift == Shift.VACATION,
+            minHeight = DAY_TYPE_CHOICE_HEIGHT,
             onClick = onVacationSelected
         )
-        RoundedButton(
+        DayEditChoiceButton(
+            text = DAY_EDIT_PAID_LEAVE_LABEL,
+            selected = selectedShift == Shift.SICK && paidLeaveSelected,
+            minHeight = DAY_TYPE_CHOICE_HEIGHT,
+            onClick = onPaidLeaveSelected
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        DayEditChoiceButton(
             text = dayEditShiftButtonText(Shift.OFF),
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = DAY_TYPE_CHOICE_HEIGHT.dp)
-                .fillMaxHeight(),
-            bgColor = if (selectedShift == Shift.OFF) THEME.off else THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
+            selected = selectedShift == Shift.OFF,
+            minHeight = DAY_TYPE_CHOICE_HEIGHT,
             onClick = onOffSelected
         )
     }
@@ -501,115 +574,130 @@ private fun DayEditWorkControls(
     additionalWorkContent: @Composable ColumnScope.() -> Unit
 ) {
     DayEditSectionCard(title = "Smena") {
-        DayEditPrimaryShiftSelector(
+        DayEditShiftSelector(
+            question = DAY_EDIT_PRIMARY_SHIFT_QUESTION_TEXT,
             selectedShift = state.shift1,
             onSelected = onPrimaryShiftSelected
         )
-        DayEditRegularWorkControls(
-            workHours = state.workHours1,
-            shortageMinutesAllowed = state.shortageMinutesAllowed,
-            effectiveRegularShortageMinutes = state.effectiveRegularShortageMinutes,
-            onRegularHoursClick = onRegularHoursClick,
-            onShortageClick = onShortageClick
-        )
-    }
-    DayEditSectionCard(title = "Prekovremeno") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
+            DayEditValueButton(
+                label = "Redovni sati",
+                value = formatHours(state.workHours1),
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "Dodatna smena posle redovne",
-                    color = THEME.textMuted,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Switch(
+                onClick = onRegularHoursClick
+            )
+            DayEditValueButton(
+                label = "Minuti",
+                value = formatShortageMinutes(state.effectiveRegularShortageMinutes),
+                modifier = Modifier.weight(1f),
+                enabled = state.shortageMinutesAllowed,
+                onClick = onShortageClick
+            )
+        }
+    }
+    if (!state.showOvertimeCard) return
+    DayEditSectionCard(title = "Prekovremeno") {
+        if (state.showDoubleSwitch) {
+            LabeledSwitchRow(
+                title = "Dodatna smena posle redovne",
                 checked = state.hasDouble,
                 onCheckedChange = onDoubleShiftChanged,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = THEME.textDark,
-                    checkedTrackColor = THEME.doubleShift,
-                    uncheckedThumbColor = THEME.textMuted,
-                    uncheckedTrackColor = THEME.bgCardElevated
-                )
+                titleStyle = MaterialTheme.typography.bodyMedium
             )
         }
         additionalWorkContent()
     }
 }
 
+/** Dugme sa etiketom i vrednošću (npr. „Redovni sati · 8h“) koje otvara birač. */
 @Composable
-private fun DayEditPrimaryShiftSelector(
+private fun DayEditValueButton(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val shape = MaterialTheme.shapes.small
+    val alpha = if (enabled) 1f else 0.45f
+    Column(
+        modifier = modifier
+            .heightIn(min = UI.buttonHeight.dp)
+            .clip(shape)
+            .background(THEME.bgCardElevated)
+            .border(1.dp, THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA), shape)
+            .radClickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = label,
+            color = THEME.textMuted.copy(alpha = alpha),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = value,
+            color = THEME.accentPrimary.copy(alpha = alpha),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DayEditShiftSelector(
+    question: String,
     selectedShift: Shift,
+    shifts: List<Shift> = Shift.workShifts(),
     onSelected: (Shift) -> Unit
 ) {
-    DayEditChoiceHeader(text = DAY_EDIT_PRIMARY_SHIFT_QUESTION_TEXT)
+    DayEditChoiceHeader(text = question)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = DAY_EDIT_SHIFT_CHOICE_HEIGHT.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        for (shift in Shift.workShifts()) {
-            val isSelected = shift == selectedShift
-            RoundedButton(
+        for (shift in shifts) {
+            DayEditChoiceButton(
                 text = dayEditShiftButtonText(shift),
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = DAY_EDIT_SHIFT_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (isSelected) shift.color else shift.color.copy(alpha = 0.2f),
-                textColor = shift.textColor,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelMedium,
-                bold = true,
+                selected = shift == selectedShift,
+                minHeight = DAY_EDIT_SHIFT_CHOICE_HEIGHT,
                 onClick = { onSelected(shift) }
             )
         }
     }
 }
 
+/** „Plaćeno / Za sate“ — jedan red, isti stil za sva pitanja o dodatnom radu. */
 @Composable
-private fun DayEditRegularWorkControls(
-    workHours: Int,
-    shortageMinutesAllowed: Boolean,
-    effectiveRegularShortageMinutes: Int,
-    onRegularHoursClick: () -> Unit,
-    onShortageClick: () -> Unit
+private fun DayEditOvertimeTypeSelector(
+    question: String,
+    selected: OvertimeType,
+    onSelected: (OvertimeType) -> Unit
 ) {
-    RoundedButton(
-        text = "Redovni sati: ${formatHours(workHours)}",
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = UI.buttonHeight.dp),
-        bgColor = THEME.bgCardElevated,
-        textColor = THEME.textPrimary,
-        radius = 14.dp,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        bold = true,
-        onClick = onRegularHoursClick
-    )
-    RoundedButton(
-        text = "Minuti: ${formatShortageMinutes(effectiveRegularShortageMinutes)}",
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = UI.buttonHeight.dp),
-        bgColor = THEME.bgCardElevated,
-        textColor = THEME.textPrimary,
-        radius = 14.dp,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        bold = true,
-        enabled = shortageMinutesAllowed,
-        onClick = onShortageClick
-    )
+    DayEditChoiceHeader(text = question)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        DayEditChoiceButton(
+            text = "Plaćeno",
+            selected = selected == OvertimeType.PAID,
+            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
+            onClick = { onSelected(OvertimeType.PAID) }
+        )
+        DayEditChoiceButton(
+            text = "Za sate",
+            selected = selected == OvertimeType.COMP_TIME,
+            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
+            onClick = { onSelected(OvertimeType.COMP_TIME) }
+        )
+    }
 }
 
 @Composable
@@ -621,167 +709,43 @@ private fun DayEditAdditionalWorkControls(
     onWeekendOvertimeTypeSelected: (OvertimeType) -> Unit
 ) {
     if (state.hasDouble) {
-        DayEditAdditionalShiftSelector(
+        DayEditShiftSelector(
+            question = "Koja je dodatna smena?",
             selectedShift = state.shift2,
+            shifts = state.secondShiftOptions,
             onSelected = onSecondShiftSelected
         )
-        RoundedButton(
-            text = "Prekovremeni sati: ${formatHours(state.workHours2)}",
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.bodyLarge,
-            bold = true,
+        DayEditValueButton(
+            label = "Prekovremeni sati",
+            value = formatHours(state.workHours2),
+            modifier = Modifier.fillMaxWidth(),
             onClick = onOvertimeHoursClick
         )
-        DayEditChoiceHeader(text = "Kako se vodi prekovremeno?")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val paidSelected = state.overtimeType == OvertimeType.PAID
-            RoundedButton(
-                text = "Plaćeno",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (paidSelected) THEME.success else THEME.bgCard,
-                textColor = if (paidSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onOvertimeTypeSelected(OvertimeType.PAID) }
-            )
-            val compSelected = state.overtimeType == OvertimeType.COMP_TIME
-            RoundedButton(
-                text = "Za sate",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (compSelected) THEME.compTime else THEME.bgCard,
-                textColor = if (compSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onOvertimeTypeSelected(OvertimeType.COMP_TIME) }
-            )
-        }
+        DayEditOvertimeTypeSelector(
+            question = "Kako se vodi prekovremeno?",
+            selected = state.overtimeType,
+            onSelected = { selected ->
+                // Vikend/praznik + dodatna smena: jedan odgovor važi za oba dela dana.
+                onOvertimeTypeSelected(selected)
+                if (state.hasPrimaryNonRegularAdditionalWork) onWeekendOvertimeTypeSelected(selected)
+            }
+        )
     }
 
-    if (state.hasPrimaryNonRegularAdditionalWork) {
-        DayEditChoiceHeader(text = "Kako se vodi dodatni rad?")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val paidSelected = state.weekendOvertimeType == OvertimeType.PAID
-            RoundedButton(
-                text = "Plaćeno",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (paidSelected) THEME.success else THEME.bgCard,
-                textColor = if (paidSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onWeekendOvertimeTypeSelected(OvertimeType.PAID) }
-            )
-            val compSelected = state.weekendOvertimeType == OvertimeType.COMP_TIME
-            RoundedButton(
-                text = "Za sate",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (compSelected) THEME.compTime else THEME.bgCard,
-                textColor = if (compSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onWeekendOvertimeTypeSelected(OvertimeType.COMP_TIME) }
-            )
-        }
+    if (state.hasPrimaryNonRegularAdditionalWork && !state.hasDouble) {
+        DayEditOvertimeTypeSelector(
+            question = "Kako se vodi dodatni rad?",
+            selected = state.weekendOvertimeType,
+            onSelected = onWeekendOvertimeTypeSelected
+        )
     }
 
     if (state.showPrimaryExtraHoursMode) {
-        DayEditChoiceHeader(text = "Kako se vode sati preko redovne smene?")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val paidSelected = state.overtimeType == OvertimeType.PAID
-            RoundedButton(
-                text = "Plaćeno",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (paidSelected) THEME.success else THEME.bgCard,
-                textColor = if (paidSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onOvertimeTypeSelected(OvertimeType.PAID) }
-            )
-            val compSelected = state.overtimeType == OvertimeType.COMP_TIME
-            RoundedButton(
-                text = "Za sate",
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (compSelected) THEME.compTime else THEME.bgCard,
-                textColor = if (compSelected) THEME.textDark else THEME.textPrimary,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onOvertimeTypeSelected(OvertimeType.COMP_TIME) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun DayEditAdditionalShiftSelector(
-    selectedShift: Shift,
-    onSelected: (Shift) -> Unit
-) {
-    DayEditChoiceHeader(text = "Koja je dodatna smena?")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = DAY_EDIT_SHIFT_CHOICE_HEIGHT.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        for (shift in Shift.workShifts()) {
-            val isSelected = shift == selectedShift
-            RoundedButton(
-                text = dayEditShiftButtonText(shift),
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = DAY_EDIT_SHIFT_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (isSelected) shift.color else shift.color.copy(alpha = 0.2f),
-                textColor = shift.textColor,
-                radius = 14.dp,
-                textStyle = MaterialTheme.typography.labelMedium,
-                bold = true,
-                onClick = { onSelected(shift) }
-            )
-        }
+        DayEditOvertimeTypeSelector(
+            question = "Kako se vode sati preko redovne smene?",
+            selected = state.overtimeType,
+            onSelected = onOvertimeTypeSelected
+        )
     }
 }
 
@@ -793,27 +757,18 @@ private fun DayEditSickControls(
     DayEditSectionCard(title = "Bolovanje") {
         DayEditChoiceHeader(text = "Isplata bolovanja")
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val rates = listOf(
                 CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%",
                 1.0 to "100%"
             )
             for (rate in rates) {
-                val isSelected = kotlin.math.abs(sickPayRate - rate.first) < 0.01
-                RoundedButton(
+                DayEditChoiceButton(
                     text = rate.second,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = OVERTIME_TYPE_CHOICE_HEIGHT.dp),
-                    bgColor = if (isSelected) THEME.sick else THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
-                    radius = 14.dp,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
+                    selected = kotlin.math.abs(sickPayRate - rate.first) < 0.01,
+                    minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
                     onClick = { onSickPayRateSelected(rate.first) }
                 )
             }
@@ -830,7 +785,7 @@ private fun DayEditVacationControls(
             Text(
                 text = message,
                 color = THEME.warning,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -839,22 +794,28 @@ private fun DayEditVacationControls(
 }
 
 @Composable
+private fun DayEditPaidLeaveControls() {
+    DayEditSectionCard(title = DAY_EDIT_PAID_LEAVE_LABEL) {
+        Text(
+            text = DAY_EDIT_PAID_LEAVE_DETAIL_TEXT,
+            color = THEME.textMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
 private fun DayEditOffControls() {
     DayEditSectionCard(title = "Nisam radio") {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Shift.OFF.color.copy(alpha = 0.16f), RoundedCornerShape(10.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "Bez radnih sati.",
-                color = THEME.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = "Bez radnih sati.",
+            color = THEME.textMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -865,26 +826,37 @@ private fun DayEditCompensationBlock(
     onUseClick: () -> Unit
 ) {
     DayEditSectionCard(title = "Kompenzacija") {
-        Text(
-            text = "Bilans sati: ${formatHoursAndMinutes(availableCompMinutes)}",
-            color = THEME.textMuted,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        RoundedButton(
-            text = "Iskoristi sate: ${formatHours(compHoursUsed)}",
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp),
-            bgColor = THEME.compTimeUsed.copy(alpha = 0.4f),
-            textColor = THEME.textPrimary,
-            borderColor = THEME.compTimeUsed,
-            radius = 14.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
-            onClick = onUseClick
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = UI.buttonHeight.dp)
+                    .padding(horizontal = 2.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Bilans sati",
+                    color = THEME.textMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+                Text(
+                    text = formatHoursAndMinutes(availableCompMinutes),
+                    color = THEME.accentPrimary,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    maxLines = 1
+                )
+            }
+            DayEditValueButton(
+                label = "Iskoristi sate",
+                value = formatHours(compHoursUsed),
+                modifier = Modifier.weight(1f),
+                onClick = onUseClick
+            )
+        }
     }
 }
 
@@ -897,12 +869,10 @@ private fun DayEditSaveButton(
 ) {
     val isSaveEnabled = saveState.shift1 != Shift.VACATION || vacationValidation.isAllowed
     GlowButton(
-        text = "SA\u010cUVAJ",
+        text = "Sa\u010duvaj",
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = UI.saveButtonHeight.dp),
-        bgColor = if (isSaveEnabled) THEME.success else THEME.empty,
-        textColor = if (isSaveEnabled) THEME.textDark else THEME.textMuted,
         textStyle = MaterialTheme.typography.labelLarge,
         enabled = isSaveEnabled,
         onClick = {
@@ -928,7 +898,8 @@ private fun DayEditSaveButton(
                 holidayOverride = saveRecord.holidayOverride,
                 sickPayRate = saveRecord.sickPayRate,
                 balanceExempt = saveRecord.balanceExempt,
-                regularShortageMinutes = saveRecord.regularShortageMinutes
+                regularShortageMinutes = saveRecord.regularShortageMinutes,
+                source = saveRecord.source
             )
             onDismiss()
         }
@@ -938,22 +909,20 @@ private fun DayEditSaveButton(
 @Composable
 private fun DayEditSectionCard(
     title: String,
-    bgColor: Color = THEME.bgCard,
-    borderColor: Color = THEME.glassBorder,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    PopupCard(bgColor = bgColor, borderColor = borderColor) {
+    PopupCard {
         SectionLabel(text = title)
         content()
     }
 }
 
 @Composable
-private fun DayEditChoiceHeader(text: String) {
+internal fun DayEditChoiceHeader(text: String) {
     Text(
         text = text,
         color = THEME.textSecondary,
-        style = MaterialTheme.typography.labelMedium,
+        style = MaterialTheme.typography.bodySmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
@@ -970,11 +939,9 @@ private fun BloodDonationLockedDayDialog(
     PopupDialog(
         title = title,
         onDismiss = onDismiss,
-        scrollable = false,
-        titleTextAlign = TextAlign.Center,
-        accent = THEME.danger
+        scrollable = false
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.danger) {
+        PopupCard {
             SectionLabel(text = BLOOD_DONATION_BOTTOM_BAR_LABEL)
             record?.let {
                 Text(
@@ -985,15 +952,13 @@ private fun BloodDonationLockedDayDialog(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            RoundedButton(
-                text = "PONIŠTI DANE",
+            GlowButton(
+                text = "Poništi dane",
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = UI.buttonHeight.dp),
-                bgColor = THEME.danger,
-                textColor = THEME.textPrimary,
+                destructive = true,
                 textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
                 onClick = {
                     repo.clearBloodDonationLeaveForDate(date)
                     onDismiss()
@@ -1012,12 +977,15 @@ private data class DayEditWorkControlState(
     val shift1: Shift,
     val workHours1: Int,
     val hasDouble: Boolean,
+    val showDoubleSwitch: Boolean,
+    val showOvertimeCard: Boolean,
     val shortageMinutesAllowed: Boolean,
     val effectiveRegularShortageMinutes: Int
 )
 
 private data class DayEditAdditionalWorkState(
     val shift2: Shift,
+    val secondShiftOptions: List<Shift>,
     val workHours2: Int,
     val hasDouble: Boolean,
     val overtimeType: OvertimeType,

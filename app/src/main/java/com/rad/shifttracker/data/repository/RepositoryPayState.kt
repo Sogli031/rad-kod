@@ -2,6 +2,7 @@ package com.rad.shifttracker.data.repository
 
 import com.rad.shifttracker.AppConfig
 import com.rad.shifttracker.BrigadeType
+import com.rad.shifttracker.DEFAULT_REGRESS_NET
 import com.rad.shifttracker.DEFAULT_MEAL_PRICE_PERIODS
 import com.rad.shifttracker.KnownPayBaseAnchor
 import com.rad.shifttracker.MealPricePeriod
@@ -17,10 +18,14 @@ import com.rad.shifttracker.SeniorityIncreaseFactor
 import com.rad.shifttracker.SeniorityInputMode
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.util.TreeMap
 
 internal class RepositoryPayState(config: AppConfig) {
     var payCoefficient = config.pay.defaultCoefficient
     val hourlyValueChanges = mutableMapOf<MonthKey, Double>()
+
+    /** Neto regres od meseca (iz obračuna regresa); pre prvog upisa važi [DEFAULT_REGRESS_NET]. */
+    val regressNetChanges = TreeMap<MonthKey, Double>()
     var sickPayBaseHourly = config.pay.sickPayBaseHourly
     var defaultPayBaseSelectionMode = PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
     var foodPerDay = config.pay.foodPerDay
@@ -28,10 +33,6 @@ internal class RepositoryPayState(config: AppConfig) {
         MonthKey(period.validFrom.year, period.validFrom.monthValue) to period.netAmountPerMeal.toDouble()
     }
     var transportDailyAmount = config.pay.transportPerWorkDay
-    var creditDeductionEnabled = false
-    var monthlyCreditDeductionAmount = 0.0
-    var unionMember = false
-    var unionDuesRate = config.pay.defaultUnionDuesRate
     var employeeContributionsPercent = config.pay.defaultEmployeeContributionsPercent
     var taxRelief = config.pay.defaultTaxRelief
     var taxPercent = config.pay.defaultTaxPercent
@@ -50,7 +51,12 @@ internal class RepositoryPayState(config: AppConfig) {
     val monthlyPayBases = mutableMapOf<MonthKey, MonthlyPayBases>()
     val monthlyGrossAdditions = mutableMapOf<MonthKey, MonthlyGrossAdditions>()
     val monthlyNetAdjustments = mutableMapOf<MonthKey, MonthlyNetAdjustments>()
-    var knownPayBaseAnchor: KnownPayBaseAnchor? = null
+    // Osnovice prepisane sa platnih listića, po radnom mesecu na čijem su listiću.
+    val knownPayBaseAnchors = TreeMap<MonthKey, Double>()
+
+    /** Najnovije uneto sidro. */
+    val knownPayBaseAnchor: KnownPayBaseAnchor?
+        get() = knownPayBaseAnchors.lastEntry()?.let { KnownPayBaseAnchor(it.key, it.value) }
     val summaries = mutableMapOf<MonthKey, MonthSummary>()
     val rollingPayBaseCache = mutableMapOf<MonthKey, RollingPayBaseCalculation?>()
     val dirtyMonths = mutableSetOf<MonthKey>()
@@ -59,6 +65,26 @@ internal class RepositoryPayState(config: AppConfig) {
     var cachedSummaryCalcFoodPerDay: Double = Double.NaN
     var cachedSummaryCalcSickPayBaseHourly: Double = Double.NaN
     var cachedSummaryCalcDifficultWorkConditionsPercent: Double = Double.NaN
+
+    /**
+     * Sidro koje važi za mesec: najnovije čiji mesec nije posle njega. Tako svaki
+     * novi listić preuzima projekciju, pa se greška prenosa ne gomila kroz mesece.
+     * Mesec pre prvog listića uzima prvo kasnije sidro — bliže je stvarnoj osnovici od podrazumevane.
+     */
+    fun knownPayBaseAnchorFor(month: MonthKey): KnownPayBaseAnchor? {
+        val entry = knownPayBaseAnchors.floorEntry(month) ?: knownPayBaseAnchors.ceilingEntry(month)
+        return entry?.let { KnownPayBaseAnchor(it.key, it.value) }
+    }
+
+    fun restoreRegressNetChanges(changes: Map<MonthKey, Double>) {
+        regressNetChanges.clear()
+        regressNetChanges.putAll(changes.filterValues { it.isFinite() && it > 0.0 })
+    }
+
+    fun regressNetForMonth(month: MonthKey): Double = regressNetChanges.floorEntry(month)?.value ?: DEFAULT_REGRESS_NET
+
+    /** Za mesec je stigao obračun regresa (i kad je iznos isti kao raniji), makar nije 2/5/8/11. */
+    fun regressPaidInMonth(month: MonthKey): Boolean = regressNetChanges.containsKey(month)
 
     fun foodPerDayForMonth(month: MonthKey): Double {
         val effectiveEntry = foodPerDayChanges.entries

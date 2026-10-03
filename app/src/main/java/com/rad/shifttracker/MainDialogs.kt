@@ -5,6 +5,32 @@ import com.rad.shifttracker.data.backup.SignInState
 import com.rad.shifttracker.data.backup.SyncState
 import java.time.LocalDate
 
+/** Gmail pri ulasku: na prvom pokretanju posle „Popuni smene“ (tada se uvod beleži kao završen), posle ažuriranja samo provera. */
+@Composable
+private fun GmailStartDialog(state: DialogState, data: MainDialogData, onDismiss: () -> Unit) {
+    val update = state == DialogState.GmailUpdate
+    GmailOnboardingDialog(
+        repo = data.repo,
+        mode = if (update) GmailImportMode.UPDATE else GmailImportMode.ONBOARDING,
+        onFinished = {
+            if (!update) data.onFirstLaunchDone()
+            onDismiss()
+        }
+    )
+}
+
+/** „Popuni smene“; na prvom pokretanju posle njega (popunjeno ili ne) ide Gmail sa listama. */
+@Composable
+private fun AutoFillStartDialog(state: DialogState, data: MainDialogData, onDismiss: () -> Unit) {
+    val onboarding = state == DialogState.OnboardingAutoFill
+    AutoFillDialog(
+        today = data.today,
+        scheduler = data.scheduler,
+        repo = data.repo,
+        onDismiss = { if (onboarding) data.onDialogChange(DialogState.GmailOnboarding) else onDismiss() }
+    )
+}
+
 @Composable
 internal fun MainDialogs(
     dialogState: DialogState,
@@ -27,19 +53,16 @@ internal fun MainDialogs(
             )
         }
 
-        DialogState.AutoFill -> {
-            AutoFillDialog(
-                today = data.today,
-                scheduler = data.scheduler,
-                repo = data.repo,
-                onDismiss = onDismiss
-            )
-        }
+        DialogState.AutoFill,
+        DialogState.OnboardingAutoFill -> AutoFillStartDialog(state, data, onDismiss)
+
+        DialogState.GmailOnboarding,
+        DialogState.GmailUpdate -> GmailStartDialog(state, data, onDismiss)
 
         DialogState.SickVacation -> {
             SickVacationDialog(
-                year = data.currentYear,
-                month = data.currentMonth,
+                initialYear = data.currentYear,
+                initialMonth = data.currentMonth,
                 scheduler = data.scheduler,
                 repo = data.repo,
                 onDismiss = onDismiss
@@ -47,10 +70,10 @@ internal fun MainDialogs(
         }
 
         DialogState.BasePay -> {
-            BasePayDialog(
-                year = data.currentYear,
-                month = data.currentMonth,
+            PayslipReaderDialog(
                 repo = data.repo,
+                month = MonthKey(data.currentYear, data.currentMonth),
+                repoTick = data.repoTick,
                 onDismiss = onDismiss
             )
         }
@@ -193,6 +216,7 @@ private fun MainPayrollDialog(
                 month = data.workHoursMonth,
                 payDetails = data.workHoursPayDetails,
                 deficitNetLoss = data.workHoursOvertimeNetImpact.deficitNetLoss,
+                seniorityConfigured = data.repo.isSeniorityConfiguredValue,
                 onDismiss = onDismiss
             )
         }
@@ -218,10 +242,6 @@ private fun MainOptionsDialog(
             data.onDialogChange(DialogState.None)
         },
         onHolidaysClick = { data.onDialogChange(DialogState.Holidays) },
-        onNotificationAccessClick = data.onNotificationAccessClick,
-        foodReceiptReminderEnabled = data.foodReceiptReminderEnabled,
-        foodReceiptReminderStatus = data.foodReceiptReminderStatus,
-        onFoodReceiptReminderChange = data.onFoodReceiptReminderToggle,
         onDismiss = onDismiss
     )
 }
@@ -268,16 +288,14 @@ internal data class MainDialogData(
     val payDetails: MonthlyPayDetails,
     val annualNetPayAverages: AnnualNetPayAverages,
     val recentNetPayAverage: RecentNetPayAverage,
-    val foodReceiptReminderEnabled: Boolean,
-    val foodReceiptReminderStatus: FoodReceiptReminderScheduleStatus,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
     val onMonthlyExportClick: () -> Unit,
     val onDebugExportClick: () -> Unit,
-    val onFoodReceiptReminderToggle: (Boolean) -> Unit,
     val onBloodDonationDateSaved: () -> Unit,
     val onBloodDonationHistoryChanged: () -> Unit,
-    val onNotificationAccessClick: () -> Unit,
-    val onDialogChange: (DialogState) -> Unit
+    val onDialogChange: (DialogState) -> Unit,
+    /** Uvod pri prvom pokretanju je prošao (posle Gmail koraka). */
+    val onFirstLaunchDone: () -> Unit = {}
 )
 
 internal data class CloudBackupDialogData(

@@ -28,9 +28,27 @@ class BackupWorker(
         val repo = app.shiftRepositoryOrNull ?: return Result.success()
         val backup = app.googleDriveBackup
 
+        // Dok traje prvo pokretanje stanje je polu-prazno (podešavanja se tek unose);
+        // backup tada bi u oblak upisao verziju sa praznim globalnim podacima.
+        if (backup.isFirstLaunch()) {
+            Log.d(TAG, "Preskačem auto-backup: prvo pokretanje nije završeno")
+            return Result.success()
+        }
+
         if (!backup.isSignedIn()) {
             Log.d(TAG, "Preskačem auto-backup: korisnik nije prijavljen")
             return Result.success()
+        }
+
+        // Nova instalacija ne sme sama da pošalje svoje (sveže) stanje preko
+        // postojećeg backup-a — prvo korisnik bira Restore ili „zadrži lokalno".
+        when (backup.autoBackupGate()) {
+            AutoBackupGate.ALLOWED -> Unit
+            AutoBackupGate.NEEDS_USER_DECISION -> {
+                Log.d(TAG, "Preskačem auto-backup: oblak ima backup koji ovaj uređaj nije preuzeo")
+                return Result.success()
+            }
+            AutoBackupGate.UNKNOWN -> return Result.retry()
         }
 
         val outcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->

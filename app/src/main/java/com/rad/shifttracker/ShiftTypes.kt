@@ -91,12 +91,16 @@ data class ShiftFillSettings(
 )
 
 enum class OvertimeType(val value: Int) {
+    /** Plaćen prekovremeni rad (+41%), bez obzira na manjak u mesecu. */
     PAID(0),
+
+    /** Sati idu u saldo slobodnih sati i ne plaćaju se u tom mesecu. */
     COMP_TIME(1);
 
     companion object {
+        // Vrednost 2 („Odrada", uklonjena 2026-09-22) i nepoznate vrednosti čitaju se kao „Plaćeno".
         fun fromValue(value: Int): OvertimeType {
-            return if (value == 1) COMP_TIME else PAID
+            return entries.firstOrNull { it.value == value } ?: PAID
         }
     }
 }

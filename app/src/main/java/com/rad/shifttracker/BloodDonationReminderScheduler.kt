@@ -25,7 +25,6 @@ internal object BloodDonationReminderScheduler {
     private const val NOTIFICATION_ID = 2406
     private const val ALARM_REQUEST_CODE = 240601
     private const val OPEN_REQUEST_CODE = 240602
-    private const val BLOOD_DONATION_FALLBACK_WINDOW_MILLIS = 10 * 60 * 1000L
 
     fun reschedule(context: Context, repo: ShiftRepository): BloodDonationReminderScheduleStatus {
         cancelAlarm(context)
@@ -55,8 +54,7 @@ internal object BloodDonationReminderScheduler {
             donationCount = repo.bloodDonationCount,
             nextDonationDate = lastDonationDate?.let(::calculateNextBloodDonationDate),
             nextReminderTime = (plan as? BloodDonationReminderAlarmPlan.Schedule)?.reminderTime,
-            notificationPermissionGranted = hasBloodDonationNotificationPermission(context),
-            exactAlarmAvailable = canScheduleBloodDonationExactAlarms(context)
+            notificationPermissionGranted = hasBloodDonationNotificationPermission(context)
         )
     }
 
@@ -84,24 +82,15 @@ internal object BloodDonationReminderScheduler {
         }
     }
 
+    /**
+     * Običan (netačan) alarm: podsetnik „možeš ponovo da daš krv“ ne mora da stigne u minut,
+     * pa aplikaciji ne treba dozvola za tačne alarme. Android ga može malo pomeriti.
+     */
     private fun scheduleAlarm(context: Context, triggerAtMillis: Long) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val pendingIntent = reminderPendingIntent(context)
-        if (canScheduleBloodDonationExactAlarms(context)) {
-            val exactScheduled = runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-                } else {
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-                }
-            }.isSuccess
-            if (exactScheduled) return
-        }
-        alarmManager.setWindow(
+        context.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             triggerAtMillis,
-            BLOOD_DONATION_FALLBACK_WINDOW_MILLIS,
-            pendingIntent
+            reminderPendingIntent(context)
         )
     }
 
@@ -144,11 +133,6 @@ private fun hasBloodDonationNotificationPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
     return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
         PackageManager.PERMISSION_GRANTED
-}
-
-private fun canScheduleBloodDonationExactAlarms(context: Context): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
-    return context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
 }
 
 private fun LocalDateTime.toEpochMillis(): Long {

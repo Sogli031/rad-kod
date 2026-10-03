@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,11 +43,9 @@ fun CloudBackupDialog(
     PopupDialog(
         title = "Cloud Backup",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.accentPrimary
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentPrimary) {
+        PopupCard {
             SectionLabel(text = "Status")
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -127,16 +124,13 @@ fun CloudBackupDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(THEME.danger.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                        .background(THEME.danger.copy(alpha = 0.15f), MaterialTheme.shapes.small)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        text = syncError,
-                        color = THEME.danger,
+                    FormErrorText(
+                        message = syncError,
                         style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -148,8 +142,6 @@ fun CloudBackupDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                bgColor = THEME.accentPrimary,
-                textColor = THEME.textDark,
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = onSignIn
             )
@@ -163,7 +155,6 @@ fun CloudBackupDialog(
                         .height(44.dp),
                     bgColor = THEME.success,
                     textColor = THEME.textDark,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -176,7 +167,6 @@ fun CloudBackupDialog(
                         .height(44.dp),
                     bgColor = THEME.info,
                     textColor = THEME.textPrimary,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -190,7 +180,6 @@ fun CloudBackupDialog(
                     bgColor = THEME.bgCardElevated,
                     textColor = THEME.info,
                     borderColor = THEME.info,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -204,7 +193,6 @@ fun CloudBackupDialog(
                     bgColor = THEME.bgCardElevated,
                     textColor = THEME.danger,
                     borderColor = THEME.danger,
-                    radius = 14.dp,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,

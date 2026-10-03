@@ -9,8 +9,9 @@ import java.time.YearMonth
 import kotlin.math.max
 
 private const val DEFAULT_DAILY_FUND_HOURS = 8
-private const val DEFAULT_REGRESS_NET = 20_000.0
-private val REGRESS_MONTHS = setOf(2, 5, 8, 11)
+/** Neto regres dok obračun regresa ne pokaže drugi iznos ([ShiftRepository.recordRegressFromPayslip]). */
+internal const val DEFAULT_REGRESS_NET = 20_000.0
+internal val REGRESS_MONTHS = setOf(2, 5, 8, 11)
 private val PAYROLL_MATH_CONTEXT = MathContext.DECIMAL128
 private val HUNDRED_DECIMAL = BigDecimal.valueOf(100L)
 
@@ -63,8 +64,9 @@ fun calculateMonthlyNetPayBreakdown(
     taxPercent: Double,
     grossAdditions: MonthlyGrossAdditions = MonthlyGrossAdditions(summary.year, summary.month),
     includeRegress: Boolean = true,
-    unionMember: Boolean = false,
-    unionDuesRate: Double = 0.0
+    percentDeductions: PercentDeductions? = null,
+    regressNet: Double = DEFAULT_REGRESS_NET,
+    regressPaidInMonth: Boolean = false
 ): MonthlyNetPayBreakdown {
     val safeGrossHourlyRate = grossHourlyRate.sanitizeMoney()
     val safeFundHours = monthlyFundHours.coerceAtLeast(0)
@@ -91,7 +93,9 @@ fun calculateMonthlyNetPayBreakdown(
         additions = safeAdditions,
         netFactor = netFactor,
         includeRegress = includeRegress,
-        hasPayrollBase = hasPayrollBase
+        hasPayrollBase = hasPayrollBase,
+        regressNet = regressNet.sanitizeMoney(),
+        regressPaidInMonth = regressPaidInMonth
     )
     val netBonusAddition = if (safeAdditions.bonusNet > 0.0) {
         safeAdditions.bonusNet
@@ -142,7 +146,7 @@ fun calculateMonthlyNetPayBreakdown(
     val taxableBase = taxableBaseDecimal.toDouble()
     val tax = taxDecimal.toDouble()
     val netPayBeforeDeductions = netPayBeforeDeductionsDecimal.toDouble()
-    val unionDuesNet = calculateUnionDuesNet(netPayBeforeDeductions, unionMember, unionDuesRate)
+    val unionDuesNet = percentDeductions?.amountNet(netPayBeforeDeductions) ?: 0.0
     val netDeductionsTotal = mealResolution.netDeduction.toDouble() + unionDuesNet
     val netWithoutSeniority = calculateNetFromGross(
         grossTotal = (
@@ -226,17 +230,19 @@ private fun calculateRegressAddition(
     additions: MonthlyGrossAdditions,
     netFactor: Double,
     includeRegress: Boolean,
-    hasPayrollBase: Boolean
+    hasPayrollBase: Boolean,
+    regressNet: Double,
+    regressPaidInMonth: Boolean
 ): RegressAddition {
     val explicitGross = additions.regressGross
     val fromGross = RegressAddition(net = explicitGross * netFactor, gross = explicitGross)
     return when {
         !includeRegress -> RegressAddition(0.0, 0.0)
         explicitGross > 0.0 -> fromGross
-        month !in REGRESS_MONTHS -> fromGross
+        month !in REGRESS_MONTHS && !regressPaidInMonth -> fromGross
         hasPayrollBase -> RegressAddition(
-            net = DEFAULT_REGRESS_NET,
-            gross = calculateGrossFromNet(DEFAULT_REGRESS_NET, netFactor)
+            net = regressNet,
+            gross = calculateGrossFromNet(regressNet, netFactor)
         )
         else -> RegressAddition(0.0, 0.0)
     }
@@ -257,7 +263,9 @@ private fun resolveMonthlyMeal(
     return ResolvedMonthlyMeal(
         entitlementCalculation = entitlement,
         resolution = resolveMealCalculation(
-            manualMealSpentNet = additions.mealSpentNet,
+            // Računa se kao da je pojedeno koliko pripada; ručni unos potrošnje je ukinut
+            // (stari uneti iznosi ostaju u backup-u, ali ne utiču na platu).
+            manualMealSpentNet = null,
             entitlementNetOverride = additions.mealEntitlementNetOverride,
             estimatedEntitlementNet = entitlement.mealEntitlementNet,
             netFactor = netFactor
@@ -355,18 +363,6 @@ private fun emptyMonthlyNetPayBreakdown(
         netDeductionsTotal = resolution.netDeduction.toDouble(),
         displayPay = 0.0
     )
-}
-
-fun calculateUnionDuesNet(
-    netPayBeforeDeductions: Double,
-    unionMember: Boolean,
-    unionDuesRate: Double
-): Double {
-    if (!unionMember) return 0.0
-    val safeNet = netPayBeforeDeductions.sanitizeMoney()
-    val safeRate = if (unionDuesRate.isFinite() && unionDuesRate > 0.0) unionDuesRate.coerceAtMost(1.0) else 0.0
-    if (safeNet <= 0.0 || safeRate <= 0.0) return 0.0
-    return roundMoneyHalfUp(safeNet * safeRate)
 }
 
 internal fun roundMoneyHalfUp(value: Double): Double {

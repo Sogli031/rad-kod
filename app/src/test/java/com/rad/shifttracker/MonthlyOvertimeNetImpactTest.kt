@@ -6,7 +6,7 @@ import org.junit.Test
 class MonthlyOvertimeNetImpactTest {
     @Test
     fun `day edit razlika koristi isti mesecni neto efekat za sest sati prekovremenog sa realnim porezom`() {
-        val repo = ShiftRepository().apply {
+        val repo = testRepository().apply {
             minuliRadStartYearValue = 2019
             minuliRadStartMonthValue = 6
             foodPerDayValue = 0.0
@@ -46,7 +46,7 @@ class MonthlyOvertimeNetImpactTest {
 
     @Test
     fun `day edit razlika bez minulog rada ostaje marginalna i poklapa se sa prekovremenim`() {
-        val repo = ShiftRepository().apply {
+        val repo = testRepository().apply {
             foodPerDayValue = 0.0
             difficultWorkConditionsPercentValue = 0.0
         }
@@ -272,7 +272,7 @@ class MonthlyOvertimeNetImpactTest {
 
     @Test
     fun `vracanje kroz za sate koristi marginalni neto uz poresku olaksicu`() {
-        val repo = ShiftRepository().apply {
+        val repo = testRepository().apply {
             grossHourlyRateValue = 1_000.0
             foodPerDayValue = 0.0
             difficultWorkConditionsPercentValue = 0.0
@@ -303,7 +303,7 @@ class MonthlyOvertimeNetImpactTest {
 }
 
 private fun overtimeImpactRepo(): ShiftRepository {
-    return ShiftRepository().apply {
+    return testRepository().apply {
         grossHourlyRateValue = 1_000.0
         foodPerDayValue = 0.0
         employeeContributionsPercentValue = 0.0

@@ -22,12 +22,10 @@ fun OvertimeNetImpactDialog(
     PopupDialog(
         title = "Prekovremeno",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.weekendOt
+        scrollable = true
     ) {
         if (!impact.hasAnyNetEffect) {
-            PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+            PopupCard {
                 Text(
                     text = "Nema prekovremenih sati u ovom mesecu.",
                     color = THEME.warning,
@@ -39,7 +37,7 @@ fun OvertimeNetImpactDialog(
             return@PopupDialog
         }
 
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.weekendOt) {
+        PopupCard {
             SectionLabel(text = "Dodatna neto zarada")
             AutoSizeText(
                 text = signedMoneyText(impact.paidOvertimeNetDifference),

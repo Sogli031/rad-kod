@@ -10,7 +10,12 @@ data class VacationYearBalance(
     val currentYearDaysTotal: Double,
     val currentYearDaysUsedBeforeAvailability: Double,
     val currentYearAvailableFrom: LocalDate,
-    val manualBaseline: Boolean
+    val manualBaseline: Boolean,
+    /**
+     * Prenos je izračunat iz prošle godine i zapamćen pre nego što su njeni stari podaci obrisani;
+     * posle toga se više ne računa ponovo (ne bi imao iz čega).
+     */
+    val carryoverFrozen: Boolean = false
 )
 
 data class VacationBalanceSummary(
@@ -27,8 +32,23 @@ data class VacationBalanceSummary(
     val carryoverUsed: Double = 0.0,
     val carryoverExpired: Double = 0.0,
     val currentYearAvailableFrom: LocalDate = currentYearVacationAvailableFrom(year),
-    val currentYearExpiresOn: LocalDate = currentYearVacationAvailableFrom(year + 1)
+    val currentYearExpiresOn: LocalDate = currentYearVacationAvailableFrom(year + 1),
+    val usageByMonth: List<VacationMonthUsage> = emptyList()
 )
+
+/**
+ * Iskorišćeni dani godišnjeg u jednom mesecu. Za mesec sa sačuvanim listićem broj je sa listića
+ * (šifra 10 / 8 h), inače iz kalendara; [calendarDays] služi da se vidi kad se kalendar ne slaže.
+ */
+data class VacationMonthUsage(
+    val month: Int,
+    val days: Double,
+    val fromPayslip: Boolean,
+    val calendarDays: Int
+)
+
+/** Listić vodi godišnji u časovima (šifra 10); jedan dan godišnjeg je 8 časova. */
+const val VACATION_HOURS_PER_DAY = 8.0
 
 data class VacationRangePreview(
     val startDate: LocalDate,
@@ -193,36 +213,65 @@ fun calculateAnnualLeaveDays(input: AnnualLeaveCalculationInput): AnnualLeaveBre
     )
 }
 
+private fun vacationUsageByMonth(
+    calendarDates: List<LocalDate>,
+    payslipMonths: Map<Int, Double>
+): List<VacationMonthUsage> = (1..12).mapNotNull { month ->
+    val calendarDays = calendarDates.count { it.monthValue == month }
+    val payslipDays = payslipMonths[month]
+    when {
+        payslipDays != null && (payslipDays > 0.0 || calendarDays > 0) ->
+            VacationMonthUsage(month, payslipDays, fromPayslip = true, calendarDays = calendarDays)
+        payslipDays == null && calendarDays > 0 ->
+            VacationMonthUsage(month, calendarDays.toDouble(), fromPayslip = false, calendarDays = calendarDays)
+        else -> null
+    }
+}
+
+/**
+ * @param payslipDaysByMonth dani godišnjeg sa sačuvanih listića te godine (mesec → dana). Takav mesec
+ * se broji po listiću umesto po kalendaru, jer popunjavanje po listiću samo procenjuje datume.
+ */
 fun calculateVacationBalanceSummary(
     balance: VacationYearBalance,
     vacationDates: List<LocalDate>,
-    today: LocalDate
+    today: LocalDate,
+    payslipDaysByMonth: Map<Int, Double> = emptyMap()
 ): VacationBalanceSummary {
     val availableFrom = balance.currentYearAvailableFrom
     val carryoverExpiry = carryoverExpiresOn(balance.year)
     val carryoverInitial = balance.carryoverDaysInitial.coerceAtLeast(0.0)
-    val countedDates = vacationDates
+    val counts: (LocalDate) -> Boolean = { carryoverInitial > 0.0 || !it.isBefore(balance.trackingStartDate) }
+    val calendarDates = vacationDates
         .asSequence()
-        .filter { carryoverInitial > 0.0 || !it.isBefore(balance.trackingStartDate) }
+        .filter(counts)
         .filter { it.year == balance.year }
         .filter { !it.isAfter(today) }
         .distinct()
         .sorted()
         .toList()
+    // Listić zamenjuje ceo mesec, pa važi samo za mesec koji je ceo posle početka praćenja.
+    val payslipMonths = payslipDaysByMonth
+        .filterKeys { month ->
+            month in 1..12 && LocalDate.of(balance.year, month, 1).let { counts(it) && !it.isAfter(today) }
+        }
+        .mapValues { (_, days) -> days.coerceAtLeast(0.0) }
+    val entries = (
+        calendarDates.filter { it.monthValue !in payslipMonths }.map { it to 1.0 } +
+            payslipMonths.map { (month, days) -> LocalDate.of(balance.year, month, 1) to days }
+        ).sortedBy { it.first }
 
     var carryoverRemaining = carryoverInitial
     var carryoverUsed = 0.0
     var currentYearUsed = balance.currentYearDaysUsedBeforeAvailability.coerceAtLeast(0.0)
 
-    for (date in countedDates) {
-        if (!date.isAfter(carryoverExpiry) && carryoverRemaining > 0.0) {
-            val consumed = minOf(1.0, carryoverRemaining)
-            carryoverRemaining = (carryoverRemaining - consumed).coerceAtLeast(0.0)
-            carryoverUsed += consumed
-        } else {
-            currentYearUsed += 1.0
-        }
+    for ((date, days) in entries) {
+        val consumed = if (!date.isAfter(carryoverExpiry)) minOf(days, carryoverRemaining) else 0.0
+        carryoverRemaining = (carryoverRemaining - consumed).coerceAtLeast(0.0)
+        carryoverUsed += consumed
+        currentYearUsed += days - consumed
     }
+    val usageByMonth = vacationUsageByMonth(calendarDates, payslipMonths)
 
     val carryoverExpired = today.isAfter(carryoverExpiry)
     val expiredCarryoverDays = if (carryoverExpired) carryoverRemaining else 0.0
@@ -257,6 +306,7 @@ fun calculateVacationBalanceSummary(
         carryoverUsed = carryoverUsed,
         carryoverExpired = expiredCarryoverDays,
         currentYearAvailableFrom = availableFrom,
-        currentYearExpiresOn = currentYearVacationAvailableFrom(balance.year + 1)
+        currentYearExpiresOn = currentYearVacationAvailableFrom(balance.year + 1),
+        usageByMonth = usageByMonth
     )
 }

@@ -31,8 +31,16 @@ internal class RepositoryPaySettingsUpdater(
     }
 
     fun setKnownPayBaseAnchor(anchor: KnownPayBaseAnchor) {
-        payState.knownPayBaseAnchor = anchor
+        payState.knownPayBaseAnchors[anchor.month] = anchor.grossHourlyBase
         invalidateAllPayrollMonths()
+    }
+
+    fun removeKnownPayBaseAnchor(month: MonthKey): Boolean {
+        val removed = payState.knownPayBaseAnchors.remove(month) != null
+        if (removed) {
+            invalidateAllPayrollMonths()
+        }
+        return removed
     }
 
     fun setEmployeeContributionsPercent(value: Double) {

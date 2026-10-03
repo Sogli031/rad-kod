@@ -14,8 +14,10 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Zakazuje pozadinske backup-ove preko WorkManager-a:
- *  - [scheduleDebounced]: posle izmene podataka; jedinstven posao sa odlaganjem
- *    i politikom REPLACE, pa se niz brzih izmena spoji u jedan backup.
+ *  - [scheduleDebounced]: posle SVAKE izmene podataka; jedinstven posao sa kratkim
+ *    odlaganjem i politikom REPLACE, pa se niz brzih izmena (npr. popuna meseca)
+ *    spoji u jedan backup, a pojedinačna izmena stigne u oblak za par sekundi.
+ *    Broj verzija na Drive-u drži [BackupRetentionPolicy].
  *  - [schedulePeriodic]: dnevni „safety-net" ako korisnik dugo ne menja ništa.
  *
  * Oba traže mrežu i koriste eksponencijalni backoff pri neuspehu. Worker sam
@@ -25,7 +27,7 @@ object BackupScheduler {
 
     private const val DEBOUNCED_WORK = "rad_cloud_backup_debounced"
     private const val PERIODIC_WORK = "rad_cloud_backup_periodic"
-    private const val DEBOUNCE_DELAY_MINUTES = 10L
+    private const val DEBOUNCE_DELAY_SECONDS = 5L
     private const val PERIODIC_INTERVAL_HOURS = 24L
 
     private fun networkConstraints(): Constraints =
@@ -35,7 +37,7 @@ object BackupScheduler {
 
     fun scheduleDebounced(context: Context) {
         val request = OneTimeWorkRequestBuilder<BackupWorker>()
-            .setInitialDelay(DEBOUNCE_DELAY_MINUTES, TimeUnit.MINUTES)
+            .setInitialDelay(DEBOUNCE_DELAY_SECONDS, TimeUnit.SECONDS)
             .setConstraints(networkConstraints())
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,

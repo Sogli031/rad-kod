@@ -19,8 +19,7 @@ data class BloodDonationReminderScheduleStatus(
     val donationCount: Int = 0,
     val nextDonationDate: LocalDate? = null,
     val nextReminderTime: LocalDateTime? = null,
-    val notificationPermissionGranted: Boolean = true,
-    val exactAlarmAvailable: Boolean = true
+    val notificationPermissionGranted: Boolean = true
 )
 
 sealed class BloodDonationReminderAlarmPlan {
@@ -100,10 +99,6 @@ internal fun bloodDonationReminderStatusText(status: BloodDonationReminderSchedu
         if (!status.notificationPermissionGranted) {
             append('\n')
             append("Dozvola za obaveštenja nije uključena.")
-        }
-        if (!status.exactAlarmAvailable) {
-            append('\n')
-            append("Tačni alarmi nisu dozvoljeni; Android može pomeriti podsetnik nekoliko minuta.")
         }
     }
 }

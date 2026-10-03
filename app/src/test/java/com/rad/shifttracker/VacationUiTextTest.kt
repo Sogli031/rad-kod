@@ -101,37 +101,47 @@ class VacationUiTextTest {
     }
 
     @Test
-    fun `pocetno stanje pre jula trazi stari novi i potroseni novi odmor`() {
-        val labels = vacationSetupFieldLabels(LocalDate.of(2026, 5, 9))
-
+    fun `pocetno stanje trazi prenos pravo za godinu i potroseno van aplikacije`() {
         assertEquals(
             listOf(
-                "Ostalo starog odmora",
-                "Ukupno novog odmora",
-                "Već potrošeno novog"
+                "Preneto iz 2025. (važi do 30.06.)",
+                "Ukupno za 2026. (po rešenju)",
+                "Potrošeno van aplikacije"
             ),
-            labels
+            vacationSetupFieldLabels(2026)
         )
     }
 
     @Test
-    fun `pocetno stanje posle jula trazi samo preostali odmor`() {
-        val labels = vacationSetupFieldLabels(LocalDate.of(2026, 7, 2))
+    fun `staro stanje uneto kao preostalo od danas trazi ponovni unos prava`() {
+        val summary = calculateVacationBalanceSummary(
+            balance = VacationYearBalance(2026, LocalDate.of(2026, 9, 10), 0.0, 5.0, 0.0, LocalDate.of(2026, 7, 1), true),
+            vacationDates = emptyList(),
+            today = LocalDate.of(2026, 9, 24)
+        )
+        val old = VacationYearBalance(2026, LocalDate.of(2026, 9, 10), 0.0, 5.0, 0.0, LocalDate.of(2026, 7, 1), true)
+        val fromJanuary = old.copy(trackingStartDate = LocalDate.of(2026, 1, 1), currentYearDaysTotal = 24.0)
 
-        assertEquals(listOf("Preostalo odmora za ovu godinu"), labels)
+        assertEquals(listOf("0", "", "0"), vacationSetupInitialInputs(old, summary))
+        assertEquals(listOf("0", "24", "0"), vacationSetupInitialInputs(fromJanuary, summary))
     }
 
     @Test
-    fun `godisnji meni zadrzava samo rucni unos bez automatskog proracuna`() {
+    fun `mesec iskoriscenog odmora kaze odakle je broj`() {
+        assertEquals("12 dana · lista", vacationMonthUsageText(VacationMonthUsage(7, 12.0, true, 12)))
+        assertEquals("2 dana · lista (kalendar 3)", vacationMonthUsageText(VacationMonthUsage(8, 2.0, true, 3)))
+        assertEquals("1 dan · kalendar", vacationMonthUsageText(VacationMonthUsage(9, 1.0, false, 1)))
+        assertEquals("2.5 dana · lista (kalendar 3)", vacationMonthUsageText(VacationMonthUsage(6, 2.5, true, 3)))
+    }
+
+    @Test
+    fun `godisnji meni ima predlog po ugovoru a rucni broj sa resenja ostaje glavni`() {
         val source = appSource("VacationBalanceDialog.kt")
 
         assertEquals(true, source.contains("SectionLabel(text = \"Stanje\")"))
         assertEquals(true, source.contains("SectionLabel(text = \"Početno stanje\")"))
-        assertEquals(true, source.contains("VacationNumberInput(setupFieldLabels[0]"))
-        assertEquals(false, source.contains("Automatski obračun godišnjeg odmora"))
-        assertEquals(false, source.contains("Primeni kao moj godišnji odmor"))
-        assertEquals(false, source.contains("Ukupan staž osiguranja na 01.01."))
-        assertEquals(false, source.contains("AnnualLeaveCheckRow("))
+        assertEquals(true, source.contains("VacationNumberInput(setupFieldLabels[1]"))
+        assertEquals(true, source.contains("AnnualLeaveEntitlementCard("))
     }
 
     @Test

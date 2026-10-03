@@ -91,9 +91,11 @@ object CrashLogStorage {
         }
     }
 
+    // Kolekcija „Files“, ne „Downloads“: Downloads dozvoljava samo putanju Download/, pa je upis u
+    // Documents/ bio odbijan i javni log nikad nije nastajao.
     @TargetApi(Build.VERSION_CODES.Q)
     private fun findPublicDocumentsLog(context: Context): Uri? {
-        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val relativePath = "${Environment.DIRECTORY_DOCUMENTS}/"
         val projection = arrayOf(MediaStore.MediaColumns._ID)
         val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND " +
@@ -118,7 +120,7 @@ object CrashLogStorage {
 
     @TargetApi(Build.VERSION_CODES.Q)
     private fun createPublicDocumentsLog(context: Context): Uri? {
-        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, CRASH_LOG_FILE)
             put(MediaStore.MediaColumns.MIME_TYPE, MIME_TYPE)

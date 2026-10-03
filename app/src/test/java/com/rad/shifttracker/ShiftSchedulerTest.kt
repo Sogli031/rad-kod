@@ -352,7 +352,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead vikend vezuje za referentnu radnu sedmicu`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val saturday = LocalDate.of(2026, 5, 9)
 
         scheduler.populateMonthsAhead(repo, saturday, Shift.THIRD, monthsAhead = 1)
@@ -364,7 +364,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead popunjava tekuci i buduce mesece i obrce redosled smena`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 4) // Ponedeljak
 
         scheduler.populateMonthsAhead(repo, referenceDate, Shift.THIRD, monthsAhead = 1)
@@ -380,7 +380,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead ne popunjava prethodne mesece`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 4)
 
         scheduler.populateMonthsAhead(repo, referenceDate, Shift.THIRD, monthsAhead = 1)
@@ -394,7 +394,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead upisuje samo tekuca i buduca praznicna OFF polja`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 3, 2)
 
         scheduler.populateMonthsAhead(repo, referenceDate, Shift.THIRD, monthsAhead = 2)
@@ -412,7 +412,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead brise prethodne automatske praznicne OFF zapise`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.setBatch(
             listOf(
                 BatchRecord(2026, 4, 9, Shift.FIRST, 8),
@@ -428,7 +428,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead ne gazi rucne unose`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 4) // ponedeljak
         repo.set(2026, 5, 6, Shift.VACATION, 8)
         repo.set(
@@ -451,34 +451,64 @@ class ShiftSchedulerTest {
     }
 
     @Test
-    fun `populateMonthsAhead cetvorobrigada subotnji praznik upisuje kao OFF bez minusa`() {
-        val repo = ShiftRepository()
-        val referenceDate = LocalDate.of(2026, 5, 1)
+    fun `populateMonthsAhead cetvorobrigada radi praznike po rasporedu`() {
+        val repo = testRepository()
+        val referenceDate = LocalDate.of(2026, 4, 1)
 
+        // Livnica, 25.09.2026. = drugi dan treće smene (indeks 5 u ciklusu 1-1-2-2-3-3-0-0).
         scheduler.populateMonthsAhead(
             repo = repo,
             referenceDate = referenceDate,
             settings = ShiftFillSettings(
                 mode = ShiftFillMode.FOUR_BRIGADE,
-                anchorDate = referenceDate,
-                selectedShift = Shift.FIRST,
-                cycleDayIndex = 0
+                anchorDate = LocalDate.of(2026, 9, 25),
+                selectedShift = Shift.THIRD,
+                cycleDayIndex = 5
             ),
             monthsAhead = 0
         )
 
-        // 02.05.2026. (subota) je drugi dan Praznika rada — u četvorobrigadi
-        // je subota cikličan radni dan pa praznik važi kao i za petak.
-        val saturdayHoliday = repo.get(2026, 5, 2)
-        assertNotNull(saturdayHoliday)
-        assertEquals(Shift.OFF, saturdayHoliday!!.shift)
-        assertEquals(0, saturdayHoliday.hours)
-        assertEquals(0, saturdayHoliday.hoursDeficitFor(BrigadeType.CETVOROBRIGADA))
+        // Uskrs 2026: 10.04. (pet) i 11.04. (sub) treća smena, 12. i 13.04. slobodni po ciklusu.
+        assertEquals(Shift.THIRD, repo.get(2026, 4, 10)!!.shift)
+        assertTrue(repo.get(2026, 4, 10)!!.workedOnHoliday)
+        assertEquals(Shift.OFF, repo.get(2026, 4, 13)!!.shift)
+        assertEquals(0, repo.get(2026, 4, 13)!!.hoursDeficitFor(BrigadeType.CETVOROBRIGADA))
+        // Listić 04/2026: rad na praznik 14 h (6 + 2 na petak, 6 na subotu), državni praznik 8 h (ponedeljak).
+        val details = repo.getMonthlyPayDetails(2026, 4)
+        val holidayPremiumMinutes = repo.getMonthRecords(2026, 4).sumOf { record ->
+            paidWorkMinuteSegments(record).sumOf { (shift, minutes) -> record.holidayPremiumMinutes(shift, minutes) }
+        }
+        assertEquals(14 * 60, holidayPremiumMinutes)
+        assertEquals("05 po satu, kao na listiću", 14 * 60, details.publicHolidayWorkedBaseMinutes)
+        assertEquals(8 * 60, details.paidHolidayMinutes)
+    }
+
+    @Test
+    fun `populateMonthsAhead cetvorobrigada ne radi prvu smenu na praznik`() {
+        val repo = testRepository()
+        scheduler.populateMonthsAhead(
+            repo = repo,
+            referenceDate = LocalDate.of(2026, 2, 1),
+            settings = ShiftFillSettings(
+                mode = ShiftFillMode.FOUR_BRIGADE,
+                anchorDate = LocalDate.of(2026, 9, 25),
+                selectedShift = Shift.THIRD,
+                cycleDayIndex = 5
+            ),
+            monthsAhead = 0
+        )
+
+        // Listić 02/2026: 17.02. (uto) je po ciklusu prva smena → državni praznik, uz 16.02. (slobodan po ciklusu).
+        assertEquals(Shift.OFF, repo.get(2026, 2, 17)!!.shift)
+        val details = repo.getMonthlyPayDetails(2026, 2)
+        assertEquals(0, details.publicHolidayWorkedBaseMinutes)
+        assertEquals(16 * 60, details.paidHolidayMinutes)
+        assertEquals(144 * 60, details.regularWorkedBaseMinutes)
     }
 
     @Test
     fun `populateMonthsAhead ne upisuje nista za smenu koja nije u starom ciklusu`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 4)
 
         val count = scheduler.populateMonthsAhead(repo, referenceDate, Shift.OFF, monthsAhead = 1)
@@ -489,7 +519,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead cetvorobrigada prebacuje repo na cetvorobrigadni obracun`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 4)
 
         scheduler.populateMonthsAhead(
@@ -509,7 +539,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead cetvorobrigada nedelju i prvu smenu u ponedeljak upisuje kao off bez minusa`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         val referenceDate = LocalDate.of(2026, 5, 10) // Nedelja u prvoj smeni ciklusa
 
         scheduler.populateMonthsAhead(
@@ -543,7 +573,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `populateMonthsAhead trobrigada prebacuje repo na trobrigadni obracun`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.brigadeTypeValue = BrigadeType.fromValue("cetv")
         val referenceDate = LocalDate.of(2026, 5, 4)
 
@@ -563,7 +593,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `previewVacationRange preskace vikende praznike i postojece bolovanje`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 1, 6, Shift.SICK, 8)
 
         val preview = scheduler.previewVacationRange(repo, 2026, 1, 1, 7)
@@ -577,7 +607,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `applyVacationRange upisuje samo dane koji se racunaju`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.set(2026, 1, 6, Shift.SICK, 8)
 
         val count = scheduler.applyVacationRange(repo, 2026, 1, 1, 7)
@@ -591,7 +621,7 @@ class ShiftSchedulerTest {
 
     @Test
     fun `applyVacationRange blokira godisnji pre jula kada nema starog odmora`() {
-        val repo = ShiftRepository()
+        val repo = testRepository()
         repo.setVacationYearBalance(
             VacationYearBalance(
                 year = 2026,

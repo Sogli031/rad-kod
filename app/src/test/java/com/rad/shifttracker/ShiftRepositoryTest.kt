@@ -20,7 +20,9 @@ class ShiftRepositoryTest {
 
     @Before
     fun setUp() {
-        repo = ShiftRepository()
+        repo = testRepository()
+        // Testovi zadržavanja istorije glume da je poslednji upisan mesec i tekući (do 12/2027).
+        repo.retentionClock = { java.time.YearMonth.of(2027, 12) }
     }
 
     private fun populateCompletePreviousTwelveMonths(
@@ -109,8 +111,9 @@ class ShiftRepositoryTest {
     private fun resolvedKnownCalculation(year: Int, month: Int): RollingPayBaseCalculation {
         val resolved = repo.getResolvedPayBases(year, month)
         assertEquals(PayBaseSource.KNOWN_BASE, resolved.vacationHourlyBase.source)
-        // Osnovica bolovanja se namerno ne vezuje za poznatu osnovicu.
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        // Bolovanje prati istu osnovicu kao GO i praznik (KU čl. 66).
+        assertEquals(PayBaseSource.KNOWN_BASE, resolved.sickHourlyBase.source)
+        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.0)
         return resolved.vacationHourlyBase.calculation!!
     }
 
@@ -300,14 +303,14 @@ class ShiftRepositoryTest {
 
         assertEquals(35.0, json.getDouble("config_difficult_work_conditions_percent"), 0.01)
 
-        val imported = ShiftRepository()
+        val imported = testRepository()
         assertTrue(imported.importFromJson(json.toString()))
         assertEquals(35.0, imported.difficultWorkConditionsPercentValue, 0.01)
     }
 
     @Test
     fun `export import roundtrip cuva podesavanja plate odmor i zapise`() {
-        val source = ShiftRepository()
+        val source = testRepository()
         source.payCoefficientValue = 2.75
         source.setHourlyValueChange(2026, 2, 610.0)
         source.employeeContributionsPercentValue = 19.9
@@ -346,7 +349,6 @@ class ShiftRepositoryTest {
             )
         )
         source.setMonthlyAdvancePaymentNet(2026, 2, 50_000.0)
-        source.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
         source.setVacationYearBalance(
             VacationYearBalance(
                 year = 2026,
@@ -374,7 +376,7 @@ class ShiftRepositoryTest {
             sickPayRate = null
         )
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(source.exportJson()))
 
         assertEquals(source.exportJson(), restored.exportJson())
@@ -384,8 +386,6 @@ class ShiftRepositoryTest {
         assertEquals(360.0, restored.transportDailyAmountValue, 0.001)
         assertEquals(12, restored.initialCompBalanceValue)
         assertEquals(BrigadeType.CETVOROBRIGADA, restored.brigadeTypeValue)
-        assertEquals(true, restored.creditDeductionEnabledValue)
-        assertEquals(48_839.50, restored.monthlyCreditDeductionAmountValue, 0.001)
         assertEquals(PayBaseSelectionMode.MANUAL, restored.getMonthlyPayBases(2026, 2)?.selectionMode)
         assertEquals(1200.0, restored.getMonthlyGrossAdditions(2026, 2).mealGross ?: Double.NaN, 0.001)
         assertEquals(50_000.0, restored.getMonthlyNetAdjustments(2026, 2).advancePaymentNet, 0.001)
@@ -405,75 +405,66 @@ class ShiftRepositoryTest {
 
         assertEquals(50_000.0, mayAdjustments.getDouble("advance_payment_net"), 0.001)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
         assertEquals(50_000.0, restored.getMonthlyNetAdjustments(2026, 5).advancePaymentNet, 0.001)
         assertEquals(0.0, restored.getMonthlyNetAdjustments(2026, 4).advancePaymentNet, 0.001)
     }
 
     @Test
-    fun `auto akontacija iz obavestenja upisuje prvi iznos za mesec`() {
-        val result = repo.recordAdvancePaymentNotificationImport(
-            RadAdvanceImportCandidate(
-                month = MonthKey(2026, 7),
-                amount = 54_321.0,
-                dateTime = java.time.LocalDateTime.of(2026, 7, 5, 9, 14),
-                place = "VALJAONICA BAKRA SEVOJNO PRVOMAJSKA 43 SEVOJNO 378406"
-            )
-        )
+    fun `akontacija iz obracuna upisuje uplacen iznos za mesec`() {
+        repo.autoAdvanceImportEnabled = true
 
-        assertEquals(AdvancePaymentNotificationImportDecision.IMPORTED, result.decision)
-        assertEquals(54_321.0, repo.getMonthlyNetAdjustments(2026, 7).advancePaymentNet, 0.001)
+        assertTrue(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
+
+        assertEquals(38_942.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
     }
 
     @Test
-    fun `auto akontacija iz obavestenja ne prepisuje postojeci rucni iznos`() {
-        repo.setMonthlyAdvancePaymentNet(2026, 7, 50_000.0)
+    fun `akontacija iz obracuna zamenjuje rucni iznos a isti iznos nije promena`() {
+        repo.autoAdvanceImportEnabled = true
+        repo.setMonthlyAdvancePaymentNet(2026, 8, 50_000.0)
 
-        val result = repo.recordAdvancePaymentNotificationImport(
-            RadAdvanceImportCandidate(
-                month = MonthKey(2026, 7),
-                amount = 54_321.0,
-                dateTime = java.time.LocalDateTime.of(2026, 7, 5, 9, 14),
-                place = "VALJAONICA BAKRA SEVOJNO PRVOMAJSKA 43 SEVOJNO 378406"
-            )
-        )
-
-        assertEquals(AdvancePaymentNotificationImportDecision.SKIPPED_EXISTING_ADVANCE, result.decision)
-        assertEquals(50_000.0, repo.getMonthlyNetAdjustments(2026, 7).advancePaymentNet, 0.001)
+        assertTrue(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
+        assertFalse(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
+        assertEquals(38_942.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
     }
 
     @Test
     fun `auto akontacija se preskace kad je funkcija iskljucena`() {
         repo.autoAdvanceImportEnabled = false
 
-        val result = repo.recordAdvancePaymentNotificationImport(
-            RadAdvanceImportCandidate(
-                month = MonthKey(2026, 7),
-                amount = 54_321.0,
-                dateTime = java.time.LocalDateTime.of(2026, 7, 5, 9, 14),
-                place = "VALJAONICA BAKRA SEVOJNO PRVOMAJSKA 43 SEVOJNO 378406"
+        assertFalse(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
+        assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
+    }
+
+    @Test
+    fun `nova instalacija ima iskljuceno citanje akontacije iz obavestenja`() {
+        assertFalse(testRepository().autoAdvanceImportEnabled)
+        assertFalse(testRepository().notificationAccessPromptSuppressed)
+    }
+
+    @Test
+    fun `postojeca instalacija zadrzava ukljuceno citanje iz obavestenja`() {
+        val existing = testRepository()
+        existing.autoAdvanceImportEnabled = true
+        val restored = testRepository()
+        assertTrue(restored.importFromJson(existing.exportJson()))
+        assertTrue(restored.autoAdvanceImportEnabled)
+    }
+
+    @Test
+    fun `stari json sa zastavicom podsetnika za racun hrane se ucitava bez gubitka`() {
+        val restored = testRepository()
+        assertTrue(
+            restored.importFromJson(
+                "{\"pay_coefficient\": 1.0, \"food_receipt_reminder_enabled\": true, " +
+                    "\"config_difficult_work_conditions_percent\": 7.5, \"config_transport_per_work_day\": 321.0}"
             )
         )
-
-        assertEquals(AdvancePaymentNotificationImportDecision.SKIPPED_DISABLED, result.decision)
-        assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 7).advancePaymentNet, 0.001)
-    }
-
-    @Test
-    fun `auto akontacija je podrazumevano ukljucena i bez potisnutog pitanja`() {
-        assertTrue(repo.autoAdvanceImportEnabled)
-        assertFalse(repo.notificationAccessPromptSuppressed)
-    }
-
-    @Test
-    fun `ponovno ukljucivanje auto akontacije vraca pitanje za pristup obavestenjima`() {
-        repo.notificationAccessPromptSuppressed = true
-        repo.autoAdvanceImportEnabled = false
-
-        repo.autoAdvanceImportEnabled = true
-
-        assertFalse(repo.notificationAccessPromptSuppressed)
+        assertEquals(7.5, restored.difficultWorkConditionsPercentValue, 0.001)
+        assertEquals(321.0, restored.transportDailyAmountValue, 0.001)
+        assertFalse(JSONObject(restored.exportJson()).has("food_receipt_reminder_enabled"))
     }
 
     @Test
@@ -485,7 +476,7 @@ class ShiftRepositoryTest {
         assertFalse(json.getBoolean("auto_advance_import_enabled"))
         assertTrue(json.getBoolean("notification_access_prompt_suppressed"))
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
         assertFalse(restored.autoAdvanceImportEnabled)
         assertTrue(restored.notificationAccessPromptSuppressed)
@@ -508,18 +499,18 @@ class ShiftRepositoryTest {
         val json = JSONObject(repo.exportJson())
         assertFalse(json.getBoolean("main_pay_includes_transport"))
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
         assertFalse(restored.mainPayIncludesTransport)
 
-        val legacy = ShiftRepository()
+        val legacy = testRepository()
         assertTrue(legacy.importFromJson("{\"pay_coefficient\": 1.0}"))
         assertTrue(legacy.mainPayIncludesTransport)
     }
 
     @Test
     fun `stari backup bez zastavice auto akontacije ostaje ukljucen`() {
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson("{\"pay_coefficient\": 1.0}"))
 
         assertTrue(restored.autoAdvanceImportEnabled)
@@ -527,36 +518,20 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `podesavanje kredita se cuva kroz export import`() {
-        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
-        val json = JSONObject(repo.exportJson())
-
-        assertEquals(true, json.getBoolean("creditDeductionEnabled"))
-        assertEquals(48_839.50, json.getDouble("monthlyCreditDeductionAmount"), 0.001)
-
-        val restored = ShiftRepository()
-        assertTrue(restored.importFromJson(json.toString()))
-        assertEquals(true, restored.creditDeductionEnabledValue)
-        assertEquals(48_839.50, restored.monthlyCreditDeductionAmountValue, 0.001)
-    }
-
-    @Test
     fun `stari backup bez akontacije koristi nulu`() {
-        assertTrue(repo.importFromJson("{}"))
+        assertTrue(repo.importFromJson("{\"pay_coefficient\": 1.0}"))
 
         assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 5).advancePaymentNet, 0.001)
         assertEquals(null, repo.getMonthlyGrossAdditions(2026, 5).mealGross)
         assertEquals(null, repo.getMonthlyGrossAdditions(2026, 5).mealSpentNet)
         assertEquals(0.0, repo.getMonthlyGrossAdditions(2026, 5).mealSettlementAdjustmentNet, 0.001)
-        assertEquals(false, repo.creditDeductionEnabledValue)
-        assertEquals(0.0, repo.monthlyCreditDeductionAmountValue, 0.001)
     }
 
     @Test
     fun `eksplicitna nula potrosnje hrane ostaje sacuvana i posle importa`() {
         repo.setMonthlyActualFoodSpentNet(2026, 6, 0.0)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         val additions = restored.getMonthlyGrossAdditions(2026, 6)
@@ -569,7 +544,7 @@ class ShiftRepositoryTest {
         repo.foodPerDayValue = 280.0
         repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         val automaticZero = restored.getNetPayBreakdown(2026, 6)
@@ -579,61 +554,6 @@ class ShiftRepositoryTest {
         val absent = restored.getNetPayBreakdown(2026, 6)
         assertEquals(MealSpentSource.ENTITLEMENT_ASSUMED, absent.mealSpentSource)
         assertTrue(absent.mealSpentNetApplied > 0.0)
-    }
-
-    @Test
-    fun `stari bruto nula ostaje u backupu ali se ignorise u obracunu`() {
-        repo.foodPerDayValue = 280.0
-        repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyMealGrossOverride(2026, 6, 0.0)
-        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
-
-        val restored = ShiftRepository()
-        assertTrue(restored.importFromJson(repo.exportJson()))
-
-        val additions = restored.getMonthlyGrossAdditions(2026, 6)
-        val breakdown = restored.getNetPayBreakdown(2026, 6)
-        assertEquals(0.0, additions.mealGross ?: Double.NaN, 0.001)
-        assertEquals(3_620.0, additions.mealSpentNet ?: Double.NaN, 0.001)
-        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
-        assertTrue(breakdown.grossMealAddition > 0.0)
-        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.001)
-    }
-
-    @Test
-    fun `brisanje starog bruto override cuva neto potrosnju`() {
-        repo.foodPerDayValue = 280.0
-        repo.set(2026, 6, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
-        repo.setMonthlyMealGrossOverride(2026, 6, 5_478.0)
-
-        repo.setMonthlyMealGrossOverride(2026, 6, null)
-
-        val additions = repo.getMonthlyGrossAdditions(2026, 6)
-        val breakdown = repo.getNetPayBreakdown(2026, 6)
-        assertEquals(null, additions.mealGross)
-        assertEquals(3_620.0, additions.mealSpentNet ?: Double.NaN, 0.001)
-        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
-        assertTrue(breakdown.grossMealAddition > 0.0)
-        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.001)
-    }
-
-    @Test
-    fun `negativna korekcija preseka se cuva u backupu ali se ignorise u obracunu`() {
-        repo.foodPerDayValue = 280.0
-        repo.set(2026, 2, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyActualFoodSpentNet(2026, 2, 5_530.0)
-        repo.setMonthlyMealSettlementAdjustmentNet(2026, 2, -210.0)
-
-        val restored = ShiftRepository()
-        assertTrue(restored.importFromJson(repo.exportJson()))
-
-        val additions = restored.getMonthlyGrossAdditions(2026, 2)
-        val breakdown = restored.getNetPayBreakdown(2026, 2)
-        assertEquals(-210.0, additions.mealSettlementAdjustmentNet, 0.001)
-        assertEquals(5_530.0, breakdown.mealCoveredNet, 0.001)
-        assertEquals(MealGrossSource.AUTO_FROM_NET, breakdown.mealGrossSource)
-        assertEquals(5_530.0, breakdown.mealSpentNetApplied, 0.001)
     }
 
     @Test
@@ -649,56 +569,26 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `iskljucen kredit ne umanjuje konacnu isplatu ni kada je rata upisana`() {
-        repo.foodPerDayValue = 0.0
-        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setCreditDeductionSettings(enabled = false, monthlyAmount = 48_839.50)
-
-        val receipt = repo.getMonthlyReceipt(2026, 6)
-        val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 6)
-
-        assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
-        assertEquals(0.0, finalPayment.loanDeductionNet, 0.01)
-        assertEquals(0.0, finalPayment.deductionsNet, 0.01)
-        assertEquals(receipt.salaryNetPay, finalPayment.finalRemainingNetPay, 0.01)
-    }
-
-    @Test
-    fun `ukljucen kredit umanjuje konacnu isplatu za podesenu ratu`() {
-        repo.foodPerDayValue = 0.0
-        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
-
-        val receipt = repo.getMonthlyReceipt(2026, 6)
-        val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 6)
-
-        assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
-        assertEquals(48_839.50, finalPayment.loanDeductionNet, 0.01)
-        assertEquals(48_839.50, finalPayment.deductionsNet, 0.01)
-        assertEquals((receipt.salaryNetPay - 48_839.50).coerceAtLeast(0.0), finalPayment.finalRemainingNetPay, 0.01)
-    }
-
-    @Test
     fun `potrosena hrana akontacija i kredit se svako odbijaju tacno jednom`() {
         repo.foodPerDayValue = 280.0
         repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
         repo.setMonthlyActualFoodSpentNet(2026, 5, 3_620.0)
         repo.setMonthlyAdvancePaymentNet(2026, 6, 10_000.0)
-        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 5_000.0)
+        repo.savePayslip(payslipWithDeductions(5, "000451 NLB Komercijalna banka 100,000.00 20 5,000.00"), withPayBase = false)
 
         val payroll = repo.getNetPayBreakdown(2026, 5)
         val receipt = repo.getMonthlyReceipt(2026, 6)
         val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 6)
 
-        assertEquals(3_620.0, payroll.mealSpentNet, 0.01)
+        // Stari ručni unos (3.620) se ignoriše: skida se celo pravo po upisanim danima.
+        assertEquals(payroll.mealAllowanceNet, payroll.mealSpentNet, 0.01)
         assertEquals(
             payroll.netPayBeforeDeductions - payroll.mealSpentNet - payroll.unionDuesNet,
             payroll.displayPay,
             0.01
         )
         assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
-        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
-        assertEquals(5_000.0, finalPayment.loanDeductionNet, 0.01)
+        assertEquals(5_000.0, finalPayment.deductionsNet, 0.01)
         assertEquals(
             (receipt.salaryNetPay - 10_000.0 - 5_000.0).coerceAtLeast(0.0),
             finalPayment.finalRemainingNetPay,
@@ -719,7 +609,7 @@ class ShiftRepositoryTest {
             )
         )
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
 
         assertEquals(estimatedNet, restored.getMonthlyReceipt(2026, 5).salaryNetPay, 0.01)
@@ -776,7 +666,6 @@ class ShiftRepositoryTest {
         assertEquals(300.0, repo.getSummary(2026, 5).foodAllowance, 0.01)
         assertEquals(receipt.salaryNetPay, finalPayment.netPayBeforeAdvance, 0.01)
         assertEquals(0.0, finalPayment.deductionsNet, 0.01)
-        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
         assertEquals(
             (receipt.salaryNetPay - 1_000.0).coerceAtLeast(0.0),
             finalPayment.finalRemainingNetPay,
@@ -786,7 +675,7 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `konacna isplata prikazuje aktivan kredit i kada hrana nije prekoracena`() {
+    fun `konacna isplata prikazuje obustavu sa liste i kada hrana nije prekoracena`() {
         repo.foodPerDayValue = 300.0
         repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
         repo.setMonthlyGrossAdditions(
@@ -794,31 +683,13 @@ class ShiftRepositoryTest {
             month = 5,
             additions = MonthlyGrossAdditions(year = 2026, month = 5, mealSpentNet = 250.0)
         )
-        repo.setCreditDeductionSettings(enabled = true, monthlyAmount = 48_839.50)
+        repo.savePayslip(payslipWithDeductions(5, "000451 NLB Komercijalna banka 2,920,783.99 62 48,839.50"), withPayBase = false)
 
         val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 6)
 
         assertEquals(48_839.50, finalPayment.deductionsNet, 0.01)
-        assertEquals(48_839.50, finalPayment.loanDeductionNet, 0.01)
+        assertEquals(listOf("NLB Komercijalna banka"), finalPayment.deductions.map { it.name })
         assertEquals(0.0, finalPayment.remainingRegressNetPay, 0.01)
-    }
-
-    @Test
-    fun `stvarna potrosena hrana se cuva po obracunskom mesecu bez duple obustave`() {
-        repo.foodPerDayValue = 300.0
-        repo.set(2026, 4, 6, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyActualFoodSpentNet(2026, 4, 450.0)
-
-        val food = repo.getMonthlyFoodSpendingBreakdown(2026, 4)
-        val finalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 5)
-
-        assertEquals(450.0, food.foodAllowanceNet, 0.01)
-        assertEquals(450.0, food.actualFoodSpentNet ?: 0.0, 0.01)
-        assertEquals(0.0, food.foodOverageNet, 0.01)
-        assertEquals(0.0, food.unusedFoodNet, 0.01)
-        assertEquals(0.0, finalPayment.deductionsNet, 0.01)
-        assertEquals(0.0, finalPayment.loanDeductionNet, 0.01)
-        assertEquals(0.0, finalPayment.foodOverageDeductionNet, 0.01)
     }
 
     @Test
@@ -838,29 +709,12 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `monthly food spending breakdown returns selected month net overage deduction`() {
-        repo.foodPerDayValue = 300.0
-        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyActualFoodSpentNet(2026, 5, 800.0)
-        repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
-        repo.setMonthlyActualFoodSpentNet(2026, 6, 450.0)
-
-        val juneFood = repo.getMonthlyFoodSpendingBreakdown(2026, 6)
-
-        assertEquals(MonthKey(2026, 6), juneFood.month)
-        assertEquals(450.0, juneFood.foodAllowanceNet, 0.01)
-        assertEquals(450.0, juneFood.actualFoodSpentNet ?: 0.0, 0.01)
-        assertEquals(0.0, juneFood.foodOverageNet, 0.01)
-        assertEquals(0.0, juneFood.unusedFoodNet, 0.01)
-    }
-
-    @Test
-    fun `junski neto unos se cuva sa potvrđenim istorijskim pravom`() {
+    fun `junski neto unos ostaje u backupu a obracun koristi potvrđeno pravo`() {
         repo.foodPerDayValue = 280.0
         repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
         repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         val additions = restored.getMonthlyGrossAdditions(2026, 6)
@@ -870,33 +724,8 @@ class ShiftRepositoryTest {
         assertEquals(MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE, breakdown.mealEntitlementSource)
         assertEquals(3_840.0, breakdown.mealEntitlementNet, 0.01)
         assertEquals(5_477.89, breakdown.mealGrossApplied, 0.01)
-        assertEquals(3_620.0, breakdown.mealSpentNetApplied, 0.01)
-        assertEquals(3_620.0, breakdown.mealNetDeduction, 0.01)
-    }
-
-    @Test
-    fun `cuvanje neto toplog obroka odmah osvezava obracun isplatu i konacni iznos`() {
-        repo.foodPerDayValue = 5_880.0
-        repo.set(2026, 6, 1, Shift.FIRST, 8, holidayOverride = false)
-        val automatic = repo.getNetPayBreakdown(2026, 6)
-        assertEquals(8_388.02, automatic.mealGrossApplied, 0.01)
-
-        var changeCount = 0
-        val token = repo.onChange { changeCount += 1 }
-        repo.setMonthlyActualFoodSpentNet(2026, 6, 3_620.0)
-        repo.removeOnChange(token)
-
-        val recalculated = repo.getNetPayBreakdown(2026, 6)
-        val julyReceipt = repo.getMonthlyReceipt(2026, 7)
-        val julyFinalPayment = repo.getMonthlyFinalPaymentBreakdown(2026, 7)
-        assertEquals(1, changeCount)
-        assertEquals(3_840.0, recalculated.mealEntitlementNet, 0.01)
-        assertEquals(5_477.89, recalculated.mealGrossApplied, 0.01)
-        assertEquals(3_620.0, recalculated.mealNetDeduction, 0.01)
-        assertEquals(220.0, recalculated.mealUnusedNet, 0.01)
-        assertEquals(recalculated.displayPay, julyReceipt.salaryNetPay, 0.01)
-        assertEquals(julyReceipt.salaryNetPay, julyFinalPayment.netPayBeforeAdvance, 0.01)
-        assertEquals(julyReceipt.salaryNetPay, julyFinalPayment.finalRemainingNetPay, 0.01)
+        assertEquals(3_840.0, breakdown.mealSpentNetApplied, 0.01)
+        assertEquals(3_840.0, breakdown.mealNetDeduction, 0.01)
     }
 
     @Test
@@ -910,7 +739,7 @@ class ShiftRepositoryTest {
         assertEquals(200.0, repo.getSummary(2026, 5).foodAllowance, 0.01)
         assertEquals(280.0, repo.getSummary(2026, 6).foodAllowance, 0.01)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
         assertEquals(200.0, restored.getSummary(2026, 5).foodAllowance, 0.01)
         assertEquals(280.0, restored.getSummary(2026, 6).foodAllowance, 0.01)
@@ -1183,7 +1012,7 @@ class ShiftRepositoryTest {
         repo.taxReliefValue = 35_000.0
         repo.taxPercentValue = 11.0
 
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         val success = repo2.importFromJson(repo.exportJson())
 
         assertTrue(success)
@@ -1386,7 +1215,7 @@ class ShiftRepositoryTest {
         repo.payCoefficientValue = 3.10
         repo.setHourlyValueChange(2026, 7, 240.0)
 
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         assertTrue(repo2.importFromJson(repo.exportJson()))
 
         assertEquals(3.10, repo2.payCoefficientValue, 0.001)
@@ -1479,7 +1308,7 @@ class ShiftRepositoryTest {
             .getJSONObject("05")
             .getJSONObject("04")
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(exported))
 
         assertEquals(30, exportedRecord.getInt("regular_shortage_minutes"))
@@ -1708,15 +1537,15 @@ class ShiftRepositoryTest {
         assertNull(repo.getMonthlyPayBases(2026, 5))
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.0)
+        assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.sickHourlyBase.source)
     }
 
     @Test
     fun `globalni satnica izbor se cuva kroz export import`() {
         repo.setDefaultPayBaseSelection(PayBaseSelectionMode.MANUAL, manualHourlyBase = 1_234.0)
 
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         val success = repo2.importFromJson(repo.exportJson())
         val resolved = repo2.getResolvedPayBases(2025, 1)
 
@@ -1925,7 +1754,7 @@ class ShiftRepositoryTest {
         prepareKnownBaseMayScenario()
 
         val exported = JSONObject(repo.exportJson())
-        val restored = ShiftRepository()
+        val restored = testRepository()
         val imported = restored.importFromJson(exported.toString())
 
         assertEquals(PayBaseSelectionMode.KNOWN_BASE.name, exported.getString("default_pay_base_selection_mode"))
@@ -1963,7 +1792,7 @@ class ShiftRepositoryTest {
             )
         )
 
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         val success = repo2.importFromJson(repo.exportJson())
 
         assertTrue(success)
@@ -2008,7 +1837,8 @@ class ShiftRepositoryTest {
     @Test
     fun `rolling pay base month includes compensation hours meal and regress by default`() {
         repo.basePayValue = 1_000.0
-        repo.foodPerDayValue = 0.0
+        // Obrok iz upisanih dana (ručni unos potrošnje je ukinut).
+        repo.foodPerDayValue = 500.0
         repo.employeeContributionsPercentValue = 0.0
         repo.taxReliefValue = 0.0
         repo.taxPercentValue = 0.0
@@ -2022,7 +1852,6 @@ class ShiftRepositoryTest {
             additions = MonthlyGrossAdditions(
                 year = 2026,
                 month = 5,
-                mealSpentNet = 10_000.0,
                 regressGross = 20_000.0,
                 bonusGross = 30_000.0
             )
@@ -2043,7 +1872,7 @@ class ShiftRepositoryTest {
         assertTrue(details.grossPaidHoliday > 0.0)
         assertTrue(details.grossVacationPay > 0.0)
         assertTrue(details.grossSickPay > 0.0)
-        assertEquals(10_000.0, details.grossMealAddition, 0.01)
+        assertTrue(details.grossMealAddition > 0.0)
         assertTrue(details.grossRegressAddition > 0.0)
         // Prosek prati listić: i naknade i obrok i regres ulaze u bruto, a
         // časovi naknada u imenilac (05/2026: 950,58 din/h).
@@ -2354,7 +2183,7 @@ class ShiftRepositoryTest {
 
         for (monthsAhead in listOf(12, 24)) {
             for (settings in scenarios) {
-                val freshRepo = ShiftRepository()
+                val freshRepo = testRepository()
                 freshRepo.basePayValue = 1_000.0
                 scheduler.populateMonthsAhead(
                     repo = freshRepo,
@@ -2494,14 +2323,15 @@ class ShiftRepositoryTest {
         )
 
         val resolved = repo.getResolvedPayBases(2026, 5)
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         val imported = repo2.importFromJson(repo.exportJson())
 
         assertEquals(918.81, resolved.vacationHourlyBase.value, 0.01)
         assertEquals(PayBaseSource.DEFAULT, resolved.vacationHourlyBase.source)
         assertEquals(918.81, resolved.paidHolidayHourlyBase.value, 0.01)
         assertEquals(PayBaseSource.DEFAULT, resolved.paidHolidayHourlyBase.source)
-        assertEquals(950.75, resolved.sickHourlyBase.value, 0.01)
+        // Ručno podešena osnovica (950,75) važi samo u ručnom režimu; ovde i bolovanje ide na podrazumevanu.
+        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
         assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
         assertTrue(imported)
         assertEquals(PayBaseSelectionMode.DEFAULT_VALUES, repo2.getMonthlyPayBases(2026, 5)!!.selectionMode)
@@ -2525,8 +2355,8 @@ class ShiftRepositoryTest {
 
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.0)
+        assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.sickHourlyBase.source)
         assertNotNull(resolved.vacationHourlyBase.calculation)
         assertEquals(12, resolved.vacationHourlyBase.calculation!!.months.size)
     }
@@ -2541,8 +2371,8 @@ class ShiftRepositoryTest {
         assertNull(repo.getMonthlyPayBases(2026, 5))
         assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.vacationHourlyBase.source)
         assertEquals(resolved.vacationHourlyBase.value, resolved.paidHolidayHourlyBase.value, 0.01)
-        assertEquals(918.81, resolved.sickHourlyBase.value, 0.01)
-        assertEquals(PayBaseSource.DEFAULT, resolved.sickHourlyBase.source)
+        assertEquals(resolved.vacationHourlyBase.value, resolved.sickHourlyBase.value, 0.0)
+        assertEquals(PayBaseSource.CALCULATED_PREVIOUS_12_MONTHS, resolved.sickHourlyBase.source)
         assertNotNull(resolved.vacationHourlyBase.calculation)
     }
 
@@ -3117,7 +2947,7 @@ class ShiftRepositoryTest {
 
     @Test
     fun `basePayValue podrazumevana vrednost`() {
-        val today = LocalDate.now()
+        val today = LocalDate.now(TEST_CLOCK)
         assertEquals(
             repo.getGrossHourlyRateForMonth(today.year, today.monthValue),
             repo.basePayValue,
@@ -3334,7 +3164,7 @@ class ShiftRepositoryTest {
         repo.minuliRadPayslipPercentValue = 8.0
         repo.minuliRadIncreaseFactorValue = SeniorityIncreaseFactor.TWELVE_SIXTEEN
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         assertEquals(SeniorityInputMode.PAYSLIP_PERCENT, restored.seniorityInputModeValue)
@@ -3648,7 +3478,7 @@ class ShiftRepositoryTest {
         assertTrue(json.isNotEmpty())
 
         // Uvezi u novi repo
-        val repo2 = ShiftRepository()
+        val repo2 = testRepository()
         val success = repo2.importFromJson(json)
         assertTrue("Import mora uspeti", success)
 
@@ -3689,7 +3519,7 @@ class ShiftRepositoryTest {
 
         val exported = repo.exportJson()
         val exportedJson = JSONObject(exported)
-        val restored = ShiftRepository()
+        val restored = testRepository()
 
         assertTrue(restored.importFromJson(exported))
         assertEquals(345, exportedJson.getInt("initial_comp_balance_minutes"))
@@ -3704,7 +3534,7 @@ class ShiftRepositoryTest {
 
         val exported = repo.exportJson()
         val exportedJson = JSONObject(exported)
-        val restored = ShiftRepository()
+        val restored = testRepository()
 
         assertTrue(restored.importFromJson(exported))
         assertEquals("2026-01-10", exportedJson.getString("blood_donation_last_date"))
@@ -3724,7 +3554,7 @@ class ShiftRepositoryTest {
         val exported = repo.exportJson()
         val exportedJson = JSONObject(exported)
         val exportedHistory = exportedJson.getJSONArray("blood_donation_history")
-        val restored = ShiftRepository()
+        val restored = testRepository()
 
         assertTrue(restored.importFromJson(exported))
         assertEquals(2, exportedHistory.length())
@@ -3762,7 +3592,7 @@ class ShiftRepositoryTest {
 
     @Test
     fun `stari backup sa datumom davanja krvi bez brojaca racuna jedno davanje`() {
-        val imported = ShiftRepository()
+        val imported = testRepository()
 
         assertTrue(imported.importFromJson("""{"blood_donation_last_date":"2026-01-10"}"""))
 
@@ -3953,9 +3783,10 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `importFromJson sa praznim objektom ne puca`() {
+    fun `importFromJson sa praznim objektom ne puca i odbija se`() {
+        // Prazan objekat nema nijedan prepoznat ključ: ranije je bio „uspešan" uvoz koji briše sve.
         val result = repo.importFromJson("{}")
-        assertTrue(result)
+        assertFalse(result)
         assertTrue(repo.getMonthRecords(2025, 1).isEmpty())
     }
 
@@ -4072,7 +3903,7 @@ class ShiftRepositoryTest {
             )
         )
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         val balance = restored.getVacationYearBalance(2026)
@@ -4268,18 +4099,21 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `retention prebacuje staru satnicu na prvi zadrzani mesec`() {
+    fun `retention ne dira rucno unete satnice`() {
         repo.setHourlyValueChange(2025, 1, 333.0)
         repo.setHourlyValueChange(2026, 3, 444.0)
         populateMonthMarkers(MonthKey(2025, 1), MonthKey(2027, 12))
 
         repo.pruneIrrelevantHistory()
+        // Lokalni save ide kroz exportJson, koji takođe orezuje istoriju.
+        val reloaded = testRepository()
+        assertTrue(reloaded.importFromJson(repo.exportJson()))
 
-        assertEquals(333.0, repo.getHourlyValueForMonth(2025, 12), 0.001)
-        assertEquals(333.0, repo.getHourlyValueForMonth(2026, 2), 0.001)
-        assertEquals(444.0, repo.getHourlyValueForMonth(2026, 3), 0.001)
-        assertFalse(repo.getHourlyValueChanges().any { it.year == 2025 && it.month == 1 })
-        assertTrue(repo.getHourlyValueChanges().any { it.year == 2025 && it.month == 12 && it.value == 333.0 })
+        assertNull(reloaded.get(2025, 1, 1))
+        assertEquals(333.0, reloaded.getHourlyValueForMonth(2025, 12), 0.001)
+        assertEquals(444.0, reloaded.getHourlyValueForMonth(2026, 3), 0.001)
+        assertTrue(reloaded.getHourlyValueChanges().any { it.year == 2025 && it.month == 1 && it.value == 333.0 })
+        assertTrue(reloaded.getHourlyValueChanges().any { it.year == 2026 && it.month == 3 && it.value == 444.0 })
     }
 
     @Test
@@ -4329,7 +4163,7 @@ class ShiftRepositoryTest {
     @Test
     fun `cloud backup cuva mesece van retention prozora`() {
         // Arhiva: 6 meseci unutar prozora -> exportJson ništa ne orezuje
-        val archiveRepo = ShiftRepository()
+        val archiveRepo = testRepository()
         for (month in 1..6) {
             archiveRepo.set(2025, month, 1, Shift.FIRST, 8, holidayOverride = false)
         }
@@ -4354,7 +4188,7 @@ class ShiftRepositoryTest {
 
     @Test
     fun `cloud backup koristi originalni pocetni saldo iz arhive`() {
-        val archiveRepo = ShiftRepository()
+        val archiveRepo = testRepository()
         archiveRepo.initialCompBalanceValue = 7
         for (month in 1..6) {
             archiveRepo.set(2025, month, 1, Shift.FIRST, 8, holidayOverride = false)
@@ -4376,7 +4210,7 @@ class ShiftRepositoryTest {
 
     @Test
     fun `cloud backup ne vraca obrisane skorasnje zapise`() {
-        val archiveRepo = ShiftRepository()
+        val archiveRepo = testRepository()
         for (month in 1..6) {
             archiveRepo.set(2026, month, 1, Shift.FIRST, 8, holidayOverride = false)
         }
@@ -4408,6 +4242,136 @@ class ShiftRepositoryTest {
     }
 
     @Test
+    fun `backup pa restore na novoj instalaciji vraca identicno stanje`() {
+        // Smene: trobrigada rotacija, dupla smena, manjak minuta, bolovanje, GO, ručni praznik.
+        ShiftScheduler().populateMonthsAhead(repo, LocalDate.of(2026, 6, 1), Shift.THIRD, monthsAhead = 3)
+        repo.set(
+            2026, 6, 10, Shift.FIRST, 8,
+            shift2 = Shift.SECOND, hours2 = 4, overtimeType = OvertimeType.COMP_TIME
+        )
+        repo.set(2026, 6, 13, Shift.FIRST, 8, weekendOvertimeType = OvertimeType.COMP_TIME)
+        repo.set(2026, 7, 6, Shift.SICK, 8, sickPayRate = 0.65)
+        repo.set(2026, 7, 7, Shift.VACATION, 8)
+        repo.setHolidayActive(2026, 7, 15, true)
+        repo.applyBloodDonationLeave(LocalDate.of(2026, 8, 3))
+        // Podešavanja: sve što korisnik može da ukuca.
+        repo.payCoefficientValue = 3.15
+        repo.setHourlyValueChange(2019, 3, 210.0)
+        repo.setHourlyValueChange(2026, 7, 480.0)
+        repo.setKnownPayBaseAnchor(2026, 5, 955.5)
+        repo.setMonthlyGrossAdditions(2026, 6, MonthlyGrossAdditions(2026, 6, mealGross = 1_234.0))
+        repo.setMonthlyAdvancePaymentNet(2026, 6, 25_000.0)
+        repo.setFoodPerDayFromMonth(2026, 7, 650.0)
+        repo.transportDailyAmountValue = 321.0
+        repo.taxReliefValue = 34_221.0
+        repo.difficultWorkConditionsPercentValue = 7.5
+        repo.mainPayIncludesTransport = false
+        repo.autoAdvanceImportEnabled = false
+        repo.recordBloodDonation(LocalDate.of(2026, 2, 10))
+        repo.recordBloodDonation(LocalDate.of(2026, 8, 3))
+        repo.initialCompBalanceMinutesValue = 450
+        repo.minuliRadStartYearValue = 2019
+        repo.minuliRadStartMonthValue = 3
+        repo.minuliRadBenefitEnabledValue = true
+        repo.minuliRadIncreaseFactorValue = SeniorityIncreaseFactor.TWELVE_FOURTEEN
+        repo.initialVacationBalanceValue = 12.5
+
+        val backupJson = repo.exportCloudBackupJson(null)
+
+        val freshInstall = testRepository()
+        assertTrue(freshInstall.importFromJson(backupJson))
+
+        assertEquals(backupJson, freshInstall.exportCloudBackupJson(null))
+        assertEquals(repo.exportJson(), freshInstall.exportJson())
+        // Rotacija smena ne sme da „pobegne": isti dan, ista smena.
+        var date = LocalDate.of(2026, 6, 1)
+        while (date.isBefore(LocalDate.of(2026, 10, 1))) {
+            assertEquals(
+                "smena za $date",
+                repo.get(date.year, date.monthValue, date.dayOfMonth)?.shift,
+                freshInstall.get(date.year, date.monthValue, date.dayOfMonth)?.shift
+            )
+            date = date.plusDays(1)
+        }
+    }
+
+    @Test
+    fun `cloud backup sa nove instalacije ne gazi davanja krvi satnice i pocetak rada`() {
+        val archiveRepo = testRepository()
+        archiveRepo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
+        archiveRepo.recordBloodDonation(LocalDate.of(2026, 2, 10))
+        archiveRepo.recordBloodDonation(LocalDate.of(2026, 6, 15))
+        archiveRepo.setHourlyValueChange(2019, 3, 210.0)
+        archiveRepo.setHourlyValueChange(2026, 7, 480.0)
+        archiveRepo.minuliRadStartYearValue = 2019
+        archiveRepo.minuliRadStartMonthValue = 3
+        val archiveJson = archiveRepo.exportCloudBackupJson(null)
+
+        // Nova instalacija: korisnik je uneo samo jedan dan pre nego što je uradio restore.
+        repo.set(2026, 9, 1, Shift.FIRST, 8, holidayOverride = false)
+
+        val restored = testRepository()
+        assertTrue(restored.importFromJson(repo.exportCloudBackupJson(archiveJson)))
+
+        assertEquals(
+            listOf(LocalDate.of(2026, 6, 15), LocalDate.of(2026, 2, 10)),
+            restored.bloodDonationHistory
+        )
+        assertEquals(2, restored.bloodDonationCount)
+        assertEquals(2019, restored.minuliRadStartYearValue)
+        assertEquals(3, restored.minuliRadStartMonthValue)
+        assertTrue(restored.getHourlyValueChanges().any { it.year == 2019 && it.month == 3 && it.value == 210.0 })
+        assertTrue(restored.getHourlyValueChanges().any { it.year == 2026 && it.month == 7 && it.value == 480.0 })
+        assertNotNull(restored.get(2026, 5, 4))
+        assertNotNull(restored.get(2026, 9, 1))
+    }
+
+    @Test
+    fun `cloud backup postuje trenutna davanja krvi i pocetak rada kad postoje`() {
+        val archiveRepo = testRepository()
+        archiveRepo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
+        archiveRepo.recordBloodDonation(LocalDate.of(2026, 2, 10))
+        archiveRepo.minuliRadStartYearValue = 2018
+        val archiveJson = archiveRepo.exportCloudBackupJson(null)
+
+        repo.importFromJson(archiveJson)
+        repo.deleteBloodDonation(LocalDate.of(2026, 2, 10))
+        repo.recordBloodDonation(LocalDate.of(2026, 8, 20))
+        repo.minuliRadStartYearValue = 2019
+
+        val merged = testRepository()
+        assertTrue(merged.importFromJson(repo.exportCloudBackupJson(archiveJson)))
+
+        assertEquals(listOf(LocalDate.of(2026, 8, 20)), merged.bloodDonationHistory)
+        assertEquals(2019, merged.minuliRadStartYearValue)
+    }
+
+    @Test
+    fun `obrisana satnica se ne vraca iz cloud arhive a ponovni unos ponistava tombstone`() {
+        repo.set(2026, 5, 4, Shift.FIRST, 8, holidayOverride = false)
+        repo.setHourlyValueChange(2025, 1, 333.0)
+        repo.setHourlyValueChange(2026, 3, 444.0)
+        val archiveJson = repo.exportCloudBackupJson(null)
+
+        repo.removeHourlyValueChange(2026, 3)
+
+        // Tombstone mora da preživi lokalni save/load.
+        val reloaded = testRepository()
+        assertTrue(reloaded.importFromJson(repo.exportJson()))
+        val afterDelete = testRepository()
+        assertTrue(afterDelete.importFromJson(reloaded.exportCloudBackupJson(archiveJson)))
+        assertFalse(afterDelete.getHourlyValueChanges().any { it.year == 2026 && it.month == 3 })
+        assertTrue(afterDelete.getHourlyValueChanges().any { it.year == 2025 && it.month == 1 })
+
+        reloaded.setHourlyValueChange(2026, 3, 455.0)
+        val afterReentryJson = reloaded.exportCloudBackupJson(archiveJson)
+        assertFalse(JSONObject(afterReentryJson).has("deleted_hourly_value_months"))
+        val afterReentry = testRepository()
+        assertTrue(afterReentry.importFromJson(afterReentryJson))
+        assertTrue(afterReentry.getHourlyValueChanges().any { it.year == 2026 && it.month == 3 && it.value == 455.0 })
+    }
+
+    @Test
     fun `obrisan najstariji mesec se ne vraca iz cloud arhive`() {
         populateMonthMarkers(MonthKey(2025, 1), MonthKey(2025, 3))
         val archiveJson = repo.exportCloudBackupJson(null)
@@ -4428,7 +4392,7 @@ class ShiftRepositoryTest {
         val archiveJson = repo.exportCloudBackupJson(null)
         repo.deleteMonth(2025, 1)
 
-        val restored = ShiftRepository()
+        val restored = testRepository()
         assertTrue(restored.importFromJson(repo.exportJson()))
 
         val merged = JSONObject(restored.exportCloudBackupJson(archiveJson))

@@ -84,6 +84,10 @@ fun PayDetailsDialog(
                     receiptDescription = receiptDescription
                 )
 
+                PayAccuracyWarningsCard(
+                    payAccuracyWarningTexts(payDetails, repo.isSeniorityConfiguredValue)
+                )
+
                 PayDetailsSectionCard(title = "Isplata") {
                     CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, THEME.accentPrimary)
                     CompactMoneyRowIf(
@@ -122,13 +126,6 @@ fun PayDetailsDialog(
                         formatHoursAndMinutes(payDetails.totalPaidMinutes)
                     )
                     CompactInfoRowIf(summary.workDays > 0, "Radni dani", summary.workDays.toString())
-                    if (payBreakdown.unionDuesNet > 0.0) {
-                        CompactInfoRow(
-                            UNION_DUES_SECTION_LABEL,
-                            deductionMoneyText(payBreakdown.unionDuesNet),
-                            THEME.danger
-                        )
-                    }
                 }
 
                 PayDetailsSectionCard(title = "Godišnji prosek neto plate") {
@@ -176,9 +173,9 @@ private fun PayDetailsHeroCard(
     payrollTitle: String,
     receiptText: String,
     receiptAvailable: Boolean,
-    receiptDescription: String
+    receiptDescription: String?
 ) {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.accentPrimary) {
+    PopupCard {
         Text(
             text = paymentTitle,
             color = THEME.textSecondary,
@@ -205,13 +202,15 @@ private fun PayDetailsHeroCard(
             maxLines = 2,
             modifier = Modifier.fillMaxWidth()
         )
-        Text(
-            text = receiptDescription,
-            color = THEME.textMuted,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
+        receiptDescription?.let {
+            Text(
+                text = it,
+                color = THEME.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -248,21 +247,9 @@ private fun FinalPaymentRows(
                 deductionMoneyText(finalPayment.deductionsNet),
                 THEME.danger
             )
-            CompactDeductionDetailRowIf(
-                visible = finalPayment.loanDeductionNet > 0.0,
-                label = FINAL_PAYMENT_LOAN_DEDUCTION_LABEL,
-                value = finalPayment.loanDeductionNet
-            )
-            CompactDeductionDetailRowIf(
-                visible = finalPayment.foodOverageDeductionNet > 0.0,
-                label = FINAL_PAYMENT_FOOD_OVERAGE_LABEL,
-                value = finalPayment.foodOverageDeductionNet
-            )
-            CompactDeductionDetailRowIf(
-                visible = finalPayment.otherDeductionsNet > 0.0,
-                label = FINAL_PAYMENT_OTHER_DEDUCTIONS_LABEL,
-                value = finalPayment.otherDeductionsNet
-            )
+            finalPayment.deductions.forEach { deduction ->
+                CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
+            }
         }
         CompactMoneyRow(
             FINAL_PAYMENT_REMAINING_20_LABEL,
@@ -332,34 +319,33 @@ private fun CompactInfoRow(
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodySmall.fontSize,
             maxLines = 1,
-            modifier = Modifier.weight(1.2f)
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
         )
+        // Iznos se nikad ne skraćuje; kad nema mesta, smanjuje se naziv levo.
         Text(
             text = value,
             color = color,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
             textAlign = TextAlign.End,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(0.8f)
+            softWrap = false
         )
     }
 }
 
 @Composable
-private fun CompactDeductionDetailRowIf(
-    visible: Boolean,
+private fun CompactDeductionDetailRow(
     label: String,
     value: Double
 ) {
-    if (visible) {
-        CompactInfoRow(
-            label = label,
-            value = deductionMoneyText(value),
-            color = THEME.danger,
-            modifier = Modifier.padding(start = UI.largeSpacing.dp)
-        )
-    }
+    CompactInfoRow(
+        label = label,
+        value = deductionMoneyText(value),
+        color = THEME.danger,
+        modifier = Modifier.padding(start = UI.largeSpacing.dp)
+    )
 }
 
 @Composable

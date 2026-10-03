@@ -44,7 +44,6 @@ internal fun AutoFillModeGrid(
                             .fillMaxHeight(),
                         bgColor = if (isSelected) THEME.accentSecondary else THEME.bgCardElevated,
                         textColor = THEME.textPrimary,
-                        radius = 14.dp,
                         textStyle = MaterialTheme.typography.labelLarge,
                         bold = true,
                         onClick = { onModeSelected(mode) }
@@ -77,7 +76,6 @@ internal fun AutoFillShiftGrid(
                     .fillMaxHeight(),
                 bgColor = if (isSelected) option.shift.color else option.shift.color.copy(alpha = 0.2f),
                 textColor = option.shift.textColor,
-                radius = 14.dp,
                 textStyle = MaterialTheme.typography.labelMedium,
                 bold = true,
                 onClick = { onShiftSelected(option.shift) }
@@ -107,7 +105,6 @@ internal fun AutoFillBlockDayGrid(
                     .fillMaxHeight(),
                 bgColor = if (isSelected) THEME.accentSecondary else THEME.bgCardElevated,
                 textColor = THEME.textPrimary,
-                radius = 14.dp,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = { onSelected(index) }

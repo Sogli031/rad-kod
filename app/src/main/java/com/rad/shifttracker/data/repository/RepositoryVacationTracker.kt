@@ -8,11 +8,15 @@ import com.rad.shifttracker.VacationYearBalance
 import com.rad.shifttracker.calculateVacationBalanceSummary
 import com.rad.shifttracker.currentYearVacationAvailableFrom
 import com.rad.shifttracker.sanitizeAnnualLeaveYears
+import java.time.Clock
 import java.time.LocalDate
 
 internal class RepositoryVacationTracker(
     private val recordStore: ShiftRecordStore,
-    private val calculateYearsOfService: (year: Int, month: Int) -> Int
+    private val calculateYearsOfService: (year: Int, month: Int) -> Int,
+    /** Dani godišnjeg sa sačuvanih listića za godinu (mesec → dana); mesec bez listića nije u mapi. */
+    private val payslipVacationDaysByMonth: (year: Int) -> Map<Int, Double> = { emptyMap() },
+    private val clock: Clock = Clock.systemDefaultZone()
 ) {
     private var initialVacationBalance = 0.0
     private val vacationYearBalances = mutableMapOf<Int, VacationYearBalance>()
@@ -79,31 +83,27 @@ internal class RepositoryVacationTracker(
             carryoverDaysInitial = balance.carryoverDaysInitial.coerceAtLeast(0.0),
             currentYearDaysTotal = balance.currentYearDaysTotal.coerceAtLeast(0.0),
             currentYearDaysUsedBeforeAvailability = balance.currentYearDaysUsedBeforeAvailability
-                .coerceAtLeast(0.0)
+                .coerceAtLeast(0.0),
+            // Ponovo sačuvana godina ostaje zamrznuta: stari podaci za prenos su već obrisani.
+            carryoverFrozen = balance.carryoverFrozen || vacationYearBalances[balance.year]?.carryoverFrozen == true
         )
         vacationYearBalances[sanitized.year] = sanitized
         initialVacationBalance = sanitized.currentYearDaysTotal
         return true
     }
 
-    fun retainVacationYearBalances(years: Set<Int>): Boolean {
-        val removedYears = vacationYearBalances.keys.filter { it !in years }
-        if (removedYears.isEmpty()) return false
-        removedYears.forEach(vacationYearBalances::remove)
-        return true
-    }
-
     fun getVacationYearBalance(year: Int): VacationYearBalance? = vacationYearBalances[year]
 
-    fun getVacationBalanceSummary(year: Int, today: LocalDate = LocalDate.now()): VacationBalanceSummary {
+    fun getVacationBalanceSummary(year: Int, today: LocalDate = LocalDate.now(clock)): VacationBalanceSummary {
         return calculateVacationBalanceSummary(
             balance = vacationYearBalanceForSummary(year),
             vacationDates = getVacationDates(year),
-            today = today
+            today = today,
+            payslipDaysByMonth = payslipVacationDaysByMonth(year)
         )
     }
 
-    fun getVacationDaysRemaining(today: LocalDate = LocalDate.now()): Double {
+    fun getVacationDaysRemaining(today: LocalDate = LocalDate.now(clock)): Double {
         return if (vacationYearBalances.isNotEmpty()) {
             getVacationBalanceSummary(today.year, today).currentYearRemaining
         } else {
@@ -111,7 +111,7 @@ internal class RepositoryVacationTracker(
         }
     }
 
-    fun isVacationExceeded(today: LocalDate = LocalDate.now()): Boolean {
+    fun isVacationExceeded(today: LocalDate = LocalDate.now(clock)): Boolean {
         return if (vacationYearBalances.isNotEmpty()) {
             getVacationBalanceSummary(today.year, today)
                 .warnings
@@ -150,21 +150,39 @@ internal class RepositoryVacationTracker(
         )
     }
 
-    private fun derivedVacationYearBalance(year: Int): VacationYearBalance {
-        val previousYearBalance = vacationYearBalances[year - 1]
-        val carryoverFromPreviousYear = if (previousYearBalance != null) {
-            calculateVacationBalanceSummary(
-                balance = previousYearBalance,
-                vacationDates = getVacationDates(year - 1),
-                today = LocalDate.of(year - 1, 12, 31)
-            ).currentYearRemaining
-        } else {
-            0.0
+    /** Prenos se računa sam kad je neka ranija godina praćena u aplikaciji (tada se ne unosi ručno). */
+    fun isCarryoverAutomatic(year: Int): Boolean =
+        vacationYearBalances[year]?.carryoverFrozen != true && vacationYearBalances.keys.any { it < year }
+
+    /**
+     * Pre brisanja stare istorije: prenos za [firstKeptYear] se izračuna dok su podaci prošle godine
+     * još celi i zapamti, a starije godine se brišu. Vraća true ako je nešto promenjeno.
+     */
+    fun freezeCarryover(firstKeptYear: Int): Boolean {
+        if (vacationYearBalances.keys.none { it < firstKeptYear }) return false
+        if (isCarryoverAutomatic(firstKeptYear)) {
+            vacationYearBalances[firstKeptYear] = vacationYearBalanceForSummary(firstKeptYear).copy(carryoverFrozen = true)
         }
+        vacationYearBalances.keys.removeAll { it < firstKeptYear }
+        return true
+    }
+
+    /** Neiskorišćeno pravo prethodne godine na dan 31.12. (lanac kroz sve praćene godine). */
+    private fun carryoverFromPreviousYear(year: Int): Double {
+        if (!isCarryoverAutomatic(year)) return 0.0
+        return calculateVacationBalanceSummary(
+            balance = vacationYearBalanceForSummary(year - 1),
+            vacationDates = getVacationDates(year - 1),
+            today = LocalDate.of(year - 1, 12, 31),
+            payslipDaysByMonth = payslipVacationDaysByMonth(year - 1)
+        ).currentYearRemaining
+    }
+
+    private fun derivedVacationYearBalance(year: Int): VacationYearBalance {
         return VacationYearBalance(
             year = year,
             trackingStartDate = LocalDate.of(year, 1, 1),
-            carryoverDaysInitial = carryoverFromPreviousYear,
+            carryoverDaysInitial = carryoverFromPreviousYear(year),
             currentYearDaysTotal = initialVacationBalance.coerceAtLeast(0.0),
             currentYearDaysUsedBeforeAvailability = 0.0,
             currentYearAvailableFrom = currentYearVacationAvailableFrom(year),
@@ -172,11 +190,27 @@ internal class RepositoryVacationTracker(
         )
     }
 
+    /**
+     * Godišnji iskorišćen januar–jun po sačuvanim listićima. Pravo iz listića se računa za period
+     * jul–jun, pa su dani prve polovine godine stari (preneti) odmor, ne novi.
+     */
+    private fun firstHalfPayslipVacationDays(year: Int): Double =
+        payslipVacationDaysByMonth(year).filterKeys { it in 1..6 }.values.sum()
+
     private fun vacationYearBalanceForSummary(year: Int): VacationYearBalance {
-        return vacationYearBalances[year] ?: if (vacationYearBalances.isEmpty()) {
-            legacyVacationYearBalance(year)
-        } else {
-            derivedVacationYearBalance(year)
+        val saved = vacationYearBalances[year]
+        val balance = when {
+            saved != null && isCarryoverAutomatic(year) -> saved.copy(carryoverDaysInitial = carryoverFromPreviousYear(year))
+            saved != null -> saved
+            vacationYearBalances.isEmpty() -> legacyVacationYearBalance(year)
+            else -> derivedVacationYearBalance(year)
         }
+        // Pravilo korisnika (27.09.2026): odmor pre jula je uvek stari. Zato je prenos najmanje ono
+        // što listići pokazuju za januar–jun — bez obzira da li je prenos izračunat iz prošle godine
+        // (listići prošle godine znaju da fale), zamrznut pri brisanju stare godine, ili sačuvan iz
+        // dijaloga koji posle 30.06. ni ne prikazuje polje za prenos.
+        return balance.copy(
+            carryoverDaysInitial = maxOf(balance.carryoverDaysInitial, firstHalfPayslipVacationDays(year))
+        )
     }
 }

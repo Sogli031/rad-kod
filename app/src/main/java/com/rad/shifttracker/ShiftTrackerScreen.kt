@@ -3,9 +3,18 @@ package com.rad.shifttracker
 import android.Manifest
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +23,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,11 +44,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.rad.shifttracker.data.backup.BackupOutcome
+import com.rad.shifttracker.data.backup.BackupScheduler
 import com.rad.shifttracker.data.backup.BackupVersion
+import com.rad.shifttracker.data.backup.GoogleDriveBackup
+import com.rad.shifttracker.data.backup.SignInState
+import com.rad.shifttracker.data.backup.VersionedBackupPlanner
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -53,6 +65,11 @@ import kotlinx.coroutines.withContext
 internal sealed class DialogState {
     object None : DialogState()
     object AutoFill : DialogState()
+
+    /** Prvo pokretanje: „Popuni smene“, a kad se zatvori, Gmail sa listama. */
+    object OnboardingAutoFill : DialogState()
+    object GmailOnboarding : DialogState()
+    object GmailUpdate : DialogState()
     object SickVacation : DialogState()
     object BasePay : DialogState()
     object PayDetails : DialogState()
@@ -87,6 +104,9 @@ private fun dialogStateSaver(recordForDay: (Int) -> DayRecord?): Saver<DialogSta
 private fun dialogStateToKey(state: DialogState): String = when (state) {
     DialogState.None -> "None"
     DialogState.AutoFill -> "AutoFill"
+    DialogState.OnboardingAutoFill -> "OnboardingAutoFill"
+    DialogState.GmailOnboarding -> "GmailOnboarding"
+    DialogState.GmailUpdate -> "GmailUpdate"
     DialogState.SickVacation -> "SickVacation"
     DialogState.BasePay -> "BasePay"
     DialogState.PayDetails -> "PayDetails"
@@ -109,6 +129,9 @@ private fun dialogStateToKey(state: DialogState): String = when (state) {
 private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.None,
     DialogState.AutoFill,
+    DialogState.OnboardingAutoFill,
+    DialogState.GmailOnboarding,
+    DialogState.GmailUpdate,
     DialogState.SickVacation,
     DialogState.BasePay,
     DialogState.PayDetails,
@@ -148,7 +171,10 @@ internal fun vacationCardAsOfDate(year: Int, month: Int, today: LocalDate): Loca
 @Composable
 fun RadApp(repo: ShiftRepository, backup: com.rad.shifttracker.data.backup.GoogleDriveBackup) {
     RadTheme {
-        ShiftTrackerScreen(repo = repo, backup = backup)
+        val snackbarHostState = remember { SnackbarHostState() }
+        CompositionLocalProvider(LocalAppSnackbar provides snackbarHostState) {
+            ShiftTrackerScreen(repo = repo, backup = backup)
+        }
     }
 }
 
@@ -158,11 +184,9 @@ fun RadApp(repo: ShiftRepository, backup: com.rad.shifttracker.data.backup.Googl
 fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.backup.GoogleDriveBackup) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val showMessage = rememberShowMessage()
+    val snackbarHostState = LocalAppSnackbar.current
     val repoTick = remember { mutableIntStateOf(0) }
-    val monthlyTaxUpdateStore = remember(context) { MonthlyTaxUpdateStore(context) }
-    val taxParameterUpdater = remember { TaxParameterUpdater() }
-    val taxParameterCache = remember(context) { TaxParameterCache(context) }
-    var monthlyTaxUpdateMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Use DisposableEffect to properly clean up the callback when composable leaves composition
     DisposableEffect(repo) {
@@ -206,9 +230,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             backupVersions = loaded
         }
     }
-    // Use rememberSaveable to persist state across configuration changes (rotation)
-    var showOnboarding by rememberSaveable { mutableStateOf(backup.isFirstLaunch()) }
-    var onboardingStep by rememberSaveable { mutableStateOf(defaultOnboardingSteps().first()) }
+    // Backup u oblaku koji ovaj uređaj još nije preuzeo (nova instalacija): čim se
+    // korisnik prijavi, ponudi Restore umesto da sveže stanje ode preko njega.
+    val cloudBackupFound = remember { mutableStateOf<BackupVersion?>(null) }
     var requestedEntryPermissions by rememberSaveable { mutableStateOf(false) }
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -217,30 +241,21 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         val account = try {
             task.result
         } catch (e: Exception) {
-            Toast.makeText(context, "Prijava neuspešna: ${e.message}", Toast.LENGTH_LONG).show()
+            showMessage("Prijava neuspešna: ${e.message}")
             null
         }
         backup.handleSignInResult(account)
         if (account != null) {
-            Toast.makeText(context, "Prijava uspešna!", Toast.LENGTH_SHORT).show()
+            showMessage("Prijava uspešna!")
         }
     }
     val entryPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { }
-    val foodReceiptNotificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            enableFoodReceiptReminder(context, repo)
-        } else {
-            Toast.makeText(context, "Dozvola za obaveštenja nije uključena.", Toast.LENGTH_LONG).show()
-        }
-    }
     val bloodDonationNotificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        handleBloodDonationPermissionResult(granted, context, repo)
+        handleBloodDonationPermissionResult(granted, context, repo, showMessage)
     }
     LaunchedEffect(requestedEntryPermissions) {
         if (!requestedEntryPermissions) {
@@ -252,22 +267,12 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         }
     }
 
-    MonthlyTaxUpdateEffect(
-        showOnboarding = showOnboarding,
-        today = today,
-        repo = repo,
-        taxParameterUpdater = taxParameterUpdater,
-        taxParameterCache = taxParameterCache,
-        monthlyTaxUpdateStore = monthlyTaxUpdateStore,
-        onUpdated = { message -> monthlyTaxUpdateMessage = message }
-    )
-
     // rememberSaveable: rotacija/ubijanje procesa ne sme da vrati kalendar
     // sa pregledanog meseca na tekući.
     var currentYear by rememberSaveable { mutableIntStateOf(today.year) }
     var currentMonth by rememberSaveable { mutableIntStateOf(today.monthValue) }
-    val launchSelectedMonthExport = rememberMonthlyWorkAndPayExportLauncher(repo, currentYear, currentMonth)
-    val launchAllMonthsDebugExport = rememberAllMonthsCalculationDebugExportLauncher(repo)
+    val launchSelectedMonthExport = rememberMonthlyWorkAndPayExportLauncher(repo, currentYear, currentMonth, showMessage)
+    val launchAllMonthsDebugExport = rememberAllMonthsCalculationDebugExportLauncher(repo, showMessage)
     val vacationAsOfDate = remember(currentYear, currentMonth, today) {
         vacationCardAsOfDate(currentYear, currentMonth, today)
     }
@@ -315,12 +320,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         repo.getAnnualNetPayAverages(payrollMonthKey.year)
     }
     val recentNetPayAverageAsOfDate = remember(payrollMonthKey, today) {
-        val displayedMonth = YearMonth.of(payrollMonthKey.year, payrollMonthKey.month)
-        if (displayedMonth == YearMonth.from(today)) {
-            today
-        } else {
-            displayedMonth.atEndOfMonth()
-        }
+        vacationCardAsOfDate(payrollMonthKey.year, payrollMonthKey.month, today)
     }
     val recentNetPayAverage = remember(repoTick.intValue, payrollMonthKey, recentNetPayAverageAsOfDate) {
         repo.getRecentNetPayAverage(payrollMonthKey.year, payrollMonthKey.month, recentNetPayAverageAsOfDate)
@@ -330,8 +330,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         repo.getAnnualNetPayAverages(selectedMonthKey.year)
     }
     val selectedMonthRecentNetPayAverageAsOfDate = remember(selectedMonthKey, today) {
-        val displayedMonth = YearMonth.of(selectedMonthKey.year, selectedMonthKey.month)
-        if (displayedMonth == YearMonth.from(today)) today else displayedMonth.atEndOfMonth()
+        vacationCardAsOfDate(selectedMonthKey.year, selectedMonthKey.month, today)
     }
     val selectedMonthRecentNetPayAverage = remember(
         repoTick.intValue,
@@ -345,9 +344,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         )
     }
     val scheduler = remember { ShiftScheduler() }
-    val foodReceiptReminderStatus = remember(repoTick.intValue, currentYear, currentMonth) {
-        FoodReceiptReminderScheduler.selectedMonthStatus(context, repo, MonthKey(currentYear, currentMonth))
-    }
     val bloodDonationReminderStatus = remember(repoTick.intValue, today) {
         BloodDonationReminderScheduler.currentStatus(context, repo)
     }
@@ -357,10 +353,19 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         stateSaver = dialogStateSaver { day -> repo.get(currentYear, currentMonth, day) }
     ) { mutableStateOf<DialogState>(DialogState.None) }
     val dismissDialog = { dialogState = DialogState.None }
-    val completeOnboarding = {
-        showOnboarding = false
-        backup.markFirstLaunchDone()
-        dialogState = DialogState.AutoFill
+    // Prvo pokretanje posle instalacije: prvo „Popuni smene“ (izbor brigade utiče i na pravo na
+    // godišnji), pa Gmail sa listićima (koeficijent, minuli rad, porez, prevoz, akontacija...).
+    // Prvo pokretanje je završeno tek kad Gmail korak prođe (MainDialogData.onFirstLaunchDone): ako
+    // se aplikacija ugasi usred čitanja listića, sledeći put se ceo uvod nudi ponovo.
+    // Ažurirana stara verzija (nije prvo pokretanje, Gmail nije povezan): jednom ponudi Gmail i
+    // proveru podešavanja po listićima, bez „Popuni smene“.
+    LaunchedEffect(Unit) {
+        if (backup.isFirstLaunch()) {
+            takeGmailUpdateIntro(context, firstLaunch = true)
+            if (dialogState == DialogState.None) dialogState = DialogState.OnboardingAutoFill
+        } else if (takeGmailUpdateIntro(context, firstLaunch = false)) {
+            dialogState = DialogState.GmailUpdate
+        }
     }
 
     Box(
@@ -372,7 +377,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.TopCenter)
+                .fillMaxHeight()
+                .widthIn(max = UI.contentMaxWidth.dp)
+                .fillMaxWidth()
                 .padding(
                     start = UI.cardPadding.dp,
                     top = 16.dp,
@@ -385,20 +393,14 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 month = currentMonth,
                 year = currentYear,
                 onPrev = {
-                    if (currentMonth == 1) {
-                        currentMonth = 12
-                        currentYear -= 1
-                    } else {
-                        currentMonth -= 1
-                    }
+                    val previous = YearMonth.of(currentYear, currentMonth).minusMonths(1)
+                    currentYear = previous.year
+                    currentMonth = previous.monthValue
                 },
                 onNext = {
-                    if (currentMonth == 12) {
-                        currentMonth = 1
-                        currentYear += 1
-                    } else {
-                        currentMonth += 1
-                    }
+                    val next = YearMonth.of(currentYear, currentMonth).plusMonths(1)
+                    currentYear = next.year
+                    currentMonth = next.monthValue
                 }
             )
 
@@ -421,17 +423,25 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 )
             }
             WeekdayHeader()
-            key(repoTick.intValue) {
-                CalendarSection(
-                    modifier = Modifier.weight(1f),
-                    year = currentYear,
-                    month = currentMonth,
-                    today = today,
-                    repo = repo,
-                    onDayClick = { day, record ->
-                        dialogState = DialogState.DayEdit(day, record)
-                    }
-                )
+            // Prelaz meseca: M3 „shared axis“ (klizanje po x + bledenje); stari mesec izlazi sa svojim podacima.
+            AnimatedContent(
+                targetState = currentYear * MONTHS_PER_YEAR + (currentMonth - 1),
+                modifier = Modifier.weight(1f),
+                transitionSpec = { monthTransition(forward = targetState > initialState) },
+                label = "month"
+            ) { monthIndex ->
+                key(repoTick.intValue) {
+                    CalendarSection(
+                        modifier = Modifier.fillMaxSize(),
+                        year = monthIndex / MONTHS_PER_YEAR,
+                        month = monthIndex % MONTHS_PER_YEAR + 1,
+                        today = today,
+                        repo = repo,
+                        onDayClick = { day, record ->
+                            dialogState = DialogState.DayEdit(day, record)
+                        }
+                    )
+                }
             }
             StatsSection(
                 summary = summary,
@@ -448,11 +458,13 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     includeTransport = mainPayIncludesTransport,
                     onClick = { dialogState = DialogState.SalaryDetails }
                 )
-                TotalCard(
-                    receipt = monthlyReceipt,
-                    includeTransport = mainPayIncludesTransport,
-                    onClick = { dialogState = DialogState.PayDetails }
-                )
+                if (SHOW_TOTAL_CARD) {
+                    TotalCard(
+                        receipt = monthlyReceipt,
+                        includeTransport = mainPayIncludesTransport,
+                        onClick = { dialogState = DialogState.PayDetails }
+                    )
+                }
             }
         }
 
@@ -463,8 +475,24 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onBasePay = { dialogState = DialogState.BasePay },
             onHolidays = { dialogState = DialogState.BloodDonation },
             onOptions = { dialogState = DialogState.Options },
-            onDeleteMonth = { dialogState = DialogState.DeleteMonth }
+            onDeleteMonth = { dialogState = DialogState.DeleteMonth },
+            basePayEnabled = !isPayslipMonthUnfinished(MonthKey(currentYear, currentMonth), today)
         )
+
+        snackbarHostState?.let { host ->
+            SnackbarHost(
+                hostState = host,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 16.dp, end = 16.dp, bottom = UI.bottomBarHeight.dp)
+            )
+        }
+    }
+
+    // Upisana akontacija / promenjen prevoz iz obračuna: poruka u aplikaciji, ne na telefonu.
+    val sideRunMessages by SideRunMessages.pending.collectAsState()
+    if (sideRunMessages.isNotEmpty() && dialogState == DialogState.None) {
+        SideRunMessagesDialog(messages = sideRunMessages, onDismiss = SideRunMessages::clear)
     }
 
     MainDialogs(
@@ -494,21 +522,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             payDetails = payDetails,
             annualNetPayAverages = annualNetPayAverages,
             recentNetPayAverage = recentNetPayAverage,
-            foodReceiptReminderEnabled = repo.foodReceiptReminderEnabled,
-            foodReceiptReminderStatus = foodReceiptReminderStatus,
             bloodDonationReminderStatus = bloodDonationReminderStatus,
             onMonthlyExportClick = launchSelectedMonthExport,
             onDebugExportClick = launchAllMonthsDebugExport,
-            onFoodReceiptReminderToggle = { enabled ->
-                handleFoodReceiptReminderToggle(
-                    enabled = enabled,
-                    context = context,
-                    repo = repo,
-                    requestNotificationPermission = {
-                        foodReceiptNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                )
-            },
             onBloodDonationDateSaved = {
                 handleBloodDonationDateSaved(
                     context = context,
@@ -521,10 +537,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onBloodDonationHistoryChanged = {
                 BloodDonationReminderScheduler.reschedule(context, repo)
             },
-            onNotificationAccessClick = {
-                runCatching { context.startActivity(notificationListenerSettingsIntent()) }
-            },
-            onDialogChange = { state -> dialogState = state }
+            onDialogChange = { state -> dialogState = state },
+            onFirstLaunchDone = { if (backup.isFirstLaunch()) backup.markFirstLaunchDone() }
         ),
         cloudBackup = CloudBackupDialogData(
             signInState = signInState,
@@ -533,13 +547,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onSignIn = { signInLauncher.launch(backup.getSignInIntent()) },
             onBackup = {
                 scope.launch {
-                    // Verzionisani backup: nova verzija u oblaku (spaja sa prethodnom
-                    // arhivom radi pune istorije), uz detekciju anomalija i retenciju.
-                    val outcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
-                        repo.buildCloudBackup(existing)
-                    }
+                    val outcome = backupUnlessCloudUnadopted(backup, repo) { cloudBackupFound.value = it }
+                        ?: return@launch
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, backupResultMessage(outcome), Toast.LENGTH_LONG).show()
+                        showMessage(backupResultMessage(outcome))
                     }
                 }
             },
@@ -561,21 +572,16 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onRestoreVersion = { version ->
                 scope.launch {
                     restoringVersion = true
-                    // Sigurnosna kopija trenutnog stanja pre vraćanja — i restore je
-                    // poništiv. Ako kopija ne uspe, vraćanje se prekida (UI obećava
-                    // da je poništivo, pa ne sme da nastavi bez kopije).
-                    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
-                        repo.buildCloudBackup(existing)
-                    }
-                    val message = if (safetyOutcome is BackupOutcome.Failure) {
-                        "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
-                    } else {
-                        restoreVersionMessage(backup.restoreVersion(version.fileId), repo)
-                    }
+                    val message = restoreWithSafetyCopy(
+                        backup = backup,
+                        repo = repo,
+                        fetch = { backup.restoreVersion(version.fileId) },
+                        messages = RestoreMessages.VERSION
+                    )
                     withContext(Dispatchers.Main) {
                         restoringVersion = false
                         showBackupVersionsDialog = false
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        showMessage(message)
                     }
                 }
             },
@@ -589,18 +595,16 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             onConfirm = {
                 scope.launch {
                     restoringLatest = true
-                    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
-                        repo.buildCloudBackup(existing)
-                    }
-                    val message = if (safetyOutcome is BackupOutcome.Failure) {
-                        "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
-                    } else {
-                        restoreLatestMessage(backup.restoreLatest(), repo)
-                    }
+                    val message = restoreWithSafetyCopy(
+                        backup = backup,
+                        repo = repo,
+                        fetch = { backup.restoreLatest() },
+                        messages = RestoreMessages.LATEST
+                    )
                     withContext(Dispatchers.Main) {
                         restoringLatest = false
                         showRestoreLatestConfirm = false
-                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        showMessage(message)
                     }
                 }
             },
@@ -608,25 +612,32 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         )
     }
 
-    if (showOnboarding) {
-        OnboardingDialog(
-            step = onboardingStep,
-            year = currentYear,
-            month = currentMonth,
-            repo = repo,
-            onStepChange = { step -> onboardingStep = step },
-            onComplete = completeOnboarding
-        )
-    }
-
-    monthlyTaxUpdateMessage?.let { message ->
-        MonthlyTaxUpdateCompletedDialog(
-            message = message,
-            onDismiss = { monthlyTaxUpdateMessage = null }
-        )
-    }
-
+    CloudBackupFoundHost(
+        found = cloudBackupFound,
+        signedIn = signInState is SignInState.SignedIn,
+        backup = backup,
+        repo = repo,
+        showMessage = showMessage
+    )
 }
+
+private const val MONTHS_PER_YEAR = 12
+private const val MONTH_TRANSITION_MS = 300
+private const val MONTH_TRANSITION_EXIT_MS = 150
+
+/** M3 shared axis X: novi mesec ulazi sa strane smera, stari izlazi na suprotnu stranu. */
+private fun monthTransition(forward: Boolean): ContentTransform {
+    val direction = if (forward) 1 else -1
+    val enter = slideInHorizontally(tween(MONTH_TRANSITION_MS, easing = EmphasizedDecelerateEasing)) {
+        direction * it / MONTH_SLIDE_DIVISOR
+    } + fadeIn(tween(MONTH_TRANSITION_MS))
+    val exit = slideOutHorizontally(tween(MONTH_TRANSITION_EXIT_MS, easing = EmphasizedAccelerateEasing)) {
+        -direction * it / MONTH_SLIDE_DIVISOR
+    } + fadeOut(tween(MONTH_TRANSITION_EXIT_MS))
+    return enter togetherWith exit
+}
+
+private const val MONTH_SLIDE_DIVISOR = 8
 
 internal fun mainContentBottomPaddingDp(): Int {
     return UI.bottomBarHeight + UI.largeSpacing
@@ -645,16 +656,120 @@ internal fun backupResultMessage(outcome: BackupOutcome): String = when (outcome
     is BackupOutcome.Failure -> "Backup neuspešan: ${outcome.message}"
 }
 
-/** Uvezi najnoviji backup i vrati korisničku poruku. */
-internal fun restoreLatestMessage(json: String?, repo: ShiftRepository): String {
-    if (json == null) return "Nema backup-a."
-    return if (repo.importFromJson(json)) "Restore uspešan." else "Restore neuspešan."
+/**
+ * Čim je korisnik prijavljen, a uređaj još nije preuzeo backup iz oblaka (nova
+ * instalacija), ponudi Restore umesto da sveže stanje ode preko postojećeg backup-a.
+ * [found] se puni i iz ručnog „Backup" dugmeta (vidi [backupUnlessCloudUnadopted]).
+ */
+@Composable
+private fun CloudBackupFoundHost(
+    found: androidx.compose.runtime.MutableState<BackupVersion?>,
+    signedIn: Boolean,
+    backup: GoogleDriveBackup,
+    repo: ShiftRepository,
+    showMessage: (String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var restoring by remember { mutableStateOf(false) }
+    LaunchedEffect(signedIn) {
+        if (signedIn && !backup.isCloudAdopted()) {
+            found.value = findUnadoptedCloudBackup(backup)
+        }
+    }
+    val version = found.value ?: return
+    CloudBackupFoundDialog(
+        version = version,
+        isBusy = restoring,
+        onRestore = {
+            scope.launch {
+                restoring = true
+                val message = restoreWithSafetyCopy(
+                    backup = backup,
+                    repo = repo,
+                    fetch = { backup.restoreVersion(version.fileId) },
+                    messages = RestoreMessages.LATEST
+                )
+                withContext(Dispatchers.Main) {
+                    restoring = false
+                    found.value = null
+                    showMessage(message)
+                }
+            }
+        },
+        onKeepLocal = {
+            // Izričita odluka: ovaj uređaj je merodavan, backup se nastavlja odavde.
+            backup.markCloudAdopted()
+            found.value = null
+            BackupScheduler.scheduleDebounced(context.applicationContext)
+        },
+        onDismiss = { if (!restoring) found.value = null }
+    )
 }
 
-/** Uvezi izabranu verziju backup-a i vrati korisničku poruku. */
-internal fun restoreVersionMessage(json: String?, repo: ShiftRepository): String {
-    if (json == null) return "Vraćanje neuspešno."
-    return if (repo.importFromJson(json)) "Vraćeno na izabranu verziju." else "Vraćanje neuspešno."
+/**
+ * Ručni backup. Uređaj koji još nije preuzeo postojeći backup iz oblaka prvo pita
+ * korisnika ([onFound], vraća null) — njegovo sveže stanje ne sme ćutke da postane
+ * „najnovija verzija". Inače: nova verzija u oblaku, spojena sa prethodnom arhivom
+ * radi pune istorije, uz detekciju anomalija i retenciju.
+ */
+internal suspend fun backupUnlessCloudUnadopted(
+    backup: GoogleDriveBackup,
+    repo: ShiftRepository,
+    onFound: (BackupVersion) -> Unit
+): BackupOutcome? {
+    val found = if (backup.isCloudAdopted()) null else findUnadoptedCloudBackup(backup)
+    if (found != null) {
+        onFound(found)
+        return null
+    }
+    return backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME) { existing ->
+        repo.buildCloudBackup(existing)
+    }
+}
+
+/**
+ * Najnovija redovna verzija u oblaku koju ovaj uređaj još nije preuzeo, ili null.
+ * Prazan oblak se odmah „usvaja" (nema šta da se pregazi); ako lista nije mogla
+ * da se pročita, ništa se ne menja pa se pita sledeći put.
+ */
+internal suspend fun findUnadoptedCloudBackup(backup: GoogleDriveBackup): BackupVersion? {
+    val versions = backup.cloudVersionsOrNull() ?: return null
+    val latest = VersionedBackupPlanner.latest(versions)
+    if (latest == null) backup.markCloudAdopted()
+    return latest
+}
+
+/**
+ * Restore uz sigurnosnu kopiju. Cilj se skida PRE pravljenja kopije: inače bi
+ * „najnovija verzija" bila upravo ta kopija (sveže stanje spojeno sa arhivom), pa
+ * bi se na novoj instalaciji vratilo pola podataka. Ako kopija ne uspe, vraćanje
+ * se prekida (UI obećava da je poništivo, pa ne sme da nastavi bez kopije).
+ */
+internal suspend fun restoreWithSafetyCopy(
+    backup: GoogleDriveBackup,
+    repo: ShiftRepository,
+    fetch: suspend () -> String?,
+    messages: RestoreMessages
+): String {
+    val json = fetch() ?: return messages.missing
+    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME, safety = true) { existing ->
+        repo.buildCloudBackup(existing)
+    }
+    if (safetyOutcome is BackupOutcome.Failure) {
+        return "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
+    }
+    if (!repo.importFromJson(json)) return messages.failure
+    // Uspešan uvoz = stanje je sada nastavak oblaka, pa auto-backup sme da krene.
+    backup.markCloudAdopted()
+    return messages.success
+}
+
+internal data class RestoreMessages(val missing: String, val success: String, val failure: String) {
+    companion object {
+        val LATEST = RestoreMessages("Nema backup-a.", "Restore uspešan.", "Restore neuspešan.")
+        val VERSION = RestoreMessages("Vraćanje neuspešno.", "Vraćeno na izabranu verziju.", "Vraćanje neuspešno.")
+    }
 }
 
 private suspend fun saveSelectedMonthWorkAndPayExport(
@@ -707,7 +822,8 @@ private suspend fun saveAllMonthsCalculationDebugExport(
 private fun rememberMonthlyWorkAndPayExportLauncher(
     repo: ShiftRepository,
     currentYear: Int,
-    currentMonth: Int
+    currentMonth: Int,
+    showMessage: (String) -> Unit
 ): () -> Unit {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -722,7 +838,8 @@ private fun rememberMonthlyWorkAndPayExportLauncher(
             target = target,
             context = context,
             repo = repo,
-            scope = scope
+            scope = scope,
+            showMessage = showMessage
         )
     }
     return {
@@ -734,7 +851,8 @@ private fun rememberMonthlyWorkAndPayExportLauncher(
 
 @Composable
 private fun rememberAllMonthsCalculationDebugExportLauncher(
-    repo: ShiftRepository
+    repo: ShiftRepository,
+    showMessage: (String) -> Unit
 ): () -> Unit {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -745,12 +863,13 @@ private fun rememberAllMonthsCalculationDebugExportLauncher(
             uri = uri,
             context = context,
             repo = repo,
-            scope = scope
+            scope = scope,
+            showMessage = showMessage
         )
     }
     return {
         if (repo.getAllMonthsSorted().isEmpty()) {
-            Toast.makeText(context, "Nema sačuvanih meseci za debug export.", Toast.LENGTH_LONG).show()
+            showMessage("Nema sačuvanih meseci za debug export.")
         } else {
             debugExportLauncher.launch(ALL_MONTHS_CALCULATION_DEBUG_EXPORT_FILE_NAME)
         }
@@ -762,21 +881,22 @@ private fun handleMonthlyExportDocumentResult(
     target: MonthKey?,
     context: Context,
     repo: ShiftRepository,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
+    showMessage: (String) -> Unit
 ) {
     if (uri == null) {
-        Toast.makeText(context, "Export otkazan.", Toast.LENGTH_SHORT).show()
+        showMessage("Export otkazan.")
         return
     }
     if (target == null) {
-        Toast.makeText(context, "Export nije uspeo: nedostaje izabrani mesec.", Toast.LENGTH_LONG).show()
+        showMessage("Export nije uspeo: nedostaje izabrani mesec.")
         return
     }
     scope.launch {
         val result = runCatching {
             saveSelectedMonthWorkAndPayExport(context, repo, target, uri)
         }
-        Toast.makeText(context, monthlyExportResultMessage(result), Toast.LENGTH_LONG).show()
+        showMessage(monthlyExportResultMessage(result))
     }
 }
 
@@ -784,17 +904,18 @@ private fun handleAllMonthsDebugExportDocumentResult(
     uri: Uri?,
     context: Context,
     repo: ShiftRepository,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
+    showMessage: (String) -> Unit
 ) {
     if (uri == null) {
-        Toast.makeText(context, "Debug export otkazan.", Toast.LENGTH_SHORT).show()
+        showMessage("Debug export otkazan.")
         return
     }
     scope.launch {
         val result = runCatching {
             saveAllMonthsCalculationDebugExport(context, repo, uri)
         }
-        Toast.makeText(context, allMonthsDebugExportResultMessage(result), Toast.LENGTH_LONG).show()
+        showMessage(allMonthsDebugExportResultMessage(result))
     }
 }
 
@@ -812,37 +933,6 @@ private fun allMonthsDebugExportResultMessage(result: Result<Unit>): String {
     )
 }
 
-private fun handleFoodReceiptReminderToggle(
-    enabled: Boolean,
-    context: Context,
-    repo: ShiftRepository,
-    requestNotificationPermission: () -> Unit
-) {
-    if (!enabled) {
-        repo.foodReceiptReminderEnabled = false
-        FoodReceiptReminderScheduler.cancel(context)
-        return
-    }
-    if (FoodReceiptReminderScheduler.notificationPermissionRequired(context)) {
-        requestNotificationPermission()
-        return
-    }
-    enableFoodReceiptReminder(context, repo)
-}
-
-private fun enableFoodReceiptReminder(context: Context, repo: ShiftRepository) {
-    repo.foodReceiptReminderEnabled = true
-    FoodReceiptReminderScheduler.reschedule(context, repo)
-    FoodReceiptReminderScheduler.exactAlarmSettingsIntent(context)?.let { intent ->
-        Toast.makeText(
-            context,
-            "Android možda neće poslati podsetnik baš tačno dok ne dozvoliš tačne alarme.",
-            Toast.LENGTH_LONG
-        ).show()
-        runCatching { context.startActivity(intent) }
-    }
-}
-
 private fun handleBloodDonationDateSaved(
     context: Context,
     repo: ShiftRepository,
@@ -854,70 +944,15 @@ private fun handleBloodDonationDateSaved(
     }
 }
 
-private fun handleBloodDonationPermissionResult(granted: Boolean, context: Context, repo: ShiftRepository) {
+private fun handleBloodDonationPermissionResult(
+    granted: Boolean,
+    context: Context,
+    repo: ShiftRepository,
+    showMessage: (String) -> Unit
+) {
     if (granted) {
         BloodDonationReminderScheduler.reschedule(context, repo)
     } else {
-        Toast.makeText(context, "Dozvola za obaveštenja nije uključena.", Toast.LENGTH_LONG).show()
-    }
-}
-
-@Composable
-private fun MonthlyTaxUpdateEffect(
-    showOnboarding: Boolean,
-    today: LocalDate,
-    repo: ShiftRepository,
-    taxParameterUpdater: TaxParameterUpdater,
-    taxParameterCache: TaxParameterCache,
-    monthlyTaxUpdateStore: MonthlyTaxUpdateStore,
-    onUpdated: (String) -> Unit
-) {
-    LaunchedEffect(showOnboarding, today.year, today.monthValue) {
-        if (showOnboarding) return@LaunchedEffect
-
-        val updateMonth = YearMonth.from(today)
-        if (!monthlyTaxUpdateStore.shouldRun(updateMonth)) return@LaunchedEffect
-
-        runCatching {
-            fetchAndApplyLatestTaxParameters(repo, taxParameterUpdater, today, taxParameterCache)
-        }.onSuccess { result ->
-            monthlyTaxUpdateStore.markProcessed(updateMonth)
-            onUpdated(taxUpdateResultMessage(result))
-        }
-    }
-}
-
-@Composable
-private fun MonthlyTaxUpdateCompletedDialog(
-    message: String,
-    onDismiss: () -> Unit
-) {
-    PopupDialog(
-        title = "Ažuriranje završeno",
-        onDismiss = onDismiss,
-        widthRatio = 0.86f,
-        scrollable = false,
-        accent = THEME.success
-    ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.success) {
-            SectionLabel(text = "Poreski parametri su ažurirani")
-            Text(
-                text = message,
-                color = THEME.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis
-            )
-            GlowButton(
-                text = "U redu",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                bgColor = THEME.success,
-                textColor = THEME.textDark,
-                textStyle = MaterialTheme.typography.labelLarge,
-                onClick = onDismiss
-            )
-        }
+        showMessage("Dozvola za obaveštenja nije uključena.")
     }
 }

@@ -1,0 +1,4 @@
+<resources>
+    <!-- Isto kao THEME.bgDark: prozor je taman od prvog frejma, bez svetlog bljeska. -->
+    <color name="rad_background">#0D1117</color>
+</resources>

@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -85,11 +86,9 @@ fun InitialCompBalanceDialog(
     PopupDialog(
         title = INITIAL_COMP_BALANCE_DIALOG_TITLE,
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.compTime
+        scrollable = true
     ) {
-        PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.compTime) {
+        PopupCard {
             Text(
                 text = INITIAL_COMP_BALANCE_DIALOG_DESCRIPTION,
                 color = THEME.textSecondary,
@@ -111,17 +110,13 @@ fun InitialCompBalanceDialog(
                     errorMessage = null
                 },
                 hintText = "Broj sati...",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                label = "Broj sati",
+                isError = errorMessage != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth()
             )
             errorMessage?.let { message ->
-                Text(
-                    text = message,
-                    color = THEME.danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                FormErrorText(message = message)
             }
         }
 
@@ -159,8 +154,6 @@ fun InitialCompBalanceDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.compTime,
-            textColor = THEME.textPrimary,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val value = parseInitialCompBalanceInputMinutes(balanceInput)

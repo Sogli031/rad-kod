@@ -1,20 +1,20 @@
 package com.rad.shifttracker
 
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -94,9 +94,7 @@ fun MinuliRadDialog(
     PopupDialog(
         title = "Minuli rad",
         onDismiss = onDismiss,
-        widthRatio = 0.85f,
-        scrollable = true,
-        accent = THEME.compTime
+        scrollable = true
     ) {
         CurrentSeniorityCard(currYears = currYears, currPercent = currPercent)
         SeniorityInfoCard()
@@ -136,21 +134,13 @@ fun MinuliRadDialog(
             )
         }
         errorMessage?.let { message ->
-            Text(
-                text = message,
-                color = THEME.danger,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            FormErrorText(message = message)
         }
         GlowButton(
             text = "Sačuvaj",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            bgColor = THEME.compTime,
-            textColor = THEME.textDark,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val validationError = saveSenioritySettings(
@@ -176,7 +166,7 @@ fun MinuliRadDialog(
 
 @Composable
 private fun CurrentSeniorityCard(currYears: Int, currPercent: Double) {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.compTime) {
+    PopupCard {
         SectionLabel(text = "Trenutno")
         AutoSizeText(
             text = "$currYears god. = ${formatPercent(currPercent)}%",
@@ -198,7 +188,7 @@ private fun CurrentSeniorityCard(currYears: Int, currPercent: Double) {
 
 @Composable
 private fun SeniorityInfoCard() {
-    PopupCard(bgColor = THEME.bgCardElevated, borderColor = THEME.warning) {
+    PopupCard {
         Text(
             text = "Beneficirani/uvećani staž se ovde koristi za minuli rad samo ako tvoja platna lista " +
                 "ili pravilo firme tako obračunava. Ako nisi siguran, koristi procenat sa poslednje " +
@@ -242,7 +232,6 @@ private fun SeniorityModeButton(text: String, selected: Boolean, onClick: () -> 
             .height(46.dp),
         bgColor = if (selected) THEME.compTime else THEME.bgCardElevated,
         textColor = if (selected) THEME.textDark else THEME.textPrimary,
-        radius = 14.dp,
         textStyle = MaterialTheme.typography.labelMedium,
         bold = true,
         onClick = onClick
@@ -267,7 +256,8 @@ private fun KnownStartSection(
             value = startYearInput,
             onValueChange = onStartYearChange,
             hintText = "npr. 2019",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = "Godina",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             modifier = Modifier.fillMaxWidth()
         )
         SectionLabel(text = "Mesec početka rada")
@@ -301,7 +291,8 @@ private fun PayslipPercentSection(
             value = lastPayslipYearInput,
             onValueChange = onLastPayslipYearChange,
             hintText = "npr. 2026",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            label = "Godina",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth()
         )
         MonthGrid(selectedMonth = selectedLastPayslipMonth, onMonthChange = onLastPayslipMonthChange)
@@ -310,7 +301,8 @@ private fun PayslipPercentSection(
             value = payslipPercentInput,
             onValueChange = onPayslipPercentChange,
             hintText = "npr. 6.5",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            label = "Procenat",
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             modifier = Modifier.fillMaxWidth()
         )
         Text(
@@ -342,10 +334,9 @@ private fun MonthGrid(selectedMonth: Int, onMonthChange: (Int) -> Unit) {
                     val selected = selectedMonth == monthNumber
                     RoundedButton(
                         text = MONTH_NAMES[monthNumber].take(3),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         bgColor = if (selected) THEME.compTime else THEME.bgCardElevated,
                         textColor = if (selected) THEME.textDark else THEME.textPrimary,
-                        radius = 14.dp,
                         textStyle = MaterialTheme.typography.labelMedium,
                         bold = true,
                         onClick = { onMonthChange(monthNumber) }
@@ -358,30 +349,18 @@ private fun MonthGrid(selectedMonth: Int, onMonthChange: (Int) -> Unit) {
 
 @Composable
 private fun BenefitSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Koristi uvećani/beneficirani staž",
-            color = THEME.textPrimary,
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+    LabeledSwitchRow(
+        title = "Koristi uvećani/beneficirani staž",
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        titleMaxLines = 1,
+        switchColors = SwitchDefaults.colors(
+            checkedThumbColor = THEME.textDark,
+            checkedTrackColor = THEME.compTime,
+            uncheckedThumbColor = THEME.textMuted,
+            uncheckedTrackColor = THEME.bgCard
         )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = THEME.textDark,
-                checkedTrackColor = THEME.compTime,
-                uncheckedThumbColor = THEME.textMuted,
-                uncheckedTrackColor = THEME.bgCard
-            )
-        )
-    }
+    )
 }
 
 @Composable
@@ -400,7 +379,6 @@ private fun SeniorityFactorDropdown(
                     .height(46.dp),
                 bgColor = THEME.bgCardElevated,
                 textColor = THEME.textPrimary,
-                radius = 14.dp,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = { expanded = true }
@@ -462,7 +440,7 @@ private fun PreviewBox(color: androidx.compose.ui.graphics.Color, content: @Comp
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.small)
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Column(
