@@ -456,3 +456,46 @@ internal fun calendarDayDetailText(
         }
     }
 }
+
+/**
+ * Panel izabranog dana na širokom ekranu (desna kolona): pun opis dana kao za čitač ekrana i dugme za izmenu.
+ */
+@Composable
+internal fun SelectedDayCard(
+    year: Int,
+    month: Int,
+    day: Int,
+    today: LocalDate,
+    repo: ShiftRepository,
+    onEdit: () -> Unit
+) {
+    val record = repo.get(year, month, day)
+    val isHolidayDay = record?.holidayOverride ?: isSerbianHoliday(year, month, day)
+    val description = calendarDayDescription(
+        day = day,
+        month = month,
+        record = record,
+        isToday = today == LocalDate.of(year, month, day),
+        isHolidayDay = isHolidayDay,
+        workedHoliday = record?.workedOnHoliday ?: false,
+        brigadeType = repo.brigadeTypeValue
+    )
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            Text(
+                text = "$day. ${MONTH_NAMES[month]}",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLargeEmphasized
+            )
+            Text(
+                text = description.substringAfter(", "),
+                color = MaterialTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            GlowButton(text = "Izmeni", modifier = Modifier.fillMaxWidth(), onClick = onEdit)
+        }
+    }
+}

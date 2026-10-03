@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Nije objavljeno] - 2026-10-03
+- **Biblioteke:** Compose BOM 2025.12.01 (material3 1.4.0), compileSdk 36, `material3-adaptive` 1.2.0.
+- **Pokret:** spring umesto tween-a za list i prelaz meseca (`RadMotion`).
+- **Široki ekran:** `WindowSizeClass` (Expanded), dodir na dan bira dan i pokazuje panel sa dugmetom „Izmeni“.
+
 ## [5.4] - 2026-10-03
 Ostatak Faze 5 (dizajn), proveren na Pixel 9 preko adb-a; objavljeno kao 5.4.
 - **Kalendar (5.3):** ćelije ≥ 48dp i rastu sa fontom, tekst u ćeliji najmanje 11sp, cela strana skroluje

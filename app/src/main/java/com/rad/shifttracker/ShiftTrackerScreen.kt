@@ -9,7 +9,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -19,7 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +32,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -384,6 +385,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             .padding(WindowInsets.safeDrawing.asPaddingValues())
     ) {
         // Cela strana skroluje kad ne staje (veći font, mesec od šest nedelja); donja traka ostaje zakucana.
+        val wide = currentWindowAdaptiveInfo().windowSizeClass
+            .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+        var selectedDay by rememberSaveable(currentYear, currentMonth) { mutableStateOf<Int?>(null) }
         // Kalendar sa zaglavljem i statistika sa platom: jedna kolona na telefonu, dve kolone na širokom ekranu.
         val calendarPane: @Composable ColumnScope.() -> Unit = {
             HeaderSection(
@@ -439,13 +443,24 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                         today = today,
                         repo = repo,
                         onDayClick = { day, record ->
-                            dialogState = DialogState.DayEdit(day, record)
+                            // Na širokom ekranu dodir bira dan (panel desno), izmena ide dugmetom „Izmeni“.
+                            if (wide) selectedDay = day else dialogState = DialogState.DayEdit(day, record)
                         }
                     )
                 }
             }
         }
         val summaryPane: @Composable ColumnScope.() -> Unit = {
+            selectedDay?.takeIf { wide }?.let { day ->
+                SelectedDayCard(
+                    year = currentYear,
+                    month = currentMonth,
+                    day = day,
+                    today = today,
+                    repo = repo,
+                    onEdit = { dialogState = DialogState.DayEdit(day, repo.get(currentYear, currentMonth, day)) }
+                )
+            }
             StatsSection(
                 summary = summary,
                 payBreakdown = payBreakdown,
@@ -470,8 +485,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 }
             }
         }
-        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val wide = maxWidth >= UI.wideLayoutMinWidth.dp
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BackgroundLayer()
 
             Column(
@@ -663,18 +677,15 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
 }
 
 private const val MONTHS_PER_YEAR = 12
-private const val MONTH_TRANSITION_MS = 300
-private const val MONTH_TRANSITION_EXIT_MS = 150
-
-/** M3 shared axis X: novi mesec ulazi sa strane smera, stari izlazi na suprotnu stranu. */
+/** M3 shared axis X (spring iz [RadMotion]): novi mesec ulazi sa strane smera, stari izlazi na suprotnu stranu. */
 private fun monthTransition(forward: Boolean): ContentTransform {
     val direction = if (forward) 1 else -1
-    val enter = slideInHorizontally(tween(MONTH_TRANSITION_MS, easing = EmphasizedDecelerateEasing)) {
+    val enter = slideInHorizontally(RadMotion.spatial()) {
         direction * it / MONTH_SLIDE_DIVISOR
-    } + fadeIn(tween(MONTH_TRANSITION_MS))
-    val exit = slideOutHorizontally(tween(MONTH_TRANSITION_EXIT_MS, easing = EmphasizedAccelerateEasing)) {
+    } + fadeIn(RadMotion.effects())
+    val exit = slideOutHorizontally(RadMotion.fastSpatial()) {
         -direction * it / MONTH_SLIDE_DIVISOR
-    } + fadeOut(tween(MONTH_TRANSITION_EXIT_MS))
+    } + fadeOut(RadMotion.fastEffects())
     return enter togetherWith exit
 }
 

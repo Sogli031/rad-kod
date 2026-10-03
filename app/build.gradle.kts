@@ -11,7 +11,7 @@ rootProject.file("../keystore/signing.gradle").takeIf { it.exists() }?.let { app
 
 android {
     namespace = "com.rad.shifttracker"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.rad.shifttracker"
@@ -67,7 +67,8 @@ android {
         abortOnError = true
         warningsAsErrors = false
         checkDependencies = true
-        disable += setOf("ObsoleteLintCustomCheck")
+        // NullSafeMutableLiveData: lint-provera iz lifecycle biblioteke puca (IncompatibleClassChangeError) na AGP 8.7; LiveData se ne koristi.
+        disable += setOf("ObsoleteLintCustomCheck", "NullSafeMutableLiveData")
     }
 
     testOptions {
@@ -78,7 +79,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.05.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -90,6 +91,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3.adaptive:adaptive:1.2.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

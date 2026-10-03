@@ -9,10 +9,8 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.DraggableState
@@ -87,9 +85,6 @@ private const val SCRIM_ALPHA = 0.6f
 private const val DISMISS_DRAG_DP = 96
 private const val DISMISS_FLING_VELOCITY = 1500f
 
-/** M3 emphasized easing za prelaze: ulaz usporava, izlaz ubrzava (isto koristi prelaz meseca). */
-internal val EmphasizedDecelerateEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
-internal val EmphasizedAccelerateEasing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 /**
  * Sistemska „ukloni animacije“ (skala trajanja animacija = 0): prelazi su trenutni.
  * Čita se pri ulasku u kompoziciju; promena podešavanja važi pri sledećem otvaranju ekrana.
@@ -102,8 +97,6 @@ internal fun rememberReducedMotion(): Boolean {
     }
 }
 
-private const val SHEET_ENTER_MS = 400
-private const val SHEET_EXIT_MS = 200
 
 /**
  * Dijalog kao M3 modalni list sa dna: oblik `extraLarge` gore, površina `surfaceContainer`,
@@ -140,7 +133,13 @@ fun PopupDialog(
     }
     val scrimAlpha by animateFloatAsState(
         targetValue = if (visibleState.targetState) SCRIM_ALPHA else 0f,
-        animationSpec = if (reducedMotion) snap() else tween(if (visibleState.targetState) SHEET_ENTER_MS else SHEET_EXIT_MS),
+        animationSpec = if (reducedMotion) {
+            snap()
+        } else if (visibleState.targetState) {
+            RadMotion.effects()
+        } else {
+            RadMotion.fastEffects()
+        },
         label = "scrim"
     )
     val dragState = rememberDraggableState { delta ->
@@ -183,12 +182,12 @@ fun PopupDialog(
                 enter = if (reducedMotion) {
                     EnterTransition.None
                 } else {
-                    slideInVertically(tween(SHEET_ENTER_MS, easing = EmphasizedDecelerateEasing)) { it }
+                    slideInVertically(RadMotion.spatial()) { it }
                 },
                 exit = if (reducedMotion) {
                     ExitTransition.None
                 } else {
-                    slideOutVertically(tween(SHEET_EXIT_MS, easing = EmphasizedAccelerateEasing)) { it }
+                    slideOutVertically(RadMotion.fastSpatial()) { it }
                 }
             ) {
                 Column(
