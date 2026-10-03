@@ -421,9 +421,17 @@ internal fun payslipMissingText(month: MonthKey): String =
 internal fun payslipNotArrivedText(month: MonthKey): String =
     "Lista za ${monthYearText(month)} još nije stigla."
 
-/** Lista za mesec stiže tek sledećeg meseca, pa za tekući i budući mesec ne može da postoji. */
-internal fun isPayslipMonthUnfinished(month: MonthKey, today: LocalDate = LocalDate.now()): Boolean =
-    month >= MonthKey(today.year, today.monthValue)
+/** Dan u sledećem mesecu kad stiže konačna lista za prethodni mesec (lista za septembar: 20. oktobar). */
+internal const val PAYSLIP_ARRIVAL_DAY = 20
+
+/**
+ * Lista za mesec stiže [PAYSLIP_ARRIVAL_DAY]. sledećeg meseca; do tada (i za tekući i budući mesec)
+ * ne postoji, pa je „Lista“ isključena.
+ */
+internal fun isPayslipMonthUnfinished(month: MonthKey, today: LocalDate = LocalDate.now()): Boolean {
+    val arrival = LocalDate.of(month.year, month.month, 1).plusMonths(1).withDayOfMonth(PAYSLIP_ARRIVAL_DAY)
+    return today.isBefore(arrival)
+}
 
 /** Listić mora biti za mesec otvoren u kalendaru; inače greška i ništa se ne učitava. */
 internal fun payslipSideRunPickText(run: PayslipParseResult.SideRun): String {

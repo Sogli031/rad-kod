@@ -120,7 +120,13 @@ class PayslipListaMonthTest {
         assertTrue(isPayslipMonthUnfinished(MonthKey(2026, 9), today))
         assertTrue(isPayslipMonthUnfinished(MonthKey(2026, 10), today))
         assertTrue(!isPayslipMonthUnfinished(MonthKey(2026, 8), today))
-        assertTrue(!isPayslipMonthUnfinished(MonthKey(2026, 9), java.time.LocalDate.of(2026, 10, 1)))
+        // Lista za septembar stiže 20. oktobra: do 19.10. dugme je isključeno, od 20.10. uključeno.
+        assertTrue(isPayslipMonthUnfinished(MonthKey(2026, 9), java.time.LocalDate.of(2026, 10, 3)))
+        assertTrue(isPayslipMonthUnfinished(MonthKey(2026, 9), java.time.LocalDate.of(2026, 10, 19)))
+        assertTrue(!isPayslipMonthUnfinished(MonthKey(2026, 9), java.time.LocalDate.of(2026, 10, 20)))
+        // Prelaz godine: lista za decembar stiže 20. januara.
+        assertTrue(isPayslipMonthUnfinished(MonthKey(2026, 12), java.time.LocalDate.of(2027, 1, 19)))
+        assertTrue(!isPayslipMonthUnfinished(MonthKey(2026, 12), java.time.LocalDate.of(2027, 1, 20)))
         assertEquals("Lista za Septembar 2026 još nije stigla.", payslipNotArrivedText(MonthKey(2026, 9)))
     }
 

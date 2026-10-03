@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [5.2] - 2026-10-03
+- **Lista:** dugme je isključeno dok lista za mesec ne stigne (20. sledećeg meseca; lista za septembar od 20. oktobra), ne već od 1. u mesecu.
+
 ## [5.1] - 2026-10-03
 Međuverzija plana „production grade" (faze 3, 5.1, 5.4, 5.6 i 6); izgled skoro isti kao 5.0.
 - **Ispravnost podataka:** restore odbija prazan ili nevalidan snapshot, verzija šeme u lokalnom fajlu
