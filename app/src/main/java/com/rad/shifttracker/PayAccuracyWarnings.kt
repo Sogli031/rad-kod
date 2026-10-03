@@ -59,7 +59,7 @@ internal fun PayAccuracyWarningsCard(warnings: List<String>) {
         warnings.forEach { warning ->
             Text(
                 text = warning,
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.bodySmall
             )
         }

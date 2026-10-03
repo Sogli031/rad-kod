@@ -125,9 +125,9 @@ internal fun PayslipFillAllButton(repo: ShiftRepository) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 if (!isWorking) {
@@ -145,7 +145,7 @@ internal fun PayslipFillAllButton(repo: ShiftRepository) {
         )
     }
     status?.let { result ->
-        ReaderText(fillAllStatusText(result), color = if (result.failed.isEmpty()) THEME.success else THEME.warning)
+        ReaderText(fillAllStatusText(result), color = if (result.failed.isEmpty()) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.warning)
     }
 }
 
@@ -158,7 +158,7 @@ private fun PayslipMonthReplaceDialog(month: MonthKey, dayCount: Int, onConfirm:
         PopupCard {
             Text(
                 text = payslipMonthReplaceQuestionText(month, dayCount),
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -173,9 +173,9 @@ private fun PayslipMonthReplaceDialog(month: MonthKey, dayCount: Int, onConfirm:
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
-                borderColor = THEME.glassBorder,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = onDismiss

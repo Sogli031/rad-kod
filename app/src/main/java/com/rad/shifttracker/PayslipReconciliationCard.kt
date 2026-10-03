@@ -19,17 +19,17 @@ internal fun PayslipReconciliationCard(reconciliation: PayslipReconciliation) {
     PopupCard {
         Text(
             text = monthYearText(reconciliation.month),
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             maxLines = 1
         )
         if (!reconciliation.hasAppData) {
-            PayslipMutedText("U aplikaciji nema unetih smena za ovaj mesec, pa poređenje nije merodavno.", THEME.warning)
+            PayslipMutedText("U aplikaciji nema unetih smena za ovaj mesec, pa poređenje nije merodavno.", MaterialTheme.extendedColors.warning)
         }
         Row(modifier = Modifier.fillMaxWidth()) {
             PayslipCell("", Modifier.weight(1.4f))
-            PayslipCell("Aplikacija", Modifier.weight(1f), THEME.textMuted)
-            PayslipCell("Lista", Modifier.weight(1f), THEME.textMuted)
+            PayslipCell("Aplikacija", Modifier.weight(1f), MaterialTheme.colorScheme.onSurfaceVariant)
+            PayslipCell("Lista", Modifier.weight(1f), MaterialTheme.colorScheme.onSurfaceVariant)
         }
         for (row in reconciliation.rows) {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -42,10 +42,10 @@ internal fun PayslipReconciliationCard(reconciliation: PayslipReconciliation) {
                     },
                     modifier = Modifier.weight(1.4f),
                     color = when {
-                        row.isTotal -> THEME.textMuted
-                        row.tone == PayslipRowTone.ALERT -> THEME.danger
-                        row.matches -> THEME.textSecondary
-                        else -> THEME.warning
+                        row.isTotal -> MaterialTheme.colorScheme.onSurfaceVariant
+                        row.tone == PayslipRowTone.ALERT -> MaterialTheme.colorScheme.error
+                        row.matches -> MaterialTheme.extendedColors.textSecondary
+                        else -> MaterialTheme.extendedColors.warning
                     }
                 )
                 PayslipCell(row.appText, Modifier.weight(1f))
@@ -54,11 +54,11 @@ internal fun PayslipReconciliationCard(reconciliation: PayslipReconciliation) {
         }
         val (notes, mismatches) = reconciliation.differences.partition { it.isNote }
         if (mismatches.isNotEmpty()) {
-            PayslipMutedText("Ne slaže se:", color = THEME.warning)
+            PayslipMutedText("Ne slaže se:", color = MaterialTheme.extendedColors.warning)
             mismatches.forEachIndexed { index, item ->
                 PayslipMutedText(
                     text = "${index + 1}. ${item.text}",
-                    color = if (item.isAlert) THEME.danger else THEME.warning,
+                    color = if (item.isAlert) MaterialTheme.colorScheme.error else MaterialTheme.extendedColors.warning,
                     maxLines = Int.MAX_VALUE
                 )
             }
@@ -73,7 +73,7 @@ internal fun PayslipReconciliationCard(reconciliation: PayslipReconciliation) {
 }
 
 @Composable
-private fun PayslipCell(text: String, modifier: Modifier, color: Color = THEME.textPrimary) {
+private fun PayslipCell(text: String, modifier: Modifier, color: Color = MaterialTheme.colorScheme.onSurface) {
     Text(
         text = text,
         color = color,
@@ -85,7 +85,7 @@ private fun PayslipCell(text: String, modifier: Modifier, color: Color = THEME.t
 }
 
 @Composable
-private fun PayslipMutedText(text: String, color: Color = THEME.textMuted, maxLines: Int = 5) {
+private fun PayslipMutedText(text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines: Int = 5) {
     Text(
         text = text,
         color = color,

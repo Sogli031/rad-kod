@@ -101,8 +101,8 @@ private fun BloodDonationStatusSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.saveButtonHeight.dp),
-            bgColor = THEME.danger,
-            textColor = THEME.textPrimary,
+            bgColor = MaterialTheme.colorScheme.error,
+            textColor = MaterialTheme.colorScheme.onSurface,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = {
@@ -128,9 +128,9 @@ private fun BloodDonationStatusSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.saveButtonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.danger,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.error,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = {
@@ -187,9 +187,9 @@ private fun BloodDonationHistorySection(
                 RoundedButton(
                     text = "Otkaži",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
-                    borderColor = THEME.glassBorder,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.colorScheme.onSurface,
+                    borderColor = MaterialTheme.colorScheme.outlineVariant,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = onCancelDelete
@@ -197,8 +197,8 @@ private fun BloodDonationHistorySection(
                 RoundedButton(
                     text = "Obriši",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = THEME.danger,
-                    textColor = THEME.textPrimary,
+                    bgColor = MaterialTheme.colorScheme.error,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = { onConfirmDelete(date) }
@@ -222,7 +222,7 @@ private fun BloodDonationHistoryRow(
     ) {
         Text(
             text = bloodDonationHistoryDateText(date),
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
             maxLines = 1,
@@ -232,9 +232,9 @@ private fun BloodDonationHistoryRow(
             text = "X",
             contentDescription = "Ukloni davanje ${bloodDonationHistoryDateText(date)}",
             modifier = Modifier.size(MIN_TOUCH_TARGET),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.danger,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.error,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = onDeleteClick
@@ -301,8 +301,8 @@ private fun BloodDonationLeaveActions(
         modifier = Modifier
             .fillMaxWidth()
             .height(UI.saveButtonHeight.dp),
-        bgColor = THEME.danger,
-        textColor = THEME.textPrimary,
+        bgColor = MaterialTheme.colorScheme.error,
+        textColor = MaterialTheme.colorScheme.onSurface,
         textStyle = MaterialTheme.typography.labelLarge,
         bold = true,
         onClick = {
@@ -329,7 +329,7 @@ private fun BloodDonationLeaveActions(
 private fun BloodDonationInfoText(text: String) {
     Text(
         text = text,
-        color = THEME.textSecondary,
+        color = MaterialTheme.extendedColors.textSecondary,
         style = MaterialTheme.typography.bodyMedium,
         maxLines = 3,
         overflow = TextOverflow.Ellipsis

@@ -513,14 +513,14 @@ private fun InlineSummaryRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             softWrap = false
         )
         Text(
             text = value,
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.End,
             maxLines = 1,
@@ -534,10 +534,10 @@ private fun InlineSummaryRow(label: String, value: String) {
 @Composable
 private fun StackedSummaryRow(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, color = THEME.textMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         Text(
             text = value,
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.End,
             modifier = Modifier.fillMaxWidth()
@@ -550,17 +550,17 @@ private fun StackedSummaryRow(label: String, value: String) {
 private fun OnboardingSummaryContent(summary: OnboardingSummary, heading: String) {
     Text(
         text = heading,
-        color = THEME.textPrimary,
+        color = MaterialTheme.colorScheme.onSurface,
         style = MaterialTheme.typography.titleSmall
     )
     summary.rows.forEach { (label, value) ->
         if (summary.stacked) StackedSummaryRow(label, value) else InlineSummaryRow(label, value)
     }
     summary.info.forEach { info ->
-        Text(text = info, color = THEME.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(text = info, color = MaterialTheme.extendedColors.textSecondary, style = MaterialTheme.typography.bodySmall)
     }
     summary.notes.forEach { note ->
-        Text(text = note, color = THEME.warning, style = MaterialTheme.typography.bodySmall)
+        Text(text = note, color = MaterialTheme.extendedColors.warning, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -575,15 +575,15 @@ private fun OnboardingProgressDialog(done: Int, total: Int) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.extraLarge)
-                .background(THEME.bgCardElevated)
-                .border(1.dp, THEME.accentPrimary, MaterialTheme.shapes.extraLarge)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 text = GMAIL_ONBOARDING_IMPORTING_TEXT,
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center
             )
@@ -594,12 +594,12 @@ private fun OnboardingProgressDialog(done: Int, total: Int) {
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(MaterialTheme.shapes.extraSmall),
-                    color = THEME.accentPrimary,
-                    trackColor = THEME.bgCard
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainer
                 )
                 Text(
                     text = "$done / $total lista i obračuna",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
@@ -608,12 +608,12 @@ private fun OnboardingProgressDialog(done: Int, total: Int) {
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(MaterialTheme.shapes.extraSmall),
-                    color = THEME.accentPrimary,
-                    trackColor = THEME.bgCard
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainer
                 )
                 Text(
                     text = "Tražim mejlove...",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -630,14 +630,14 @@ internal fun SideRunMessagesDialog(messages: List<String>, onDismiss: () -> Unit
                 .fillMaxWidth()
                 .heightIn(max = 560.dp)
                 .clip(MaterialTheme.shapes.extraLarge)
-                .background(THEME.bgCardElevated)
-                .border(1.dp, THEME.accentPrimary, MaterialTheme.shapes.extraLarge)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 text = SIDE_RUN_MESSAGES_TITLE,
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -649,7 +649,7 @@ internal fun SideRunMessagesDialog(messages: List<String>, onDismiss: () -> Unit
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 messages.forEach { message ->
-                    Text(text = message, color = THEME.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = message, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             RoundedButton(
@@ -657,8 +657,8 @@ internal fun SideRunMessagesDialog(messages: List<String>, onDismiss: () -> Unit
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                bgColor = THEME.accentPrimary,
-                textColor = THEME.textDark,
+                bgColor = MaterialTheme.colorScheme.primary,
+                textColor = MaterialTheme.colorScheme.onPrimary,
                 bold = true,
                 onClick = onDismiss
             )
@@ -758,7 +758,7 @@ internal fun GmailOnboardingDialog(
                 is OnboardingStep.Done -> OnboardingSummaryContent(current.summary, mode.heading(current.summary))
                 else -> Text(
                     text = if (current == OnboardingStep.Intro) mode.introText else GMAIL_ONBOARDING_IMPORTING_TEXT,
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -789,8 +789,8 @@ private fun OnboardingActions(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
-                bgColor = THEME.bgCard,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainer,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 onClick = onFinish
             )
             RoundedButton(
@@ -798,8 +798,8 @@ private fun OnboardingActions(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
-                bgColor = THEME.accentPrimary,
-                textColor = THEME.textDark,
+                bgColor = MaterialTheme.colorScheme.primary,
+                textColor = MaterialTheme.colorScheme.onPrimary,
                 bold = true,
                 onClick = onConnect
             )
@@ -810,8 +810,8 @@ private fun OnboardingActions(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            bgColor = THEME.accentPrimary,
-            textColor = THEME.textDark,
+            bgColor = MaterialTheme.colorScheme.primary,
+            textColor = MaterialTheme.colorScheme.onPrimary,
             bold = true,
             onClick = onFinish
         )

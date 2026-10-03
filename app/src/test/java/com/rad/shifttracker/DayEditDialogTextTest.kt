@@ -94,15 +94,15 @@ class DayEditDialogTextTest {
     @Test
     fun calendarHolidayUsesWarningBackgroundInsteadOfDotOrTextColor() {
         val source = appSource("ShiftCalendar.kt")
-        val defaultBackground = THEME.empty
-        val defaultTextColor = THEME.textPrimary
+        val scheme = RadDarkColorScheme
+        val ext = DarkExtendedColors
+        val worked = DayRecord(2026, 1, 7, Shift.FIRST, 8)
 
-        assertEquals(THEME.warning, calendarDayBackgroundColor(isHolidayDay = true, workedHoliday = false, defaultBackground))
-        assertEquals(THEME.warning, calendarDayBackgroundColor(isHolidayDay = false, workedHoliday = true, defaultBackground))
-        assertEquals(defaultBackground, calendarDayBackgroundColor(isHolidayDay = false, workedHoliday = false, defaultBackground))
-        assertEquals(THEME.textDark, calendarDayTextColor(isHolidayDay = true, workedHoliday = false, defaultTextColor))
-        assertEquals(THEME.textDark, calendarDayTextColor(isHolidayDay = false, workedHoliday = true, defaultTextColor))
-        assertEquals(defaultTextColor, calendarDayTextColor(isHolidayDay = false, workedHoliday = false, defaultTextColor))
+        // Praznik (i rad na praznik) tonira ćeliju bojom upozorenja, bez obzira na smenu.
+        assertEquals(ext.warning, calendarDayTint(null, isHolidayDay = true, workedHoliday = false, scheme, ext).dayNumber)
+        assertEquals(ext.warning, calendarDayTint(worked, isHolidayDay = false, workedHoliday = true, scheme, ext).dayNumber)
+        assertEquals(ext.shift1, calendarDayTint(worked, isHolidayDay = false, workedHoliday = false, scheme, ext).dayNumber)
+        assertEquals(scheme.onSurfaceVariant, calendarDayTint(null, isHolidayDay = false, workedHoliday = false, scheme, ext).dayNumber)
         assertEquals(false, source.contains("holidayIndicatorColor"))
         assertEquals(false, source.contains("holiday = holidayIndicatorColor"))
         assertEquals(false, source.contains("calendarDayDetailColor"))
@@ -422,7 +422,7 @@ class DayEditDialogTextTest {
         assertEquals(1, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
         assertEquals(true, source.contains("text = \"Bolovanje\""))
         assertEquals(false, source.contains("BOLOVANJE"))
-        assertEquals(false, source.contains("THEME.sick"))
+        assertEquals(false, source.contains("extendedColors.sick"))
     }
 
     @Test

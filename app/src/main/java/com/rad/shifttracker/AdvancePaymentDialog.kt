@@ -64,20 +64,20 @@ fun AdvancePaymentDialog(
                 PredictionValueRow(
                     label = ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL,
                     value = predictionMoneyText(prediction.previousMonthPaidTotalNet),
-                    valueColor = THEME.textPrimary
+                    valueColor = MaterialTheme.colorScheme.onSurface
                 )
                 PredictionValueRow(
                     label = ADVANCE_PREDICTION_MINIMUM_LABEL,
                     value = predictionMoneyText(prediction.minimumAdvanceNet),
-                    valueColor = THEME.warning
+                    valueColor = MaterialTheme.extendedColors.warning
                 )
                 RoundedButton(
                     text = ADVANCE_PREDICTION_USE_MINIMUM_LABEL,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.bgCardElevated,
-                    textColor = THEME.warning,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.extendedColors.warning,
                     textStyle = MaterialTheme.typography.labelMedium,
                     onClick = {
                         advanceInput = formatRateInput(prediction.minimumAdvanceNet)
@@ -87,7 +87,7 @@ fun AdvancePaymentDialog(
             } else {
                 Text(
                     text = ADVANCE_PREDICTION_UNAVAILABLE_TEXT,
-                    color = THEME.textMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
@@ -104,8 +104,8 @@ fun AdvancePaymentDialog(
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = onDismiss
             )
@@ -142,7 +142,7 @@ private fun PredictionValueRow(
     ) {
         Text(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

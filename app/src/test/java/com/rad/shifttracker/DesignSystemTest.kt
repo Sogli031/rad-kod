@@ -24,28 +24,30 @@ class DesignSystemTest {
         return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
     }
 
-    private val surfaces = listOf(THEME.bgDark, THEME.bgCard, THEME.bgCardElevated)
+    private val scheme = RadDarkColorScheme
+    private val ext = DarkExtendedColors
+    private val surfaces = listOf(scheme.background, scheme.surfaceContainer, scheme.surfaceContainerHigh)
 
     @Test
     fun `secondary text colors reach 4_5 to 1 on every surface`() {
         for (surface in surfaces) {
-            assertTrue("textFaint on $surface", contrast(THEME.textFaint, surface) >= 4.5)
-            assertTrue("textMuted on $surface", contrast(THEME.textMuted, surface) >= 4.5)
-            assertTrue("textSecondary on $surface", contrast(THEME.textSecondary, surface) >= 4.5)
+            assertTrue("textFaint on $surface", contrast(ext.textFaint, surface) >= 4.5)
+            assertTrue("textMuted on $surface", contrast(scheme.onSurfaceVariant, surface) >= 4.5)
+            assertTrue("textSecondary on $surface", contrast(ext.textSecondary, surface) >= 4.5)
         }
     }
 
     @Test
     fun `outline for field and switch borders reaches 3 to 1 on every surface`() {
         for (surface in surfaces) {
-            assertTrue("outline on $surface", contrast(THEME.outline, surface) >= 3.0)
+            assertTrue("outline on $surface", contrast(scheme.outline, surface) >= 3.0)
         }
     }
 
     @Test
     fun `content on primary and error is readable`() {
-        assertTrue(contrast(THEME.textDark, THEME.accentPrimary) >= 4.5)
-        assertTrue(contrast(THEME.textDark, THEME.danger) >= 4.5)
+        assertTrue(contrast(scheme.onPrimary, scheme.primary) >= 4.5)
+        assertTrue(contrast(scheme.onError, scheme.error) >= 4.5)
     }
 
     @Test
@@ -85,6 +87,21 @@ class DesignSystemTest {
 
         val holiday = calendarDayDescription(1, 1, null, false, true, false, BrigadeType.TROBRIGADA)
         assertTrue(holiday, holiday.contains("praznik"))
+    }
+
+    @Test
+    fun `ui reads colors only from the theme`() {
+        val mainDir = File(themeSourcePath()).parentFile
+        val offenders = mainDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "Theme.kt" }
+            .flatMap { file ->
+                file.readLines().mapIndexedNotNull { index, line ->
+                    val raw = Regex("""\bTHEME\.|Color\(0x|Color\.(White|Black|Red|Green|Blue|Gray|Yellow)\b""")
+                    if (raw.containsMatchIn(line)) "${file.name}:${index + 1}: ${line.trim()}" else null
+                }
+            }
+            .toList()
+        assertTrue("Boje idu kroz MaterialTheme.colorScheme/extendedColors:\n" + offenders.joinToString("\n"), offenders.isEmpty())
     }
 
     private fun themeSourcePath(): String {

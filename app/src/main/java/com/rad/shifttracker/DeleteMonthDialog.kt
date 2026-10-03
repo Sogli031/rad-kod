@@ -38,7 +38,7 @@ fun DeleteMonthDialog(
         ) {
             AutoSizeText(
                 text = "!",
-                color = THEME.danger,
+                color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.displaySmall.copy(textAlign = TextAlign.Center),
                 maxFontSize = MaterialTheme.typography.displaySmall.fontSize,
                 minFontSize = MaterialTheme.typography.headlineMedium.fontSize,
@@ -51,7 +51,7 @@ fun DeleteMonthDialog(
                 } else {
                     "Da li ste sigurni da želite da obrišete sve podatke za ${MONTH_NAMES[month]}?"
                 },
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Center),
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 2,
@@ -70,8 +70,8 @@ fun DeleteMonthDialog(
                 RoundedButton(
                     text = "Ovaj mesec",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = if (!deleteAll) THEME.danger else THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
+                    bgColor = if (!deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = { deleteAll = false }
@@ -79,8 +79,8 @@ fun DeleteMonthDialog(
                 RoundedButton(
                     text = "Svi meseci",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = if (deleteAll) THEME.danger else THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
+                    bgColor = if (deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = { deleteAll = true }
@@ -97,9 +97,9 @@ fun DeleteMonthDialog(
             RoundedButton(
                 text = "Otkaži",
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
-                borderColor = THEME.glassBorder,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = onDismiss

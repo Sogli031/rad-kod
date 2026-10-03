@@ -50,7 +50,7 @@ fun BackupVersionsDialog(
             versions.isEmpty() -> PopupCard {
                 Text(
                     text = "Nema sačuvanih verzija u oblaku.",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -59,7 +59,7 @@ fun BackupVersionsDialog(
                     Text(
                         text = "Izaberi verziju za vraćanje. Pre vraćanja se automatski " +
                             "napravi sigurnosna kopija trenutnog stanja.",
-                        color = THEME.textSecondary,
+                        color = MaterialTheme.extendedColors.textSecondary,
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -84,12 +84,12 @@ private fun LoadingCard() {
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.height(18.dp),
-                color = THEME.info,
+                color = MaterialTheme.extendedColors.info,
                 strokeWidth = 2.dp
             )
             Text(
                 text = "Učitavanje verzija…",
-                color = THEME.info,
+                color = MaterialTheme.extendedColors.info,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -105,25 +105,25 @@ private fun BackupVersionRow(
     PopupCard {
         Text(
             text = formatVersionTime(version.createdAtMillis),
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
         )
         Text(
             text = backupVersionSummary(version),
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.labelMedium
         )
         if (version.safety) {
             Text(
                 text = "Sigurnosna kopija stanja pre jednog vraćanja — nije redovan backup.",
-                color = THEME.info,
+                color = MaterialTheme.extendedColors.info,
                 style = MaterialTheme.typography.labelMedium
             )
         }
         if (version.flagged) {
             Text(
                 text = "⚠ Mogući pad podataka — proveri pre vraćanja.",
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.labelMedium
             )
         }
@@ -132,8 +132,8 @@ private fun BackupVersionRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp),
-            bgColor = THEME.info,
-            textColor = THEME.textPrimary,
+            bgColor = MaterialTheme.extendedColors.info,
+            textColor = MaterialTheme.colorScheme.onSurface,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             enabled = enabled,
@@ -152,13 +152,13 @@ private fun RestoreConfirmCard(
     PopupCard {
         Text(
             text = "Vraćanje verzije od ${formatVersionTime(version.createdAtMillis)}",
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
         )
         Text(
             text = "Trenutno stanje će biti zamenjeno (${backupVersionSummary(version)}). " +
                 "Pravi se sigurnosna kopija pre vraćanja, pa je i ovo poništivo.",
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.labelMedium
         )
         if (isBusy) {
@@ -168,12 +168,12 @@ private fun RestoreConfirmCard(
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.height(18.dp),
-                    color = THEME.info,
+                    color = MaterialTheme.extendedColors.info,
                     strokeWidth = 2.dp
                 )
                 Text(
                     text = "Vraćanje u toku…",
-                    color = THEME.info,
+                    color = MaterialTheme.extendedColors.info,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -187,8 +187,8 @@ private fun RestoreConfirmCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp),
-                    bgColor = THEME.bgCard,
-                    textColor = THEME.textPrimary,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainer,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     onClick = onCancel
                 )
                 RoundedButton(
@@ -196,8 +196,8 @@ private fun RestoreConfirmCard(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp),
-                    bgColor = THEME.warning,
-                    textColor = THEME.textDark,
+                    bgColor = MaterialTheme.extendedColors.warning,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
                     bold = true,
                     onClick = onConfirm
                 )
@@ -225,7 +225,7 @@ fun RestoreLatestConfirmDialog(
                 text = "Trenutno stanje će biti zamenjeno najnovijom verzijom iz oblaka. " +
                     "Izmene od poslednjeg backup-a bi bile izgubljene, pa se pre vraćanja " +
                     "automatski pravi sigurnosna kopija trenutnog stanja.",
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.labelMedium
             )
             if (isBusy) {
@@ -235,12 +235,12 @@ fun RestoreLatestConfirmDialog(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.height(18.dp),
-                        color = THEME.info,
+                        color = MaterialTheme.extendedColors.info,
                         strokeWidth = 2.dp
                     )
                     Text(
                         text = "Vraćanje u toku…",
-                        color = THEME.info,
+                        color = MaterialTheme.extendedColors.info,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -254,8 +254,8 @@ fun RestoreLatestConfirmDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp),
-                        bgColor = THEME.bgCard,
-                        textColor = THEME.textPrimary,
+                        bgColor = MaterialTheme.colorScheme.surfaceContainer,
+                        textColor = MaterialTheme.colorScheme.onSurface,
                         onClick = onDismiss
                     )
                     RoundedButton(
@@ -263,8 +263,8 @@ fun RestoreLatestConfirmDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp),
-                        bgColor = THEME.warning,
-                        textColor = THEME.textDark,
+                        bgColor = MaterialTheme.extendedColors.warning,
+                        textColor = MaterialTheme.colorScheme.onPrimary,
                         bold = true,
                         onClick = onConfirm
                     )
@@ -294,14 +294,14 @@ fun CloudBackupFoundDialog(
         PopupCard {
             Text(
                 text = "Backup od ${formatVersionTime(version.createdAtMillis)}",
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
             )
             Text(
                 text = "${backupVersionSummary(version)}. Ovaj uređaj ga još nije preuzeo. " +
                     "„Vrati sve iz oblaka“ vraća sve upise i sva podešavanja tačno kako su sačuvani. " +
                     "Dok ne izabereš, automatski backup je pauziran da ništa u oblaku ne bude pregaženo.",
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.labelMedium
             )
             if (isBusy) {
@@ -311,12 +311,12 @@ fun CloudBackupFoundDialog(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.height(18.dp),
-                        color = THEME.info,
+                        color = MaterialTheme.extendedColors.info,
                         strokeWidth = 2.dp
                     )
                     Text(
                         text = "Vraćanje u toku…",
-                        color = THEME.info,
+                        color = MaterialTheme.extendedColors.info,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -326,8 +326,8 @@ fun CloudBackupFoundDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.info,
-                    textColor = THEME.textPrimary,
+                    bgColor = MaterialTheme.extendedColors.info,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     bold = true,
                     onClick = onRestore
                 )
@@ -340,8 +340,8 @@ fun CloudBackupFoundDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp),
-                        bgColor = THEME.bgCard,
-                        textColor = THEME.textPrimary,
+                        bgColor = MaterialTheme.colorScheme.surfaceContainer,
+                        textColor = MaterialTheme.colorScheme.onSurface,
                         onClick = onDismiss
                     )
                     RoundedButton(
@@ -349,8 +349,8 @@ fun CloudBackupFoundDialog(
                         modifier = Modifier
                             .weight(1f)
                             .height(44.dp),
-                        bgColor = THEME.warning,
-                        textColor = THEME.textDark,
+                        bgColor = MaterialTheme.extendedColors.warning,
+                        textColor = MaterialTheme.colorScheme.onPrimary,
                         onClick = onKeepLocal
                     )
                 }

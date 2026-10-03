@@ -1,7 +1,5 @@
 package com.rad.shifttracker
 
-import androidx.compose.ui.graphics.Color
-
 object UI {
     const val buttonHeight = 48
     const val iconButtonSize = 48
@@ -29,44 +27,6 @@ object UI {
     const val contentMaxWidth = 600
 }
 
-// Ista plavo-siva paleta, pročišćena: jedan akcenat (cijan), boje smena zadržane.
-// Treća smena i bolovanje su posvetljene da budu čitljive kao TEKST na toniranoj ćeliji.
-data class ModernTheme(
-    val bgDark: Color = Color(0xFF0D1117),
-    val bgPrimary: Color = Color(0xFF111827),
-    val bgSecondary: Color = Color(0xFF0F172A),
-    val bgCard: Color = Color(0xFF111827),
-    val bgCardElevated: Color = Color(0xFF172033),
-    val glassBorder: Color = Color(0xFF334155),
-    val accentPrimary: Color = Color(0xFF38BDF8),
-    val accentSecondary: Color = Color(0xFFF59E0B),
-    val success: Color = Color(0xFF22C55E),
-    val warning: Color = Color(0xFFFBBF24),
-    val danger: Color = Color(0xFFF87171),
-    val info: Color = Color(0xFF60A5FA),
-    val textPrimary: Color = Color(0xFFF8FAFC),
-    val textSecondary: Color = Color(0xFFCBD5E1),
-    val textMuted: Color = Color(0xFF94A3B8),
-    val textFaint: Color = Color(0xFF8494AA),
-    /** M3 `outline`: ivice polja i prekidača, >= 3:1 na svim površinama. */
-    val outline: Color = Color(0xFF708199),
-    val textDark: Color = Color(0xFF0F172A),
-    val shadow: Color = Color(0xFF000000),
-    val shift1: Color = Color(0xFF38BDF8),
-    val shift2: Color = Color(0xFF86EFAC),
-    val shift3: Color = Color(0xFFA78BFA),
-    val sick: Color = Color(0xFFF87171),
-    val vacation: Color = Color(0xFFFBBF24),
-    val off: Color = Color(0xFF334155),
-    val empty: Color = Color(0xFF1E293B),
-    val doubleShift: Color = Color(0xFFF97316),
-    val compTime: Color = Color(0xFF14B8A6),
-    val compTimeUsed: Color = Color(0xFFFB923C),
-    val compTimeDeficit: Color = Color(0xFFF87171),
-    val weekendOt: Color = Color(0xFFFBBF24),
-    val sunday: Color = Color(0xFFF97316)
-)
-
 data class PayConfig(
     val defaultCoefficient: Double = DEFAULT_PAY_COEFFICIENT,
     val defaultBasePay: Double = defaultCoefficient * HOURLY_VALUE_FROM_JANUARY_2026,
@@ -91,13 +51,11 @@ data class PayConfig(
 )
 
 data class AppConfig(
-    val theme: ModernTheme = ModernTheme(),
     val pay: PayConfig = PayConfig(),
     val weeklyShiftCycle: List<Int> = listOf(3, 2, 1)
 )
 
 val CONFIG = AppConfig()
-val THEME = CONFIG.theme
 const val MANUAL_HOLIDAY_LABEL = "Ručno unet praznik"
 
 val WEEKDAY_NAMES = listOf("PON", "UTO", "SRE", "\u010cET", "PET", "SUB", "NED")

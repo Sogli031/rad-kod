@@ -28,7 +28,7 @@ fun OvertimeNetImpactDialog(
             PopupCard {
                 Text(
                     text = "Nema prekovremenih sati u ovom mesecu.",
-                    color = THEME.warning,
+                    color = MaterialTheme.extendedColors.warning,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -41,7 +41,7 @@ fun OvertimeNetImpactDialog(
             SectionLabel(text = "Dodatna neto zarada")
             AutoSizeText(
                 text = signedMoneyText(impact.paidOvertimeNetDifference),
-                color = THEME.weekendOt,
+                color = MaterialTheme.extendedColors.weekendOt,
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
@@ -50,7 +50,7 @@ fun OvertimeNetImpactDialog(
             )
             Text(
                 text = "Za ${formatHours(impact.overtimeHours)} prekovremenog rada.",
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -58,24 +58,24 @@ fun OvertimeNetImpactDialog(
             OvertimeImpactMoneyRow(
                 label = "Vraćeno kroz Za sate",
                 value = signedMoneyText(impact.compTimeRecoveryNetEffect),
-                color = if (impact.compTimeRecoveryNetEffect > 0.0) THEME.compTime else THEME.textMuted,
+                color = if (impact.compTimeRecoveryNetEffect > 0.0) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.onSurfaceVariant,
                 visible = impact.compTimeRecoveryNetEffect > 0.0
             )
             OvertimeImpactMoneyRow(
                 label = "Gubitak zbog manjka sati",
                 value = "-${moneyText(impact.deficitNetLoss)}",
-                color = THEME.danger,
+                color = MaterialTheme.colorScheme.error,
                 visible = impact.deficitNetLoss > 0.0
             )
             OvertimeImpactMoneyRow(
                 label = "Konačna razlika",
                 value = signedMoneyText(impact.netDifference),
-                color = if (impact.netDifference >= 0.0) THEME.success else THEME.danger,
+                color = if (impact.netDifference >= 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error,
                 visible = impact.deficitNetLoss > 0.0 || impact.compTimeRecoveryNetEffect > 0.0
             )
             Text(
                 text = "Razlika u odnosu na isti mesec bez tih sati.",
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -102,7 +102,7 @@ private fun OvertimeImpactMoneyRow(
     ) {
         AutoSizeText(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodySmall.fontSize,

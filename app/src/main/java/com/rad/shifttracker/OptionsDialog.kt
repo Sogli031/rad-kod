@@ -104,9 +104,9 @@ private fun OptionActionButton(
         modifier = modifier
             .fillMaxWidth()
             .height(UI.buttonHeight.dp),
-        bgColor = if (primary) THEME.accentPrimary else THEME.bgCardElevated,
-        textColor = if (primary) THEME.textDark else THEME.textPrimary,
-        borderColor = if (primary) THEME.accentPrimary else THEME.glassBorder,
+        bgColor = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        textColor = if (primary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        borderColor = if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         textStyle = MaterialTheme.typography.labelLarge,
         bold = primary,
         onClick = onClick
@@ -117,7 +117,7 @@ private val OPTION_ROW_PADDING = PaddingValues(vertical = 10.dp)
 
 @Composable
 private fun OptionDivider() {
-    HorizontalDivider(color = THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
 }
 
 /**
@@ -128,7 +128,7 @@ private fun OptionDivider() {
 private fun ManualPaySettingsSection(repo: ShiftRepository) {
     Text(
         text = difficultWorkConditionsStatusText(repo.difficultWorkConditionsPercentValue),
-        color = THEME.textMuted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -137,7 +137,7 @@ private fun ManualPaySettingsSection(repo: ShiftRepository) {
     // Prevoz po danu se ne kuca: čita se iz najnovijeg obračuna prevoza (~15. u mesecu).
     Text(
         text = transportDailyAmountStatusText(repo.transportDailyAmountValue),
-        color = THEME.textMuted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,

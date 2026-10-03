@@ -74,9 +74,9 @@ internal fun AnnualLeaveEntitlementCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = UI.buttonHeight.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
-                borderColor = THEME.glassBorder,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = { onUseTotal(total.toString()) }
             )
@@ -89,14 +89,14 @@ private fun EntitlementRow(label: String, value: String, bold: Boolean = false) 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             text = value,
-            color = if (bold) THEME.vacation else THEME.textPrimary,
+            color = if (bold) MaterialTheme.extendedColors.vacation else MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal),
             maxLines = 1
         )
@@ -105,7 +105,7 @@ private fun EntitlementRow(label: String, value: String, bold: Boolean = false) 
 
 @Composable
 private fun EntitlementNote(text: String) {
-    Text(text = text, color = THEME.textMuted, style = MaterialTheme.typography.bodySmall)
+    Text(text = text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable

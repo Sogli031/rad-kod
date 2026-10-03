@@ -91,14 +91,14 @@ fun InitialCompBalanceDialog(
         PopupCard {
             Text(
                 text = INITIAL_COMP_BALANCE_DIALOG_DESCRIPTION,
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = INITIAL_COMP_BALANCE_MINUTES_NOTE,
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
@@ -129,8 +129,8 @@ fun InitialCompBalanceDialog(
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = {
                     repo.initialCompBalanceMinutesValue = 0
@@ -142,8 +142,8 @@ fun InitialCompBalanceDialog(
                 modifier = Modifier
                     .weight(1f)
                     .height(50.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = onDismiss
             )

@@ -359,7 +359,7 @@ fun HoursPickerDialog(
     title: String,
     currentHours: Int,
     minHours: Int = 1,
-    accent: Color = THEME.accentPrimary,
+    accent: Color = MaterialTheme.colorScheme.primary,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -386,8 +386,8 @@ fun HoursPickerDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(UI.buttonHeight.dp),
-                            bgColor = if (isSelected) accent else THEME.bgDark,
-                            textColor = if (isSelected) THEME.textDark else THEME.textPrimary,
+                            bgColor = if (isSelected) accent else MaterialTheme.colorScheme.background,
+                            textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             textStyle = MaterialTheme.typography.titleLarge,
                             bold = true,
                             onClick = {
@@ -424,8 +424,8 @@ fun ShortageMinutesDialog(
                     modifier = Modifier
                         .weight(1f)
                         .height(UI.buttonHeight.dp),
-                    bgColor = if (isSelected) THEME.accentPrimary else THEME.bgDark,
-                    textColor = if (isSelected) THEME.textDark else THEME.textPrimary,
+                    bgColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+                    textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.titleMedium,
                     bold = true,
                     onClick = {
@@ -456,7 +456,7 @@ fun CompUsedDialog(
     ) {
         AutoSizeText(
             text = "Dostupno: ${formatHours(availableHours)}",
-            color = THEME.compTime,
+            color = MaterialTheme.extendedColors.compTime,
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
             maxFontSize = MaterialTheme.typography.bodyLarge.fontSize,
             minFontSize = MaterialTheme.typography.bodyMedium.fontSize,
@@ -478,8 +478,8 @@ fun CompUsedDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(UI.buttonHeight.dp),
-                            bgColor = if (isSelected) THEME.compTimeUsed else THEME.bgDark,
-                            textColor = THEME.textPrimary,
+                            bgColor = if (isSelected) MaterialTheme.extendedColors.compTimeUsed else MaterialTheme.colorScheme.background,
+                            textColor = MaterialTheme.colorScheme.onSurface,
                             textStyle = MaterialTheme.typography.titleLarge,
                             bold = true,
                             onClick = {

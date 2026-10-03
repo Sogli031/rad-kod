@@ -53,14 +53,14 @@ fun CloudBackupDialog(
             ) {
                 Text(
                     text = "Nalog:",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = email ?: "Nije povezano",
-                    color = if (isSignedIn) THEME.success else THEME.textMuted,
+                    color = if (isSignedIn) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -74,7 +74,7 @@ fun CloudBackupDialog(
                 ) {
                     Text(
                         text = "Status:",
-                        color = THEME.textSecondary,
+                        color = MaterialTheme.extendedColors.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -84,13 +84,13 @@ fun CloudBackupDialog(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = THEME.info,
+                            color = MaterialTheme.extendedColors.info,
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Sinhronizacija...",
-                            color = THEME.info,
+                            color = MaterialTheme.extendedColors.info,
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -105,14 +105,14 @@ fun CloudBackupDialog(
                 ) {
                     Text(
                         text = "Poslednji backup:",
-                        color = THEME.textSecondary,
+                        color = MaterialTheme.extendedColors.textSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = formatSyncTime(lastSyncTime),
-                        color = THEME.success,
+                        color = MaterialTheme.extendedColors.success,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -124,7 +124,7 @@ fun CloudBackupDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(THEME.danger.copy(alpha = 0.15f), MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), MaterialTheme.shapes.small)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     FormErrorText(
@@ -153,8 +153,8 @@ fun CloudBackupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.success,
-                    textColor = THEME.textDark,
+                    bgColor = MaterialTheme.extendedColors.success,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -165,8 +165,8 @@ fun CloudBackupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.info,
-                    textColor = THEME.textPrimary,
+                    bgColor = MaterialTheme.extendedColors.info,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -177,9 +177,9 @@ fun CloudBackupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.bgCardElevated,
-                    textColor = THEME.info,
-                    borderColor = THEME.info,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.extendedColors.info,
+                    borderColor = MaterialTheme.extendedColors.info,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,
@@ -190,9 +190,9 @@ fun CloudBackupDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    bgColor = THEME.bgCardElevated,
-                    textColor = THEME.danger,
-                    borderColor = THEME.danger,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.colorScheme.error,
+                    borderColor = MaterialTheme.colorScheme.error,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     enabled = !isSyncing,

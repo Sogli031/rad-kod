@@ -377,7 +377,7 @@ fun StatColumn(
         )
         AutoSizeText(
             text = label.uppercase(),
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.6.sp,
@@ -429,7 +429,7 @@ private fun SummaryCard(
             )
             AutoSizeText(
                 text = subtitle,
-                color = THEME.textFaint,
+                color = MaterialTheme.extendedColors.textFaint,
                 style = MaterialTheme.typography.labelSmall,
                 maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
                 minFontSize = 10.sp,
@@ -448,9 +448,9 @@ fun CompTimeCard(
 ) {
     val balanceMinutes = summary.compTimeEndingMinutes
     val mainColor = when {
-        balanceMinutes > 0 -> THEME.compTime
-        balanceMinutes < 0 -> THEME.danger
-        else -> THEME.textMuted
+        balanceMinutes > 0 -> MaterialTheme.extendedColors.compTime
+        balanceMinutes < 0 -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     SummaryCard(
         label = "Bilans sati",
@@ -474,7 +474,7 @@ fun VacationCard(
     val summary = remember(repoTick, year, today) { repo.getVacationBalanceSummary(year, today) }
     val exceeded = summary.warnings.contains(VacationWarnings.VACATION_EXCEEDED)
 
-    val mainColor = if (exceeded) THEME.danger else THEME.vacation
+    val mainColor = if (exceeded) MaterialTheme.colorScheme.error else MaterialTheme.extendedColors.vacation
     val displayText = if (exceeded) {
         "Prekora\u010deno!"
     } else {

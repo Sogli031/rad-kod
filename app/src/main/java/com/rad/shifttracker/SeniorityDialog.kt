@@ -170,7 +170,7 @@ private fun CurrentSeniorityCard(currYears: Int, currPercent: Double) {
         SectionLabel(text = "Trenutno")
         AutoSizeText(
             text = "$currYears god. = ${formatPercent(currPercent)}%",
-            color = THEME.compTime,
+            color = MaterialTheme.extendedColors.compTime,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
             minFontSize = MaterialTheme.typography.titleSmall.fontSize,
@@ -178,7 +178,7 @@ private fun CurrentSeniorityCard(currYears: Int, currPercent: Double) {
         )
         Text(
             text = "Za svaku punu obračunsku godinu staža: +${formatPercent(seniorityRatePercent())}%",
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -193,7 +193,7 @@ private fun SeniorityInfoCard() {
             text = "Beneficirani/uvećani staž se ovde koristi za minuli rad samo ako tvoja platna lista " +
                 "ili pravilo firme tako obračunava. Ako nisi siguran, koristi procenat sa poslednje " +
                 "platne liste kao izvor istine.",
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 4,
             overflow = TextOverflow.Ellipsis
@@ -230,8 +230,8 @@ private fun SeniorityModeButton(text: String, selected: Boolean, onClick: () -> 
         modifier = Modifier
             .fillMaxWidth()
             .height(46.dp),
-        bgColor = if (selected) THEME.compTime else THEME.bgCardElevated,
-        textColor = if (selected) THEME.textDark else THEME.textPrimary,
+        bgColor = if (selected) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.surfaceContainerHigh,
+        textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
         textStyle = MaterialTheme.typography.labelMedium,
         bold = true,
         onClick = onClick
@@ -307,7 +307,7 @@ private fun PayslipPercentSection(
         )
         Text(
             text = "Stopa minulog rada po godini: ${formatPercent(seniorityRatePercent())}%",
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -335,8 +335,8 @@ private fun MonthGrid(selectedMonth: Int, onMonthChange: (Int) -> Unit) {
                     RoundedButton(
                         text = MONTH_NAMES[monthNumber].take(3),
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        bgColor = if (selected) THEME.compTime else THEME.bgCardElevated,
-                        textColor = if (selected) THEME.textDark else THEME.textPrimary,
+                        bgColor = if (selected) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         textStyle = MaterialTheme.typography.labelMedium,
                         bold = true,
                         onClick = { onMonthChange(monthNumber) }
@@ -355,10 +355,10 @@ private fun BenefitSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) 
         onCheckedChange = onCheckedChange,
         titleMaxLines = 1,
         switchColors = SwitchDefaults.colors(
-            checkedThumbColor = THEME.textDark,
-            checkedTrackColor = THEME.compTime,
-            uncheckedThumbColor = THEME.textMuted,
-            uncheckedTrackColor = THEME.bgCard
+            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+            checkedTrackColor = MaterialTheme.extendedColors.compTime,
+            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainer
         )
     )
 }
@@ -377,8 +377,8 @@ private fun SeniorityFactorDropdown(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(46.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = { expanded = true }
@@ -392,7 +392,7 @@ private fun SeniorityFactorDropdown(
                         text = {
                             Text(
                                 text = factor.label,
-                                color = THEME.textPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         },
@@ -409,7 +409,7 @@ private fun SeniorityFactorDropdown(
 
 @Composable
 private fun SeniorityPreviewBox(preview: SeniorityPreview) {
-    PreviewBox(color = if (preview.fullAccountingYears > 0) THEME.compTime else THEME.textMuted) {
+    PreviewBox(color = if (preview.fullAccountingYears > 0) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.onSurfaceVariant) {
         PreviewText("Efektivni staž: ${formatSeniorityMonths(preview.effectiveMonths)}")
         PreviewText("Obračunski staž: ${formatSeniorityMonths(preview.accountingMonths.roundToInt())}")
         PreviewText("Minuli rad: ${formatPercent(preview.percent)}%")
@@ -418,7 +418,7 @@ private fun SeniorityPreviewBox(preview: SeniorityPreview) {
 
 @Composable
 private fun PayslipEstimateBox(estimate: PayslipSeniorityEstimate) {
-    PreviewBox(color = THEME.compTime) {
+    PreviewBox(color = MaterialTheme.extendedColors.compTime) {
         PreviewText("Procena, mesec početka nije poznat")
         PreviewText("Obračunski staž: ${estimate.accountingFullYears} god.")
         PreviewText("Efektivni staž: ${formatYearsDecimal(estimate.estimatedEffectiveYears)} god.")
@@ -426,7 +426,7 @@ private fun PayslipEstimateBox(estimate: PayslipSeniorityEstimate) {
         if (estimate.rounded) {
             Text(
                 text = "Procenat nije tačno ceo broj godina po stopi 0.5%, vrednost je zaokružena.",
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -456,7 +456,7 @@ private fun PreviewBox(color: androidx.compose.ui.graphics.Color, content: @Comp
 private fun PreviewText(text: String) {
     Text(
         text = text,
-        color = THEME.compTime,
+        color = MaterialTheme.extendedColors.compTime,
         modifier = Modifier.fillMaxWidth(),
         style = MaterialTheme.typography.labelMedium.copy(textAlign = TextAlign.Center),
         maxLines = 1,

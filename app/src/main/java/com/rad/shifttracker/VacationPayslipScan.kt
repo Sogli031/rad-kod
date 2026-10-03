@@ -86,25 +86,25 @@ internal fun VacationPayslipScanCard() {
                     LinearProgressIndicator(
                         progress = { current.done.toFloat() / current.total },
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = THEME.vacation,
-                        trackColor = THEME.bgCard
+                        color = MaterialTheme.extendedColors.vacation,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 } else {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = THEME.vacation,
-                        trackColor = THEME.bgCard
+                        color = MaterialTheme.extendedColors.vacation,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 }
                 Text(
                     text = if (current.total > 0) "Čitam liste... ${current.done} / ${current.total}" else "Tražim mejlove...",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             is VacationScanState.Result -> Text(
                 text = current.text,
-                color = if (current.ok) THEME.textPrimary else THEME.warning,
+                color = if (current.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.bodyMedium
             )
             VacationScanState.Idle -> Unit
@@ -113,9 +113,9 @@ internal fun VacationPayslipScanCard() {
             RoundedButton(
                 text = "Proveri po listama iz Gmail-a",
                 modifier = Modifier.fillMaxWidth().height(UI.buttonHeight.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
-                borderColor = THEME.glassBorder,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = {
                     if (!hasGmailPayslipAccess(context)) {

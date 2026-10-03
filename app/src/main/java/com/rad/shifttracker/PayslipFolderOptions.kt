@@ -100,8 +100,8 @@ internal fun PayslipFolderSettingsSection() {
                 modifier = Modifier
                     .width(96.dp)
                     .height(UI.buttonHeight.dp),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = {
                     settings.folder = folderInput
@@ -118,15 +118,15 @@ internal fun PayslipFolderSettingsSection() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = { runCatching { folderPicker.launch(null) } }
         )
         Text(
             text = "$PAYSLIP_FOLDER_ACCESS_LABEL: ${payslipFolderAccessStatusText(hasAccess)}",
-            color = if (hasAccess) THEME.success else THEME.warning,
+            color = if (hasAccess) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.warning,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -136,9 +136,9 @@ internal fun PayslipFolderSettingsSection() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = { openPayslipFolderAccessSettings(context) }
         )
@@ -232,7 +232,7 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
     ) {
         Text(
             text = gmailPayslipAccessStatusText(accountEmail),
-            color = if (accountEmail != null) THEME.success else THEME.warning,
+            color = if (accountEmail != null) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.warning,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -249,9 +249,9 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = connector.connect
         )
@@ -260,8 +260,8 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.accentPrimary,
-            textColor = THEME.textDark,
+            bgColor = MaterialTheme.colorScheme.primary,
+            textColor = MaterialTheme.colorScheme.onPrimary,
             bold = true,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = { recheckOpen = true }

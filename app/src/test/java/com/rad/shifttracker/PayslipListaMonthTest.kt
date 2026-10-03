@@ -53,7 +53,7 @@ class PayslipListaMonthTest {
         val repo = testRepository()
         val check = buildPayslipReconciliation(repo, august())
 
-        assertEquals("U ovom mesecu nema upisanih dana.", payslipCompareVerdict(check).first)
+        assertEquals("U ovom mesecu nema upisanih dana.", payslipCompareVerdict(check, DarkExtendedColors).first)
         assertTrue(check.rows.any { it.label == "Godišnji odmor (10)" && !it.matches })
     }
 
@@ -295,7 +295,7 @@ class PayslipListaMonthTest {
         val check = PayslipReconciliation(MonthKey(2026, 8), hasAppData = true, rows = rows)
 
         assertTrue(rows.filter { it.label in PAYSLIP_TOTAL_ROWS }.all { it.isTotal })
-        assertEquals("Sve se slaže sa listom.", payslipCompareVerdict(check).first)
+        assertEquals("Sve se slaže sa listom.", payslipCompareVerdict(check, DarkExtendedColors).first)
     }
 
     @Test
@@ -306,7 +306,7 @@ class PayslipListaMonthTest {
         ) + totalRows()
         val check = PayslipReconciliation(MonthKey(2026, 8), hasAppData = true, rows = rows)
 
-        assertEquals("2 stavke se ne slažu (označeno sa ✗).", payslipCompareVerdict(check).first)
+        assertEquals("2 stavke se ne slažu (označeno sa ✗).", payslipCompareVerdict(check, DarkExtendedColors).first)
     }
 
     @Test

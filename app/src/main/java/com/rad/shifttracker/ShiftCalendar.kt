@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -87,7 +88,7 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AutoSizeText(
                 text = MONTH_NAMES[month],
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
@@ -96,7 +97,7 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
             )
             Text(
                 text = year.toString(),
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 modifier = Modifier.alignByBaseline()
             )
@@ -146,7 +147,7 @@ internal fun WeekdayHeader() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         WEEKDAY_NAMES.forEachIndexed { index, name ->
-            val color = if (index >= 5) THEME.weekendOt.copy(alpha = 0.75f) else THEME.textMuted
+            val color = if (index >= 5) MaterialTheme.extendedColors.weekendOt.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
             Text(
                 text = name,
                 color = color,
@@ -241,21 +242,27 @@ private fun RowScope.DayButton(
 
     val isHolidayDay = record?.holidayOverride ?: isSerbianHoliday(year, month, day)
     val workedHoliday = record?.workedOnHoliday ?: false
-    val tint = calendarDayTint(record, isHolidayDay, workedHoliday)
+    val tint = calendarDayTint(
+        record,
+        isHolidayDay,
+        workedHoliday,
+        MaterialTheme.colorScheme,
+        MaterialTheme.extendedColors
+    )
     val detailText = calendarDayDetailText(record, isHolidayDay, workedHoliday)
     val detailLines = detailText.split("\n")
 
     val doubleIndicatorColor = if (record?.isDoubleShift == true && record.shift2 != null) {
-        if (record.isCompTimeOvertime) THEME.compTime else record.shift2.color
+        if (record.isCompTimeOvertime) MaterialTheme.extendedColors.compTime else record.shift2.color
     } else {
         null
     }
 
     val compIndicatorColor = if (record != null) {
         when {
-            record.hoursDeficitMinutesFor(brigadeType) > 0 -> THEME.compTimeDeficit
-            record.compHoursUsed > 0 -> THEME.compTimeUsed
-            record.compensatoryAdditionalWorkMinutes > 0 -> THEME.compTime
+            record.hoursDeficitMinutesFor(brigadeType) > 0 -> MaterialTheme.extendedColors.compTimeDeficit
+            record.compHoursUsed > 0 -> MaterialTheme.extendedColors.compTimeUsed
+            record.compensatoryAdditionalWorkMinutes > 0 -> MaterialTheme.extendedColors.compTime
             else -> null
         }
     } else {
@@ -329,7 +336,7 @@ private fun RowScope.DayButton(
                 val isLeaveLabel = record?.shift == Shift.VACATION || record?.shift == Shift.SICK
                 AutoSizeText(
                     text = detailLines[1],
-                    color = if (isLeaveLabel) tint.detail else THEME.textMuted,
+                    color = if (isLeaveLabel) tint.detail else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Medium,
                         lineHeight = 12.sp,
@@ -390,50 +397,36 @@ internal data class CalendarDayTint(
     val detail: Color
 )
 
-private fun tintFor(color: Color): CalendarDayTint = CalendarDayTint(
+private fun tintFor(color: Color, colors: ExtendedColors): CalendarDayTint = CalendarDayTint(
     background = color.copy(alpha = DAY_TINT_ALPHA),
     border = color.copy(alpha = DAY_TINT_BORDER_ALPHA),
     dayNumber = color,
-    detail = THEME.textSecondary
+    detail = colors.textSecondary
 )
 
 /** Prazan dan i slobodan dan su "tihi": bez pozadine, jedva vidljiv okvir. */
-private fun quietTint(dayNumber: Color, detail: Color): CalendarDayTint = CalendarDayTint(
+private fun quietTint(dayNumber: Color, detail: Color, scheme: ColorScheme): CalendarDayTint = CalendarDayTint(
     background = Color.Transparent,
-    border = THEME.empty.copy(alpha = 0.7f),
+    border = scheme.surfaceContainerHighest.copy(alpha = 0.7f),
     dayNumber = dayNumber,
     detail = detail
 )
 
+/** Boje ćelije iz teme; čista funkcija (bez kompozicije), pa je testabilna za svaku temu. */
 internal fun calendarDayTint(
     record: DayRecord?,
     isHolidayDay: Boolean,
-    workedHoliday: Boolean
+    workedHoliday: Boolean,
+    scheme: ColorScheme,
+    colors: ExtendedColors
 ): CalendarDayTint {
-    if (isHolidayDay || workedHoliday) return tintFor(THEME.warning)
-    if (record == null) return quietTint(dayNumber = THEME.textMuted, detail = THEME.textFaint)
+    if (isHolidayDay || workedHoliday) return tintFor(colors.warning, colors)
+    if (record == null) return quietTint(dayNumber = scheme.onSurfaceVariant, detail = colors.textFaint, scheme = scheme)
     return if (record.shift == Shift.OFF) {
-        quietTint(dayNumber = THEME.textFaint, detail = THEME.textFaint)
+        quietTint(dayNumber = colors.textFaint, detail = colors.textFaint, scheme = scheme)
     } else {
-        tintFor(record.shift.color)
+        tintFor(record.shift.colorIn(colors), colors)
     }
-}
-
-// Zadržano radi postojećih testova i poziva; novi kalendar koristi calendarDayTint.
-internal fun calendarDayBackgroundColor(
-    isHolidayDay: Boolean,
-    workedHoliday: Boolean,
-    defaultBackground: Color
-): Color {
-    return if (isHolidayDay || workedHoliday) THEME.warning else defaultBackground
-}
-
-internal fun calendarDayTextColor(
-    isHolidayDay: Boolean,
-    workedHoliday: Boolean,
-    defaultTextColor: Color
-): Color {
-    return if (isHolidayDay || workedHoliday) THEME.textDark else defaultTextColor
 }
 
 internal fun calendarDayDetailText(

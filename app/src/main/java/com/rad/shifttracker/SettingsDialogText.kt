@@ -1,5 +1,8 @@
 package com.rad.shifttracker
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -57,11 +60,13 @@ internal fun filterSignedDecimalInput(value: String): String {
     return if (value.trimStart().startsWith("-")) "-$unsigned" else unsigned
 }
 
+@Composable
+@ReadOnlyComposable
 internal fun absenceNetDifferenceColor(value: Double): Color {
     return when {
-        value > 0.5 -> THEME.success
-        value < -0.5 -> THEME.danger
-        else -> THEME.textSecondary
+        value > 0.5 -> MaterialTheme.extendedColors.success
+        value < -0.5 -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.extendedColors.textSecondary
     }
 }
 

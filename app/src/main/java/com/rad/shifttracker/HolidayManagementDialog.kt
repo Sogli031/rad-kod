@@ -76,8 +76,8 @@ fun HolidayManagementDialog(
                     modifier = Modifier
                         .weight(1f)
                         .height(UI.buttonHeight.dp),
-                    bgColor = THEME.warning,
-                    textColor = THEME.textDark,
+                    bgColor = MaterialTheme.extendedColors.warning,
+                    textColor = MaterialTheme.colorScheme.onPrimary,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
                     onClick = {
@@ -140,18 +140,18 @@ private fun HolidayEntryRow(
         HolidayEntrySource.OFFICIAL -> "Zvanični"
         HolidayEntrySource.MANUAL -> "Ručni"
     }
-    val stateColor = if (entry.isActive) THEME.warning else THEME.textMuted
+    val stateColor = if (entry.isActive) MaterialTheme.extendedColors.warning else MaterialTheme.colorScheme.onSurfaceVariant
     LabeledCheckboxRow(
         checked = entry.isActive,
         onCheckedChange = onActiveChange,
         modifier = Modifier
             .heightIn(min = 64.dp)
             .clip(MaterialTheme.shapes.medium)
-            .background(THEME.bgCardElevated.copy(alpha = 0.72f)),
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)),
         checkboxColors = CheckboxDefaults.colors(
-            checkedColor = THEME.warning,
-            uncheckedColor = THEME.textMuted,
-            checkmarkColor = THEME.textDark
+            checkedColor = MaterialTheme.extendedColors.warning,
+            uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            checkmarkColor = MaterialTheme.colorScheme.onPrimary
         ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
     ) {
@@ -161,7 +161,7 @@ private fun HolidayEntryRow(
         ) {
             Text(
                 text = entry.name,
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -172,7 +172,7 @@ private fun HolidayEntryRow(
                     entry.month,
                     entry.year
                 ),
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

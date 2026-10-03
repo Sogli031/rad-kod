@@ -87,25 +87,25 @@ internal fun StatsSection(
         StatItem(
             WORK_HOURS_CARD_LABEL,
             formatHours(summary.workHours),
-            THEME.textPrimary,
+            MaterialTheme.colorScheme.onSurface,
             onClick = onWorkHoursClick
         ),
         StatItem(
             "Prekovremeno",
             formatHours(summary.overtimeHours),
-            if (summary.overtimeHours > 0) THEME.weekendOt else THEME.textMuted,
+            if (summary.overtimeHours > 0) MaterialTheme.extendedColors.weekendOt else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onOvertimeClick
         ),
         StatItem(
             "Hrana",
             formatNumber(summary.foodAllowance),
-            if (summary.foodAllowance > 0) THEME.success else THEME.textMuted,
+            if (summary.foodAllowance > 0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onFoodClick
         ),
         StatItem(
             minuliLabel,
             formatNumber(payBreakdown.netSeniorityBonus),
-            if (payBreakdown.netSeniorityBonus > 0) THEME.compTime else THEME.textMuted,
+            if (payBreakdown.netSeniorityBonus > 0) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onMinuliClick
         )
     )
@@ -122,7 +122,7 @@ internal fun StatsSection(
                         modifier = Modifier
                             .fillMaxHeight()
                             .width(1.dp)
-                            .background(THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA))
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
                     )
                 }
                 val clickModifier = stat.onClick?.let { Modifier.radClickable(onClick = it) } ?: Modifier
@@ -150,7 +150,7 @@ internal fun TotalCard(
         label = totalCardLabel(receipt.year, receipt.month),
         amount = mainPayCardAmount(receipt, includeTransport),
         isAvailable = receipt.isSalaryAvailable,
-        amountColor = THEME.textPrimary,
+        amountColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
         showTopDivider = true,
         onClick = onClick
@@ -168,7 +168,7 @@ internal fun SalaryCard(
         label = salaryCardLabel(month),
         amount = mainPayCardAmount(nextMonthReceipt, includeTransport),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
-        amountColor = THEME.accentPrimary,
+        amountColor = MaterialTheme.colorScheme.primary,
         shape = if (SHOW_TOTAL_CARD) {
             MaterialTheme.shapes.medium.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize)
         } else {
@@ -198,7 +198,7 @@ private fun PayAmountCard(
     val totalText = if (isAvailable) {
         "${formatCurrency(amount)} ${CONFIG.pay.currency}"
     } else TOTAL_CARD_UNAVAILABLE_TEXT
-    val totalColor = if (isAvailable) amountColor else THEME.warning
+    val totalColor = if (isAvailable) amountColor else MaterialTheme.extendedColors.warning
     val clickModifier = if (onClick != null) Modifier.radClickable(onClick = onClick) else Modifier
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
     Box(
@@ -220,7 +220,7 @@ private fun PayAmountCard(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(horizontal = 14.dp),
-                color = THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA)
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
             )
         }
         Row(
@@ -231,7 +231,7 @@ private fun PayAmountCard(
         ) {
             AutoSizeText(
                 text = label,
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Start),
                 maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
                 minFontSize = MaterialTheme.typography.labelSmall.fontSize,

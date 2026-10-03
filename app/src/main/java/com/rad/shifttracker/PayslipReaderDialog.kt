@@ -125,7 +125,7 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
 
         reconciliation?.let { check ->
             SectionLabel(text = "Poređenje sa upisanim danima")
-            val (text, color) = payslipCompareVerdict(check)
+            val (text, color) = payslipCompareVerdict(check, MaterialTheme.extendedColors)
             ReaderText(text, color = color)
             PayslipReconciliationCard(check)
         }
@@ -288,7 +288,7 @@ private fun MissingPayslipSection(
     val hit = scan.found
     if (hit != null) {
         PopupCard {
-            ReaderText("Nađena lista za ${monthYearText(month)}", color = THEME.success)
+            ReaderText("Nađena lista za ${monthYearText(month)}", color = MaterialTheme.extendedColors.success)
             ReaderText(hit.fileName)
         }
     }
@@ -310,9 +310,9 @@ private fun MissingPayslipSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelMedium,
             onClick = onPick
         )
@@ -328,7 +328,7 @@ private fun ReaderMessage(message: Pair<String, Boolean>?) {
     if (isError) {
         FormErrorText(message = text, style = MaterialTheme.typography.bodySmall, maxLines = 5)
     } else {
-        ReaderText(text, color = THEME.success, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        ReaderText(text, color = MaterialTheme.extendedColors.success, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
     }
 }
 
@@ -349,9 +349,9 @@ private fun PayslipFileActions(isReading: Boolean, onReplace: () -> Unit, onDele
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight(),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.textPrimary,
-            borderColor = THEME.glassBorder,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = onReplace
@@ -361,9 +361,9 @@ private fun PayslipFileActions(isReading: Boolean, onReplace: () -> Unit, onDele
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight(),
-            bgColor = THEME.bgCardElevated,
-            textColor = THEME.danger,
-            borderColor = THEME.danger,
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.error,
+            borderColor = MaterialTheme.colorScheme.error,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = onDelete
@@ -380,7 +380,7 @@ private fun PayslipDeleteDialog(month: MonthKey, onConfirm: () -> Unit, onDismis
         PopupCard {
             Text(
                 text = "Obrisati listu za ${monthYearText(month)}?",
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -395,9 +395,9 @@ private fun PayslipDeleteDialog(month: MonthKey, onConfirm: () -> Unit, onDismis
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                bgColor = THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
-                borderColor = THEME.glassBorder,
+                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = onDismiss
@@ -441,12 +441,12 @@ internal fun payslipWrongMonthError(scanned: MonthKey, selected: MonthKey): Stri
     }
 
 /** Broje se samo stvarne stavke; bruto, neto i za isplatu su zbirovi i ne ulaze u neslaganje. */
-internal fun payslipCompareVerdict(check: PayslipReconciliation): Pair<String, Color> {
+internal fun payslipCompareVerdict(check: PayslipReconciliation, colors: ExtendedColors): Pair<String, Color> {
     val mismatches = check.rows.count { !it.isTotal && !it.matches }
     return when {
-        !check.hasAppData -> "U ovom mesecu nema upisanih dana." to THEME.warning
-        mismatches == 0 -> "Sve se slaže sa listom." to THEME.success
-        else -> "${payslipMismatchCountText(mismatches)} (označeno sa ✗)." to THEME.warning
+        !check.hasAppData -> "U ovom mesecu nema upisanih dana." to colors.warning
+        mismatches == 0 -> "Sve se slaže sa listom." to colors.success
+        else -> "${payslipMismatchCountText(mismatches)} (označeno sa ✗)." to colors.warning
     }
 }
 
@@ -491,14 +491,14 @@ private fun ReaderValueRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = label,
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
-            color = THEME.textPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -507,7 +507,7 @@ private fun ReaderValueRow(label: String, value: String) {
 }
 
 @Composable
-internal fun ReaderText(text: String, color: Color = THEME.textMuted, modifier: Modifier = Modifier) {
+internal fun ReaderText(text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant, modifier: Modifier = Modifier) {
     Text(
         text = text,
         color = color,

@@ -38,7 +38,7 @@ fun CrashLogScreen(crashLog: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(THEME.bgDark)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Column(
@@ -49,7 +49,7 @@ fun CrashLogScreen(crashLog: String) {
 
             Text(
                 text = "Aplikacija je pukla",
-                color = THEME.danger,
+                color = MaterialTheme.colorScheme.error,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -64,13 +64,13 @@ fun CrashLogScreen(crashLog: String) {
                     copied = true
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (copied) THEME.success else THEME.danger
+                    containerColor = if (copied) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error
                 ),
                 modifier = Modifier.fillMaxWidth(0.7f)
             ) {
                 Text(
                     text = if (copied) "Kopirano!" else "Kopiraj crash log",
-                    color = THEME.textPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -82,7 +82,7 @@ fun CrashLogScreen(crashLog: String) {
                     .fillMaxWidth()
                     .weight(1f)
                     .background(
-                        color = THEME.bgCard,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = MaterialTheme.shapes.small
                     )
                     .padding(12.dp)
@@ -91,7 +91,7 @@ fun CrashLogScreen(crashLog: String) {
             ) {
                 Text(
                     text = crashLog,
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     lineHeight = 16.sp

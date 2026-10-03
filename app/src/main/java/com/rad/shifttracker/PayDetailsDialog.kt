@@ -66,7 +66,7 @@ fun PayDetailsDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(THEME.bgDark)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(safeDrawingPadding)
         ) {
             Column(
@@ -89,22 +89,22 @@ fun PayDetailsDialog(
                 )
 
                 PayDetailsSectionCard(title = "Isplata") {
-                    CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, THEME.accentPrimary)
+                    CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
                     CompactMoneyRowIf(
                         monthlyReceipt.regressNetPay > 0.0,
                         payDetailsRegressLabel(monthlyReceipt),
                         monthlyReceipt.regressNetPay,
-                        THEME.success
+                        MaterialTheme.extendedColors.success
                     )
                     CompactInfoRow(
                         payDetailsTransportLabel(monthlyReceipt),
                         payDetailsTransportAmountText(monthlyReceipt),
-                        if (monthlyReceipt.transportAmount > 0.0) THEME.success else THEME.textMuted
+                        if (monthlyReceipt.transportAmount > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     CompactMoneyRow(
                         payDetailsTotalLabel(monthlyReceipt),
                         monthlyReceipt.totalReceivedThisMonth,
-                        THEME.accentPrimary
+                        MaterialTheme.colorScheme.primary
                     )
                     FinalPaymentRows(
                         finalPayment = monthlyFinalPaymentBreakdown,
@@ -131,29 +131,29 @@ fun PayDetailsDialog(
                 PayDetailsSectionCard(title = "Godišnji prosek neto plate") {
                     val labels = annualNetPayAverageLabels()
                     if (annualNetPayAverages.monthCount > 0) {
-                        CompactMoneyRow(labels[0], annualNetPayAverages.averagePay, THEME.accentPrimary)
+                        CompactMoneyRow(labels[0], annualNetPayAverages.averagePay, MaterialTheme.colorScheme.primary)
                         CompactMoneyRow(labels[1], annualNetPayAverages.averagePayWithoutRegress)
-                        CompactMoneyRow(labels[2], annualNetPayAverages.averagePayWithoutThirdShift, THEME.shift2)
+                        CompactMoneyRow(labels[2], annualNetPayAverages.averagePayWithoutThirdShift, MaterialTheme.extendedColors.shift2)
                     } else {
                         Text(
                             text = ANNUAL_NET_PAY_AVERAGE_EMPTY_TEXT,
-                            color = THEME.warning,
+                            color = MaterialTheme.extendedColors.warning,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                     Text(
                         text = ANNUAL_NET_PAY_AVERAGE_HINT_TEXT,
-                        color = THEME.textMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
                     SectionLabel(text = RECENT_NET_PAY_AVERAGE_SECTION_LABEL)
                     val recentAverage = recentNetPayAverage.averageNetPay
                     if (recentAverage != null) {
-                        CompactMoneyRow(RECENT_NET_PAY_AVERAGE_VALUE_LABEL, recentAverage, THEME.accentPrimary)
+                        CompactMoneyRow(RECENT_NET_PAY_AVERAGE_VALUE_LABEL, recentAverage, MaterialTheme.colorScheme.primary)
                     } else {
                         Text(
                             text = RECENT_NET_PAY_AVERAGE_UNAVAILABLE_TEXT,
-                            color = THEME.warning,
+                            color = MaterialTheme.extendedColors.warning,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -178,21 +178,21 @@ private fun PayDetailsHeroCard(
     PopupCard {
         Text(
             text = paymentTitle,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             text = payrollTitle,
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         AutoSizeText(
             text = receiptText,
-            color = if (receiptAvailable) THEME.accentPrimary else THEME.warning,
+            color = if (receiptAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.warning,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Start
@@ -205,7 +205,7 @@ private fun PayDetailsHeroCard(
         receiptDescription?.let {
             Text(
                 text = it,
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
@@ -233,19 +233,19 @@ private fun FinalPaymentRows(
 ) {
     SectionLabel(text = FINAL_PAYMENT_REMAINING_LABEL)
     if (!finalPayment.isNetPayAvailable) {
-        CompactTextBlock(FINAL_PAYMENT_REMAINING_LABEL, FINAL_PAYMENT_UNAVAILABLE_TEXT, THEME.warning)
+        CompactTextBlock(FINAL_PAYMENT_REMAINING_LABEL, FINAL_PAYMENT_UNAVAILABLE_TEXT, MaterialTheme.extendedColors.warning)
     } else {
-        CompactMoneyRow(FINAL_PAYMENT_NET_PAY_LABEL, finalPayment.netPayBeforeAdvance, THEME.accentPrimary)
+        CompactMoneyRow(FINAL_PAYMENT_NET_PAY_LABEL, finalPayment.netPayBeforeAdvance, MaterialTheme.colorScheme.primary)
         CompactInfoRow(
             FINAL_PAYMENT_ADVANCE_LABEL,
             deductionMoneyText(finalPayment.advancePaymentNet),
-            if (finalPayment.advancePaymentNet > 0.0) THEME.warning else THEME.textMuted
+            if (finalPayment.advancePaymentNet > 0.0) MaterialTheme.extendedColors.warning else MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (finalPayment.deductionsNet > 0.0) {
             CompactInfoRow(
                 FINAL_PAYMENT_DEDUCTIONS_LABEL,
                 deductionMoneyText(finalPayment.deductionsNet),
-                THEME.danger
+                MaterialTheme.colorScheme.error
             )
             finalPayment.deductions.forEach { deduction ->
                 CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
@@ -254,19 +254,19 @@ private fun FinalPaymentRows(
         CompactMoneyRow(
             FINAL_PAYMENT_REMAINING_20_LABEL,
             finalPayment.finalRemainingNetPay,
-            THEME.accentPrimary
+            MaterialTheme.colorScheme.primary
         )
         if (finalPayment.remainingRegressNetPay > 0.0) {
             CompactMoneyRow(
                 FINAL_PAYMENT_REMAINING_REGRESS_LABEL,
                 finalPayment.remainingRegressNetPay,
-                THEME.success
+                MaterialTheme.extendedColors.success
             )
         }
         if (finalPayment.advanceExceedsCalculatedNetPay) {
             Text(
                 text = FINAL_PAYMENT_ADVANCE_WARNING_TEXT,
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -283,7 +283,7 @@ private fun FinalPaymentRows(
 private fun CompactMoneyRow(
     label: String,
     value: Double,
-    color: Color = THEME.textPrimary
+    color: Color = MaterialTheme.colorScheme.onSurface
 ) {
     CompactInfoRow(label, moneyText(value), color)
 }
@@ -293,7 +293,7 @@ private fun CompactMoneyRowIf(
     visible: Boolean,
     label: String,
     value: Double,
-    color: Color = THEME.textPrimary
+    color: Color = MaterialTheme.colorScheme.onSurface
 ) {
     if (visible) {
         CompactMoneyRow(label, value, color)
@@ -304,7 +304,7 @@ private fun CompactMoneyRowIf(
 private fun CompactInfoRow(
     label: String,
     value: String,
-    color: Color = THEME.textPrimary,
+    color: Color = MaterialTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -314,7 +314,7 @@ private fun CompactInfoRow(
     ) {
         AutoSizeText(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodySmall.fontSize,
@@ -343,7 +343,7 @@ private fun CompactDeductionDetailRow(
     CompactInfoRow(
         label = label,
         value = deductionMoneyText(value),
-        color = THEME.danger,
+        color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(start = UI.largeSpacing.dp)
     )
 }
@@ -352,12 +352,12 @@ private fun CompactDeductionDetailRow(
 private fun CompactTextBlock(
     label: String,
     value: String,
-    color: Color = THEME.textPrimary
+    color: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -377,7 +377,7 @@ private fun CompactInfoRowIf(
     visible: Boolean,
     label: String,
     value: String,
-    color: Color = THEME.textPrimary
+    color: Color = MaterialTheme.colorScheme.onSurface
 ) {
     if (visible) {
         CompactInfoRow(label, value, color)

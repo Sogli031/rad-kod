@@ -42,8 +42,8 @@ internal fun AutoFillModeGrid(
                             .weight(1f)
                             .heightIn(min = AUTO_FILL_MODE_CHOICE_HEIGHT.dp)
                             .fillMaxHeight(),
-                        bgColor = if (isSelected) THEME.accentSecondary else THEME.bgCardElevated,
-                        textColor = THEME.textPrimary,
+                        bgColor = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        textColor = MaterialTheme.colorScheme.onSurface,
                         textStyle = MaterialTheme.typography.labelLarge,
                         bold = true,
                         onClick = { onModeSelected(mode) }
@@ -103,8 +103,8 @@ internal fun AutoFillBlockDayGrid(
                     .weight(1f)
                     .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
                     .fillMaxHeight(),
-                bgColor = if (isSelected) THEME.accentSecondary else THEME.bgCardElevated,
-                textColor = THEME.textPrimary,
+                bgColor = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelLarge,
                 bold = true,
                 onClick = { onSelected(index) }

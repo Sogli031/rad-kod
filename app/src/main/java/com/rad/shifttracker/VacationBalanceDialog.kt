@@ -95,33 +95,33 @@ fun VacationBalanceDialog(
         PopupCard {
             SectionLabel(text = "Stanje")
             if (beforeJuly) {
-                VacationStateRow("Stari odmor:", "${formatVacationInput(summary.availableNow)} dana", THEME.vacation)
+                VacationStateRow("Stari odmor:", "${formatVacationInput(summary.availableNow)} dana", MaterialTheme.extendedColors.vacation)
                 if (summary.carryoverInitial > 0.0) {
                     VacationStateRow(
                         "Stari potrošeno:",
                         "${formatVacationInput(summary.carryoverUsed)}/${formatVacationInput(summary.carryoverInitial)}",
-                        THEME.textPrimary
+                        MaterialTheme.colorScheme.onSurface
                     )
-                    VacationStateRow("Stari važi do:", currentYearAvailableFrom, THEME.textPrimary)
+                    VacationStateRow("Stari važi do:", currentYearAvailableFrom, MaterialTheme.colorScheme.onSurface)
                 }
                 VacationStateRow(
                     "Novi odmor:",
                     "${formatVacationInput(summary.currentYearRemaining)} dana od $currentYearAvailableFrom",
-                    THEME.info
+                    MaterialTheme.extendedColors.info
                 )
             } else {
-                VacationStateRow("Novi odmor:", "${formatVacationInput(summary.currentYearRemaining)} dana", THEME.vacation)
+                VacationStateRow("Novi odmor:", "${formatVacationInput(summary.currentYearRemaining)} dana", MaterialTheme.extendedColors.vacation)
                 VacationStateRow(
                     "Potrošeno:",
                     "${formatVacationInput(summary.currentYearUsed)}/${formatVacationInput(summary.currentYearTotal)}",
-                    THEME.textPrimary
+                    MaterialTheme.colorScheme.onSurface
                 )
-                VacationStateRow("Važi do:", currentYearExpiresOn, THEME.textPrimary)
+                VacationStateRow("Važi do:", currentYearExpiresOn, MaterialTheme.colorScheme.onSurface)
                 if (summary.carryoverExpired > 0.0) {
                     VacationStateRow(
                         "Propalo starog:",
                         "${formatVacationInput(summary.carryoverExpired)} dana",
-                        THEME.danger
+                        MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -129,12 +129,12 @@ fun VacationBalanceDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(THEME.danger.copy(alpha = 0.2f), MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f), MaterialTheme.shapes.small)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Prekora\u010den fond godi\u0161njeg!",
-                        color = THEME.danger,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
@@ -152,15 +152,15 @@ fun VacationBalanceDialog(
             if (summary.usageByMonth.isEmpty() && summary.carryoverUsed == 0.0) {
                 Text(
                     text = "Nema godišnjeg ni na listama ni u kalendaru.",
-                    color = THEME.textMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             summary.usageByMonth.forEach { usage ->
-                VacationStateRow("${MONTH_NAMES[usage.month]}:", vacationMonthUsageText(usage), THEME.textPrimary)
+                VacationStateRow("${MONTH_NAMES[usage.month]}:", vacationMonthUsageText(usage), MaterialTheme.colorScheme.onSurface)
             }
             savedBalance?.currentYearDaysUsedBeforeAvailability?.takeIf { it > 0.0 }?.let { outside ->
-                VacationStateRow("Van aplikacije:", "${formatVacationInput(outside)} dana", THEME.textPrimary)
+                VacationStateRow("Van aplikacije:", "${formatVacationInput(outside)} dana", MaterialTheme.colorScheme.onSurface)
             }
         }
 
@@ -194,7 +194,7 @@ fun VacationBalanceDialog(
             }
             Text(
                 text = VACATION_SETUP_HINT,
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall
             )
             errorMessage?.let { message ->
@@ -225,7 +225,7 @@ private fun VacationStateRow(label: String, value: String, valueColor: Color) {
     ) {
         Text(
             text = label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

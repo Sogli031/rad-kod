@@ -112,7 +112,7 @@ fun SickVacationDialog(
                 }
                 Text(
                     text = "${MONTH_NAMES[month]} $year",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -269,7 +269,7 @@ private fun VacationRangePreviewCard(preview: VacationRangePreview) {
         SectionLabel(text = "Godišnji")
         Text(
             text = vacationRangePreviewText(preview),
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -277,7 +277,7 @@ private fun VacationRangePreviewCard(preview: VacationRangePreview) {
         for (warning in preview.warnings) {
             Text(
                 text = warning,
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -297,7 +297,7 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
         if (impact == null) {
             Text(
                 text = "Unesi opseg dana za procenu.",
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -308,7 +308,7 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
         if (impact.affectedDays == 0) {
             Text(
                 text = "U opsegu nema radnih dana za upis.",
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -323,8 +323,8 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodySmall,
             valueStyle = MaterialTheme.typography.bodyMedium,
-            labelColor = THEME.textMuted,
-            valueColor = THEME.textSecondary,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            valueColor = MaterialTheme.extendedColors.textSecondary,
             valueFontWeight = FontWeight.Bold
         )
         ResponsiveInfoRow(
@@ -334,8 +334,8 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodySmall,
             valueStyle = MaterialTheme.typography.bodyMedium,
-            labelColor = THEME.textMuted,
-            valueColor = THEME.textSecondary,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            valueColor = MaterialTheme.extendedColors.textSecondary,
             valueFontWeight = FontWeight.Bold
         )
         ResponsiveInfoRow(
@@ -345,14 +345,14 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodyMedium,
             valueStyle = MaterialTheme.typography.titleMedium,
-            labelColor = THEME.textSecondary,
+            labelColor = MaterialTheme.extendedColors.textSecondary,
             valueColor = differenceColor,
             valueFontWeight = FontWeight.Bold
         )
 
         Text(
             text = absenceReplacementText(impact),
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis

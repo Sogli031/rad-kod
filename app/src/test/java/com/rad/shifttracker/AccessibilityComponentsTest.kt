@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -171,8 +172,8 @@ class AccessibilityComponentsTest {
                     RoundedButton(
                         text = "Mali",
                         modifier = Modifier.height(36.dp),
-                        bgColor = THEME.bgCardElevated,
-                        textColor = THEME.textPrimary,
+                        bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        textColor = MaterialTheme.colorScheme.onSurface,
                         onClick = {}
                     )
                     GlowButton(text = "Sačuvaj", modifier = Modifier.height(40.dp), onClick = {})
@@ -216,8 +217,8 @@ class AccessibilityComponentsTest {
                 RoundedButton(
                     text = "X",
                     contentDescription = "Ukloni davanje 01.03.2026.",
-                    bgColor = THEME.bgCardElevated,
-                    textColor = THEME.textPrimary,
+                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     onClick = { clicks++ }
                 )
             }

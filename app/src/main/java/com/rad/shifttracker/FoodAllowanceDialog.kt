@@ -37,7 +37,7 @@ fun FoodAllowanceDialog(
             SectionLabel(text = "Dnevni iznos od ${monthYearText(selectedMonth)}")
             Text(
                 text = "Za izabrani mesec: ${formatRateInput(selectedPrice)} ${CONFIG.pay.currency}",
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

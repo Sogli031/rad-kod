@@ -50,6 +50,7 @@ fun DayEditDialog(
     onDismiss: () -> Unit
 ) {
     val dayDate = remember(year, month, day) { LocalDate.of(year, month, day) }
+    val pickerAccent = MaterialTheme.colorScheme.primary
     if (isDayEditLockedByBloodDonation(record)) {
         BloodDonationLockedDayDialog(
             title = "$day. ${MONTH_NAMES[month]}",
@@ -255,7 +256,7 @@ fun DayEditDialog(
                     hoursPicker = HoursPickerState(
                         title = "Izaberi sate",
                         current = workHours1,
-                        accent = THEME.accentPrimary,
+                        accent = pickerAccent,
                         target = HoursTarget.SHIFT1,
                         minHours = 1
                     )
@@ -288,7 +289,7 @@ fun DayEditDialog(
                             hoursPicker = HoursPickerState(
                                 title = "Izaberi prekovremene sate",
                                 current = workHours2,
-                                accent = THEME.accentPrimary,
+                                accent = pickerAccent,
                                 target = HoursTarget.SHIFT2,
                                 minHours = 1
                             )
@@ -385,8 +386,8 @@ private fun DayEditStatusHeader(
         currency = CONFIG.pay.currency
     )
     val netDifferenceColor = when {
-        savedNetDailyPay != null && estimatedNetDailyPay - savedNetDailyPay < 0.0 -> THEME.danger
-        else -> THEME.success
+        savedNetDailyPay != null && estimatedNetDailyPay - savedNetDailyPay < 0.0 -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.extendedColors.success
     }
 
     if (estimatedNetDailyPay > 0.0 || netDifferenceText != null) {
@@ -394,10 +395,10 @@ private fun DayEditStatusHeader(
             DayEditValueRow(
                 label = "Neto procena",
                 value = "${formatNumber(estimatedNetDailyPay)} ${CONFIG.pay.currency}",
-                valueColor = THEME.textPrimary
+                valueColor = MaterialTheme.colorScheme.onSurface
             )
             netDifferenceText?.let { text ->
-                HorizontalDivider(color = THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
                 DayEditValueRow(
                     label = "Razlika",
                     value = text.removePrefix("Razlika: "),
@@ -417,7 +418,7 @@ private fun DayEditValueRow(label: String, value: String, valueColor: Color) {
     ) {
         Text(
             text = label,
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -445,13 +446,13 @@ private fun DayEditHolidayWarningStrip(text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(THEME.warning.copy(alpha = 0.14f))
-            .border(1.dp, THEME.warning.copy(alpha = 0.35f), shape)
+            .background(MaterialTheme.extendedColors.warning.copy(alpha = 0.14f))
+            .border(1.dp, MaterialTheme.extendedColors.warning.copy(alpha = 0.35f), shape)
             .padding(horizontal = 12.dp, vertical = 9.dp)
     ) {
         Text(
             text = text,
-            color = THEME.warning,
+            color = MaterialTheme.extendedColors.warning,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.fillMaxWidth(),
             maxLines = 2,
@@ -474,9 +475,9 @@ internal fun RowScope.DayEditChoiceButton(
 ) {
     val shape = MaterialTheme.shapes.small
     val alpha = if (enabled) 1f else DISABLED_CHOICE_ALPHA
-    val bg = if (selected) THEME.accentPrimary.copy(alpha = alpha) else THEME.bgCardElevated
-    val fg = (if (selected) THEME.textDark else THEME.textSecondary).copy(alpha = alpha)
-    val border = if (selected) THEME.accentPrimary.copy(alpha = alpha) else THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA)
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.surfaceContainerHigh
+    val fg = (if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.extendedColors.textSecondary).copy(alpha = alpha)
+    val border = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
     Box(
         modifier = Modifier
             .weight(1f)
@@ -627,22 +628,22 @@ private fun DayEditValueButton(
         modifier = modifier
             .heightIn(min = UI.buttonHeight.dp)
             .clip(shape)
-            .background(THEME.bgCardElevated)
-            .border(1.dp, THEME.glassBorder.copy(alpha = CARD_BORDER_ALPHA), shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA), shape)
             .radClickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             text = label,
-            color = THEME.textMuted.copy(alpha = alpha),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
             text = value,
-            color = THEME.accentPrimary.copy(alpha = alpha),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -784,7 +785,7 @@ private fun DayEditVacationControls(
         DayEditSectionCard(title = "Godišnji") {
             Text(
                 text = message,
-                color = THEME.warning,
+                color = MaterialTheme.extendedColors.warning,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
@@ -798,7 +799,7 @@ private fun DayEditPaidLeaveControls() {
     DayEditSectionCard(title = DAY_EDIT_PAID_LEAVE_LABEL) {
         Text(
             text = DAY_EDIT_PAID_LEAVE_DETAIL_TEXT,
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -811,7 +812,7 @@ private fun DayEditOffControls() {
     DayEditSectionCard(title = "Nisam radio") {
         Text(
             text = "Bez radnih sati.",
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -839,13 +840,13 @@ private fun DayEditCompensationBlock(
             ) {
                 Text(
                     text = "Bilans sati",
-                    color = THEME.textMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1
                 )
                 Text(
                     text = formatHoursAndMinutes(availableCompMinutes),
-                    color = THEME.accentPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1
                 )
@@ -921,7 +922,7 @@ private fun DayEditSectionCard(
 internal fun DayEditChoiceHeader(text: String) {
     Text(
         text = text,
-        color = THEME.textSecondary,
+        color = MaterialTheme.extendedColors.textSecondary,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
@@ -946,7 +947,7 @@ private fun BloodDonationLockedDayDialog(
             record?.let {
                 Text(
                     text = "Datum: ${it.date.formatBloodDonationDate()}",
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

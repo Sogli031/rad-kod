@@ -46,7 +46,7 @@ fun AutoFillDialog(
         PopupCard {
             AutoSizeText(
                 text = "Automatsko popunjavanje smena",
-                color = THEME.textPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 minFontSize = MaterialTheme.typography.titleSmall.fontSize,
@@ -54,7 +54,7 @@ fun AutoFillDialog(
             )
             Text(
                 text = "Tekući mesec: ${MONTH_NAMES[today.monthValue]} ${today.year}",
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -67,7 +67,7 @@ fun AutoFillDialog(
                         ShiftFillMode.FOUR_BRIGADE -> "Početni dan ciklusa: $fourBrigadeReferenceDateText"
                         ShiftFillMode.ONE_SHIFT -> ""
                     },
-                    color = THEME.textSecondary,
+                    color = MaterialTheme.extendedColors.textSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis

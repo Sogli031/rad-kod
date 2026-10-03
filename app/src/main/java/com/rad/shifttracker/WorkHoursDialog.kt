@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,7 +82,7 @@ private fun WorkHoursRow(row: WorkHoursBreakdownLine) {
     ) {
         AutoSizeText(
             text = row.label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodySmall.fontSize,
@@ -112,21 +113,21 @@ private fun WorkHoursTableHeader() {
     ) {
         WorkHoursTableText(
             text = "Tip",
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Start,
             weight = WORK_HOURS_TABLE_LABEL_WEIGHT
         )
         WorkHoursTableText(
             text = "Sati",
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_HOURS_WEIGHT
         )
         WorkHoursTableText(
             text = "Iznos",
-            color = THEME.textMuted,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_AMOUNT_WEIGHT
@@ -143,7 +144,7 @@ private fun WorkHoursTableRow(row: WorkHoursTableLine) {
     ) {
         WorkHoursTableText(
             text = row.label,
-            color = THEME.textSecondary,
+            color = MaterialTheme.extendedColors.textSecondary,
             fontWeight = FontWeight.Normal,
             textAlign = TextAlign.Start,
             weight = WORK_HOURS_TABLE_LABEL_WEIGHT
@@ -428,9 +429,19 @@ private data class WorkHoursTableLine(
     val tone: WorkHoursTone
 )
 
-private enum class WorkHoursTone(val color: Color) {
-    Primary(THEME.textPrimary),
-    Positive(THEME.success),
-    Danger(THEME.danger),
-    Muted(THEME.textMuted)
+private enum class WorkHoursTone {
+    Primary,
+    Positive,
+    Danger,
+    Muted;
+
+    val color: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = when (this) {
+            Primary -> MaterialTheme.colorScheme.onSurface
+            Positive -> MaterialTheme.extendedColors.success
+            Danger -> MaterialTheme.colorScheme.error
+            Muted -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
 }

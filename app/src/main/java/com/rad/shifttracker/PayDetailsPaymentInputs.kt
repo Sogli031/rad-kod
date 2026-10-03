@@ -63,7 +63,7 @@ internal fun MonthlyPaymentInputRows(
         } else {
             null
         },
-        accentColor = THEME.warning
+        accentColor = MaterialTheme.extendedColors.warning
     )
     // Topli obrok se ne unosi: računa se kao da je pojedeno koliko pripada, a „Lista“
     // pri učitavanju listića javlja ako je pojedeno više od toga.
@@ -78,7 +78,7 @@ private fun PaymentAdjustmentInputRow(
     errorMessage: String?,
     manualEntered: Boolean = false,
     supportingText: String? = null,
-    accentColor: Color = THEME.accentPrimary
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
@@ -88,7 +88,7 @@ private fun PaymentAdjustmentInputRow(
         ) {
             AutoSizeText(
                 text = label,
-                color = THEME.textSecondary,
+                color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
                 minFontSize = MaterialTheme.typography.bodySmall.fontSize,
@@ -98,7 +98,7 @@ private fun PaymentAdjustmentInputRow(
             if (manualEntered) {
                 Text(
                     text = MANUAL_ENTRY_BADGE_TEXT,
-                    color = THEME.warning,
+                    color = MaterialTheme.extendedColors.warning,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -123,7 +123,7 @@ private fun PaymentAdjustmentInputRow(
                 text = ADVANCE_PAYMENT_SAVE_LABEL,
                 modifier = Modifier.weight(0.3f).heightIn(min = 56.dp),
                 bgColor = accentColor,
-                textColor = THEME.textDark,
+                textColor = MaterialTheme.colorScheme.onPrimary,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = onSave
             )
@@ -134,7 +134,7 @@ private fun PaymentAdjustmentInputRow(
         supportingText?.let { text ->
             Text(
                 text = text,
-                color = THEME.textMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
