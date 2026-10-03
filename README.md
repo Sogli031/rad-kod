@@ -32,8 +32,8 @@ ne komituju se). Bez njega `assembleRelease` pada, da APK ne bi tiho dobio debug
 CI (nema ključa) koristi `-PallowDebugSigning=true`.
 
 Objava: podigni `versionCode`/`versionName` u `app/build.gradle.kts`, pa
-`.\release.ps1 -Notes "Šta je novo"`. Skripta pokreće testove, detekt i lint, gradi APK,
-proverava `apksigner` i otisak ključa, čuva `mapping.txt` u `release-out\` i pravi GitHub release.
+`.\release.ps1` (napomene uzima iz `CHANGELOG.md`, ili `-Notes "..."`). Skripta pokreće testove, detekt, lint i Kover, gradi APK,
+proverava `apksigner`, otisak ključa i 16 KB poravnanje, čuva `mapping.txt` u `release-out\` i pravi GitHub release.
 `-SkipPublish` samo gradi. Instalacija na telefon: `adb install -r` (isti potpis čuva podatke).
 
 Izveštaj o stabilnosti Compose-a: `./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports`.

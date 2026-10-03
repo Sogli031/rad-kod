@@ -1,8 +1,9 @@
-# Objavljivanje verzije: build, provera potpisa, kopija mapping.txt, GitHub release.
-# Upotreba: .\release.ps1 -Notes "Izmene na srpskom" [-SkipPublish]
+# Objavljivanje verzije: testovi, build, provera potpisa i 16 KB poravnanja, kopija mapping.txt, GitHub release.
+# Upotreba: .\release.ps1 [-Notes "Izmene na srpskom"] [-SkipPublish]
+# Bez -Notes uzima se odeljak "## [verzija]" iz CHANGELOG.md.
 # Verziju (versionCode/versionName) podigni u app/build.gradle.kts PRE pokretanja.
 param(
-    [Parameter(Mandatory = $true)][string]$Notes,
+    [string]$Notes,
     [switch]$SkipPublish
 )
 $ErrorActionPreference = 'Stop'
@@ -15,15 +16,28 @@ $gradle = Get-Content app\build.gradle.kts -Raw
 $version = [regex]::Match($gradle, 'versionName = "([^"]+)"').Groups[1].Value
 if (-not $version) { throw 'versionName nije nađen' }
 
+if (-not $Notes) {
+    $changelog = Get-Content CHANGELOG.md -Raw -Encoding UTF8
+    $pattern = '(?ms)^## \[' + [regex]::Escape($version) + '\][^\n]*\n(.*?)(?=^## \[|\z)'
+    $m = [regex]::Match($changelog, $pattern)
+    if (-not $m.Success) { throw "CHANGELOG.md nema odeljak za verziju $version, a -Notes nije dat" }
+    $Notes = $m.Groups[1].Value.Trim()
+}
+
 .\gradlew.bat testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease --no-daemon
 if ($LASTEXITCODE -ne 0) { throw 'Build ili testovi su pali' }
 
 $apk = 'app\build\outputs\apk\release\app-release.apk'
-$apksigner = Get-ChildItem "$env:LOCALAPPDATA\Android\Sdk\build-tools\*\apksigner.bat" | Sort-Object FullName | Select-Object -Last 1
+$buildTools = "$env:LOCALAPPDATA\Android\Sdk\build-tools"
+$apksigner = Get-ChildItem "$buildTools\*\apksigner.bat" | Sort-Object FullName | Select-Object -Last 1
 $certs = & $apksigner.FullName verify --print-certs $apk
 if ($LASTEXITCODE -ne 0) { throw 'apksigner verify nije prošao' }
 $sha1 = ($certs | Select-String 'SHA-1 digest: (\w+)').Matches[0].Groups[1].Value
 if ($sha1 -ne $ExpectedSha1) { throw "Pogrešan potpisni ključ: $sha1" }
+
+$zipalign = Get-ChildItem "$buildTools\*\zipalign.exe" | Sort-Object FullName | Select-Object -Last 1
+& $zipalign.FullName -c -P 16 4 $apk
+if ($LASTEXITCODE -ne 0) { throw 'APK nije poravnat na 16 KB' }
 
 New-Item -ItemType Directory -Force release-out | Out-Null
 $out = "release-out\smene-app-v$version.apk"

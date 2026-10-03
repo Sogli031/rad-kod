@@ -28,7 +28,11 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | 8–9 (deo) | `MAPS_API_KEY` uklonjen iz `local.properties` i README-a; README ažuriran (alati, release tok) | — |
 | 3 — golden test | pokriven postojećim `PayslipFillRoundTripTest`/`PayslipMonthFillScenariosTest` (8 listića × 3 faze, obračun = listić) | testovi zeleni |
 | 4.5 | **`ShiftRepository` podeljen**: 2509 → 395 linija u klasi; ostalo je u `ShiftRepository{Persistence,PayCalculation,PaySettings,Receipts,BloodDonation,Seniority,Vacation}.kt` kao funkcije/svojstva proširenja (javni API i pozivi `repo.foo()` isti, najveći fajl 644 linije). Mrtav `ReadOnly` lanac u `RepositoryPayBaseResolver` uklonjen (−205). Kover filter proširen na `ShiftRepository*` (93,7%) | gate zelen, snimci isti, proveren na telefonu |
-| 2, 4, 7–10 — ostaje | Baseline Profile 📱, još ~11 testova koji čitaju izvorni tekst, Faze 8, 10 (crash log, release napomene), TalkBack 📱 | — |
+| 8 | **crash log** samo u `filesDir` (javni Documents i dozvola za spoljnu memoriju uklonjeni), bez poruka izuzetaka, uz verziju i poslednji ekran (`CrashContext`), istorija 5 padova; `Log.*` ne ispisuju lične podatke osim vrednosti podešavanja u logcat-u (samo preko adb-a) | `CrashLogFormatterTest` |
+| 4 (deo 3) | kartica godišnjeg i panel dana bez repoa u kompoziciji (`vacationSummary` u `MainMonthState`); `collectAsStateWithLifecycle` svuda; StrictMode i LeakCanary samo u debug-u | gate zelen |
+| 4.6 | `play-services-auth` 21.6, `google-api-client-android` 2.9.1, Drive/Gmail revizije 2026, androidx, coroutines 1.10.2, material 1.13; Compose BOM ostaje 2025.12.01 (dizajn proveren) | proveren start i Opcije na telefonu; 📱 Drive/Gmail tokovi |
+| 10 | `release.ps1`: napomene iz `CHANGELOG.md` (odeljak `[6.0]` je spreman), SHA-256 i otisak u opisu, provera 16 KB poravnanja (APK ima samo `libandroidx.graphics.path.so`, poravnata); proveren `-SkipPublish` | skripta prošla do kraja |
+| ostaje | Baseline Profile 📱, TalkBack 📱, `strings.xml` (143 teksta), još ~10 testova koji čitaju izvorni tekst, ponovljen `/android audit`, Faza 9 (po tvojoj odluci preskočena) | — |
 
 Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
 donja traka „Po…"/„Op…".

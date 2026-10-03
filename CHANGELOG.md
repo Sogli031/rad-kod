@@ -3,6 +3,15 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.0] - nije objavljeno
+Priprema „production grade“ izdanja (faze 2, 3, 4, 7, 8, 10 plana); izgled isti kao 5.5.
+- **Manji i bezbedniji APK:** R8 i skupljanje resursa (27 → 10,5 MB), potpis samo zajedničkim ključem (build pada bez njega), `network_security_config` bez nešifrovanog saobraćaja, poravnanje na 16 KB provereno.
+- **Listići samo iz Gmail-a:** čitanje iz foldera i dozvola „Pristup svim fajlovima“ su uklonjeni; nema više zahteva za pristup spoljnoj memoriji.
+- **Brži glavni ekran:** izabrani mesec i izvedeni podaci žive u `MainViewModel` i računaju se van glavne niti; kalendar čita mesec jednim upitom.
+- **Crash log:** samo u privatnom folderu aplikacije (ne u javnom Documents), bez poruka izuzetaka, uz verziju i poslednji ekran; čuva se poslednjih 5 padova.
+- **Biblioteke:** AGP 8.13, Kotlin 2.1.21, Gradle 8.13, `targetSdk` 36, nove verzije Google klijenata (Drive, Gmail, prijava), androidx i coroutines.
+- **Kvalitet:** prag pokrivenosti testovima za obračun (90%), `ShiftRepository` podeljen po domenima, testovi ponašanja umesto čitanja izvornog teksta.
+
 ## [5.5] - 2026-10-03
 - **Tema:** izbor teme (i „Boje sa pozadine“) uklonjen iz Opcija; aplikacija je uvek tamna. Svetla paleta ostaje u kodu kao rezerva.
 - **Biblioteke:** Compose BOM 2025.12.01 (material3 1.4.0), compileSdk 36, `material3-adaptive` 1.2.0.
