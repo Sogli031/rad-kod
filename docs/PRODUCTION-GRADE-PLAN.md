@@ -27,7 +27,8 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | 7 (deo) | Kover prag 90% za obračun i podatke (danas 92,7%; `RepositoryPayBaseResolver` 56% je najslabija tačka), u `release.ps1` i CI; testovi koji čitaju izvorni tekst zamenjeni `DashboardBehaviorTest` (ostao nijedan `sourceText`) | `koverVerifyDebug` |
 | 8–9 (deo) | `MAPS_API_KEY` uklonjen iz `local.properties` i README-a; README ažuriran (alati, release tok) | — |
 | 3 — golden test | pokriven postojećim `PayslipFillRoundTripTest`/`PayslipMonthFillScenariosTest` (8 listića × 3 faze, obračun = listić) | testovi zeleni |
-| 2, 4, 7–10 — ostaje | Baseline Profile 📱, podela `ShiftRepository` (2509 linija), `RepositoryPayBaseResolver` pokrivenost, Faze 8, 10 (crash log, release napomene), TalkBack 📱 | — |
+| 4.5 | **`ShiftRepository` podeljen**: 2509 → 395 linija u klasi; ostalo je u `ShiftRepository{Persistence,PayCalculation,PaySettings,Receipts,BloodDonation,Seniority,Vacation}.kt` kao funkcije/svojstva proširenja (javni API i pozivi `repo.foo()` isti, najveći fajl 644 linije). Mrtav `ReadOnly` lanac u `RepositoryPayBaseResolver` uklonjen (−205). Kover filter proširen na `ShiftRepository*` (93,7%) | gate zelen, snimci isti, proveren na telefonu |
+| 2, 4, 7–10 — ostaje | Baseline Profile 📱, još ~11 testova koji čitaju izvorni tekst, Faze 8, 10 (crash log, release napomene), TalkBack 📱 | — |
 
 Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
 donja traka „Po…"/„Op…".
