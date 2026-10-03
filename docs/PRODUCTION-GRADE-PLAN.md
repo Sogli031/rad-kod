@@ -12,7 +12,16 @@ ne po veličini. Stavke označene 📱 traže telefon preko USB debug-a.
 | 3 — ispravnost podataka | **kod gotov, spojen u `rad`** (2026-10-03). Restore guard (`tryImportFromJson` + `SnapshotRejection`), `schema_version` + `SchemaMigrations`, `Clock` u codec-u, `AtomicTextFile` (keš i lokalni fajl), `CloudArchiveMergerTest`, `RestoreGuardTest`, fuzz/round-trip testovi | detekt + lint + 1112 testova zeleno. Golden test obračuna iz listića nije potvrđen — proveriti u `PayslipImportTest`/novim testovima da li fixture dozvoljava reprodukciju meseca |
 | 6 — pristupačnost | **kod gotov, spojen u `rad`**. `LabeledSwitchRow`/`LabeledCheckboxRow`, `FormErrorText` (liveRegion), `label`+`ImeAction` na poljima, scrim bez semantike + `paneTitle`, 48dp minimum na dugmadi, 12 Robolectric/Compose testova | isto; 📱 vizuelna provera (plutajući label, izgled redova) i TalkBack |
 | 6 — odloženo | automatski fokus na prvo polje, `strings.xml`, kartice plate 41dp, reduced motion, ATF | odluke ili uređaj |
-| 0, 1, 2, 4, 5, 7–10 | nije početo | — |
+| 0.1 | commit stanja (bez taga v5.0: stablo je već imalo Faze 3 i 6) | `git status` čist |
+| 7.2 (deo) | Roborazzi snimci: glavni ekran 360/411/840dp × font 1.0/1.5/2.0, Opcije, dan | `verifyRoborazziDebug` |
+| 5.1 | **gotovo**: `THEME` uklonjen, `colorScheme` + `ExtendedColors`; snimci pikselski isti | DesignSystemTest zabranjuje `THEME.`/`Color(0x` |
+| 5.6 | **gotovo**: `Spacing` (4dp mreža) umesto literala u razmacima | DesignSystemTest zabranjuje `.dp` u razmaku |
+| 5.4 | težina fonta gotova (`*Emphasized`); minimum 11sp čeka 5.3 (kalendar) | DesignSystemTest zabranjuje `FontWeight.` |
+| — | **v5.1 objavljena na zahtev korisnika** (međuverzija za proveru preko Obtainium-a) | potpis isti kao v5.0 |
+| 1, 2, 4, 5.2/5.3/5.5/5.7/5.8, 7–10 | nije početo | — |
+
+Snimci na font 2.0 već pokazuju greške za 5.3/5.4: dani u nedelji se slepe, oznake statistike odsečene,
+donja traka „Po…"/„Op…".
 
 Napomena: agent Faze 3 je stao bez izveštaja i pre popravke detekta (`ShiftRepositoryJsonCodec` prešao granicu
 `LargeClass`/`TooManyFunctions`); popravljeno ciljanim `@Suppress` sa obrazloženjem. Nije objavljen release (jedan ceo v6.0 na kraju).
