@@ -1,8 +1,5 @@
 package com.rad.shifttracker
 
-import android.os.Build
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -68,8 +64,6 @@ internal fun OptionsDialog(
                 }
             )
             OptionDivider()
-            ThemeOptions()
-            OptionDivider()
             LabeledSwitchRow(
                 title = AUTO_ADVANCE_IMPORT_ENABLED_LABEL,
                 checked = autoAdvanceImportEnabled,
@@ -117,40 +111,6 @@ private fun OptionActionButton(
         bold = primary,
         onClick = onClick
     )
-}
-
-/** Tema: tamna / svetla / po sistemu, i boje sa pozadine na Android-u 12+. */
-@Composable
-private fun ThemeOptions() {
-    val context = LocalContext.current
-    val settings = ThemeStore.settings
-    Column(
-        modifier = Modifier.padding(vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-    ) {
-        Text(
-            text = "Tema",
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyLarge
-        )
-        DayEditSegmentedChoice(
-            options = ThemeMode.entries.map { mode ->
-                DayEditChoice(mode.label, settings.mode == mode) {
-                    ThemeStore.save(context, settings.copy(mode = mode))
-                }
-            },
-            minHeight = OVERTIME_TYPE_CHOICE_HEIGHT
-        )
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        OptionDivider()
-        LabeledSwitchRow(
-            title = "Boje sa pozadine",
-            checked = settings.dynamicColor,
-            contentPadding = OPTION_ROW_PADDING,
-            onCheckedChange = { ThemeStore.save(context, settings.copy(dynamicColor = it)) }
-        )
-    }
 }
 
 private val OPTION_ROW_PADDING = PaddingValues(vertical = Spacing.md)
