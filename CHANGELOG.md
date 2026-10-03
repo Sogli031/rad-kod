@@ -11,6 +11,7 @@ Priprema „production grade“ izdanja (faze 2, 3, 4, 7, 8, 10 plana); izgled i
 - **Crash log:** samo u privatnom folderu aplikacije (ne u javnom Documents), bez poruka izuzetaka, uz verziju i poslednji ekran; čuva se poslednjih 5 padova.
 - **Biblioteke:** AGP 8.13, Kotlin 2.1.21, Gradle 8.13, `targetSdk` 36, nove verzije Google klijenata (Drive, Gmail, prijava), androidx i coroutines.
 - **Kvalitet:** prag pokrivenosti testovima za obračun (90%), `ShiftRepository` podeljen po domenima, testovi ponašanja umesto čitanja izvornog teksta.
+- **Popuna po listi:** praznik radnim danom usred bolovanja je dan bolovanja (listić 11/2025: 11.11. u bolovanju, bez šifre 12), pa se takav mesec sad popuni. Maj 2025 (3 h državnog praznika uz delimičan rad na praznik) i dalje ne može tačno: obračun ne zna za delimično plaćen praznik.
 
 ## [5.5] - 2026-10-03
 - **Tema:** izbor teme (i „Boje sa pozadine“) uklonjen iz Opcija; aplikacija je uvek tamna. Svetla paleta ostaje u kodu kao rezerva.

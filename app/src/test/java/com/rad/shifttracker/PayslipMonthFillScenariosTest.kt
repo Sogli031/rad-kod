@@ -85,6 +85,24 @@ class PayslipMonthFillScenariosTest {
         assertTrue(hourMismatches(repo, slip).isEmpty())
     }
 
+    // --- bolovanje preko praznika ---
+
+    @Test
+    fun sickLeaveCoversWeekdayHolidayWithoutPaidHoliday() {
+        // Listić 11/2025: 80 h bolovanja preko 11.11. (utorak), bez šifre 12 Državni praznik.
+        val sickDays = listOf(5, 6, 7, 10, 11, 12, 13, 14, 17, 18)
+        val truth = truthMonth(2025, 11, Shift.FIRST, sickDays.map { TruthDay(it, Shift.SICK, sickRate = 0.65) })
+        val slip = payslipFromRepo(truth, 2025, 11)
+        assertTrue(hourMismatches(truth, slip).isEmpty())
+        assertTrue(!slip.items.containsKey(12))
+
+        val repo = templateRepoBefore(2025, 11, Shift.FIRST)
+        val result = success(planMonthFromPayslip(repo, slip))
+        assertTrue(11 in daysOf(result, FillDayKind.SICK))
+        applyMonthFill(repo, result)
+        assertTrue(hourMismatches(repo, slip).isEmpty())
+    }
+
     // --- praznik koji je korisnik sam uključio ili isključio ---
 
     @Test

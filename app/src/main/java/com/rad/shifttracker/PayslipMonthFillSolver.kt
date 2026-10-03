@@ -312,6 +312,14 @@ private fun List<SpecialOption>.cheapestPerEffect(): List<SpecialOption> =
         .values
         .map { same -> same.minByOrNull { it.cost } ?: same.first() }
 
+/** Dan posebnog slota pokriven blokom odsustva (svakim blokom koji [accepts] dozvoljava). */
+private fun blockCoverOptions(slot: FillSlot, blocks: List<FillLeaveBlock>, accepts: (FillLeaveBlock) -> Boolean): List<SpecialOption> =
+    blocks.mapIndexedNotNull { index, block ->
+        if (block.days <= 0 || !accepts(block)) return@mapIndexedNotNull null
+        val day = FillDay(slot.date, block.kind, null, DAY_HOURS, templateShift = slot.template, sickRate = block.sickRate)
+        SpecialOption(HoursVec(), 0, false, false, COST_BLOCK_ON_SPECIAL_DAY, day, blockIndex = index)
+    }
+
 private fun specialOptions(slot: FillSlot, tier: OptionTier, blocks: List<FillLeaveBlock>, allowBlockCover: Boolean): List<SpecialOption> {
     val options = mutableListOf<SpecialOption>()
     if (slot.isWeekday && !slot.isHoliday) {
@@ -327,13 +335,7 @@ private fun specialOptions(slot: FillSlot, tier: OptionTier, blocks: List<FillLe
             options += workOption(slot, FillDayKind.WORK, shift, DAY_HOURS, COST_SWAP_DAY)
         }
         // Godišnji, bolovanje i plaćeno odsustvo mogu da pokriju i dan koji ima praznik u smeni (treća uoči praznika).
-        if (allowBlockCover) {
-            blocks.forEachIndexed { index, block ->
-                if (block.days <= 0) return@forEachIndexed
-                val day = FillDay(slot.date, block.kind, null, DAY_HOURS, templateShift = slot.template, sickRate = block.sickRate)
-                options += SpecialOption(HoursVec(), 0, false, false, COST_BLOCK_ON_SPECIAL_DAY, day, blockIndex = index)
-            }
-        }
+        if (allowBlockCover) options += blockCoverOptions(slot, blocks) { true }
         return options
     }
     options += if (slot.isWeekday) {
@@ -341,6 +343,8 @@ private fun specialOptions(slot: FillSlot, tier: OptionTier, blocks: List<FillLe
     } else {
         SpecialOption(HoursVec(), 0, false, false, 0.0, null)
     }
+    // Praznik radnim danom usred bolovanja je dan bolovanja, ne plaćen praznik (listić 11/2025: 11.11. u bolovanju, bez šifre 12).
+    if (slot.isWeekday && allowBlockCover) options += blockCoverOptions(slot, blocks) { it.kind == FillDayKind.SICK }
     val kind = if (slot.isHoliday) FillDayKind.HOLIDAY_WORK else FillDayKind.WEEKEND_WORK
     for (shift in Shift.workShifts()) {
         for (hours in 1..MAX_SHIFT_HOURS) {
@@ -683,7 +687,7 @@ internal fun solveMonthFill(
     val special = calendar.slots.filterNot { it.isGroupDay() }
     val search = MonthSearch(group, targets, blockStyle(calendar, group, hints))
     val allowBlockCover = targets.blocks.size * BLOCK_USE_BITS < Int.SIZE_BITS - 1 &&
-        special.count { it.isWeekday && !it.isHoliday } <= MAX_BLOCK_USE
+        special.count { it.isWeekday } <= MAX_BLOCK_USE
     val tried = HashSet<List<FillDay>>()
     var anyFinals = false
     var anyCandidates = false
