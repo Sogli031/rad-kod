@@ -3,6 +3,15 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [5.1] - 2026-10-03
+Međuverzija plana „production grade" (faze 3, 5.1, 5.4, 5.6 i 6); izgled skoro isti kao 5.0.
+- **Ispravnost podataka:** restore odbija prazan ili nevalidan snapshot, verzija šeme u lokalnom fajlu
+  sa migracijama, atomski upis keša i lokalnog fajla.
+- **Pristupačnost:** red sa prekidačem/kvadratićem je jedna dodirna površina, greške u formama čita
+  čitač ekrana, polja imaju stalnu oznaku i dugme „Dalje/Gotovo" na tastaturi, dugmad najmanje 48dp.
+- **Dizajn sistem:** sve boje iz M3 teme (colorScheme + boje smena kroz ExtendedColors), razmaci
+  na 4dp mreži (Spacing), težina fonta samo kroz M3 stilove; sitno više vazduha u karticama i listovima.
+- **Provera bez telefona:** snimci ekrana na računaru (Roborazzi) za glavni ekran, Opcije i dan.
 ## [5.0] - 2026-10-03
 Pregled dizajna po Material 3 (audit 38/100, sada znatno više): tema, komponente, pristupačnost.
 - **Tema:** puna M3 tamna šema (sve uloge, bez podrazumevane ljubičaste), M3 skala oblika
