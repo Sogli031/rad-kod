@@ -45,3 +45,4 @@ Thumbs.db
 context-snapshot.json
 
 .claude/settings.local.json
+release-out/

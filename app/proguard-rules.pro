@@ -1,60 +1,22 @@
-# ProGuard rules for RAD Shift Tracker
+# R8 pravila za Rad. Compose, coroutines, WorkManager i Play Services nose svoja (consumer) pravila.
+# Refleksiju traže samo Google API klijenti (polja sa @Key) i pdfbox; kod aplikacije JSON piše ručno (org.json).
 
-# Keep the application class
--keep class com.rad.shifttracker.** { *; }
+-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault,InnerClasses,EnclosingMethod
 
-# Keep data classes used for JSON serialization
--keepclassmembers class com.rad.shifttracker.DayRecord { *; }
--keepclassmembers class com.rad.shifttracker.MonthSummary { *; }
--keepclassmembers class com.rad.shifttracker.BatchRecord { *; }
--keepclassmembers class com.rad.shifttracker.Shift { *; }
--keepclassmembers class com.rad.shifttracker.BrigadeType { *; }
--keepclassmembers class com.rad.shifttracker.OvertimeType { *; }
--keepclassmembers class com.rad.shifttracker.PayConfig { *; }
--keepclassmembers class com.rad.shifttracker.AppConfig { *; }
-
-# Keep enum classes
--keepclassmembers enum * {
-    public static **[] values();
-    public static ** valueOf(java.lang.String);
+# Google API modeli (Drive/Gmail): polja se čitaju refleksijom preko @Key
+-keepclassmembers class * {
+    @com.google.api.client.util.Key <fields>;
 }
-
-# Keep Kotlin metadata
--keep class kotlin.Metadata { *; }
-
-# Compose rules
--dontwarn androidx.compose.**
--keep class androidx.compose.** { *; }
-
-# Coroutines
--dontwarn kotlinx.coroutines.**
--keep class kotlinx.coroutines.** { *; }
-
-# JSON parsing with org.json
--keep class org.json.** { *; }
-
-# Google Play Services Auth
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.android.gms.**
-
-# Google API Client
--keep class com.google.api.** { *; }
--keep class com.google.api.client.** { *; }
--keep class com.google.api.services.** { *; }
--dontwarn com.google.api.**
-
-# Google HTTP Client
--keep class com.google.http.** { *; }
--dontwarn com.google.http.**
-
-# Gson (used by Google API)
--keep class com.google.gson.** { *; }
--dontwarn com.google.gson.**
-
-# Keep Google credential classes
--keep class com.google.api.client.googleapis.extensions.android.gms.auth.** { *; }
-
-# Apache HTTP Client (transitive dependency from Google API)
+-keep class com.google.api.services.drive.model.** { *; }
+-keep class com.google.api.services.gmail.model.** { *; }
+-keep class * extends com.google.api.client.json.GenericJson { *; }
+-dontwarn com.google.api.client.**
 -dontwarn org.apache.http.**
 -dontwarn javax.naming.**
 -dontwarn org.ietf.jgss.**
+
+# pdfbox-android: fontovi, glifovi i filteri se učitavaju po imenu
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**
+-dontwarn com.gemalto.jp2.**
+-dontwarn org.bouncycastle.**

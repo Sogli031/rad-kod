@@ -7,7 +7,22 @@ plugins {
 }
 
 // Zajednički potpis: Desktop\programi\keystore
-rootProject.file("../keystore/signing.gradle").takeIf { it.exists() }?.let { apply(from = it) }
+val sharedSigning = rootProject.file("../keystore/signing.gradle")
+sharedSigning.takeIf { it.exists() }?.let { apply(from = it) }
+
+// Release se ne potpisuje tiho debug ključem: bez zajedničkog ključa build pada.
+// CI (nema ključa) prolazi sa -PallowDebugSigning=true.
+val hasSharedKey = rootProject.file("../keystore/keystore.properties").exists()
+val allowDebugSigning = providers.gradleProperty("allowDebugSigning").orNull == "true"
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any { it.project == project && it.name.contains("Release") && it.name.startsWith("assemble") }
+    if (buildsRelease && !hasSharedKey && !allowDebugSigning) {
+        throw GradleException(
+            "Nema ../keystore/keystore.properties: release bi bio potpisan debug ključem. " +
+                "Dodaj ključ ili pokreni sa -PallowDebugSigning=true."
+        )
+    }
+}
 
 android {
     namespace = "com.rad.shifttracker"
@@ -25,8 +40,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

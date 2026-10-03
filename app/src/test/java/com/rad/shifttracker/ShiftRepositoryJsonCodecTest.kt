@@ -54,8 +54,18 @@ class ShiftRepositoryJsonCodecTest {
             }
         ),
         records = snapshot.records.map { it.key to it.toMap() }.sortedBy { it.first.toString() },
-        payslips = snapshot.savedPayslips.mapValues { JSONObject(it.value).toMap() }
+        payslips = snapshot.savedPayslips.mapValues { jsonToMap(JSONObject(it.value)) }
     )
+
+    // Android stub org.json nema JSONObject.toMap(), pa se pretvara ručno.
+    private fun jsonToMap(obj: JSONObject): Map<String, Any> =
+        obj.keys().asSequence().associateWith { key -> jsonValue(obj.get(key)) }
+
+    private fun jsonValue(v: Any): Any = when (v) {
+        is JSONObject -> jsonToMap(v)
+        is org.json.JSONArray -> (0 until v.length()).map { jsonValue(v.get(it)) }
+        else -> v
+    }
 
     // ---------------- Round-trip ----------------
 
