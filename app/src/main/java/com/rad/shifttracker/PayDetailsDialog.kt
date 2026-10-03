@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -193,8 +192,7 @@ private fun PayDetailsHeroCard(
         AutoSizeText(
             text = receiptText,
             color = if (receiptAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.warning,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineMediumEmphasized.copy(
                 textAlign = TextAlign.Start
             ),
             maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
@@ -327,7 +325,7 @@ private fun CompactInfoRow(
         Text(
             text = value,
             color = color,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             textAlign = TextAlign.End,
             maxLines = 1,
             softWrap = false
@@ -365,7 +363,7 @@ private fun CompactTextBlock(
         Text(
             text = value,
             color = color,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )

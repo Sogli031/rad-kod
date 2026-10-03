@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.data.backup.BackupVersion
 import java.text.SimpleDateFormat
@@ -106,7 +105,7 @@ private fun BackupVersionRow(
         Text(
             text = formatVersionTime(version.createdAtMillis),
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.bodyMediumEmphasized
         )
         Text(
             text = backupVersionSummary(version),
@@ -153,7 +152,7 @@ private fun RestoreConfirmCard(
         Text(
             text = "Vraćanje verzije od ${formatVersionTime(version.createdAtMillis)}",
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+            style = MaterialTheme.typography.bodyMediumEmphasized
         )
         Text(
             text = "Trenutno stanje će biti zamenjeno (${backupVersionSummary(version)}). " +
@@ -295,7 +294,7 @@ fun CloudBackupFoundDialog(
             Text(
                 text = "Backup od ${formatVersionTime(version.createdAtMillis)}",
                 color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.bodyMediumEmphasized
             )
             Text(
                 text = "${backupVersionSummary(version)}. Ovaj uređaj ga još nije preuzeo. " +

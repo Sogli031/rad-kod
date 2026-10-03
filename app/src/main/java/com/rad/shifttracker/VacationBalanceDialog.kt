@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
@@ -135,8 +134,7 @@ fun VacationBalanceDialog(
                     Text(
                         text = "Prekora\u010den fond godi\u0161njeg!",
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMediumEmphasized.copy(
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth(),
@@ -233,7 +231,7 @@ private fun VacationStateRow(label: String, value: String, valueColor: Color) {
         Text(
             text = value,
             color = valueColor,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

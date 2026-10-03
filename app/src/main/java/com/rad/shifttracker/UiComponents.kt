@@ -52,7 +52,6 @@ import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -175,7 +174,7 @@ fun RoundedButton(
     ) {
         RadButtonLabel(
             text = text,
-            style = if (bold) textStyle.copy(fontWeight = FontWeight.Bold) else textStyle,
+            style = if (bold) textStyle.emphasized() else textStyle,
             contentDescription = contentDescription
         )
     }
@@ -206,7 +205,7 @@ fun GlowButton(
         ),
         contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 0.dp)
     ) {
-        RadButtonLabel(text = text, style = textStyle.copy(fontWeight = FontWeight.Bold))
+        RadButtonLabel(text = text, style = textStyle.emphasized())
     }
 }
 
@@ -323,8 +322,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text.uppercase(),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelSmallEmphasized.copy(
             letterSpacing = 0.9.sp
         ),
         modifier = modifier.fillMaxWidth(),
@@ -370,7 +368,7 @@ fun StatColumn(
         AutoSizeText(
             text = value,
             color = color,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleMediumEmphasized,
             maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             maxLines = 1
@@ -378,8 +376,7 @@ fun StatColumn(
         AutoSizeText(
             text = label.uppercase(),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelSmallEmphasized.copy(
                 letterSpacing = 0.6.sp,
                 textAlign = TextAlign.Center
             ),
@@ -422,7 +419,7 @@ private fun SummaryCard(
             AutoSizeText(
                 text = value,
                 color = valueColor,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 maxLines = 1

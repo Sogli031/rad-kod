@@ -37,7 +37,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,7 +88,7 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
             AutoSizeText(
                 text = MONTH_NAMES[month],
                 color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 maxLines = 1,
@@ -98,7 +97,7 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
             Text(
                 text = year.toString(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.alignByBaseline()
             )
         }
@@ -151,8 +150,7 @@ internal fun WeekdayHeader() {
             Text(
                 text = name,
                 color = color,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelSmallEmphasized.copy(
                     letterSpacing = 0.6.sp,
                     textAlign = TextAlign.Center
                 ),
@@ -309,8 +307,7 @@ private fun RowScope.DayButton(
             Text(
                 text = day.toString(),
                 color = tint.dayNumber,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelMediumEmphasized.copy(
                     fontSize = 13.sp,
                     lineHeight = 15.sp
                 ),
@@ -321,7 +318,6 @@ private fun RowScope.DayButton(
                 text = detailLines[0],
                 color = tint.detail,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Medium,
                     lineHeight = 12.sp,
                     textAlign = TextAlign.Center
                 ),
@@ -338,7 +334,6 @@ private fun RowScope.DayButton(
                     text = detailLines[1],
                     color = if (isLeaveLabel) tint.detail else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Medium,
                         lineHeight = 12.sp,
                         textAlign = TextAlign.Center
                     ),

@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -61,7 +60,7 @@ fun CloudBackupDialog(
                 Text(
                     text = email ?: "Nije povezano",
                     color = if (isSignedIn) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -91,7 +90,7 @@ fun CloudBackupDialog(
                         Text(
                             text = "Sinhronizacija...",
                             color = MaterialTheme.extendedColors.info,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -113,7 +112,7 @@ fun CloudBackupDialog(
                     Text(
                         text = formatSyncTime(lastSyncTime),
                         color = MaterialTheme.extendedColors.success,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

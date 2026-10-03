@@ -12,6 +12,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +44,32 @@ private val RadTypography = Typography(
     labelMedium = BaseTypography.labelMedium.copy(fontFamily = SpaceGrotesk),
     labelSmall = BaseTypography.labelSmall.copy(fontFamily = SpaceGrotesk)
 )
+
+/*
+ * Naglašeni (emphasized) stilovi iz M3 Expressive tipografske skale. Ovaj material3 (1.3) ih još
+ * nema, pa su ovde kao proširenja istog imena; posle nadogradnje na verziju koja ih ima, članovi
+ * klase imaju prednost i ova proširenja otpadaju (proveriti snimke, zvanična težina je drugačija).
+ * UI ne menja `fontWeight` ručno, nego bira stil.
+ */
+private val EmphasizedWeight = FontWeight.Bold
+val Typography.displayLargeEmphasized: TextStyle get() = displayLarge.copy(fontWeight = EmphasizedWeight)
+val Typography.displayMediumEmphasized: TextStyle get() = displayMedium.copy(fontWeight = EmphasizedWeight)
+val Typography.displaySmallEmphasized: TextStyle get() = displaySmall.copy(fontWeight = EmphasizedWeight)
+val Typography.headlineLargeEmphasized: TextStyle get() = headlineLarge.copy(fontWeight = EmphasizedWeight)
+val Typography.headlineMediumEmphasized: TextStyle get() = headlineMedium.copy(fontWeight = EmphasizedWeight)
+val Typography.headlineSmallEmphasized: TextStyle get() = headlineSmall.copy(fontWeight = EmphasizedWeight)
+val Typography.titleLargeEmphasized: TextStyle get() = titleLarge.copy(fontWeight = EmphasizedWeight)
+val Typography.titleMediumEmphasized: TextStyle get() = titleMedium.copy(fontWeight = EmphasizedWeight)
+val Typography.titleSmallEmphasized: TextStyle get() = titleSmall.copy(fontWeight = EmphasizedWeight)
+val Typography.bodyLargeEmphasized: TextStyle get() = bodyLarge.copy(fontWeight = EmphasizedWeight)
+val Typography.bodyMediumEmphasized: TextStyle get() = bodyMedium.copy(fontWeight = EmphasizedWeight)
+val Typography.bodySmallEmphasized: TextStyle get() = bodySmall.copy(fontWeight = EmphasizedWeight)
+val Typography.labelLargeEmphasized: TextStyle get() = labelLarge.copy(fontWeight = EmphasizedWeight)
+val Typography.labelMediumEmphasized: TextStyle get() = labelMedium.copy(fontWeight = EmphasizedWeight)
+val Typography.labelSmallEmphasized: TextStyle get() = labelSmall.copy(fontWeight = EmphasizedWeight)
+
+/** Naglašena varijanta stila koji je komponenta dobila spolja (npr. oznaka dugmeta). */
+fun TextStyle.emphasized(): TextStyle = copy(fontWeight = EmphasizedWeight)
 
 /** M3 skala oblika: komponente biraju oblik po ulozi, ne po sirovim dp vrednostima. */
 val RadShapes = Shapes(

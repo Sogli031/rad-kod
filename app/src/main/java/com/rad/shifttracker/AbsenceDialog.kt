@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
@@ -322,10 +321,10 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             labelWeight = 0.42f,
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodySmall,
-            valueStyle = MaterialTheme.typography.bodyMedium,
+            valueStyle = MaterialTheme.typography.bodyMediumEmphasized,
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             valueColor = MaterialTheme.extendedColors.textSecondary,
-            valueFontWeight = FontWeight.Bold
+            
         )
         ResponsiveInfoRow(
             label = "Posle upisa:",
@@ -333,10 +332,10 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             labelWeight = 0.42f,
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodySmall,
-            valueStyle = MaterialTheme.typography.bodyMedium,
+            valueStyle = MaterialTheme.typography.bodyMediumEmphasized,
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             valueColor = MaterialTheme.extendedColors.textSecondary,
-            valueFontWeight = FontWeight.Bold
+            
         )
         ResponsiveInfoRow(
             label = "Razlika:",
@@ -344,10 +343,10 @@ private fun AbsenceNetImpactCard(impact: AbsenceRangeNetImpact?) {
             labelWeight = 0.42f,
             valueWeight = 0.58f,
             labelStyle = MaterialTheme.typography.bodyMedium,
-            valueStyle = MaterialTheme.typography.titleMedium,
+            valueStyle = MaterialTheme.typography.titleMediumEmphasized,
             labelColor = MaterialTheme.extendedColors.textSecondary,
             valueColor = differenceColor,
-            valueFontWeight = FontWeight.Bold
+            
         )
 
         Text(

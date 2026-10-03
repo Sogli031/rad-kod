@@ -7,7 +7,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 
 /** Neutralna napomena ispod tabele: odakle razlika u zbirovima (stimulacije, KIRU...), nije neslaganje. */
@@ -20,7 +19,7 @@ internal fun PayslipReconciliationCard(reconciliation: PayslipReconciliation) {
         Text(
             text = monthYearText(reconciliation.month),
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.labelLargeEmphasized,
             maxLines = 1
         )
         if (!reconciliation.hasAppData) {

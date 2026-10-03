@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.rad.shifttracker.ui.components.AutoSizeText
@@ -42,7 +41,7 @@ fun OvertimeNetImpactDialog(
             AutoSizeText(
                 text = signedMoneyText(impact.paidOvertimeNetDifference),
                 color = MaterialTheme.extendedColors.weekendOt,
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineMediumEmphasized,
                 maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 maxLines = 1,
@@ -112,8 +111,7 @@ private fun OvertimeImpactMoneyRow(
         Text(
             text = value,
             color = color,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMediumEmphasized.copy(
                 textAlign = TextAlign.End
             ),
             maxLines = 1,

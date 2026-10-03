@@ -66,7 +66,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -263,8 +262,7 @@ private fun SheetHeader(
         AutoSizeText(
             text = title,
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLargeEmphasized.copy(
                 textAlign = titleTextAlign
             ),
             maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
@@ -457,7 +455,7 @@ fun CompUsedDialog(
         AutoSizeText(
             text = "Dostupno: ${formatHours(availableHours)}",
             color = MaterialTheme.extendedColors.compTime,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.bodyLargeEmphasized,
             maxFontSize = MaterialTheme.typography.bodyLarge.fontSize,
             minFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             maxLines = 1

@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -162,7 +161,7 @@ private fun HolidayEntryRow(
             Text(
                 text = entry.name,
                 color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodyLargeEmphasized,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -188,7 +187,7 @@ private fun HolidayEntryRow(
             Text(
                 text = if (entry.isActive) "Da" else "Ne",
                 color = stateColor,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelMediumEmphasized,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

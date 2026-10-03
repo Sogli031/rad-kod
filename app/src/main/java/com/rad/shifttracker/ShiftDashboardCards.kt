@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -243,8 +242,7 @@ private fun PayAmountCard(
             AutoSizeText(
                 text = totalText,
                 color = totalColor,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLargeEmphasized.copy(
                     textAlign = TextAlign.End
                 ),
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
@@ -344,7 +342,6 @@ private fun BottomBarAction(item: BottomBarItem, enabled: Boolean, modifier: Mod
             text = item.label,
             color = scheme.onSurfaceVariant.copy(alpha = contentAlpha),
             style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center
             ),
             maxFontSize = MaterialTheme.typography.labelSmall.fontSize,

@@ -12,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -97,7 +96,7 @@ private fun EntitlementRow(label: String, value: String, bold: Boolean = false) 
         Text(
             text = value,
             color = if (bold) MaterialTheme.extendedColors.vacation else MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal),
+            style = if (bold) MaterialTheme.typography.bodyMediumEmphasized else MaterialTheme.typography.bodyMedium,
             maxLines = 1
         )
     }

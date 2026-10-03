@@ -122,6 +122,20 @@ class DesignSystemTest {
         assertTrue("Razmaci idu kroz Spacing.*:\n" + offenders.joinToString("\n"), offenders.isEmpty())
     }
 
+    @Test
+    fun `font weight comes from type scale styles not manual overrides`() {
+        val mainDir = File(themeSourcePath()).parentFile
+        val offenders = mainDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "Theme.kt" }
+            .flatMap { file ->
+                file.readLines().mapIndexedNotNull { index, line ->
+                    if (line.contains("FontWeight.")) "${file.name}:${index + 1}: ${line.trim()}" else null
+                }
+            }
+            .toList()
+        assertTrue("Težina ide kroz *Emphasized stil ili emphasized():\n" + offenders.joinToString("\n"), offenders.isEmpty())
+    }
+
     private fun themeSourcePath(): String {
         return listOf(
             "src/main/java/com/rad/shifttracker/Theme.kt",

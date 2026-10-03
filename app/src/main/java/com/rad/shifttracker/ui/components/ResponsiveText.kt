@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -34,10 +33,10 @@ fun ResponsiveInfoRow(
     labelWeight: Float = 0.35f,
     valueWeight: Float = 0.65f,
     labelStyle: TextStyle = MaterialTheme.typography.bodyMedium,
-    valueStyle: TextStyle = MaterialTheme.typography.bodyMedium,
+    /** Vrednost je srednje težine (M3 titleSmall); naglašena vrednost se zadaje kroz Emphasized stil. */
+    valueStyle: TextStyle = MaterialTheme.typography.titleSmall,
     labelColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
-    valueFontWeight: FontWeight = FontWeight.Medium,
     valueMaxLines: Int = 1
 ) {
     Row(
@@ -58,7 +57,7 @@ fun ResponsiveInfoRow(
         Text(
             text = value,
             modifier = Modifier.weight(valueWeight),
-            style = valueStyle.copy(fontWeight = valueFontWeight, textAlign = TextAlign.End),
+            style = valueStyle.copy(textAlign = TextAlign.End),
             color = valueColor,
             maxLines = valueMaxLines,
             overflow = TextOverflow.Ellipsis

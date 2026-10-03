@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -47,7 +46,7 @@ fun AutoFillDialog(
             AutoSizeText(
                 text = "Automatsko popunjavanje smena",
                 color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 minFontSize = MaterialTheme.typography.titleSmall.fontSize,
                 maxLines = 1

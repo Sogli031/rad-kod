@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -427,8 +426,7 @@ private fun DayEditValueRow(label: String, value: String, valueColor: Color) {
         AutoSizeText(
             text = value,
             color = valueColor,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMediumEmphasized.copy(
                 textAlign = TextAlign.End
             ),
             maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
@@ -453,7 +451,7 @@ private fun DayEditHolidayWarningStrip(text: String) {
         Text(
             text = text,
             color = MaterialTheme.extendedColors.warning,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             modifier = Modifier.fillMaxWidth(),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -493,8 +491,7 @@ internal fun RowScope.DayEditChoiceButton(
         AutoSizeText(
             text = text,
             color = fg,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            style = (if (selected) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge).copy(
                 textAlign = TextAlign.Center
             ),
             maxFontSize = MaterialTheme.typography.labelLarge.fontSize,
@@ -644,7 +641,7 @@ private fun DayEditValueButton(
         Text(
             text = value,
             color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleMediumEmphasized,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -786,7 +783,7 @@ private fun DayEditVacationControls(
             Text(
                 text = message,
                 color = MaterialTheme.extendedColors.warning,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.bodyMediumEmphasized,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -847,7 +844,7 @@ private fun DayEditCompensationBlock(
                 Text(
                     text = formatHoursAndMinutes(availableCompMinutes),
                     color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     maxLines = 1
                 )
             }

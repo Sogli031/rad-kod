@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,8 +49,7 @@ fun CrashLogScreen(crashLog: String) {
             Text(
                 text = "Aplikacija je pukla",
                 color = MaterialTheme.colorScheme.error,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -71,7 +69,7 @@ fun CrashLogScreen(crashLog: String) {
                 Text(
                     text = if (copied) "Kopirano!" else "Kopiraj crash log",
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.labelLargeEmphasized
                 )
             }
 

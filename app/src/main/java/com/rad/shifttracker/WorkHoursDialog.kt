@@ -10,7 +10,6 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rad.shifttracker.ui.components.AutoSizeText
 import kotlin.math.roundToInt
@@ -92,8 +91,7 @@ private fun WorkHoursRow(row: WorkHoursBreakdownLine) {
         AutoSizeText(
             text = row.value,
             color = row.tone.color,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMediumEmphasized.copy(
                 textAlign = TextAlign.End
             ),
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
@@ -114,21 +112,21 @@ private fun WorkHoursTableHeader() {
         WorkHoursTableText(
             text = "Tip",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
+            emphasized = true,
             textAlign = TextAlign.Start,
             weight = WORK_HOURS_TABLE_LABEL_WEIGHT
         )
         WorkHoursTableText(
             text = "Sati",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
+            emphasized = true,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_HOURS_WEIGHT
         )
         WorkHoursTableText(
             text = "Iznos",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
+            emphasized = true,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_AMOUNT_WEIGHT
         )
@@ -145,21 +143,21 @@ private fun WorkHoursTableRow(row: WorkHoursTableLine) {
         WorkHoursTableText(
             text = row.label,
             color = MaterialTheme.extendedColors.textSecondary,
-            fontWeight = FontWeight.Normal,
+            emphasized = false,
             textAlign = TextAlign.Start,
             weight = WORK_HOURS_TABLE_LABEL_WEIGHT
         )
         WorkHoursTableText(
             text = row.hours,
             color = row.tone.color,
-            fontWeight = FontWeight.Bold,
+            emphasized = true,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_HOURS_WEIGHT
         )
         WorkHoursTableText(
             text = row.amount,
             color = row.tone.color,
-            fontWeight = FontWeight.Bold,
+            emphasized = true,
             textAlign = TextAlign.End,
             weight = WORK_HOURS_TABLE_AMOUNT_WEIGHT
         )
@@ -170,17 +168,15 @@ private fun WorkHoursTableRow(row: WorkHoursTableLine) {
 private fun RowScope.WorkHoursTableText(
     text: String,
     color: Color,
-    fontWeight: FontWeight,
+    emphasized: Boolean,
     textAlign: TextAlign,
     weight: Float
 ) {
     AutoSizeText(
         text = text,
         color = color,
-        style = MaterialTheme.typography.bodyMedium.copy(
-            fontWeight = fontWeight,
-            textAlign = textAlign
-        ),
+        style = (if (emphasized) MaterialTheme.typography.bodyMediumEmphasized else MaterialTheme.typography.bodyMedium)
+            .copy(textAlign = textAlign),
         maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
         minFontSize = MaterialTheme.typography.labelSmall.fontSize,
         maxLines = 1,
