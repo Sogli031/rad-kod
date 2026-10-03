@@ -1,58 +1,48 @@
 # MD3 Compliance Audit Report
 
-Target: `app/src/main/java/com/rad/shifttracker` (Compose, verzija 5.3)
-Date: 2026-10-03 · metod: material-3 skill, statička provera izvora + Roborazzi snimci (360/411/840dp, font 1.0/1.5/2.0)
-Overall Score: **65/100** (prethodno 60; pre toga 38)
+Target: `app/src/main/java/com/rad/shifttracker` (Compose, verzija 5.4)
+Date: 2026-10-03 · metod: material-3 skill, statička provera izvora (grep po izvoru, testovi-čuvari) + provera na Pixel 9 (tamna/svetla tema, font 1.0/1.5, 864dp)
+Overall Score: **75/100** (prethodno 65 u 5.3; pre toga 60 i 38)
 
 ## Scores by Category
 | Category       | Score | Status | Ukratko |
 |----------------|-------|--------|---------|
-| Color tokens   | 8/10  | pass | Sve boje iz `colorScheme`/`extendedColors`, test zabranjuje `THEME.`/`Color(0x`; jedno uparivanje van uloge (vidi Warnings) |
-| Typography     | 6/10  | warn | Skala + `*Emphasized`, bez ručnog `fontWeight`; ali 27× `AutoSizeText` spušta tekst do 9sp i 14 `sp` literala |
-| Shape          | 9/10  | pass | 0 ručnih `RoundedCornerShape`, kartice `shapes.medium`, dugmad `CircleShape` (full) |
-| Elevation      | 8/10  | pass | Dubina samo kroz tonalne `surfaceContainer*` nivoe, nema senki |
-| Components     | 5/10  | warn | Pravi M3: `Button`, `Switch`, `Checkbox`, `OutlinedTextField`, `Snackbar`, progres; ručno: kartica, donja traka, sheet, izbor smene |
-| Layout         | 5/10  | warn | `Spacing` na 4dp mreži, max širina 600dp; nema `WindowSizeClass`, font 2.0 lomi raspored |
-| Navigation     | 6/10  | warn | Predictive back u manifestu, sheet ima nazad-gest; navigacija je 21 `DialogState` bez back stack-a |
-| Motion         | 6/10  | warn | Emphasized easing za sheet i prelaz meseca (shared axis); nema `MotionScheme`/spring, nema „ukloni animacije“ |
-| Accessibility  | 7/10  | pass | 48dp mete (test), `toggleable` redovi, `liveRegion`, kontrast testiran; kalendar ograničava font na 1.15 i ćelije < 48dp |
-| Theming        | 5/10  | warn | `MaterialTheme` + `ExtendedColors` CompositionLocal (spremno); samo tamna tema, nema dynamic color ni praćenja sistema |
+| Color tokens   | 9/10  | pass | 0× `Color(0x` van `Theme.kt`; sve iz `colorScheme`/`extendedColors`; `onShiftBright/onShiftDeep` uloge; kontrast obe teme pod testom |
+| Typography     | 7/10  | pass | M3 skala + `*Emphasized`, 0× ručni `FontWeight`, tekst u ćeliji min 11sp; ostaje 27× `AutoSizeText` i 12 `sp` literala |
+| Shape          | 9/10  | pass | 0× ručni `RoundedCornerShape`, kartice `shapes.medium`, dugmad `CircleShape`, segmentirani izbor |
+| Elevation      | 8/10  | pass | Samo tonalni `surfaceContainer*` nivoi, 0 senki |
+| Components     | 6/10  | warn | M3: `Button`, `OutlinedCard`, `SingleChoiceSegmentedButtonRow`, `Switch`, `Checkbox`, `OutlinedTextField`, `Snackbar`; ručno: donja traka, sheet u `Dialog`-u, izbor tipa dana (5 dugmadi) |
+| Layout         | 7/10  | pass | `Spacing` 4dp, skrol cele strane, ćelije ≥ 48dp, dve kolone od 840dp, max širina 600/1200dp; nema `WindowSizeClass` ni foldable/hinge logike |
+| Navigation     | 6/10  | warn | Predictive back uključen, sheet ima nazad-gest; 21 `DialogState` bez back stack-a, bez `NavigationBar`/`NavHost` |
+| Motion         | 6/10  | warn | Emphasized easing, shared axis za mesec, „ukloni animacije“ poštovano; nema `MotionScheme`/spring |
+| Accessibility  | 8/10  | pass | 48dp mete, `toggleable` redovi, `liveRegion`, pun opis dana, kontrast testiran u obe teme, font prati sistem; TalkBack nije ručno prošao |
+| Theming        | 9/10  | pass | Tamna / svetla / sistem + dynamic color (Android 12+) u Opcijama, `ExtendedColors` po temi; nema nivoa kontrasta (medium/high) |
 
 ## Critical Issues
 Nema (ništa ≤ 3).
 
 ## Warnings
-1. **Komponente (5):**
-   - `GlassCard` (`UiComponents.kt`) je `Box` + `background` + `border` → `OutlinedCard` (isti izgled: `surfaceContainer`, `outlineVariant`, `shapes.medium`).
-   - Izbor smene i tipa dana u `DayEditDialog.kt` su `DayEditChoiceButton` → `SingleChoiceSegmentedButtonRow` (smena) / ostaju radio-dugmad (tip dana, 5 izbora).
-   - `BottomBar` (`ShiftDashboardCards.kt`) je ručni `Column`+`Row` → `BottomAppBar` (to su radnje, ne destinacije, pa ne `NavigationBar`).
-   - `PopupDialog` je ručni sheet u `Dialog` prozoru → `ModalBottomSheet` **tek posle provere tastature na telefonu** (Faza 1).
-2. **Layout + tipografija (5/6):** snimak `main_w360_f200` — dani u nedelji se slepe („UTOSREČETPET“), oznake statistike
-   odsečene, donja traka „Po…/Op…“; `CALENDAR_MAX_FONT_SCALE = 1.15f` ignoriše sistemski font; `AutoSizeText` min 9–10sp.
-   Rešenje je Faza 5.3 (ćelija ≥ 48dp, skrol cele strane, min 11sp).
-3. **Theming (5):** nema svetle teme ni dynamic color (Faza 5.2). Infrastruktura postoji (`RadDarkColorScheme`,
-   `DarkExtendedColors`), treba `RadLightColorScheme` + `LightExtendedColors` + izbor u Opcijama.
-4. **Motion (6):** `MotionScheme` (spring) za komponente; poštovati `Settings.Global.ANIMATOR_DURATION_SCALE == 0`.
-5. **Navigation (6):** `DialogState` (21 stanje) je ručna navigacija; prihvatljivo za jedan ekran sa listovima, ali
-   dvopanelni prikaz (≥ 840dp) traži stanje „izabran dan“ odvojeno od dijaloga.
-6. **Color pairing (8):** `Shift.textColor` koristi `onPrimary` na punoj boji smene (npr. `shift2`, `vacation`) —
-   kontrast je dobar, ali uloga nije par; u svetloj temi to puca. Uvesti `onShiftX` u `ExtendedColors`.
+1. **Komponente (6):** `BottomBar` je ručni `Column`+`Row` (`BottomAppBar` ima fiksnu visinu 80dp, pa ne raste sa fontom — svesno ostavljeno);
+   `PopupDialog` je ručni sheet u `Dialog` prozoru (tastatura i isečak podešeni); tip dana u `DayEditDialog.kt` je 5 dugmadi (`DayEditChoiceButton`),
+   a ne segmentirani izbor (5 opcija je previše za jedan red).
+2. **Navigacija (6):** `DialogState` (21 stanje) je ručna navigacija; prihvatljivo za jedan ekran sa listovima, ali nema back stack-a ni
+   „izabran dan“ kao zasebnog stanja (dvokolonski prikaz ≥ 840dp pokazuje iznose, ne detalje dana).
+3. **Pokret (6):** komponente nemaju spring; `MotionScheme` traži material3 1.4 (BOM 2025.05.01 ima 1.3) — Faza 4.6.
+4. **Tipografija (7):** `AutoSizeText` (27 mesta) umesto fiksnih stilova; 12 `sp` literala (oznake u ćeliji, `AutoSizeText` granice). Zvanični emphasized stilovi stižu sa 1.4.
+5. **Layout (7):** `UI.wideLayoutMinWidth = 840` je ručni prag umesto `WindowSizeClass`; 72 `dp` literala za veličine (visine, ikone), razmaci su u `Spacing`.
 
 ## Passing
-- Kontrast (tamna tema, izračunato): broj dana u boji smene na toniranoj ćeliji (alpha 0.18 na `surfaceContainer`):
-  Prva 5.9, Druga 8.0, Treća 4.9, Bolovanje 4.9, Godišnji 7.2 — sve ≥ 4.5:1; detalj (`textSecondary`) ≥ 7.6.
-  `textFaint` 5.7, `onSurfaceVariant` 6.9 na kartici. **Nije još automatski test** (dodati sa 5.2, za obe teme).
-- Oblici, elevacija, razmaci i boje su pod testovima-čuvarima u `DesignSystemTest`.
+- Boje, oblici, elevacija, razmaci i težina fonta su pod testovima-čuvarima (`DesignSystemTest`), kontrast boja smene i teksta pod `ThemeContrastTest` (≥ 4.5:1, obe teme).
+- Svetla tema pregledana na telefonu: ćelije, kartice, dijalog dana, Opcije; pozadina ide i ispod statusne/navigacione trake.
+- Font 1.5 na 360dp: kalendar i lista skrolaju, statistika 2×2, donja traka 3×2, ništa odsečeno osim „Prekovremeno“ u statistici na uskom prikazu 1.0 (skraćeno tačkicama).
 
 ## Recommended Fixes (Priority Order)
-| # | Stavka | Kategorije | Procena | Telefon? |
-|---|--------|------------|---------|----------|
-| 1 | **5.3 kalendar:** ćelija ≥ 48dp, bez `CALENDAR_MAX_FONT_SCALE`, skrol cele strane, min 11sp; zaglavlje dana i statistika koji ne lome na fontu 2.0 | Layout, Typography, A11y | +5 | snimci; skrol 📱 |
-| 2 | **5.5 komponente:** `OutlinedCard`, `SingleChoiceSegmentedButtonRow`, `BottomAppBar` | Components | +3 | snimci |
-| 3 | **5.2 svetla tema + dynamic color + „prati sistem“**, `onShiftX` uloge, test kontrasta za sve boje × obe teme | Theming, Color | +4 | izbor palete (ti) |
-| 4 | **5.8 pokret:** `MotionScheme.standard()`/spring, „ukloni animacije“ | Motion | +2 | 📱 za osećaj |
-| 5 | **5.7 adaptivno:** `WindowSizeClass`, ≥ 840dp kalendar + detalji dana | Layout, Navigation | +2 | snimak 840dp |
-| 6 | `ModalBottomSheet` (posle Faze 1) | Components | +1 | 📱 |
+| # | Stavka | Kategorije | Procena |
+|---|--------|------------|---------|
+| 1 | **material3 1.4+** (BOM nadogradnja): `MotionScheme` (spring), zvanični emphasized stilovi, `ButtonGroup`/expressive komponente | Motion, Typography, Components | +4 |
+| 2 | `WindowSizeClass` umesto ručnog praga; stanje „izabran dan“ i list-detail na ≥ 840dp | Layout, Navigation | +3 |
+| 3 | Donja traka u `BottomAppBar`/`NavigationBar` (kad 1.4 dozvoli visinu koja raste sa fontom) | Components, Navigation | +2 |
+| 4 | `AutoSizeText` → fiksni M3 stilovi + prelom u dva reda gde može | Typography | +1 |
+| 5 | Nivoi kontrasta (medium/high) za šemu | Theming, A11y | +1 |
 
-Posle 1–5: procena **≈ 84–86/100**. Ostatak do 90+ traži material3 1.4+ (zvanični emphasized stilovi, expressive
-komponente) — to je Faza 4.6 (nadogradnja BOM-a).
+Posle 1–3: procena **≈ 85/100**; do 90+ traži zamenu ručnog sheet-a (`ModalBottomSheet`) i `NavHost` za dijaloge.
