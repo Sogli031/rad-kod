@@ -199,6 +199,7 @@ private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 month = month,
                 today = today,
                 repo = repo,
+                refreshKey = 0,
                 onDayClick = { _, _ -> }
             )
             StatsSection(

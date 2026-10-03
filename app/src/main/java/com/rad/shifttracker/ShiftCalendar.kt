@@ -171,10 +171,13 @@ internal fun CalendarSection(
     month: Int,
     today: LocalDate,
     repo: ShiftRepository,
+    refreshKey: Int,
     onDayClick: (Int, DayRecord?) -> Unit
 ) {
     val weeks = remember(year, month) { getMonthMatrix(year, month) }
-    val brigadeType = repo.brigadeTypeValue
+    // Jedan upit za ceo mesec; ponovo se čita samo kad se podaci izmene (refreshKey).
+    val recordsByDay = remember(year, month, refreshKey) { repo.getMonthRecords(year, month).associateBy { it.day } }
+    val brigadeType = remember(refreshKey) { repo.brigadeTypeValue }
     val density = LocalDensity.current
     val cellFontScale = calendarCellFontScale(density.fontScale)
     val dayHeight = calendarDayHeight(cellFontScale)
@@ -192,7 +195,7 @@ internal fun CalendarSection(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                     ) {
                         for (day in week) {
-                            val record = if (day != 0) repo.get(year, month, day) else null
+                            val record = if (day != 0) recordsByDay[day] else null
                             val isToday = day == today.dayOfMonth &&
                                 month == today.monthValue &&
                                 year == today.year

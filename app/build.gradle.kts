@@ -24,6 +24,14 @@ gradle.taskGraph.whenReady {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("stability_config.conf"))
+    // Izveštaj o stabilnosti: ./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports
+    if (providers.gradleProperty("composeReports").isPresent) {
+        reportsDestination = layout.buildDirectory.dir("compose_reports")
+    }
+}
+
 android {
     namespace = "com.rad.shifttracker"
     compileSdk = 36

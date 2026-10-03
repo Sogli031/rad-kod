@@ -46,7 +46,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -366,18 +365,17 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 },
                 label = "month"
             ) { monthIndex ->
-                key(repoTick.intValue) {
-                    CalendarSection(
-                        year = monthIndex / MONTHS_PER_YEAR,
-                        month = monthIndex % MONTHS_PER_YEAR + 1,
-                        today = today,
-                        repo = repo,
-                        onDayClick = { day, record ->
-                            // Na širokom ekranu dodir bira dan (panel desno), izmena ide dugmetom „Izmeni“.
-                            if (wide) selectedDay = day else dialogState = DialogState.DayEdit(day, record)
-                        }
-                    )
-                }
+                CalendarSection(
+                    year = monthIndex / MONTHS_PER_YEAR,
+                    month = monthIndex % MONTHS_PER_YEAR + 1,
+                    today = today,
+                    repo = repo,
+                    refreshKey = repoTick.intValue,
+                    onDayClick = { day, record ->
+                        // Na širokom ekranu dodir bira dan (panel desno), izmena ide dugmetom „Izmeni“.
+                        if (wide) selectedDay = day else dialogState = DialogState.DayEdit(day, record)
+                    }
+                )
             }
         }
         val summaryPane: @Composable ColumnScope.() -> Unit = {
