@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("io.gitlab.arturbosch.detekt")
+    id("io.github.takahirom.roborazzi")
 }
 
 // Zajednički potpis: Desktop\programi\keystore
@@ -121,6 +122,10 @@ dependencies {
     // Compose UI testovi bez uređaja (pristupačnost: semantika, dodirne površine)
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Snimci ekrana na računaru (Robolectric native graphics); vidi DesignSnapshotTest
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.46.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.46.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.46.1")
 
     // Android instrumentation testing
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
@@ -128,6 +133,11 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Referentni snimci su u repou: `recordRoborazziDebug` ih piše, `verifyRoborazziDebug` pada na razliku.
+roborazzi {
+    outputDir.set(file("src/test/snapshots"))
 }
 
 detekt {
