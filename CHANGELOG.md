@@ -3,8 +3,8 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [6.0] - nije objavljeno
-Priprema „production grade“ izdanja (faze 2, 3, 4, 7, 8, 10 plana); izgled isti kao 5.5.
+## [5.6] - 2026-10-03
+„Production grade“ izdanje (faze 2, 3, 4, 7, 8, 10 plana); izgled isti kao 5.5.
 - **Manji i bezbedniji APK:** R8 i skupljanje resursa (27 → 10,5 MB), potpis samo zajedničkim ključem (build pada bez njega), `network_security_config` bez nešifrovanog saobraćaja, poravnanje na 16 KB provereno.
 - **Listići samo iz Gmail-a:** čitanje iz foldera i dozvola „Pristup svim fajlovima“ su uklonjeni; nema više zahteva za pristup spoljnoj memoriji.
 - **Brži glavni ekran:** izabrani mesec i izvedeni podaci žive u `MainViewModel` i računaju se van glavne niti; kalendar čita mesec jednim upitom.
