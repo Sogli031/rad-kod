@@ -1,9 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("io.gitlab.arturbosch.detekt")
-    id("io.github.takahirom.roborazzi")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.roborazzi)
 }
 
 // Zajednički potpis: Desktop\programi\keystore
@@ -31,7 +31,7 @@ android {
     defaultConfig {
         applicationId = "com.rad.shifttracker"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 46
         versionName = "5.5"
 
@@ -94,62 +94,62 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-text")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material3.adaptive:adaptive:1.2.0")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.adaptive)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.google.material)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Uvoz platnog listića iz PDF-a (samo lokalna ekstrakcija teksta, bez mreže)
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    implementation(libs.pdfbox.android)
 
     // Google Drive Backup
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
-    implementation("com.google.api-client:google-api-client-android:2.2.0") {
+    implementation(libs.play.services.auth)
+    implementation(libs.google.api.client.android) {
         exclude(group = "org.apache.httpcomponents")
     }
-    implementation("com.google.apis:google-api-services-drive:v3-rev20231128-2.0.0") {
+    implementation(libs.google.api.drive) {
         exclude(group = "org.apache.httpcomponents")
     }
     // Listići iz Gmail-a (samo čitanje)
-    implementation("com.google.apis:google-api-services-gmail:v1-rev20240520-2.0.0") {
+    implementation(libs.google.api.gmail) {
         exclude(group = "org.apache.httpcomponents")
     }
-    implementation("com.google.http-client:google-http-client-gson:1.43.3") {
+    implementation(libs.google.http.client.gson) {
         exclude(group = "org.apache.httpcomponents")
     }
 
     // Unit testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
     // Compose UI testovi bez uređaja (pristupačnost: semantika, dodirne površine)
-    testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
     // Snimci ekrana na računaru (Robolectric native graphics); vidi DesignSnapshotTest
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.46.1")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.46.1")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi-junit-rule:1.46.1")
+    testImplementation(libs.roborazzi.core)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
 
     // Android instrumentation testing
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.espresso.core)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 // Referentni snimci su u repou: `recordRoborazziDebug` ih piše, `verifyRoborazziDebug` pada na razliku.
