@@ -1,103 +1,84 @@
-# Android audit — Rad (posle plana „production grade“)
+# Android audit — rad (v5.6), 04.10.2026.
 
-Datum: 2026-10-04 · verzija koda: 5.5 + izmene za 6.0 (versionCode 46, neobjavljeno) · metod: `android` skill
-(`scan_project`, `analyze_*`, `check_r8_config`, `build_audit_context`, `score.py`) nad čistom kopijom commitovanog stanja,
-plus ručna provera nalaza. Sve je **statička** provera izvora; ništa nije mereno na uređaju. Prethodni audit (2026-10-03, v5.0) je u git istoriji.
+Statički audit (skill `android`), dokazi u `generated/audit-context.json`. Bez runtime merenja (vitals, trace, screenshot) — performanse, dizajn i pristupačnost su preflight.
 
 ## Ocena
 
-| Kategorija | Težina | Pre (v5.0) | Sada | Težinski |
-|---|---|---|---|---|
-| Arhitektura | 15 | 40 | 62 | 9.3 |
-| Performanse | 15 | 50 | 68 | 10.2 |
-| Bezbednost | 15 | 70 | 80 | 12.0 |
-| Kompatibilnost | 10 | 80 | 82 | 8.2 |
-| Dizajn sistem (M3 audit 77/100) | 10 | 60 | 77 | 7.7 |
-| Pristupačnost | 10 | 65 | 72 | 7.2 |
-| Testiranje | 10 | 65 | 76 | 7.6 |
-| Build | 10 | 55 | 80 | 8.0 |
-| Play preflight (sideload, nije relevantno) | 5 | 40 | 50 | 2.5 |
-| **Zbir** | | **58.5** | | **72.7** |
-
-**Završna ocena skill-a: 40/100** zbog gornje granice za kritični gate. Taj gate je lažan (vidi dole), pa je stvarna ocena **72.7**.
-Cilj plana (≥ 80) nije dostignut; razlog je Arhitektura (62) i Performanse (68), ne dizajn ni bezbednost.
-
-## Gate-ovi
-
-| Gate | Ozbiljnost | Stvaran? |
+| Oblast | Težina | Ocena |
 |---|---|---|
-| C1 izvezena komponenta bez dozvole | critical | **Lažan** — `MainActivity` je LAUNCHER; ne može se zadovoljiti ni u jednoj aplikaciji sa ikonom |
-| H2 nema benchmark/Baseline Profile | high | **Stvaran** — jedini otvoren pravi gate |
-| H3 nizak pouzdan rizik dodirne mete | high | **Lažan** — oba mesta proverena: `DayEditDialog.kt:531` ima `heightIn(min = MIN_TOUCH_TARGET)`, `PopupComponents.kt:166` je ceo providni sloj iza lista |
-| C5/C6 Vitals (crash/ANR) | critical | traži spoljne podatke (Play Console); aplikacija se ne distribuira kroz Play |
-| ~~C7 release bez shrink~~ | — | **rešeno** (R8 + shrink, APK 27 → 10,5 MB) |
-| ~~H6 network security config~~ | — | **rešeno** (`cleartextTrafficPermitted=false`) |
+| Arhitektura | 15% | 58 |
+| Performanse | 15% | 68 |
+| Bezbednost | 15% | 70 |
+| Kompatibilnost (Android 15/16) | 10% | 88 |
+| Dizajn sistem | 10% | 82 |
+| Pristupačnost | 10% | 78 |
+| Testovi | 10% | 71 |
+| Build | 10% | 78 |
+| Play preflight | 5% | n/a (distribucija preko GitHub-a) |
+| **Ukupno (renormalizovano na 95%)** | | **≈ 73 / 100** |
 
-## Šta se promenilo od prošlog audita
+Gate C1 („exported komponenta bez dozvole") je **lažno pozitivan**: `MainActivity` ima samo MAIN/LAUNCHER filter i ne čita spoljne Intent podatke → cap od 40 nije primenjen.
 
-- Release: R8 i shrink, potpis samo zajedničkim ključem (build pada bez njega), 16 KB poravnanje proveren, `release.ps1` sa `apksigner`/`zipalign`.
-- Dozvole: nema `MANAGE_EXTERNAL_STORAGE` ni READ/WRITE_EXTERNAL; crash log samo u privatnom folderu, bez poruka izuzetaka.
-- Podaci: restore guard, `schema_version` + migracije, atomski upis, `Clock`.
-- Arhitektura: `MainViewModel`, `ShiftRepository` 2509 → 395 linija, mrtav kod (−205 linija) uklonjen, `collectAsStateWithLifecycle` svuda.
-- Build: version catalog (50 unosa, 0 inline verzija), AGP 8.13 / Kotlin 2.1.21 / Gradle 8.13, `targetSdk` 36, Gradle cache/parallel/configuration-cache, nove verzije Google biblioteka.
-- Testovi: 1127 testova, Robolectric UI, Roborazzi snimci, Kover prag 90% na obračunu i podacima (92,7%).
-- Nalaz ovog audita, popravljen odmah: `BloodDonationReminderReceiver` nije ponovo zakazivao podsetnik posle nadogradnje aplikacije ni promene vremena
-  i čitao je lokalni fajl na glavnoj niti → dodati `MY_PACKAGE_REPLACED`, `TIME_SET`, `TIMEZONE_CHANGED` i `goAsync()` sa radnom niti.
+## Verifikovani statički nalazi
 
-## Nalazi po kategorijama
-
-### Arhitektura (62)
-- **Medium** Nema DI/kontejnera: `RadApplication` drži `ShiftRepository` i `GoogleDriveBackup` kao singletone, a dijalozi i kalendar primaju `repo` direktno
-  (`CalendarSection`, `MainDialogs`, 21 `DialogState` bez back stack-a).
-- **Medium** `ShiftRepository` je i dalje jedna fasada: logika je u fajlovima proširenja (`ShiftRepository*.kt`), ali stanje i zaključavanje su zajednički (`internal` polja, `synchronized(lock)`); interfejsi po domenima nisu uvedeni.
-- **Low** `MainActivity` pokreće provere (`checkSideRunsOnEntry`) iz aktivnosti, a `GmailImportRunner`/`SideRunMessages` su globalni singletoni.
-- Dobro: `MainViewModel` + `StateFlow`, izvedeni podaci van glavne niti, 0 `LiveData`, 0 kapt/ksp.
+### Arhitektura (58)
+- Composable-i direktno čitaju/pišu `repo` na UI niti tokom kompozicije: `DayEditDialog.kt:321,365,383-384` (`getSummary`, `calculateEstimatedDailyWorkNetPay` bez `remember`), `SeniorityDialog.kt:44-62,489-493`, `MonthlyWorkAndPayExport` (43 poziva), `PayslipImport` (26), `GmailOnboarding` (26).
+- `MainViewModel.kt:74` radi sinhroni `compute()` u konstruktoru (~20 upita) na glavnoj niti.
+- `GmailImportRunner` (`GmailOnboarding.kt:460-482`) — globalni `object` sa sopstvenim scope-om, van lifecycle-a; `GmailOnboarding.kt:718` `collectAsState()` bez lifecycle-a.
+- God-fajlovi: `PayCalculator.kt` 1254, `DayEditDialog.kt` 1022, `ShiftRepositoryJsonCodec.kt` 970, `ShiftTrackerScreen.kt` 923, `GmailOnboarding.kt` 814.
+- 107 od 143 fajla u root paketu; domen (parser, kalkulatori, solver) pomešan sa UI.
 
 ### Performanse (68)
-- **High (gate H2)** Nema Baseline Profile ni Macrobenchmark modula; hladan start nije meren.
-- **Medium** 36 data klasa sa kolekcijama; stability config pokriva `java.time`, `BigDecimal`, kolekcije (nestabilnih klasa 107 → 31, preostale su servisi/repo), strong skipping je uključen.
-- **Low** `AutoSizeText` (27 mesta) meri tekst u kompoziciji.
-- Dobro: kalendar čita mesec jednim upitom, nema `key(repoTick)` koji gradi sve iznova, R8, StrictMode i LeakCanary u debug-u.
+- Gate H2: nema baseline profila ni Macrobenchmark modula.
+- `RadApplication.kt:59` — `loadFromLocal` (čitanje + parsiranje celog JSON-a) na glavnoj niti pre `setContent`.
+- `MainActivity.kt:115` → `flushPendingPersistence()` može blokirati `onStop` do 2 s.
+- Keševi u repozitorijumu su obični `mutableMapOf` (`RepositoryPayState.kt:61`), a koriste se i sa `Dispatchers.Default` (ViewModel) i sa main niti (dijalozi).
 
-### Bezbednost (80)
-- **Medium** Podaci u mirovanju nisu šifrovani (lokalni JSON u `filesDir`, JMBG i račun iz listića) — odluka korisnika: Faza 9 se ne radi.
-- **Low** `Log.w/i` ispisuju vrednosti podešavanja (koeficijent, osnovica) i dijagnostiku obračuna; vidljivo samo preko adb-a.
-- **Low** `R8` širok `-keep` za `com.tom_roush.pdfbox.**` i Google model klase (potrebno zbog refleksije; sužavati tek uz test sa nalogom).
-- Dobro: `allowBackup=false`, nema cleartext-a, scope-ovi `drive.appdata` i `gmail.readonly`, nema `exported` komponenti osim launcher-a, crash log bez poruka, restore guard.
+### Bezbednost (70)
+- **M9:** platni podaci (JMBG, plata) nešifrovani u `filesDir`: `LocalShiftStorage.kt:20,34`, `GmailPayslipCache.kt:104` (30 meseci listića), `PayslipSnapshotStore.kt:16`.
+- `gmail.readonly` scope (`GmailPayslips.kt:45-46`) — restriktivan, čita ceo inbox; token se ne čuva (dobro).
+- Nema `gradle/verification-metadata.xml`.
+- Logovi sa ličnim podacima nisu uklonjeni u release-u (nema `-assumenosideeffects`): `GmailOnboarding.kt:173`, `ShiftRepositoryPaySettings.kt:22,110,135`.
+- Prolazi: cleartext zabranjen, backup isključen, PendingIntent `FLAG_IMMUTABLE`, PDF limit 10 MB / 10 strana, nema praćenih tajni u git-u.
 
-### Kompatibilnost (82)
-- `compileSdk`/`targetSdk` 36, `minSdk` 26, predictive back uključen, 16 KB poravnanje proveren, `POST_NOTIFICATIONS` traži se u toku rada.
-- **Low** Compose BOM 2025.12.01 i `activity-compose` 1.12.4 nisu najnoviji (BOM 2026.09.00 postoji); namerno ne dirano posle provere dizajna.
-- **Low** `play-services-auth` 21.6.0 (postoji 22.0.0, veliki skok) — proveriti pre sledećeg većeg izdanja.
+### Build (78)
+- APK 10,6 MB (21,5 MB raspakovano): BouncyCastle `org/bouncycastle/pqc/**` ≈ 8,2 MB (`lowmc.properties` 3,6 MB) + pdfbox CJK cmap asseti ≈ 4,6 MB — ne koriste se.
+- Preširoki keep-ovi: `proguard-rules.pro:10-11` (Drive/Gmail modeli, redundantno uz liniju 12), `:19/22` ceo `com.tom_roush.pdfbox.**` → `mapping.txt` 58 MB.
+- Guard za potpisivanje (`app/build.gradle.kts:18-26`) hvata samo `assemble*Release`, ne `bundleRelease`.
+- `kotlinOptions { jvmTarget }` (`:72-74`) deprecated; lifecycle verzija ponovljena 3× u katalogu.
+- `release.ps1` ne proverava čist working tree i ne pravi git tag.
 
-### Dizajn sistem (77)
-- Preuzeto iz M3 audita (77/100): boje i oblici iz teme, `Spacing` 4dp, M3 komponente; ostaje ručna donja traka i sheet u `Dialog`-u (svesno).
+### Testovi (71)
+- 80 fajlova / 1.121 testova; novac, parser listića, solver, merge backup-a i godišnji dobro pokriveni.
+- **Bez testova:** `data/backup/GoogleDriveBackup.kt` (513 linija — `runVersionedBackup`, `autoBackupGate`, `restoreVersion`), `BackupWorker.kt`, `AtomicTextFile.kt`, `LocalShiftStorage.kt`.
+- Kover 90% pravilo pokriva samo 7 klasa; van njega su `PayslipMonthFillSolver`, `MonthlyNetPayBreakdownCalculator`, `PayBreakdown`, `VacationTracking`, `data/backup/**`.
+- CI ne pokreće `verifyRoborazziDebug` (10 snimaka postoji, ne porede se). `MainViewModelTest` ima 2 testa.
 
-### Pristupačnost (72)
-- Dobro: `toggleable` redovi, `liveRegion` za greške, 48dp mete, font prati sistem, kontrast pod testom.
-- **Medium** TalkBack nije ručno prošao; nema ATF testa; 143 tvrdo kodirana teksta (nema `strings.xml`, `plurals`).
+### Pristupačnost (78)
+- Oba touch-target upozorenja su lažna (`DayEditDialog.kt:525` ima `heightIn(min=48dp)`, `PopupComponents.kt:166` je scrim).
+- Samo jedan `heading()` (`PopupComponents.kt:301`) — naslov meseca i sekcija bez heading semantike.
+- `ShiftCalendar.kt:56/63` — `CALENDAR_CELL_MAX_FONT_SCALE = 1.15f` ograničava sistemsku veličinu fonta.
+- Donja traka bez `Role.Tab`/selected; radio izbori bez `selectableGroup()`.
+- Statusne tačke u kalendaru samo bojom (TalkBack opis postoji).
 
-### Testiranje (76)
-- 1127 unit/Robolectric testova, Roborazzi snimci (glavni ekran × font × širina), Kover 92,7% na obračunu i podacima.
-- **Medium** Ekrani/dijalozi nemaju pokrivenost (UI sloj ~0–10%); nema instrumentacionih testova.
-- **Low** Još oko 10 testova čita izvorni tekst (`OptionsDialogTextTest`, `PayDetailsDialogTextTest`, `BloodDonationLeaveTest` …).
-- **Low** `RepositoryPayBaseResolver` je najslabije pokriven deo obračuna.
+### Dizajn (82)
+- Svih 77 `Color(0x…)` u `Theme.kt`; 270 tipografskih referenci; Spacing tokeni korišćeni.
+- `RadTheme` (`Theme.kt:295`) uvek tamna — `RadLightColorScheme` i `LightExtendedColors` mrtav kod.
+- ~78 sirovih `.dp` van tokena (najviše `BackupVersionsDialog.kt`), 12 sirovih `.sp`; `CrashLogScreen.kt` zaobilazi sopstvene komponente.
 
-### Build (80)
-- Dobro: version catalog, R8, potpis bez tihog debug ključa, `release.ps1`, CI (nije pokrenut na GitHub-u), Kover u `check`.
-- **Low** Nema `verification-metadata.xml` (provera integriteta zavisnosti), nema convention plugina (jedan modul, nije potrebno).
-- **Low** CI nikad nije pokrenut sa novim tokom (SDK 36, Kover, `allowDebugSigning`) jer ništa nije pushovano.
+### Kompatibilnost (88)
+- `MainActivity.kt:27-35` ručni edge-to-edge + deprecated `statusBarColor`/`navigationBarColor` (no-op na API 35+) → `enableEdgeToEdge()`.
+- `CrashLogScreen.kt:33-60` bez insets-a — dno ispod navigacione trake na API 35+.
+- Prolazi: neegzaktni alarmi bez `SCHEDULE_EXACT_ALARM`, POST_NOTIFICATIONS u kontekstu, bez FGS, 16 KB poravnanje provereno u `release.ps1`, bez ograničenja orijentacije.
 
-### Play preflight (50)
-- Distribucija je sideload/Obtainium; AAB, upload ključ, privacy policy i Data safety nisu rađeni (nisu potrebni bez Play-a).
+## Preflight upozorenja (zahtevaju potvrdu)
+- Stvarni trošak `loadFromLocal` i `getSummary` u kompoziciji — potreban startup/Perfetto trace.
+- Kontrast boja (procena ~5–6:1 za `textFaint`) — screenshot provera.
+- Predictive back sa otvorenim popup-om i tastaturom — test na API 36 uređaju.
+- Širina ćelije kalendara ≥ 48dp na 360dp ekranu.
 
-## Preporuke (po prioritetu)
-
-1. **Baseline Profile + Macrobenchmark** (gate H2, jedina pravi granica): traži telefon; izmeri hladan start pre/posle.
-2. Ručna provera R8 tokova sa novim bibliotekama: Drive backup/restore, Gmail uvoz, izvoz JSON-a, obaveštenje za krv.
-3. Uvesti mali `AppContainer` (ili Hilt) i interfejse po domenima za repo; `ShiftRepositoryUi`/dijalozi da primaju interfejs, ne konkretnu klasu.
-4. TalkBack prolaz + ATF test; zatim `strings.xml`.
-5. Preostalih ~10 testova koji čitaju izvor zameniti testovima ponašanja; podići pokrivenost `RepositoryPayBaseResolver`.
-6. `verification-metadata.xml` i prvi zeleni CI run na GitHub-u pre izdanja 6.0.
-
-Procena: stavke 1, 3 i 4 podižu Performanse (+10), Arhitekturu (+10) i Pristupačnost (+8), tj. zbir na oko **76–77**; za ≥ 80 treba još Testiranje (+8, UI pokrivenost i instrumentacioni testovi) i Build (+5, verifikacija zavisnosti, zeleni CI).
+## Potrebni spoljni dokazi
+- Android Vitals (crash/ANR stopa) — gate C5/C6 nerazrešeni.
+- Merged manifest (dozvole iz biblioteka), potpis release APK-a (`apksigner verify --print-certs`).
+- Status verifikacije OAuth consent ekrana za `gmail.readonly`.
+- CVE provera za pdfbox-android 2.0.27.0.
