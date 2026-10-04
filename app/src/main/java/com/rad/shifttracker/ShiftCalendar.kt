@@ -117,7 +117,7 @@ internal fun HeaderChevron(icon: ImageVector, label: String, onClick: () -> Unit
         modifier = Modifier
             .size(UI.iconButtonSize.dp)
             .clip(CircleShape)
-            .radClickable(onClickLabel = label, onClick = onClick),
+            .radClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Box(

@@ -1,6 +1,8 @@
 package com.rad.shifttracker
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -941,7 +943,9 @@ internal fun DayEditChoiceHeader(text: String) {
         color = MaterialTheme.extendedColors.textSecondary,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        // Odeljci dijaloga: čitač ekrana skače po naslovima.
+        modifier = Modifier.semantics { heading() }
     )
 }
 

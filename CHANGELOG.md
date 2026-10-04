@@ -3,6 +3,15 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.0] - 2026-10-05
+„Production grade“: Android audit (zbir oko 73 → 80), provereno na telefonu.
+- **Manji APK:** 10,5 → 4,9 MB (izbačene neupotrebljene kriptografske i kineske/japanske tabele iz čitača PDF-a; listić se čita isto).
+- **Brži start:** podaci i prvi obračun meseca se učitavaju van glavne niti, Baseline Profile za start aplikacije; dijalozi ne računaju mesec pri svakom dodiru.
+- **Pristupačnost:** redovi „plata“ i „primanja“ su visoki 48dp (tekst u sredini), naslov meseca i odeljci u danu se najavljuju kao naslovi, tekst nikad ispod 11sp; ATF provera na telefonu.
+- **Bezbednost:** iz release verzije su uklonjeni debug logovi, svaka biblioteka se proverava po SHA-256, Gradle wrapper po otisku.
+- **Backup:** upis verzija na Drive i lokalni fajl pokriveni testovima (prekinut upis, oštećen i prazan fajl, orezivanje tek posle upisa).
+- **Ekran:** trake preko `enableEdgeToEdge`, ekran posle pada ne ide ispod navigacione trake.
+
 ## [5.6] - 2026-10-03
 „Production grade“ izdanje (faze 2, 3, 4, 7, 8, 10 plana); izgled isti kao 5.5.
 - **Manji i bezbedniji APK:** R8 i skupljanje resursa (27 → 10,5 MB), potpis samo zajedničkim ključem (build pada bez njega), `network_security_config` bez nešifrovanog saobraćaja, poravnanje na 16 KB provereno.

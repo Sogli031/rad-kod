@@ -217,7 +217,9 @@ private fun PayAmountCard(
             .heightIn(min = COMPACT_PAY_CARD_HEIGHT.dp)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
-            .then(clickModifier)
+            .then(clickModifier),
+        // Etiketa i iznos su vertikalno u sredini reda (red je viši od teksta: 48dp dodirna površina).
+        contentAlignment = Alignment.CenterStart
     ) {
         // Okvir se crta ručno da bi se spojio preko oba reda kao jedna kartica.
         Box(
