@@ -42,6 +42,11 @@ Baseline Profile (brži start, `app/src/main/baseline-prof.txt`): sa telefonom n
 preko `app/src/main/baseline-prof.txt`. Meri se zasebna aplikacija `com.rad.shifttracker.benchmark`
 (test je na kraju deinstalira), prava instalacija se ne dira. Profil osvežiti posle većih izmena ekrana.
 
+Provera biblioteka: `gradle/verification-metadata.xml` (SHA-256 svake zavisnosti). Posle dodavanja ili
+nadogradnje biblioteke: `./gradlew --write-verification-metadata sha256 --no-configuration-cache testDebugUnitTest
+verifyRoborazziDebug detekt lintDebug koverVerifyDebug assembleRelease :app:assembleBenchmark :baselineprofile:assembleBenchmark`
+i pregledaj razliku pre commita.
+
 Izveštaj o stabilnosti Compose-a: `./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports`.
 
 ## Struktura
