@@ -1,4 +1,4 @@
-# Objavljivanje verzije: testovi, build, provera potpisa i 16 KB poravnanja, kopija mapping.txt, GitHub release.
+﻿# Objavljivanje verzije: testovi, build, provera potpisa i 16 KB poravnanja, kopija mapping.txt, GitHub release.
 # Upotreba: .\release.ps1 [-Notes "Izmene na srpskom"] [-SkipPublish]
 # Bez -Notes uzima se odeljak "## [verzija]" iz CHANGELOG.md.
 # Verziju (versionCode/versionName) podigni u app/build.gradle.kts PRE pokretanja.
@@ -11,6 +11,12 @@ $ExpectedSha1 = '1ba8c0aab7cd5be3af2c1099443d5c6375b06b55'
 $Repo = 'Sogli031/rad'
 $Gh = 'C:\Program Files\GitHub CLI\gh.exe'
 Set-Location $PSScriptRoot
+
+# Release se pravi samo iz commitovanog stanja, da APK odgovara tagu.
+$Git = (Get-Command git -ErrorAction SilentlyContinue).Source
+if (-not $Git) { $Git = 'C:\Program Files\Git\cmd\git.exe' }
+$dirty = & $Git status --porcelain --untracked-files=no
+if ($dirty) { throw "Ima necommitovanih izmena:`n$dirty" }
 
 $gradle = Get-Content app\build.gradle.kts -Raw
 $version = [regex]::Match($gradle, 'versionName = "([^"]+)"').Groups[1].Value
@@ -47,6 +53,8 @@ $sha256 = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
 Write-Host "APK: $out  SHA-256: $sha256  potpis SHA-1: $sha1"
 
 if ($SkipPublish) { return }
+& $Git tag -a "v$version" -m "Verzija $version"
+if ($LASTEXITCODE -ne 0) { throw "Tag v$version nije napravljen (možda već postoji)" }
 $notesFile = Join-Path $env:TEMP "rad-notes-$version.md"
 Set-Content -Path $notesFile -Value "$Notes`n`nSHA-256 APK-a: ``$sha256```nSHA-1 sertifikata: ``$sha1``" -Encoding UTF8
 & $Gh release create "v$version" $out --repo $Repo --title "Verzija $version" --notes-file $notesFile

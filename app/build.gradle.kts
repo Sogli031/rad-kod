@@ -16,7 +16,10 @@ sharedSigning.takeIf { it.exists() }?.let { apply(from = it) }
 val hasSharedKey = rootProject.file("../keystore/keystore.properties").exists()
 val allowDebugSigning = providers.gradleProperty("allowDebugSigning").orNull == "true"
 gradle.taskGraph.whenReady {
-    val buildsRelease = allTasks.any { it.project == project && it.name.contains("Release") && it.name.startsWith("assemble") }
+    // assemble*Release (APK) i bundle*Release (AAB): oba bi bez ključa dobila debug potpis.
+    val buildsRelease = allTasks.any {
+        it.project == project && it.name.contains("Release") && (it.name.startsWith("assemble") || it.name.startsWith("bundle"))
+    }
     if (buildsRelease && !hasSharedKey && !allowDebugSigning) {
         throw GradleException(
             "Nema ../keystore/keystore.properties: release bi bio potpisan debug ključem. " +
@@ -30,6 +33,12 @@ composeCompiler {
     // Izveštaj o stabilnosti: ./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports
     if (providers.gradleProperty("composeReports").isPresent) {
         reportsDestination = layout.buildDirectory.dir("compose_reports")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -69,10 +78,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -84,7 +89,19 @@ android {
             excludes += "/META-INF/NOTICE.txt"
             excludes += "/META-INF/notice.txt"
             excludes += "/META-INF/INDEX.LIST"
+            // BouncyCastle (dolazi uz pdfbox) nosi ~8 MB tabela post-kvantne kriptografije; listić ih ne koristi.
+            excludes += "org/bouncycastle/pqc/**"
         }
+    }
+
+    // pdfbox: CMap tabele za kineske/japanske/korejske fontove (~3 MB). Listići su TrueType Arial;
+    // Identity-H/V (Type0 fontovi) ostaju. Prva stavka je podrazumevana lista aapt-a.
+    androidResources {
+        ignoreAssetsPattern = listOf(
+            "!.svn", "!.git", "!.ds_store", "!*.scc", ".*", "<dir>_*", "!CVS", "!thumbs.db", "!picasa.ini", "!*~",
+            "<file>Uni*", "<file>Adobe-*", "<file>GB*", "<file>KSC*", "<file>B5*", "<file>ETen*", "<file>HKscs*",
+            "<file>CNS-*", "<file>90*", "<file>83*", "<file>78*", "<file>Add-*", "<file>Ext-*", "<file>EUC-*"
+        ).joinToString(":")
     }
 
     lint {

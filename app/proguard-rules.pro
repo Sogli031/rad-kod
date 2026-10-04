@@ -7,16 +7,20 @@
 -keepclassmembers class * {
     @com.google.api.client.util.Key <fields>;
 }
--keep class com.google.api.services.drive.model.** { *; }
--keep class com.google.api.services.gmail.model.** { *; }
 -keep class * extends com.google.api.client.json.GenericJson { *; }
 -dontwarn com.google.api.client.**
 -dontwarn org.apache.http.**
 -dontwarn javax.naming.**
 -dontwarn org.ietf.jgss.**
 
-# pdfbox-android: fontovi, glifovi i filteri se učitavaju po imenu
--keep class com.tom_roush.pdfbox.** { *; }
+# pdfbox-android nosi svoja pravila (SecurityHandler refleksija); fontovi i CMap-e su asseti, ne klase.
 -dontwarn com.tom_roush.pdfbox.**
 -dontwarn com.gemalto.jp2.**
 -dontwarn org.bouncycastle.**
+
+# Release bez debug/info/verbose logova (u njima ima iznosa i datuma); w/e ostaju za crash dijagnostiku.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

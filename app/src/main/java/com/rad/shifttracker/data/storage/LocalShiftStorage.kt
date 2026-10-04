@@ -1,9 +1,7 @@
 package com.rad.shifttracker.data.storage
 
 import android.content.Context
-import android.util.AtomicFile
 import java.io.File
-import java.io.FileOutputStream
 
 /** Lokalni fajl sa podacima; izdvojeno da se čuvanje i učitavanje mogu testirati bez Android okruženja. */
 internal interface LocalDataStore {
@@ -16,26 +14,11 @@ internal interface LocalDataStore {
 internal class LocalShiftStorage(
     private val fileName: String = LOCAL_BACKUP_FILE
 ) : LocalDataStore {
-    override fun save(context: Context, json: String): Boolean {
-        val atomicFile = AtomicFile(File(context.filesDir, fileName))
-        var stream: FileOutputStream? = null
-        return try {
-            stream = atomicFile.startWrite()
-            stream.write(json.toByteArray(Charsets.UTF_8))
-            atomicFile.finishWrite(stream)
-            true
-        } catch (_: Exception) {
-            stream?.let { runCatching { atomicFile.failWrite(it) } }
-            false
-        }
-    }
+    override fun save(context: Context, json: String): Boolean = file(context).write(json)
 
-    override fun load(context: Context): String? {
-        val atomicFile = AtomicFile(File(context.filesDir, fileName))
-        return runCatching {
-            atomicFile.readFully().toString(Charsets.UTF_8)
-        }.getOrNull()
-    }
+    override fun load(context: Context): String? = file(context).read()
+
+    private fun file(context: Context) = AtomicTextFile(File(context.filesDir, fileName))
 
     override fun hasData(context: Context): Boolean {
         return load(context)?.isNotEmpty() == true
