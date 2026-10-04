@@ -30,11 +30,13 @@ internal fun OptionsDialog(
     onDismiss: () -> Unit
 ) {
     val actions = optionsDialogActionLabels()
-    var mainPayIncludesTransport by remember(repo.mainPayIncludesTransport) {
-        mutableStateOf(repo.mainPayIncludesTransport)
+    val savedMainPayIncludesTransport = rememberRepoValue(repo) { mainPayIncludesTransport }
+    var mainPayIncludesTransport by remember(savedMainPayIncludesTransport) {
+        mutableStateOf(savedMainPayIncludesTransport)
     }
-    var autoAdvanceImportEnabled by remember(repo.autoAdvanceImportEnabled) {
-        mutableStateOf(repo.autoAdvanceImportEnabled)
+    val savedAutoAdvanceImportEnabled = rememberRepoValue(repo) { autoAdvanceImportEnabled }
+    var autoAdvanceImportEnabled by remember(savedAutoAdvanceImportEnabled) {
+        mutableStateOf(savedAutoAdvanceImportEnabled)
     }
 
     PopupDialog(
@@ -122,7 +124,7 @@ private fun OptionDivider() {
 @Composable
 private fun ManualPaySettingsSection(repo: ShiftRepository) {
     Text(
-        text = difficultWorkConditionsStatusText(repo.difficultWorkConditionsPercentValue),
+        text = difficultWorkConditionsStatusText(rememberRepoValue(repo) { difficultWorkConditionsPercentValue }),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 2,
@@ -131,7 +133,7 @@ private fun ManualPaySettingsSection(repo: ShiftRepository) {
     )
     // Prevoz po danu se ne kuca: čita se iz najnovijeg obračuna prevoza (~15. u mesecu).
     Text(
-        text = transportDailyAmountStatusText(repo.transportDailyAmountValue),
+        text = transportDailyAmountStatusText(rememberRepoValue(repo) { transportDailyAmountValue }),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 3,

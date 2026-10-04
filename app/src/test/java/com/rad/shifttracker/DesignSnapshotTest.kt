@@ -135,24 +135,7 @@ class DesignSnapshotTest {
     private fun snapshotPath(name: String, widthDp: Int, fontScale: Float): String =
         "src/test/snapshots/${name}_w${widthDp}_f${(fontScale * 100).toInt()}.png"
 
-    /** Mesec sa svim vrstama dana: tri smene, slobodni, godišnji, bolovanje i prekovremeno. */
-    private fun sampleRepository(): ShiftRepository = testRepository().apply {
-        val pattern = listOf(Shift.FIRST, Shift.FIRST, Shift.SECOND, Shift.SECOND, Shift.THIRD, Shift.THIRD, Shift.OFF, Shift.OFF)
-        val days = YearMonth.of(YEAR, MONTH).lengthOfMonth()
-        for (day in 1..days) {
-            val shift = when (day) {
-                in 20..22 -> Shift.VACATION
-                27 -> Shift.SICK
-                else -> pattern[(day - 1) % pattern.size]
-            }
-            val hours = if (shift == Shift.OFF) 0 else 8
-            if (day == 9) {
-                set(YEAR, MONTH, day, shift, hours, shift2 = Shift.SECOND, hours2 = 4)
-            } else {
-                set(YEAR, MONTH, day, shift, hours)
-            }
-        }
-    }
+    private fun sampleRepository(): ShiftRepository = sampleMonthRepository()
 
     private companion object {
         const val YEAR = 2026
@@ -161,10 +144,27 @@ class DesignSnapshotTest {
     }
 }
 
+/** Mesec sa svim vrstama dana: tri smene, slobodni, godišnji, bolovanje i prekovremeno (oktobar 2026). */
+internal fun sampleMonthRepository(year: Int = 2026, month: Int = 10): ShiftRepository = testRepository().apply {
+    val pattern = listOf(Shift.FIRST, Shift.FIRST, Shift.SECOND, Shift.SECOND, Shift.THIRD, Shift.THIRD, Shift.OFF, Shift.OFF)
+    for (day in 1..YearMonth.of(year, month).lengthOfMonth()) {
+        val shift = when (day) {
+            in 20..22 -> Shift.VACATION
+            27 -> Shift.SICK
+            else -> pattern[(day - 1) % pattern.size]
+        }
+        val hours = if (shift == Shift.OFF) 0 else 8
+        if (day == 9) {
+            set(year, month, day, shift, hours, shift2 = Shift.SECOND, hours2 = 4)
+        } else {
+            set(year, month, day, shift, hours)
+        }
+    }
+}
 
 /** Isti raspored sekcija kao [ShiftTrackerScreen], bez sporednih efekata. */
 @Composable
-private fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
+internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
     val year = today.year
     val month = today.monthValue
     val summary = repo.getSummary(year, month)

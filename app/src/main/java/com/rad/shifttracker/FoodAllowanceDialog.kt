@@ -24,7 +24,7 @@ fun FoodAllowanceDialog(
     onDismiss: () -> Unit
 ) {
     val selectedMonth = MonthKey(year, month)
-    val selectedPrice = repo.getFoodPerDayForMonth(year, month)
+    val selectedPrice = rememberRepoValue(repo, year, month) { getFoodPerDayForMonth(year, month) }
     var foodInput by remember(selectedMonth) { mutableStateOf(formatRateInput(selectedPrice)) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 

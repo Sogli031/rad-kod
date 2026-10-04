@@ -13,12 +13,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali
  * izvorni tekst): šta korisnik vidi i da dodir otvara dijalog.
  */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34])
 class DashboardBehaviorTest {
 

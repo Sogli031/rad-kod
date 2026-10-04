@@ -84,7 +84,7 @@ fun PayDetailsDialog(
                 )
 
                 PayAccuracyWarningsCard(
-                    payAccuracyWarningTexts(payDetails, repo.isSeniorityConfiguredValue)
+                    payAccuracyWarningTexts(payDetails, rememberRepoValue(repo) { isSeniorityConfiguredValue })
                 )
 
                 PayDetailsSectionCard(title = "Isplata") {

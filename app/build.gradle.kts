@@ -76,7 +76,15 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }
+        // Instrumentacioni testovi na telefonu (ATF): poseban applicationId, jer test na kraju
+        // deinstalira aplikaciju, a debug i release su potpisani istim ključem kao prava instalacija.
+        create("uiTest") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".uitest"
+            matchingFallbacks += listOf("debug")
+        }
     }
+    testBuildType = "uiTest"
 
     buildFeatures {
         compose = true
@@ -187,6 +195,10 @@ dependencies {
     // Android instrumentation testing
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
+    // Accessibility Test Framework (ATF) nad pravim ekranima na telefonu, vidi AccessibilityChecksTest
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.accessibility)
+    "uiTestImplementation"(libs.androidx.compose.ui.test.manifest)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     // Samo u debug build-u: curenje memorije (LeakCanary), vidi i StrictMode u RadApplication.

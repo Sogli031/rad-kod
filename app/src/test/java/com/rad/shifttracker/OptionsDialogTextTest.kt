@@ -119,10 +119,10 @@ class OptionsDialogTextTest {
         assertFalse(options.contains("Odbici od plate"))
         // Otežani uslovi se više ne kucaju: upisuje ih lista (šifra 21), ovde se samo prikazuju.
         assertFalse(options.contains("repo.difficultWorkConditionsPercentValue ="))
-        assertTrue(options.contains("difficultWorkConditionsStatusText(repo.difficultWorkConditionsPercentValue)"))
+        assertTrue(options.contains("difficultWorkConditionsStatusText(rememberRepoValue(repo) { difficultWorkConditionsPercentValue })"))
         // Prevoz po danu se više ne kuca: samo se prikazuje, upisuje ga obračun prevoza.
         assertFalse(options.contains("repo.transportDailyAmountValue ="))
-        assertTrue(options.contains("transportDailyAmountStatusText(repo.transportDailyAmountValue)"))
+        assertTrue(options.contains("transportDailyAmountStatusText(rememberRepoValue(repo) { transportDailyAmountValue })"))
         assertFalse(lista.contains("difficultWorkConditionsPercentValue"))
         assertFalse(lista.contains("transportDailyAmountValue"))
     }

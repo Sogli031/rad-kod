@@ -33,8 +33,8 @@ internal fun BloodDonationDialog(
     onHistoryChanged: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val savedDate = repo.lastBloodDonationDate
-    val leaveStartDate = repo.bloodDonationLeaveStartDate
+    val savedDate = rememberRepoValue(repo) { lastBloodDonationDate }
+    val leaveStartDate = rememberRepoValue(repo) { bloodDonationLeaveStartDate }
 
     PopupDialog(
         title = BLOOD_DONATION_OPTION_LABEL,
@@ -141,7 +141,7 @@ private fun BloodDonationStatusSection(
     }
     if (showHistory) {
         BloodDonationHistorySection(
-            history = repo.bloodDonationHistory,
+            history = rememberRepoValue(repo) { bloodDonationHistory },
             pendingDeleteDate = pendingDeleteDate,
             onDeleteClick = { pendingDeleteDate = it },
             onCancelDelete = { pendingDeleteDate = null },
@@ -254,7 +254,7 @@ private fun BloodDonationLeaveSection(
 
     PopupCard {
         SectionLabel(text = "Dani odsustva po osnovu davanja krvi")
-        val usage = repo.lastBloodDonationLeaveUsage
+        val usage = rememberRepoValue(repo) { lastBloodDonationLeaveUsage }
         BloodDonationInfoText(text = bloodDonationLeaveUsageText(usage))
         BloodDonationInfoText(text = bloodDonationLeaveNextText(usage))
 

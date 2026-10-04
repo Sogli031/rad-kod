@@ -31,8 +31,8 @@ internal fun MonthlyPaymentInputRows(
     repo: ShiftRepository
 ) {
     val paymentMonth = monthlyReceipt.paymentMonth
-    val paymentAdjustments = repo.getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month)
-    val advancePrediction = repo.getAdvancePaymentPrediction(paymentMonth.year, paymentMonth.month)
+    val paymentAdjustments = rememberRepoValue(repo, paymentMonth) { getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month) }
+    val advancePrediction = rememberRepoValue(repo, paymentMonth) { getAdvancePaymentPrediction(paymentMonth.year, paymentMonth.month) }
 
     var advanceInput by remember(paymentMonth, paymentAdjustments.advancePaymentNet) {
         mutableStateOf(formatPositiveMoneyInput(paymentAdjustments.advancePaymentNet))

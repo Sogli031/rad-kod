@@ -45,8 +45,8 @@ fun VacationBalanceDialog(
         year = year,
         today = today,
         saved = savedBalance,
-        carryoverAutomatic = repo.isVacationCarryoverAutomatic(year),
-        monthsWithoutData = repo.getVacationMonthsWithoutData(year, today)
+        carryoverAutomatic = rememberRepoValue(repo, year) { isVacationCarryoverAutomatic(year) },
+        monthsWithoutData = rememberRepoValue(repo, year, today) { getVacationMonthsWithoutData(year, today) }
     )
     var carryoverInput by remember { mutableStateOf(initialInputs[0]) }
     // Prazno pravo se popunjava predlogom po ugovoru; broj sa rešenja se upisuje preko njega.

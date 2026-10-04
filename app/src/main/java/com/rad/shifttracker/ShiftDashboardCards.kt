@@ -38,7 +38,8 @@ import com.rad.shifttracker.ui.components.AutoSizeText
 internal const val SHOW_TOTAL_CARD = true
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
-internal const val COMPACT_PAY_CARD_HEIGHT = 41
+// Svaki red je zaseban dodir (plata, primanja): najmanje 48dp (M3 / ATF TouchTargetSizeCheck).
+internal const val COMPACT_PAY_CARD_HEIGHT = 48
 // Dve kartice plate su vizuelno jedna grupa: bez razmaka, gornja/donja zaobljena.
 internal const val PAY_CARDS_SPACING = 0
 

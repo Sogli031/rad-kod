@@ -431,7 +431,8 @@ private fun SummaryCard(
                 color = MaterialTheme.extendedColors.textFaint,
                 style = MaterialTheme.typography.labelSmall,
                 maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                minFontSize = 10.sp,
+                // Tekst nikad ispod 11sp (labelSmall); što ne stane skraćuje se.
+                minFontSize = MaterialTheme.typography.labelSmall.fontSize,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )

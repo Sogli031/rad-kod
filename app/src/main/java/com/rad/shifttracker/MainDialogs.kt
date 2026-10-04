@@ -216,7 +216,7 @@ private fun MainPayrollDialog(
                 month = data.workHoursMonth,
                 payDetails = data.workHoursPayDetails,
                 deficitNetLoss = data.workHoursOvertimeNetImpact.deficitNetLoss,
-                seniorityConfigured = data.repo.isSeniorityConfiguredValue,
+                seniorityConfigured = rememberRepoValue(data.repo) { isSeniorityConfiguredValue },
                 onDismiss = onDismiss
             )
         }
