@@ -199,7 +199,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             initializer { MainViewModel(repo, context.applicationContext, createSavedStateHandle()) }
         }
     )
-    val ui by viewModel.state.collectAsStateWithLifecycle()
+    val ui = viewModel.state.collectAsStateWithLifecycle().value
     val today by viewModel.today.collectAsStateWithLifecycle()
     val selectedMonth by viewModel.month.collectAsStateWithLifecycle()
     // Brojač izmena podataka za delove koji još sami čitaju repo (kalendar, godišnji, dijalozi).
@@ -250,6 +250,12 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         handleBloodDonationPermissionResult(granted, context, repo, showMessage)
+    }
+
+    if (ui == null) {
+        // Prvi obračun meseca još traje (pozadinska nit): samo pozadina, bez praznog kalendara.
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+        return
     }
 
     // Izabrani mesec živi u MainViewModel (preživljava rotaciju i ubijanje procesa).

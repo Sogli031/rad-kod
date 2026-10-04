@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.selection.selectable
@@ -144,7 +145,10 @@ fun DayEditDialog(
         regularShortageMinutes = effectiveRegularShortageMinutes,
         paidLeave = paidLeave
     )
-    val previewRecord = saveState.toDayRecord()
+    // Procene se računaju samo kad se unos promeni, ne pri svakoj rekompoziciji; repo se ne menja dok je dijalog otvoren.
+    val estimatedNetDailyPay = remember(saveState) { repo.calculateEstimatedDailyWorkNetPay(saveState.toDayRecord()) }
+    val savedNetDailyPay = remember(recordContentKey) { record?.let { repo.calculateEstimatedDailyWorkNetPay(it) } }
+    val monthSummary = remember(year, month) { repo.getSummary(year, month) }
     val vacationValidation = remember(repo, dayDate, shift1, record) {
         if (shift1 == Shift.VACATION) {
             repo.validateVacationRequest(listOf(dayDate))
@@ -181,7 +185,7 @@ fun DayEditDialog(
         scrollable = true,
         footer = { DayEditSaveButton(saveState, vacationValidation, repo, onDismiss) }
     ) {
-        DayEditStatusHeader(record = record, previewRecord = previewRecord, repo = repo)
+        DayEditStatusHeader(estimatedNetDailyPay = estimatedNetDailyPay, savedNetDailyPay = savedNetDailyPay)
         holidayText?.let { text -> DayEditHolidayWarningStrip(text = text) }
 
         DayEditSectionCard(title = "Tip dana") {
@@ -318,9 +322,8 @@ fun DayEditDialog(
             Shift.OFF -> DayEditOffControls()
         }
 
-        val summary = repo.getSummary(year, month)
-        val availableComp = summary.compTimeStarting
-        val availableCompMinutes = summary.compTimeStartingMinutes
+        val availableComp = monthSummary.compTimeStarting
+        val availableCompMinutes = monthSummary.compTimeStartingMinutes
         if (compHoursUsed > 0 || availableComp > 0) {
             DayEditCompensationBlock(
                 compHoursUsed = compHoursUsed,
@@ -362,10 +365,8 @@ fun DayEditDialog(
     }
 
     if (showCompDialog) {
-        val summary = repo.getSummary(year, month)
-        val availableComp = summary.compTimeStarting
         CompUsedDialog(
-            availableHours = availableComp,
+            availableHours = monthSummary.compTimeStarting,
             currentHours = compHoursUsed,
             onSelect = { selected -> compHoursUsed = selected },
             onDismiss = { showCompDialog = false }
@@ -376,12 +377,9 @@ fun DayEditDialog(
 /** Neto procena kao dva mirna reda (etiketa levo, iznos desno) — bez zelenog okvira. */
 @Composable
 private fun DayEditStatusHeader(
-    record: DayRecord?,
-    previewRecord: DayRecord,
-    repo: ShiftRepository
+    estimatedNetDailyPay: Double,
+    savedNetDailyPay: Double?
 ) {
-    val estimatedNetDailyPay = repo.calculateEstimatedDailyWorkNetPay(previewRecord)
-    val savedNetDailyPay = record?.let { repo.calculateEstimatedDailyWorkNetPay(it) }
     val netDifferenceText = formatDayEditNetDifference(
         savedNetPay = savedNetDailyPay,
         currentNetPay = estimatedNetDailyPay,
@@ -559,7 +557,7 @@ private fun DayEditDayTypeSelector(
 ) {
     val isWorkDaySelected = selectedShift in Shift.workShifts()
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
@@ -576,7 +574,7 @@ private fun DayEditDayTypeSelector(
         )
     }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(
@@ -593,7 +591,7 @@ private fun DayEditDayTypeSelector(
         )
     }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         DayEditChoiceButton(

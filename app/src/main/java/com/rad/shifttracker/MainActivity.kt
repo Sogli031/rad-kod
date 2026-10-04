@@ -8,10 +8,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.rad.shifttracker.data.backup.GoogleDriveBackup
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -44,27 +52,26 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // Normalna inicijalizacija wrappovana u try-catch
-        try {
-            initializeApp()
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Inicijalizacija pukla", e)
-            setContent {
-                RadTheme {
-                    CrashLogScreen(Log.getStackTraceString(e))
+        // Do učitanih podataka samo pozadina; čitanje i parsiranje lokalnog fajla ide van glavne niti.
+        setContent { RadTheme { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) } }
+        lifecycleScope.launch {
+            try {
+                val app = application as RadApplication
+                withContext(Dispatchers.IO) { app.initializeServices() }
+                repo = app.shiftRepository
+                backup = app.googleDriveBackup
+                setContent { RadApp(repo, backup) }
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onDataReady()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Inicijalizacija pukla", e)
+                setContent {
+                    RadTheme {
+                        CrashLogScreen(Log.getStackTraceString(e))
+                    }
                 }
             }
-        }
-    }
-
-    private fun initializeApp() {
-        val app = application as RadApplication
-        app.initializeServices()
-        repo = app.shiftRepository
-        backup = app.googleDriveBackup
-
-        setContent {
-            RadApp(repo, backup)
         }
     }
 
@@ -78,10 +85,12 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
-        if (::repo.isInitialized) {
-            BloodDonationReminderScheduler.reschedule(this, repo)
-            checkSideRunsOnEntry()
-        }
+        if (::repo.isInitialized) onDataReady()
+    }
+
+    private fun onDataReady() {
+        BloodDonationReminderScheduler.reschedule(this, repo)
+        checkSideRunsOnEntry()
     }
 
     private fun checkSideRunsOnEntry() {

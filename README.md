@@ -36,6 +36,12 @@ Objava: podigni `versionCode`/`versionName` u `app/build.gradle.kts`, pa
 proverava `apksigner`, otisak ključa i 16 KB poravnanje, čuva `mapping.txt` u `release-out\` i pravi GitHub release.
 `-SkipPublish` samo gradi. Instalacija na telefon: `adb install -r` (isti potpis čuva podatke).
 
+Baseline Profile (brži start, `app/src/main/baseline-prof.txt`): sa telefonom na adb-u
+`./gradlew :baselineprofile:connectedBenchmarkAndroidTest`, pa iz
+`baselineprofile/build/outputs/connected_android_test_additional_output/` kopiraj `*-startup-prof.txt`
+preko `app/src/main/baseline-prof.txt`. Meri se zasebna aplikacija `com.rad.shifttracker.benchmark`
+(test je na kraju deinstalira), prava instalacija se ne dira. Profil osvežiti posle većih izmena ekrana.
+
 Izveštaj o stabilnosti Compose-a: `./gradlew :app:compileReleaseKotlin --rerun -PcomposeReports`.
 
 ## Struktura

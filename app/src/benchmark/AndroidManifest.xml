@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Macrobenchmark/Baseline Profile meri aplikaciju preko shell-a (samo benchmark build). -->
+        <profileable android:shell="true" />
+    </application>
+</manifest>

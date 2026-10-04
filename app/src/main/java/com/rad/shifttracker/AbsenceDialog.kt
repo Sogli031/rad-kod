@@ -1,6 +1,7 @@
 package com.rad.shifttracker
 
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -161,7 +162,7 @@ fun SickVacationDialog(
             SectionLabel(text = "Tip odsustva")
             val isSick = absenceType == AbsenceType.SICK
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 DayEditChoiceButton(
@@ -185,7 +186,7 @@ fun SickVacationDialog(
             }
             DayEditChoiceHeader(text = "Isplata bolovanja")
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {

@@ -27,7 +27,7 @@ fun AdvancePaymentDialog(
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
-    val currentAdjustments = repo.getMonthlyNetAdjustments(year, month)
+    val currentAdjustments = remember(year, month) { repo.getMonthlyNetAdjustments(year, month) }
     val prediction = remember(year, month) { repo.getAdvancePaymentPrediction(year, month) }
     var advanceInput by remember(year, month) {
         mutableStateOf(formatRateInput(currentAdjustments.advancePaymentNet))

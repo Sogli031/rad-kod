@@ -53,8 +53,8 @@ internal data class MainStateKey(val tick: Int, val month: MonthKey, val today: 
 
 /**
  * Stanje glavnog ekrana: izabrani mesec (preživljava ubijanje procesa), današnji dan i izvedeni
- * podaci meseca. Računanje ne blokira glavnu nit; do prvog rezultata nove vrednosti se vidi
- * prethodno stanje.
+ * podaci meseca. Računanje ne blokira glavnu nit, ni prvo; do prvog rezultata nove vrednosti se
+ * vidi prethodno stanje.
  */
 internal class MainViewModel(
     private val repo: ShiftRepository,
@@ -71,15 +71,16 @@ internal class MainViewModel(
     )
     val month: StateFlow<MonthKey> = monthFlow.asStateFlow()
 
-    private val stateFlow = MutableStateFlow(compute(MainStateKey(0, monthFlow.value, initialToday)))
-    val state: StateFlow<MainMonthState> = stateFlow.asStateFlow()
+    // Null dok se prvi put ne izračuna (van glavne niti); ekran do tada crta samo pozadinu.
+    private val stateFlow = MutableStateFlow<MainMonthState?>(null)
+    val state: StateFlow<MainMonthState?> = stateFlow.asStateFlow()
 
     private val changeToken = repo.onChange { tick.value += 1 }
 
     init {
         viewModelScope.launch {
             combine(tick, monthFlow, todayFlow) { t, m, d -> MainStateKey(t, m, d) }.collectLatest { key ->
-                if (key == stateFlow.value.key) return@collectLatest
+                if (key == stateFlow.value?.key) return@collectLatest
                 stateFlow.value = withContext(Dispatchers.Default) { compute(key) }
             }
         }

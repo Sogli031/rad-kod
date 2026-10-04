@@ -24,6 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,7 +84,11 @@ internal fun HeaderSection(month: Int, year: Int, onPrev: () -> Unit, onNext: ()
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec", onClick = onPrev)
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        // Naslov ekrana: čitač ekrana ga najavljuje kao naslov („septembar 2026“) i do njega se skače.
+        Row(
+            modifier = Modifier.semantics(mergeDescendants = true) { heading() },
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
             AutoSizeText(
                 text = MONTH_NAMES[month],
                 color = MaterialTheme.colorScheme.onSurface,

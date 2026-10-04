@@ -66,6 +66,16 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
+        // Samo za pravljenje Baseline Profile-a (modul :baselineprofile): release kod bez R8 da pravila
+        // nose prava imena klasa, poseban applicationId da test ne dira pravu instalaciju.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".benchmark"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     buildFeatures {
@@ -139,6 +149,8 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime.ktx)
+    // Primenjuje src/main/baseline-prof.txt i kad se APK instalira van Play-a (GitHub release).
+    implementation(libs.androidx.profileinstaller)
 
     // Uvoz platnog listića iz PDF-a (samo lokalna ekstrakcija teksta, bez mreže)
     implementation(libs.pdfbox.android)
@@ -204,7 +216,21 @@ kover {
                     "com.rad.shifttracker.data.repository.RepositoryPayBaseResolver*",
                     "com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec*",
                     "com.rad.shifttracker.data.storage.CloudArchiveMerger*",
-                    "com.rad.shifttracker.PayslipParserKt*"
+                    "com.rad.shifttracker.PayslipParserKt*",
+                    "com.rad.shifttracker.PayslipMonthFillSolver*",
+                    "com.rad.shifttracker.MonthlyNetPayBreakdownCalculator*",
+                    "com.rad.shifttracker.PayBreakdown*",
+                    "com.rad.shifttracker.AdvanceFromPayslips*",
+                    "com.rad.shifttracker.VacationTracking*",
+                    "com.rad.shifttracker.RollingPayBaseMonthSimulator*",
+                    "com.rad.shifttracker.data.repository.RepositoryCompBalanceCalculator*",
+                    "com.rad.shifttracker.data.backup.VersionedBackupWriter*",
+                    "com.rad.shifttracker.data.backup.BackupRetentionPolicy*",
+                    "com.rad.shifttracker.data.backup.BackupAnomalyGuard*",
+                    "com.rad.shifttracker.data.backup.BackupMetadata*",
+                    "com.rad.shifttracker.data.backup.VersionedBackupPlanner*",
+                    "com.rad.shifttracker.data.storage.LocalShiftStorage*",
+                    "com.rad.shifttracker.data.storage.AtomicTextFile*"
                 )
             }
         }

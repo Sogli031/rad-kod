@@ -22,8 +22,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -715,7 +715,7 @@ internal fun GmailOnboardingDialog(
 ) {
     val context = LocalContext.current
     // Uvoz teče van ekrana: okretanje telefona ne prekida čitanje niti ga pokreće ponovo.
-    val importState by GmailImportRunner.state.collectAsState()
+    val importState by GmailImportRunner.state.collectAsStateWithLifecycle()
     val step = remember(importState) {
         when (val state = importState) {
             GmailImportState.Idle -> OnboardingStep.Intro

@@ -33,8 +33,8 @@ fun VacationBalanceDialog(
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
-    val summary = repo.getVacationBalanceSummary(year, today)
-    val savedBalance = repo.getVacationYearBalance(year)
+    val summary = remember(year, today) { repo.getVacationBalanceSummary(year, today) }
+    val savedBalance = remember(year) { repo.getVacationYearBalance(year) }
     val beforeJuly = today.isBefore(summary.currentYearAvailableFrom)
     val setupFieldLabels = vacationSetupFieldLabels(year)
     val currentYearAvailableFrom = formatVacationDate(summary.currentYearAvailableFrom)

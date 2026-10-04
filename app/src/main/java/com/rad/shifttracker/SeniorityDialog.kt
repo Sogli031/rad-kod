@@ -41,7 +41,7 @@ fun MinuliRadDialog(
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
-    val currYears = repo.getSummary(year, month).yearsOfService
+    val currYears = remember(year, month) { repo.getSummary(year, month).yearsOfService }
     val currPercent = currYears * seniorityRatePercent()
     var selectedMode by remember { mutableStateOf(repo.seniorityInputModeValue) }
     var startYearInput by remember {

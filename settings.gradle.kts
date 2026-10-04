@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Rad"
 include(":app")
+include(":baselineprofile")
