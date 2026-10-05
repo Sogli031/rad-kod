@@ -183,13 +183,9 @@ private fun MainPayrollDialog(
     when (state) {
         DialogState.PayDetails -> {
             PayDetailsDialog(
-                summary = data.summary,
-                payBreakdown = data.payBreakdown,
                 monthlyReceipt = data.monthlyReceipt,
                 monthlyFinalPaymentBreakdown = data.monthlyFinalPaymentBreakdown,
                 payDetails = data.payDetails,
-                annualNetPayAverages = data.annualNetPayAverages,
-                recentNetPayAverage = data.recentNetPayAverage,
                 repo = data.repo,
                 onDismiss = onDismiss
             )
@@ -197,13 +193,9 @@ private fun MainPayrollDialog(
 
         DialogState.SalaryDetails -> {
             PayDetailsDialog(
-                summary = data.workHoursSummary,
-                payBreakdown = data.workHoursPayBreakdown,
                 monthlyReceipt = data.salaryDetailsReceipt,
                 monthlyFinalPaymentBreakdown = data.salaryDetailsFinalPaymentBreakdown,
                 payDetails = data.workHoursPayDetails,
-                annualNetPayAverages = data.salaryDetailsAnnualNetPayAverages,
-                recentNetPayAverage = data.salaryDetailsRecentNetPayAverage,
                 repo = data.repo,
                 onDismiss = onDismiss
             )
@@ -271,8 +263,6 @@ internal data class MainDialogData(
     val scheduler: ShiftScheduler,
     val repo: ShiftRepository,
     val repoTick: Int,
-    val summary: MonthSummary,
-    val payBreakdown: MonthlyNetPayBreakdown,
     val workHoursSummary: MonthSummary,
     val workHoursPayBreakdown: MonthlyNetPayBreakdown,
     val workHoursMonth: MonthKey,
@@ -280,14 +270,10 @@ internal data class MainDialogData(
     val workHoursOvertimeNetImpact: MonthlyOvertimeNetImpact,
     val salaryDetailsReceipt: MonthlyReceipt,
     val salaryDetailsFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
-    val salaryDetailsAnnualNetPayAverages: AnnualNetPayAverages,
-    val salaryDetailsRecentNetPayAverage: RecentNetPayAverage,
     val monthlyReceipt: MonthlyReceipt,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
     val payDetails: MonthlyPayDetails,
-    val annualNetPayAverages: AnnualNetPayAverages,
-    val recentNetPayAverage: RecentNetPayAverage,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
     val onMonthlyExportClick: () -> Unit,
     val onDebugExportClick: () -> Unit,

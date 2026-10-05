@@ -12,43 +12,7 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `annual net pay average labels match requested wording`() {
-        assertEquals(
-            listOf(
-                "Prosek plate",
-                "Bez regresa",
-                "Bez regresa i treće smene"
-            ),
-            annualNetPayAverageLabels()
-        )
-    }
-
-    @Test
-    fun `recent net pay average text names net average and incomplete data`() {
-        val average = RecentNetPayAverage(
-            listOf(
-                RecentNetPayMonth(MonthKey(2025, 12), 100_000.0),
-                RecentNetPayMonth(MonthKey(2026, 1), null),
-                RecentNetPayMonth(MonthKey(2026, 2), 120_000.0)
-            )
-        )
-
-        assertEquals("Neto prosek 3 poslednje plate", RECENT_NET_PAY_AVERAGE_SECTION_LABEL)
-        assertEquals("Neto prosek", RECENT_NET_PAY_AVERAGE_VALUE_LABEL)
-        assertEquals(
-            "Decembar 2025, Januar 2026, Februar 2026",
-            recentNetPayAverageMonthsText(average)
-        )
-        assertEquals(
-            "Neto prosek 3 poslednje plate trenutno nije moguće izračunati zbog nepotpunih podataka.",
-            RECENT_NET_PAY_AVERAGE_UNAVAILABLE_TEXT
-        )
-    }
-
-    @Test
-    fun `pay details explains annual average and missing receipt input`() {
-        assertEquals("Računa samo mesece sa unetim zapisima.", ANNUAL_NET_PAY_AVERAGE_HINT_TEXT)
-        assertEquals("Nema unetih meseci za godišnji prosek.", ANNUAL_NET_PAY_AVERAGE_EMPTY_TEXT)
+    fun `pay details explains missing receipt input`() {
         assertEquals("Nije moguće izračunati", TOTAL_CARD_UNAVAILABLE_TEXT)
         assertEquals("Nedostaje obračun prethodnog meseca.", PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT)
     }
@@ -123,13 +87,6 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `pay details shows hourly value label and text`() {
-        assertEquals("Vrednost sata", PAY_DETAILS_HOURLY_VALUE_LABEL)
-        assertEquals("226 RSD", payDetailsHourlyValueText(226.0))
-        assertEquals("214.5 RSD", payDetailsHourlyValueText(214.5))
-    }
-
-    @Test
     fun `advance payment labels and unavailable text match requested wording`() {
         assertEquals("Akontacija", ADVANCE_PAYMENT_DIALOG_TITLE)
         assertEquals("Akontacija neto", ADVANCE_PAYMENT_NET_LABEL)
@@ -172,21 +129,6 @@ class PayDetailsDialogTextTest {
         assertTrue(source.contains("maxOf("))
         assertTrue(source.contains("PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP.dp"))
         assertTrue(!source.contains("WindowInsets.systemBars"))
-    }
-
-    @Test
-    fun `recent net pay average shows value before months list`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
-        val sectionIndex = source.indexOf("SectionLabel(text = RECENT_NET_PAY_AVERAGE_SECTION_LABEL)")
-        val valueIndex = source.indexOf("CompactMoneyRow(RECENT_NET_PAY_AVERAGE_VALUE_LABEL", sectionIndex)
-        val monthsIndex = source.indexOf("CompactTextBlock(\"Meseci\"", sectionIndex)
-
-        assertTrue(sectionIndex >= 0)
-        assertTrue(valueIndex > sectionIndex)
-        assertTrue(monthsIndex > valueIndex)
     }
 
     @Test

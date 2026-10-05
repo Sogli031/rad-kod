@@ -274,15 +274,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val monthlyFinalPaymentBreakdown = ui.monthlyFinalPaymentBreakdown
     val nextMonthFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown
     val overtimeNetImpact = ui.overtimeNetImpact
-    val payrollSummary = ui.payrollSummary
-    val payrollPayBreakdown = ui.payrollPayBreakdown
     val payDetails = ui.payDetails
     val selectedMonthPayDetails = ui.selectedMonthPayDetails
     val selectedMonthOvertimeNetImpact = ui.overtimeNetImpact
-    val annualNetPayAverages = ui.annualNetPayAverages
-    val recentNetPayAverage = ui.recentNetPayAverage
-    val selectedMonthAnnualNetPayAverages = ui.selectedMonthAnnualNetPayAverages
-    val selectedMonthRecentNetPayAverage = ui.selectedMonthRecentNetPayAverage
     val scheduler = remember { ShiftScheduler() }
     val bloodDonationReminderStatus = ui.bloodDonationReminderStatus
 
@@ -483,8 +477,6 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             scheduler = scheduler,
             repo = repo,
             repoTick = repoTick.intValue,
-            summary = payrollSummary,
-            payBreakdown = payrollPayBreakdown,
             workHoursSummary = summary,
             workHoursPayBreakdown = payBreakdown,
             workHoursMonth = MonthKey(currentYear, currentMonth),
@@ -492,14 +484,10 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             workHoursOvertimeNetImpact = selectedMonthOvertimeNetImpact,
             salaryDetailsReceipt = nextMonthReceipt,
             salaryDetailsFinalPaymentBreakdown = nextMonthFinalPaymentBreakdown,
-            salaryDetailsAnnualNetPayAverages = selectedMonthAnnualNetPayAverages,
-            salaryDetailsRecentNetPayAverage = selectedMonthRecentNetPayAverage,
             monthlyReceipt = monthlyReceipt,
             monthlyFinalPaymentBreakdown = monthlyFinalPaymentBreakdown,
             overtimeNetImpact = overtimeNetImpact,
             payDetails = payDetails,
-            annualNetPayAverages = annualNetPayAverages,
-            recentNetPayAverage = recentNetPayAverage,
             bloodDonationReminderStatus = bloodDonationReminderStatus,
             onMonthlyExportClick = launchSelectedMonthExport,
             onDebugExportClick = launchAllMonthsDebugExport,

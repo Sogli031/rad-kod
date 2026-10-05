@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.3] - 2026-10-05
+- **Detalji plate su kraći:** iz prozora koji se otvara na „… plata“ i „Primanja u …“ uklonjeni su odeljci „Osnovni podaci“ (vrednost sata, satnice, fond, plaćeni sati, radni dani) i „Godišnji prosek neto plate“ (sa neto prosekom 3 poslednje plate). Osnovni podaci su i dalje u „Sati rada“; proseci se više ne računaju pri svakom osvežavanju ekrana.
+
 ## [6.2] - 2026-10-05
 - **Prekidač „Samo plata za rad“** (Opcije → „Prikaz i obaveštenja“, podrazumevano uključen) zamenjuje „Prevoz u iznosu za isplatu“: kartice ispod kalendara prikazuju samo neto platu za rad, bez regresa i prevoza. Isključen = plata, regres i prevoz zajedno. Detalji plate i dalje prikazuju sve stavke. Novi JSON ključ `main_pay_salary_only`; stari `main_pay_includes_transport` se zanemaruje, pa svi kreću sa uključenim.
 

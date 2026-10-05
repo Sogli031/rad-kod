@@ -30,17 +30,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.rad.shifttracker.ui.components.AutoSizeText
 
-// Existing detail dialog slightly exceeds the new method length limit; keep pressure on new methods.
-@Suppress("LongMethod")
 @Composable
 fun PayDetailsDialog(
-    summary: MonthSummary,
-    payBreakdown: MonthlyNetPayBreakdown,
     monthlyReceipt: MonthlyReceipt,
     monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     payDetails: MonthlyPayDetails,
-    annualNetPayAverages: AnnualNetPayAverages,
-    recentNetPayAverage: RecentNetPayAverage,
     repo: ShiftRepository,
     onDismiss: () -> Unit
 ) {
@@ -112,52 +106,6 @@ fun PayDetailsDialog(
                     )
                 }
 
-                PayDetailsSectionCard(title = "Osnovni podaci") {
-                    payBreakdown.hourlyValue?.let { hourlyValue ->
-                        CompactInfoRow(PAY_DETAILS_HOURLY_VALUE_LABEL, payDetailsHourlyValueText(hourlyValue))
-                    }
-                    CompactInfoRow("Bruto satnica", moneyText(payBreakdown.grossHourlyRate))
-                    CompactInfoRow("Informativna neto satnica", moneyText(payBreakdown.informativeNetHourlyBase))
-                    CompactInfoRow("Fond meseca", "${payBreakdown.monthlyFundHours}h")
-                    CompactInfoRowIf(
-                        payDetails.totalPaidHours > 0,
-                        "Plaćeni sati",
-                        formatHoursAndMinutes(payDetails.totalPaidMinutes)
-                    )
-                    CompactInfoRowIf(summary.workDays > 0, "Radni dani", summary.workDays.toString())
-                }
-
-                PayDetailsSectionCard(title = "Godišnji prosek neto plate") {
-                    val labels = annualNetPayAverageLabels()
-                    if (annualNetPayAverages.monthCount > 0) {
-                        CompactMoneyRow(labels[0], annualNetPayAverages.averagePay, MaterialTheme.colorScheme.primary)
-                        CompactMoneyRow(labels[1], annualNetPayAverages.averagePayWithoutRegress)
-                        CompactMoneyRow(labels[2], annualNetPayAverages.averagePayWithoutThirdShift, MaterialTheme.extendedColors.shift2)
-                    } else {
-                        Text(
-                            text = ANNUAL_NET_PAY_AVERAGE_EMPTY_TEXT,
-                            color = MaterialTheme.extendedColors.warning,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Text(
-                        text = ANNUAL_NET_PAY_AVERAGE_HINT_TEXT,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    SectionLabel(text = RECENT_NET_PAY_AVERAGE_SECTION_LABEL)
-                    val recentAverage = recentNetPayAverage.averageNetPay
-                    if (recentAverage != null) {
-                        CompactMoneyRow(RECENT_NET_PAY_AVERAGE_VALUE_LABEL, recentAverage, MaterialTheme.colorScheme.primary)
-                    } else {
-                        Text(
-                            text = RECENT_NET_PAY_AVERAGE_UNAVAILABLE_TEXT,
-                            color = MaterialTheme.extendedColors.warning,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    CompactTextBlock("Meseci", recentNetPayAverageMonthsText(recentNetPayAverage))
-                }
                 Spacer(
                     modifier = Modifier.height(bottomScrollPadding)
                 )
@@ -367,17 +315,5 @@ private fun CompactTextBlock(
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
-    }
-}
-
-@Composable
-private fun CompactInfoRowIf(
-    visible: Boolean,
-    label: String,
-    value: String,
-    color: Color = MaterialTheme.colorScheme.onSurface
-) {
-    if (visible) {
-        CompactInfoRow(label, value, color)
     }
 }

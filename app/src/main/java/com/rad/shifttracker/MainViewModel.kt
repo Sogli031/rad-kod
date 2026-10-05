@@ -36,14 +36,8 @@ internal data class MainMonthState(
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val nextMonthFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
-    val payrollSummary: MonthSummary,
-    val payrollPayBreakdown: MonthlyNetPayBreakdown,
     val payDetails: MonthlyPayDetails,
     val selectedMonthPayDetails: MonthlyPayDetails,
-    val annualNetPayAverages: AnnualNetPayAverages,
-    val recentNetPayAverage: RecentNetPayAverage,
-    val selectedMonthAnnualNetPayAverages: AnnualNetPayAverages,
-    val selectedMonthRecentNetPayAverage: RecentNetPayAverage,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
     val vacationSummary: VacationBalanceSummary
 )
@@ -115,7 +109,6 @@ internal class MainViewModel(
         val next = YearMonth.of(year, month).plusMonths(1)
         val monthlyReceipt = repo.getMonthlyReceipt(year, month)
         val payroll = monthlyReceipt.payrollMonth
-        val payrollAsOf = vacationCardAsOfDate(payroll.year, payroll.month, key.today)
         val selectedAsOf = vacationCardAsOfDate(year, month, key.today)
         return MainMonthState(
             key = key,
@@ -127,14 +120,8 @@ internal class MainViewModel(
             monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(year, month),
             nextMonthFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
             overtimeNetImpact = repo.getMonthlyOvertimeNetImpact(year, month),
-            payrollSummary = repo.getSummary(payroll.year, payroll.month),
-            payrollPayBreakdown = repo.getNetPayBreakdown(payroll.year, payroll.month),
             payDetails = repo.getMonthlyPayDetails(payroll.year, payroll.month),
             selectedMonthPayDetails = repo.getMonthlyPayDetails(year, month),
-            annualNetPayAverages = repo.getAnnualNetPayAverages(payroll.year),
-            recentNetPayAverage = repo.getRecentNetPayAverage(payroll.year, payroll.month, payrollAsOf),
-            selectedMonthAnnualNetPayAverages = repo.getAnnualNetPayAverages(year),
-            selectedMonthRecentNetPayAverage = repo.getRecentNetPayAverage(year, month, selectedAsOf),
             bloodDonationReminderStatus = BloodDonationReminderScheduler.currentStatus(appContext, repo),
             vacationSummary = repo.getVacationBalanceSummary(year, selectedAsOf)
         )

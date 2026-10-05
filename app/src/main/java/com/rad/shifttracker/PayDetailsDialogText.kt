@@ -5,14 +5,7 @@ import java.util.Locale
 internal const val PAY_DETAILS_WORK_HOURS_LABEL = "Rad u režiji"
 internal const val PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP = 72
 
-internal const val RECENT_NET_PAY_AVERAGE_SECTION_LABEL = "Neto prosek 3 poslednje plate"
-internal const val RECENT_NET_PAY_AVERAGE_VALUE_LABEL = "Neto prosek"
-internal const val RECENT_NET_PAY_AVERAGE_UNAVAILABLE_TEXT =
-    "Neto prosek 3 poslednje plate trenutno nije moguće izračunati zbog nepotpunih podataka."
-internal const val ANNUAL_NET_PAY_AVERAGE_HINT_TEXT = "Računa samo mesece sa unetim zapisima."
-internal const val ANNUAL_NET_PAY_AVERAGE_EMPTY_TEXT = "Nema unetih meseci za godišnji prosek."
 internal const val PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT = "Nedostaje obračun prethodnog meseca."
-internal const val PAY_DETAILS_HOURLY_VALUE_LABEL = "Vrednost sata"
 
 /**
  * Šifra 96 na listiću nije kazna nego zaokruživanje: režija se piše u celim satima
@@ -36,14 +29,6 @@ internal fun estimateAbsenceRoundingGross(
 }
 
 private const val MINUTES_PER_HOUR_FOR_TEXT = 60
-
-internal fun annualNetPayAverageLabels(): List<String> {
-    return listOf(
-        "Prosek plate",
-        "Bez regresa",
-        "Bez regresa i treće smene"
-    )
-}
 
 internal fun monthYearText(key: MonthKey): String {
     val monthName = MONTH_NAMES.getOrElse(key.month) { "Mesec" }
@@ -102,17 +87,6 @@ internal fun payDetailsTotalLabel(receipt: MonthlyReceipt): String {
 
 internal fun payDetailsTransportAmountText(receipt: MonthlyReceipt): String {
     return moneyText(receipt.transportAmount)
-}
-
-internal fun recentNetPayAverageMonthsText(average: RecentNetPayAverage): String {
-    return average.monthKeys.joinToString(", ") { key ->
-        val monthName = MONTH_NAMES.getOrElse(key.month) { "Mesec" }
-        "$monthName ${key.year}"
-    }.ifBlank { "Meseci nisu dostupni" }
-}
-
-internal fun payDetailsHourlyValueText(value: Double): String {
-    return "${formatHourlyValue(value)} ${CONFIG.pay.currency}"
 }
 
 internal fun defaultHourlyHistoryInfoText(): String {

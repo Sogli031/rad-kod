@@ -47,7 +47,6 @@ class MainViewModelTest {
         assertEquals(repo.getMonthlyPayDetails(2026, 10), state.selectedMonthPayDetails)
         val payroll = state.monthlyReceipt.payrollMonth
         assertEquals(repo.getMonthlyPayDetails(payroll.year, payroll.month), state.payDetails)
-        assertEquals(repo.getSummary(payroll.year, payroll.month), state.payrollSummary)
         assertEquals(repo.getMonthlyOvertimeNetImpact(2026, 10), state.overtimeNetImpact)
     }
 
