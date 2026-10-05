@@ -168,7 +168,6 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
     val year = today.year
     val month = today.monthValue
     val summary = repo.getSummary(year, month)
-    val payBreakdown = repo.getNetPayBreakdown(year, month)
     val monthlyReceipt = repo.getMonthlyReceipt(year, month)
     val next = YearMonth.of(year, month).plusMonths(1)
     val nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue)
