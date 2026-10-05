@@ -77,7 +77,7 @@ internal fun randomSnapshot(random: Random): ShiftRepositorySnapshot {
         regressNetChanges = randomMap(random.nextInt(0, 3), ::month) { positive() },
         deletedMonths = List(random.nextInt(0, 4)) { month() }.distinct().sorted(),
         deletedHourlyValueMonths = List(random.nextInt(0, 4)) { month() }.distinct().sorted(),
-        mainPayIncludesTransport = random.nextBoolean(),
+        mainPaySalaryOnly = random.nextBoolean(),
         savedPayslips = randomPayslips(random),
         deletedPayslipMonths = List(random.nextInt(0, 4)) { month() }.distinct().sorted()
     )

@@ -122,7 +122,7 @@ internal class ShiftRepositoryJsonCodec(
         data[FOOD_PER_DAY_KEY] = snapshot.foodPerDay
         data[TRANSPORT_DAILY_AMOUNT_KEY] = snapshot.transportDailyAmount
         data[NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY] = snapshot.notificationAccessPromptSuppressed
-        data[MAIN_PAY_INCLUDES_TRANSPORT_KEY] = snapshot.mainPayIncludesTransport
+        data[MAIN_PAY_SALARY_ONLY_KEY] = snapshot.mainPaySalaryOnly
         snapshot.lastBloodDonationDate?.let { date ->
             data[BLOOD_DONATION_LAST_DATE_KEY] = date.toString()
         }
@@ -288,7 +288,7 @@ internal class ShiftRepositoryJsonCodec(
             foodPerDay = parsedFoodPerDay,
             transportDailyAmount = parsedTransportDailyAmount,
             notificationAccessPromptSuppressed = parsedAutoAdvanceImport.promptSuppressed,
-            mainPayIncludesTransport = json.optBoolean(MAIN_PAY_INCLUDES_TRANSPORT_KEY, true),
+            mainPaySalaryOnly = json.optBoolean(MAIN_PAY_SALARY_ONLY_KEY, true),
             lastBloodDonationDate = parsedBloodDonationHistory.firstOrNull() ?: parsedLastBloodDonationDate,
             bloodDonationCount = parsedBloodDonationCount,
             bloodDonationHistory = parsedBloodDonationHistory,
@@ -751,8 +751,10 @@ internal class ShiftRepositoryJsonCodec(
         const val FOOD_RECEIPT_REMINDER_ENABLED_KEY = "food_receipt_reminder_enabled"
         const val AUTO_ADVANCE_IMPORT_ENABLED_KEY = "auto_advance_import_enabled"
         const val NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY = "notification_access_prompt_suppressed"
-        /** Stari bekapi nemaju ovaj ključ — prikaz ispod kalendara ostaje sa prevozom kao i do sada. */
-        const val MAIN_PAY_INCLUDES_TRANSPORT_KEY = "main_pay_includes_transport"
+        /** Bez ključa (stari bekapi) prikaz ispod kalendara je samo plata za rad, bez regresa i prevoza. */
+        const val MAIN_PAY_SALARY_ONLY_KEY = "main_pay_salary_only"
+        /** Ukinut prekidač „Prevoz u iznosu za isplatu“: ključ se više ne čita ni ne piše. */
+        const val LEGACY_MAIN_PAY_INCLUDES_TRANSPORT_KEY = "main_pay_includes_transport"
         const val BLOOD_DONATION_LAST_DATE_KEY = "blood_donation_last_date"
         const val BLOOD_DONATION_COUNT_KEY = "blood_donation_count"
         const val BLOOD_DONATION_HISTORY_KEY = "blood_donation_history"
@@ -843,7 +845,8 @@ internal class ShiftRepositoryJsonCodec(
         /** Svi ključevi koje aplikacija piše ili je ikad pisala (osim godina sa zapisima i verzije sheme). */
         val RECOGNIZED_KEYS = METADATA_KEYS + setOf(
             FOOD_PER_DAY_CHANGES_KEY,
-            MAIN_PAY_INCLUDES_TRANSPORT_KEY,
+            MAIN_PAY_SALARY_ONLY_KEY,
+            LEGACY_MAIN_PAY_INCLUDES_TRANSPORT_KEY,
             BLOOD_DONATION_HISTORY_KEY,
             SavedPayslipsJsonCodec.KEY
         )

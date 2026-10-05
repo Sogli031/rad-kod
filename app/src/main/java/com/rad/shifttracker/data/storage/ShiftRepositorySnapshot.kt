@@ -66,7 +66,7 @@ internal data class ShiftRepositorySnapshot(
      */
     val deletedHourlyValueMonths: List<MonthKey> = emptyList(),
     /** Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru") uključuju prevoz. */
-    val mainPayIncludesTransport: Boolean = true,
+    val mainPaySalaryOnly: Boolean = true,
     /** Sačuvani platni listići po mesecu (JSON listića) za „Uporedi“. */
     val savedPayslips: Map<MonthKey, String> = emptyMap(),
     /** Listići koje je korisnik izričito obrisao (tombstone); oblak ih inače spaja kao uniju. */

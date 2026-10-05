@@ -153,12 +153,12 @@ internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f
 @Composable
 internal fun TotalCard(
     receipt: MonthlyReceipt,
-    includeTransport: Boolean = true,
+    salaryOnly: Boolean = true,
     onClick: () -> Unit
 ) {
     PayAmountCard(
         label = totalCardLabel(receipt.year, receipt.month),
-        amount = mainPayCardAmount(receipt, includeTransport),
+        amount = mainPayCardAmount(receipt, salaryOnly),
         isAvailable = receipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
@@ -171,12 +171,12 @@ internal fun TotalCard(
 internal fun SalaryCard(
     month: Int,
     nextMonthReceipt: MonthlyReceipt,
-    includeTransport: Boolean = true,
+    salaryOnly: Boolean = true,
     onClick: () -> Unit
 ) {
     PayAmountCard(
         label = salaryCardLabel(month),
-        amount = mainPayCardAmount(nextMonthReceipt, includeTransport),
+        amount = mainPayCardAmount(nextMonthReceipt, salaryOnly),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.primary,
         shape = if (SHOW_TOTAL_CARD) {
@@ -189,9 +189,9 @@ internal fun SalaryCard(
     )
 }
 
-/** Iznos na kartici ispod kalendara: sa prevozom (podrazumevano) ili samo neto plata i regres. */
-internal fun mainPayCardAmount(receipt: MonthlyReceipt, includeTransport: Boolean): Double {
-    return if (includeTransport) receipt.totalReceivedThisMonth else receipt.displayPay
+/** Iznos na kartici ispod kalendara: samo plata za rad (podrazumevano) ili plata, regres i prevoz. */
+internal fun mainPayCardAmount(receipt: MonthlyReceipt, salaryOnly: Boolean): Double {
+    return if (salaryOnly) receipt.workSalaryPay else receipt.totalReceivedThisMonth
 }
 
 /** Jedan red grupe plate: etiketa levo, iznos desno. */

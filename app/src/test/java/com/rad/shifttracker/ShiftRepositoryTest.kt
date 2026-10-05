@@ -469,29 +469,29 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `prevoz u iznosu ispod kalendara je podrazumevano ukljucen`() {
-        assertTrue(repo.mainPayIncludesTransport)
+    fun `samo plata za rad ispod kalendara je podrazumevano ukljuceno`() {
+        assertTrue(repo.mainPaySalaryOnly)
     }
 
     @Test
-    fun `iskljucen prevoz ispod kalendara se cuva kroz export import i stari backup ostaje sa prevozom`() {
+    fun `iskljuceno samo plata ispod kalendara se cuva kroz export import i stari backup dobija samo platu`() {
         var changeCount = 0
         val token = repo.onChange { changeCount += 1 }
-        repo.mainPayIncludesTransport = false
-        repo.mainPayIncludesTransport = false
+        repo.mainPaySalaryOnly = false
+        repo.mainPaySalaryOnly = false
         repo.removeOnChange(token)
         assertEquals(1, changeCount)
 
         val json = JSONObject(repo.exportJson())
-        assertFalse(json.getBoolean("main_pay_includes_transport"))
+        assertFalse(json.getBoolean("main_pay_salary_only"))
 
         val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
-        assertFalse(restored.mainPayIncludesTransport)
+        assertFalse(restored.mainPaySalaryOnly)
 
         val legacy = testRepository()
-        assertTrue(legacy.importFromJson("{\"pay_coefficient\": 1.0}"))
-        assertTrue(legacy.mainPayIncludesTransport)
+        assertTrue(legacy.importFromJson("{\"pay_coefficient\": 1.0, \"main_pay_includes_transport\": true}"))
+        assertTrue(legacy.mainPaySalaryOnly)
     }
 
     @Test
@@ -4250,7 +4250,7 @@ class ShiftRepositoryTest {
         repo.transportDailyAmountValue = 321.0
         repo.taxReliefValue = 34_221.0
         repo.difficultWorkConditionsPercentValue = 7.5
-        repo.mainPayIncludesTransport = false
+        repo.mainPaySalaryOnly = false
         repo.recordBloodDonation(LocalDate.of(2026, 2, 10))
         repo.recordBloodDonation(LocalDate.of(2026, 8, 3))
         repo.initialCompBalanceMinutesValue = 450

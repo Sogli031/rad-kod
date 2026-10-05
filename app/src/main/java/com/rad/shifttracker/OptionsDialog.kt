@@ -29,9 +29,9 @@ internal fun OptionsDialog(
     onDismiss: () -> Unit
 ) {
     val actions = optionsDialogActionLabels()
-    val savedMainPayIncludesTransport = rememberRepoValue(repo) { mainPayIncludesTransport }
-    var mainPayIncludesTransport by remember(savedMainPayIncludesTransport) {
-        mutableStateOf(savedMainPayIncludesTransport)
+    val savedMainPaySalaryOnly = rememberRepoValue(repo) { mainPaySalaryOnly }
+    var mainPaySalaryOnly by remember(savedMainPaySalaryOnly) {
+        mutableStateOf(savedMainPaySalaryOnly)
     }
 
     PopupDialog(
@@ -52,12 +52,13 @@ internal fun OptionsDialog(
         SectionLabel(text = "Prikaz i obaveštenja")
         PopupCard(spacing = 0.dp) {
             LabeledSwitchRow(
-                title = MAIN_PAY_TRANSPORT_LABEL,
-                checked = mainPayIncludesTransport,
+                title = MAIN_PAY_SALARY_ONLY_LABEL,
+                hint = MAIN_PAY_SALARY_ONLY_HINT,
+                checked = mainPaySalaryOnly,
                 contentPadding = OPTION_ROW_PADDING,
                 onCheckedChange = { checked ->
-                    mainPayIncludesTransport = checked
-                    repo.mainPayIncludesTransport = checked
+                    mainPaySalaryOnly = checked
+                    repo.mainPaySalaryOnly = checked
                 }
             )
         }

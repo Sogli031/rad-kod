@@ -270,7 +270,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val payBreakdown = ui.payBreakdown
     val monthlyReceipt = ui.monthlyReceipt
     val nextMonthReceipt = ui.nextMonthReceipt
-    val mainPayIncludesTransport = ui.mainPayIncludesTransport
+    val mainPaySalaryOnly = ui.mainPaySalaryOnly
     val monthlyFinalPaymentBreakdown = ui.monthlyFinalPaymentBreakdown
     val nextMonthFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown
     val overtimeNetImpact = ui.overtimeNetImpact
@@ -396,13 +396,13 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                 SalaryCard(
                     month = currentMonth,
                     nextMonthReceipt = nextMonthReceipt,
-                    includeTransport = mainPayIncludesTransport,
+                    salaryOnly = mainPaySalaryOnly,
                     onClick = { dialogState = DialogState.SalaryDetails }
                 )
                 if (SHOW_TOTAL_CARD) {
                     TotalCard(
                         receipt = monthlyReceipt,
-                        includeTransport = mainPayIncludesTransport,
+                        salaryOnly = mainPaySalaryOnly,
                         onClick = { dialogState = DialogState.PayDetails }
                     )
                 }

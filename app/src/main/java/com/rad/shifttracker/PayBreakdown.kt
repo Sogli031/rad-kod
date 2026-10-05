@@ -135,6 +135,10 @@ data class MonthlyReceipt(
             0.0
         }
 
+    /** Samo neto plata za rad, bez regresa i prevoza. */
+    val workSalaryPay: Double
+        get() = if (isSalaryAvailable) salaryNetPay.sanitizeMoney() else 0.0
+
     val transportAmount: Double
         get() = if (isSalaryAvailable) {
             calculateTransportAmount(transportEligibleDays, transportDailyAmount)

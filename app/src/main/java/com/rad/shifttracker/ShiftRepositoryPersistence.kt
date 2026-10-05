@@ -30,7 +30,7 @@ internal fun ShiftRepository.buildSnapshotUnsafe(): ShiftRepositorySnapshot {
         regressNetChanges = payState.regressNetChanges.toMap(),
         transportDailyAmount = payState.transportDailyAmount,
         notificationAccessPromptSuppressed = notificationAccessPromptSuppressedState,
-        mainPayIncludesTransport = mainPayIncludesTransportState,
+        mainPaySalaryOnly = mainPaySalaryOnlyState,
         lastBloodDonationDate = lastBloodDonationDateState,
         bloodDonationCount = bloodDonationCountState,
         bloodDonationHistory = bloodDonationHistoryState,
@@ -351,7 +351,7 @@ internal fun ShiftRepository.applySnapshotUnsafe(snapshot: ShiftRepositorySnapsh
         config.pay.transportPerWorkDay
     }
     notificationAccessPromptSuppressedState = snapshot.notificationAccessPromptSuppressed
-    mainPayIncludesTransportState = snapshot.mainPayIncludesTransport
+    mainPaySalaryOnlyState = snapshot.mainPaySalaryOnly
     bloodDonationHistoryState = normalizeBloodDonationHistory(snapshot.bloodDonationHistory)
     lastBloodDonationDateState = bloodDonationHistoryState.firstOrNull() ?: snapshot.lastBloodDonationDate
     bloodDonationCountState = snapshot.bloodDonationCount.coerceAtLeast(bloodDonationHistoryState.size)

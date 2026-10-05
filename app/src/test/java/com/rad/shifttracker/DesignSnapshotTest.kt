@@ -211,9 +211,9 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 onMinuliClick = {}
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-                SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, includeTransport = repo.mainPayIncludesTransport, onClick = {})
+                SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, salaryOnly = repo.mainPaySalaryOnly, onClick = {})
                 if (SHOW_TOTAL_CARD) {
-                    TotalCard(receipt = monthlyReceipt, includeTransport = repo.mainPayIncludesTransport, onClick = {})
+                    TotalCard(receipt = monthlyReceipt, salaryOnly = repo.mainPaySalaryOnly, onClick = {})
                 }
             }
         }

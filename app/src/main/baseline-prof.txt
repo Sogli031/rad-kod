@@ -18634,7 +18634,7 @@ SPLcom/rad/shifttracker/MainMonthState;-><clinit>()V
 SPLcom/rad/shifttracker/MainMonthState;-><init>(Lcom/rad/shifttracker/MainStateKey;Lcom/rad/shifttracker/MonthSummary;Lcom/rad/shifttracker/MonthlyNetPayBreakdown;Lcom/rad/shifttracker/MonthlyReceipt;Lcom/rad/shifttracker/MonthlyReceipt;ZLcom/rad/shifttracker/MonthlyFinalPaymentBreakdown;Lcom/rad/shifttracker/MonthlyFinalPaymentBreakdown;Lcom/rad/shifttracker/MonthlyOvertimeNetImpact;Lcom/rad/shifttracker/MonthSummary;Lcom/rad/shifttracker/MonthlyNetPayBreakdown;Lcom/rad/shifttracker/MonthlyPayDetails;Lcom/rad/shifttracker/MonthlyPayDetails;Lcom/rad/shifttracker/AnnualNetPayAverages;Lcom/rad/shifttracker/RecentNetPayAverage;Lcom/rad/shifttracker/AnnualNetPayAverages;Lcom/rad/shifttracker/RecentNetPayAverage;Lcom/rad/shifttracker/BloodDonationReminderScheduleStatus;Lcom/rad/shifttracker/VacationBalanceSummary;)V
 SPLcom/rad/shifttracker/MainMonthState;->getAnnualNetPayAverages()Lcom/rad/shifttracker/AnnualNetPayAverages;
 SPLcom/rad/shifttracker/MainMonthState;->getBloodDonationReminderStatus()Lcom/rad/shifttracker/BloodDonationReminderScheduleStatus;
-SPLcom/rad/shifttracker/MainMonthState;->getMainPayIncludesTransport()Z
+SPLcom/rad/shifttracker/MainMonthState;->getMainPaySalaryOnly()Z
 SPLcom/rad/shifttracker/MainMonthState;->getMonthlyFinalPaymentBreakdown()Lcom/rad/shifttracker/MonthlyFinalPaymentBreakdown;
 SPLcom/rad/shifttracker/MainMonthState;->getMonthlyReceipt()Lcom/rad/shifttracker/MonthlyReceipt;
 SPLcom/rad/shifttracker/MainMonthState;->getNextMonthFinalPaymentBreakdown()Lcom/rad/shifttracker/MonthlyFinalPaymentBreakdown;
@@ -19320,7 +19320,7 @@ SPLcom/rad/shifttracker/ShiftRepository;->getBloodDonationHistoryState$app_bench
 SPLcom/rad/shifttracker/ShiftRepository;->getLastBloodDonationDateState$app_benchmark()Ljava/time/LocalDate;
 SPLcom/rad/shifttracker/ShiftRepository;->getLocalStorage$app_benchmark()Lcom/rad/shifttracker/data/storage/LocalDataStore;
 SPLcom/rad/shifttracker/ShiftRepository;->getLock$app_benchmark()Ljava/lang/Object;
-SPLcom/rad/shifttracker/ShiftRepository;->getMainPayIncludesTransportState$app_benchmark()Z
+SPLcom/rad/shifttracker/ShiftRepository;->getMainPaySalaryOnlyState$app_benchmark()Z
 SPLcom/rad/shifttracker/ShiftRepository;->getMonthRecords(II)Ljava/util/List;
 SPLcom/rad/shifttracker/ShiftRepository;->getParsedPayslipCache$app_benchmark()Ljava/util/Map;
 SPLcom/rad/shifttracker/ShiftRepository;->getPayQueries$app_benchmark()Lcom/rad/shifttracker/data/repository/RepositoryPayQueries;
@@ -19370,7 +19370,7 @@ SPLcom/rad/shifttracker/ShiftRepositoryPayCalculationKt;->calculateMonthSummaryU
 SPLcom/rad/shifttracker/ShiftRepositoryPayCalculationKt;->getSummary(Lcom/rad/shifttracker/ShiftRepository;II)Lcom/rad/shifttracker/MonthSummary;
 Lcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;
 SPLcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;->getAutoAdvanceImportEnabled(Lcom/rad/shifttracker/ShiftRepository;)Z
-SPLcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;->getMainPayIncludesTransport(Lcom/rad/shifttracker/ShiftRepository;)Z
+SPLcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;->getMainPaySalaryOnly(Lcom/rad/shifttracker/ShiftRepository;)Z
 SPLcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;->getSavedPayslipMonths(Lcom/rad/shifttracker/ShiftRepository;)Ljava/util/List;
 SPLcom/rad/shifttracker/ShiftRepositoryPaySettingsKt;->payslipVacationDaysByMonthUnsafe(Lcom/rad/shifttracker/ShiftRepository;I)Ljava/util/Map;
 Lcom/rad/shifttracker/ShiftRepositoryPersistenceKt;

@@ -582,17 +582,17 @@ var ShiftRepository.transportDailyAmountValue: Double
  */
 /**
  * Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru")
- * prikazuju neto platu (i regres) zajedno sa prevozom. Isključeno = samo
- * neto plata; detalji plate i dalje prikazuju prevoz kao zasebnu stavku.
+ * prikazuju samo neto platu za rad (podrazumevano), bez regresa i prevoza.
+ * Isključeno = plata, regres i prevoz zajedno; detalji plate uvek prikazuju sve stavke.
  */
-var ShiftRepository.mainPayIncludesTransport: Boolean
-    get() = synchronized(lock) { mainPayIncludesTransportState }
+var ShiftRepository.mainPaySalaryOnly: Boolean
+    get() = synchronized(lock) { mainPaySalaryOnlyState }
     set(value) {
         val changed = synchronized(lock) {
-            if (mainPayIncludesTransportState == value) {
+            if (mainPaySalaryOnlyState == value) {
                 false
             } else {
-                mainPayIncludesTransportState = value
+                mainPaySalaryOnlyState = value
                 true
             }
         }

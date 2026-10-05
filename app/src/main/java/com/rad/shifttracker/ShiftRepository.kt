@@ -87,7 +87,7 @@ class ShiftRepository(
     )
     // Nova instalacija: čitanje akontacije iz obaveštenja je isključeno dok ga korisnik ne uključi.
     internal var notificationAccessPromptSuppressedState = false
-    internal var mainPayIncludesTransportState = true
+    internal var mainPaySalaryOnlyState = true
     internal var lastBloodDonationDateState: LocalDate? = null
     internal var bloodDonationCountState = 0
     internal var bloodDonationHistoryState: List<LocalDate> = emptyList()

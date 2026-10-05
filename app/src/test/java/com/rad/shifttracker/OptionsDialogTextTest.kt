@@ -30,26 +30,27 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `options dialog exposes transport toggle for pay cards below calendar`() {
-        assertEquals("Prikaz ispod kalendara", MAIN_PAY_TRANSPORT_SECTION_LABEL)
-        assertEquals("Prevoz u iznosu za isplatu", MAIN_PAY_TRANSPORT_LABEL)
+    fun `options dialog exposes salary only toggle for pay cards below calendar`() {
+        assertEquals("Prikaz ispod kalendara", MAIN_PAY_SECTION_LABEL)
+        assertEquals("Samo plata za rad", MAIN_PAY_SALARY_ONLY_LABEL)
+        assertEquals("Bez regresa i prevoza", MAIN_PAY_SALARY_ONLY_HINT)
 
         val optionsSource = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
         ).first { it.exists() }.readText()
-        assertTrue(optionsSource.contains("title = MAIN_PAY_TRANSPORT_LABEL"))
-        assertTrue(optionsSource.contains("repo.mainPayIncludesTransport = checked"))
+        assertTrue(optionsSource.contains("title = MAIN_PAY_SALARY_ONLY_LABEL"))
+        assertTrue(optionsSource.contains("repo.mainPaySalaryOnly = checked"))
 
         val screenSource = listOf(
             java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt"),
             java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt")
         ).first { it.exists() }.readText()
-        assertEquals(2, screenSource.split("includeTransport = mainPayIncludesTransport").size - 1)
+        assertEquals(2, screenSource.split("salaryOnly = mainPaySalaryOnly").size - 1)
     }
 
     @Test
-    fun `pay cards below calendar drop transport only when toggle is off`() {
+    fun `pay cards below calendar show only work salary when toggle is on`() {
         val receipt = MonthlyReceipt(
             year = 2026,
             month = 8,
@@ -60,9 +61,10 @@ class OptionsDialogTextTest {
             transportDailyAmount = 240.0
         )
 
-        assertEquals(122_400.0, mainPayCardAmount(receipt, includeTransport = true), 0.001)
-        assertEquals(120_000.0, mainPayCardAmount(receipt, includeTransport = false), 0.001)
-        assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, includeTransport = true), 0.001)
+        assertEquals(100_000.0, mainPayCardAmount(receipt, salaryOnly = true), 0.001)
+        assertEquals(122_400.0, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
+        assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
+        assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false), salaryOnly = true), 0.001)
     }
 
     @Test
