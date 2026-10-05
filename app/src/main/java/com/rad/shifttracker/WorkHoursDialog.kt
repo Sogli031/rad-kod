@@ -10,6 +10,9 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import com.rad.shifttracker.ui.components.AutoSizeText
 import kotlin.math.roundToInt
@@ -88,8 +91,15 @@ private fun WorkHoursRow(row: WorkHoursBreakdownLine) {
             maxLines = 1,
             modifier = Modifier.weight(1.15f)
         )
+        val moneyColor = WorkHoursTone.Positive.color
         AutoSizeText(
-            text = row.value,
+            text = buildAnnotatedString {
+                append(row.value)
+                row.money?.let { money ->
+                    append(" · ")
+                    withStyle(SpanStyle(color = moneyColor)) { append(money) }
+                }
+            },
             color = row.tone.color,
             style = MaterialTheme.typography.bodyMediumEmphasized.copy(
                 textAlign = TextAlign.End
@@ -194,11 +204,9 @@ private fun overviewRows(
         add(
             WorkHoursBreakdownLine(
                 "Obični sati",
-                hoursAndMoneyText(
-                    formatPayDetailMinutes(payDetails.paidWorkMinutes),
-                    netMoneyText(payDetails.grossBaseRegular, payDetails)
-                ),
-                WorkHoursTone.Primary
+                formatPayDetailMinutes(payDetails.paidWorkMinutes),
+                WorkHoursTone.Primary,
+                money = netMoneyText(payDetails.grossBaseRegular, payDetails)
             )
         )
         addIf(summary.workDays > 0, "Radni dani", summary.workDays.toString(), WorkHoursTone.Muted)
@@ -275,17 +283,9 @@ private fun absenceAndLeaveRows(
                 )
             )
         }
-        // Listić (šifra 95): fond − plaćeni sati bez prekovremenih; bez iznosa jer ti sati nisu plaćeni.
+        // Listić (šifra 95): fond − plaćeni sati bez prekovremenih; sami sati se ne prikazuju jer nisu plaćeni.
         val fundAbsenceMinutes = payDetails.fundAbsenceMinutes(payBreakdown.monthlyFundHours)
         if (fundAbsenceMinutes > 0) {
-            add(
-                WorkHoursTableLine(
-                    "Izostanci po fondu (lista)",
-                    formatHoursAndMinutes(-fundAbsenceMinutes),
-                    "–",
-                    WorkHoursTone.Muted
-                )
-            )
             // Listić piše cele sate, a ostatak minuta skida kroz šifru 96; ovde je to već u satima.
             val roundingGross = estimateAbsenceRoundingGross(
                 fundAbsenceMinutes = fundAbsenceMinutes,
@@ -295,7 +295,7 @@ private fun absenceAndLeaveRows(
             if (roundingGross > 0) {
                 add(
                     WorkHoursTableLine(
-                        "od toga „Izostanci 1“ na listi",
+                        "„Izostanci 1“ na listi",
                         formatHoursAndMinutes(-(fundAbsenceMinutes % WORK_HOURS_MINUTES_PER_HOUR)),
                         "≈ ${deductionMoneyText(roundingGross.toDouble())}",
                         WorkHoursTone.Muted
@@ -323,16 +323,8 @@ private fun otherPayrollRows(
                 )
             )
         }
-        val deductionsTotal = payBreakdown.netDeductionsTotal
-        if (deductionsTotal > 0.0) {
-            add(
-                WorkHoursBreakdownLine(
-                    "Odbici",
-                    deductionMoneyText(deductionsTotal),
-                    WorkHoursTone.Danger
-                )
-            )
-        }
+        addDeductionRowIf(payBreakdown.mealNetDeduction > 0.0, "Odbitak – topli obrok", payBreakdown.mealNetDeduction)
+        addDeductionRowIf(payBreakdown.unionDuesNet > 0.0, "Obustave (sindikat, fond)", payBreakdown.unionDuesNet)
     }
 }
 
@@ -362,6 +354,16 @@ private fun MutableList<WorkHoursBreakdownLine>.addIf(
     if (visible) add(WorkHoursBreakdownLine(label, value, tone))
 }
 
+private fun MutableList<WorkHoursBreakdownLine>.addDeductionRowIf(
+    visible: Boolean,
+    label: String,
+    value: Double
+) {
+    if (visible) {
+        add(WorkHoursBreakdownLine(label, deductionMoneyText(value), WorkHoursTone.Danger))
+    }
+}
+
 private fun MutableList<WorkHoursBreakdownLine>.addMoneyRowIf(
     visible: Boolean,
     label: String,
@@ -371,10 +373,6 @@ private fun MutableList<WorkHoursBreakdownLine>.addMoneyRowIf(
     if (visible) {
         add(WorkHoursBreakdownLine(label, moneyText(value), tone))
     }
-}
-
-private fun hoursAndMoneyText(hours: String, money: String): String {
-    return "$hours · $money"
 }
 
 private fun formatPayDetailMinutes(minutes: Int): String {
@@ -415,7 +413,9 @@ private fun uncoveredDeficitMinutes(
 private data class WorkHoursBreakdownLine(
     val label: String,
     val value: String,
-    val tone: WorkHoursTone
+    val tone: WorkHoursTone,
+    /** Iznos iza vrednosti, zelenom bojom: „168h · 77.909,51 RSD“. */
+    val money: String? = null
 )
 
 private data class WorkHoursTableLine(

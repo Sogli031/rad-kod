@@ -380,11 +380,9 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             }
             StatsSection(
                 summary = summary,
-                payBreakdown = payBreakdown,
                 onWorkHoursClick = { dialogState = DialogState.WorkHours },
                 onOvertimeClick = { dialogState = DialogState.OvertimeNetImpact },
-                onFoodClick = { dialogState = DialogState.Food },
-                onMinuliClick = { dialogState = DialogState.Minuli }
+                onFoodClick = { dialogState = DialogState.Food }
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
                 SalaryCard(

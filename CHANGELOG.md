@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.4] - 2026-10-06
+- **Glavni ekran bez minulog rada:** ispod kalendara su tri stavke (Sati rada, Prekovremeno, Hrana), pa se prekovremeno vidi ceo naziv. Minuli rad se i dalje računa sa liste i vidi u „Sati rada“.
+- **„Sati rada“ jasniji:** iznos pored običnih sati je zelen; uklonjen red „Izostanci po fondu (lista)“ (bio je bez iznosa); umesto „Odbici“ piše šta je skinuto — „Odbitak – topli obrok“ i, ako postoje, „Obustave (sindikat, fond)“.
+
 ## [6.3] - 2026-10-05
 - **Detalji plate su kraći:** iz prozora koji se otvara na „… plata“ i „Primanja u …“ uklonjeni su odeljci „Osnovni podaci“ (vrednost sata, satnice, fond, plaćeni sati, radni dani) i „Godišnji prosek neto plate“ (sa neto prosekom 3 poslednje plate). Osnovni podaci su i dalje u „Sati rada“; proseci se više ne računaju pri svakom osvežavanju ekrana.
 

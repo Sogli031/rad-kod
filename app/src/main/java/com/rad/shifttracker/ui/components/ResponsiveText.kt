@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +69,20 @@ fun ResponsiveInfoRow(
 @Composable
 fun AutoSizeText(
     text: String,
+    modifier: Modifier = Modifier,
+    maxFontSize: TextUnit = 24.sp,
+    minFontSize: TextUnit = 12.sp,
+    maxLines: Int = 1,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified
+) {
+    AutoSizeText(AnnotatedString(text), modifier, maxFontSize, minFontSize, maxLines, style, color)
+}
+
+/** Isto kao [AutoSizeText], ali delovi teksta mogu imati svoju boju (npr. sati beli, iznos zelen). */
+@Composable
+fun AutoSizeText(
+    text: AnnotatedString,
     modifier: Modifier = Modifier,
     maxFontSize: TextUnit = 24.sp,
     minFontSize: TextUnit = 12.sp,

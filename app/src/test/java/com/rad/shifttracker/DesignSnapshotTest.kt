@@ -204,11 +204,9 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
             )
             StatsSection(
                 summary = summary,
-                payBreakdown = payBreakdown,
                 onWorkHoursClick = {},
                 onOvertimeClick = {},
-                onFoodClick = {},
-                onMinuliClick = {}
+                onFoodClick = {}
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
                 SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, salaryOnly = repo.mainPaySalaryOnly, onClick = {})

@@ -69,22 +69,14 @@ internal fun totalCardLabel(year: Int, month: Int): String {
     return "Primanja u ${monthLocativeText(MonthKey(year, month))}"
 }
 
-/** Četiri statistike u jednoj kartici, razdvojene tankim linijama. */
+/** Tri statistike u jednoj kartici, razdvojene tankim linijama. */
 @Composable
 internal fun StatsSection(
     summary: MonthSummary,
-    payBreakdown: MonthlyNetPayBreakdown,
     onWorkHoursClick: () -> Unit,
     onOvertimeClick: () -> Unit,
-    onFoodClick: () -> Unit,
-    onMinuliClick: () -> Unit
+    onFoodClick: () -> Unit
 ) {
-    val minuliLabel = if (summary.yearsOfService > 0) {
-        "Minuli (${summary.yearsOfService}g)"
-    } else {
-        "Minuli"
-    }
-
     val stats = listOf(
         StatItem(
             WORK_HOURS_CARD_LABEL,
@@ -103,16 +95,10 @@ internal fun StatsSection(
             formatNumber(summary.foodAllowance),
             if (summary.foodAllowance > 0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onFoodClick
-        ),
-        StatItem(
-            minuliLabel,
-            formatNumber(payBreakdown.netSeniorityBonus),
-            if (payBreakdown.netSeniorityBonus > 0) MaterialTheme.extendedColors.compTime else MaterialTheme.colorScheme.onSurfaceVariant,
-            onClick = onMinuliClick
         )
     )
 
-    // Pri velikom fontu četiri stubca ne staju: kartica se lomi u 2 × 2.
+    // Pri velikom fontu tri stubca ne staju: kartica se lomi po dva u redu.
     val perRow = if (LocalDensity.current.fontScale > WIDE_LAYOUT_FONT_SCALE) 2 else stats.size
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
