@@ -347,7 +347,6 @@ fun ShiftRepository.setMonthlyAdvancePaymentNet(year: Int, month: Int, amount: D
  */
 fun ShiftRepository.recordAdvancePaymentFromPayslip(month: MonthKey, amount: Double): Boolean {
     val changed = synchronized(lock) {
-        if (!autoAdvanceImportEnabledState) return@synchronized false
         if (month.year <= 0 || month.month !in 1..12 || amount <= 0.0 || !amount.isFinite()) {
             return@synchronized false
         }
@@ -594,22 +593,6 @@ var ShiftRepository.mainPayIncludesTransport: Boolean
                 false
             } else {
                 mainPayIncludesTransportState = value
-                true
-            }
-        }
-        if (changed) {
-            notifyChange()
-        }
-    }
-
-var ShiftRepository.autoAdvanceImportEnabled: Boolean
-    get() = synchronized(lock) { autoAdvanceImportEnabledState }
-    set(value) {
-        val changed = synchronized(lock) {
-            if (autoAdvanceImportEnabledState == value) {
-                false
-            } else {
-                autoAdvanceImportEnabledState = value
                 true
             }
         }

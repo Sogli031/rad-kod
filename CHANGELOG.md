@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Neobjavljeno]
+- **Učitaj listu iz fajla (PDF)** u Opcijama (odeljak „Liste iz Gmail-a“): skinuta lista se učitava ručno, jedna po jedna, i upisuje kao iz Gmail-a: sva podešavanja sa liste, osnovica, akontacija za sledeći mesec i pravo na godišnji (ako još nije upisano). Mesec se čita iz PDF-a, ne iz kalendara; ponovo učitana lista za isti mesec zamenjuje staru. Prima i posebne obračune (akontacija, regres, prevoz). Za kolege koji su tek uključili prosleđivanje mejla na Gmail.
+- **Auto akontacija je uvek uključena:** prekidač „Upiši akontaciju iz obračuna“ je uklonjen. Stari backup sa isključenim prekidačem se učitava, a akontacija se svejedno upisuje.
+
 ## [6.0] - 2026-10-05
 „Production grade“: Android audit (zbir oko 73 → 80), provereno na telefonu.
 - **Manji APK:** 10,5 → 4,9 MB (izbačene neupotrebljene kriptografske i kineske/japanske tabele iz čitača PDF-a; listić se čita isto).

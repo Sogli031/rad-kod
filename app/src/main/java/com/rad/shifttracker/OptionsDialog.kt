@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,10 +33,6 @@ internal fun OptionsDialog(
     var mainPayIncludesTransport by remember(savedMainPayIncludesTransport) {
         mutableStateOf(savedMainPayIncludesTransport)
     }
-    val savedAutoAdvanceImportEnabled = rememberRepoValue(repo) { autoAdvanceImportEnabled }
-    var autoAdvanceImportEnabled by remember(savedAutoAdvanceImportEnabled) {
-        mutableStateOf(savedAutoAdvanceImportEnabled)
-    }
 
     PopupDialog(
         title = "Opcije",
@@ -63,16 +58,6 @@ internal fun OptionsDialog(
                 onCheckedChange = { checked ->
                     mainPayIncludesTransport = checked
                     repo.mainPayIncludesTransport = checked
-                }
-            )
-            OptionDivider()
-            LabeledSwitchRow(
-                title = AUTO_ADVANCE_IMPORT_ENABLED_LABEL,
-                checked = autoAdvanceImportEnabled,
-                contentPadding = OPTION_ROW_PADDING,
-                onCheckedChange = { checked ->
-                    autoAdvanceImportEnabled = checked
-                    repo.autoAdvanceImportEnabled = checked
                 }
             )
         }
@@ -111,11 +96,6 @@ private fun OptionActionButton(
 }
 
 private val OPTION_ROW_PADDING = PaddingValues(vertical = Spacing.md)
-
-@Composable
-private fun OptionDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA))
-}
 
 /**
  * Otežani uslovi rada i prevoz po danu se samo prikazuju: otežane uslove upisuje lista (šifra 21,

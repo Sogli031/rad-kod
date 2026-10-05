@@ -130,7 +130,6 @@ class AdvanceFromPayslipsTest {
     @Test
     fun applySideRunsWritesAdvanceAndTransport() {
         val repo = testRepository()
-        repo.autoAdvanceImportEnabled = true
         val changed = mutableListOf<MonthKey>()
         applySideRuns(
             repo,
@@ -169,7 +168,6 @@ class AdvanceFromPayslipsTest {
     @Test
     fun manuallyTypedAdvanceIsReplacedByTheOneFromMail() {
         val repo = testRepository()
-        repo.autoAdvanceImportEnabled = true
         repo.setMonthlyAdvancePaymentNet(2026, 9, 40_000.0)
         val changes = mutableListOf<Triple<MonthKey, Double, Double>>()
 
@@ -180,42 +178,24 @@ class AdvanceFromPayslipsTest {
     }
 
     @Test
-    fun transportIsWrittenEvenWhenAutoAdvanceIsOff() {
-        val repo = testRepository()
-        repo.autoAdvanceImportEnabled = false
-        repo.transportDailyAmountValue = 200.0
-        applySideRuns(repo, listOf(side(advanceAugust), side(transportAugust)))
-        assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 9).advancePaymentNet, 0.001)
-        assertEquals(240.0, repo.transportDailyAmountValue, 0.001)
-    }
-
-    @Test
     fun entryCheckRunsOnlyWhileSomethingIsMissing() {
         val today = LocalDate.of(2026, 9, 25)
-        val repo = testRepository()
-        repo.autoAdvanceImportEnabled = true
 
         val now = 10 * DAY_MS
         // Dnevna provera je upravo obavljena: ostaje samo ono što fali.
-        fun needed(r: ShiftRepository, transport: MonthKey?, confirmed: Set<MonthKey> = emptySet()) =
-            sideRunCheckNeeded(r, today, transport, confirmed, lastFullCheckMillis = now - 1_000L, nowMillis = now)
+        fun needed(transport: MonthKey?, confirmed: Set<MonthKey> = emptySet()) =
+            sideRunCheckNeeded(today, transport, confirmed, lastFullCheckMillis = now - 1_000L, nowMillis = now)
 
         val bothConfirmed = setOf(august, september)
-        assertTrue(needed(repo, august))
+        assertTrue(needed(august))
         // Ručno ukucana akontacija nije potvrda: traži se dok obračun iz mejla ne stigne.
-        repo.setMonthlyAdvancePaymentNet(2026, 9, 38_942.0)
-        assertTrue(needed(repo, august, setOf(august)))
+        assertTrue(needed(august, setOf(august)))
         // Prošli mesec isplate (avgust) nije potvrđen: traži se i on.
-        assertTrue(needed(repo, august, setOf(september)))
-        assertFalse(needed(repo, august, bothConfirmed))
+        assertTrue(needed(august, setOf(september)))
+        assertFalse(needed(august, bothConfirmed))
         // Prevoz za avgust još nije uzet iz obračuna.
-        assertTrue(needed(repo, MonthKey(2026, 7), bothConfirmed))
-        assertTrue(needed(repo, null, bothConfirmed))
-
-        // Isključena auto akontacija: traži se samo prevoz.
-        val manual = testRepository()
-        manual.autoAdvanceImportEnabled = false
-        assertFalse(needed(manual, august))
+        assertTrue(needed(MonthKey(2026, 7), bothConfirmed))
+        assertTrue(needed(null, bothConfirmed))
     }
 
     @Test
@@ -228,12 +208,10 @@ class AdvanceFromPayslipsTest {
         assertTrue(dailyCheckDue(lastFullCheckMillis = now + 1_000L, nowMillis = now))
 
         // Sve potvrđeno, ali dnevna provera dospela: traži se bilo koji obračun (i regres van 2/5/8/11).
-        val repo = testRepository()
-        repo.autoAdvanceImportEnabled = true
         val october = LocalDate.of(2026, 10, 12)
         val confirmed = setOf(september, MonthKey(2026, 10))
-        assertTrue(sideRunCheckNeeded(repo, october, september, confirmed, 0L, now))
-        assertFalse(sideRunCheckNeeded(repo, october, september, confirmed, now - 1_000L, now))
+        assertTrue(sideRunCheckNeeded(october, september, confirmed, 0L, now))
+        assertFalse(sideRunCheckNeeded(october, september, confirmed, now - 1_000L, now))
     }
 
     @Test

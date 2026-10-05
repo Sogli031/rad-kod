@@ -413,7 +413,6 @@ class ShiftRepositoryTest {
 
     @Test
     fun `akontacija iz obracuna upisuje uplacen iznos za mesec`() {
-        repo.autoAdvanceImportEnabled = true
 
         assertTrue(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
 
@@ -422,7 +421,6 @@ class ShiftRepositoryTest {
 
     @Test
     fun `akontacija iz obracuna zamenjuje rucni iznos a isti iznos nije promena`() {
-        repo.autoAdvanceImportEnabled = true
         repo.setMonthlyAdvancePaymentNet(2026, 8, 50_000.0)
 
         assertTrue(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
@@ -431,26 +429,17 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `auto akontacija se preskace kad je funkcija iskljucena`() {
-        repo.autoAdvanceImportEnabled = false
+    fun `stari backup sa iskljucenom auto akontacijom i dalje upisuje akontaciju`() {
+        val restored = testRepository()
+        assertTrue(restored.importFromJson("{\"pay_coefficient\": 1.0, \"auto_advance_import_enabled\": false}"))
 
-        assertFalse(repo.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
-        assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
+        assertTrue(restored.recordAdvancePaymentFromPayslip(MonthKey(2026, 8), 38_942.0))
+        assertFalse(JSONObject(restored.exportJson()).has("auto_advance_import_enabled"))
     }
 
     @Test
     fun `nova instalacija ima iskljuceno citanje akontacije iz obavestenja`() {
-        assertFalse(testRepository().autoAdvanceImportEnabled)
         assertFalse(testRepository().notificationAccessPromptSuppressed)
-    }
-
-    @Test
-    fun `postojeca instalacija zadrzava ukljuceno citanje iz obavestenja`() {
-        val existing = testRepository()
-        existing.autoAdvanceImportEnabled = true
-        val restored = testRepository()
-        assertTrue(restored.importFromJson(existing.exportJson()))
-        assertTrue(restored.autoAdvanceImportEnabled)
     }
 
     @Test
@@ -469,16 +458,13 @@ class ShiftRepositoryTest {
 
     @Test
     fun `podesavanja auto akontacije se cuvaju kroz export import`() {
-        repo.autoAdvanceImportEnabled = false
         repo.notificationAccessPromptSuppressed = true
         val json = JSONObject(repo.exportJson())
 
-        assertFalse(json.getBoolean("auto_advance_import_enabled"))
         assertTrue(json.getBoolean("notification_access_prompt_suppressed"))
 
         val restored = testRepository()
         assertTrue(restored.importFromJson(json.toString()))
-        assertFalse(restored.autoAdvanceImportEnabled)
         assertTrue(restored.notificationAccessPromptSuppressed)
     }
 
@@ -513,7 +499,6 @@ class ShiftRepositoryTest {
         val restored = testRepository()
         assertTrue(restored.importFromJson("{\"pay_coefficient\": 1.0}"))
 
-        assertTrue(restored.autoAdvanceImportEnabled)
         assertFalse(restored.notificationAccessPromptSuppressed)
     }
 
@@ -4266,7 +4251,6 @@ class ShiftRepositoryTest {
         repo.taxReliefValue = 34_221.0
         repo.difficultWorkConditionsPercentValue = 7.5
         repo.mainPayIncludesTransport = false
-        repo.autoAdvanceImportEnabled = false
         repo.recordBloodDonation(LocalDate.of(2026, 2, 10))
         repo.recordBloodDonation(LocalDate.of(2026, 8, 3))
         repo.initialCompBalanceMinutesValue = 450

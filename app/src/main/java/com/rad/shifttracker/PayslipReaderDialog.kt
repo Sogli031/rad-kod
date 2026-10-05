@@ -167,21 +167,22 @@ internal sealed interface PayslipPickOutcome {
 }
 
 /** [payslipPickOutcome] koji umesto pada daje poruku o neočekivanoj grešci. */
-internal fun safePayslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey): PayslipPickOutcome =
+internal fun safePayslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey?): PayslipPickOutcome =
     runPayslipSafely { payslipPickOutcome(repo, result, month) }
         ?: PayslipPickOutcome.Rejected(PAYSLIP_UNEXPECTED_ERROR_TEXT)
 
 /**
  * Izabrani PDF: nečitljiv ili za drugi mesec se odbija; inače plan izmena za potvrdu.
+ * [month] `null` (Opcije → ručno učitavanje) prima listu za mesec koji piše na njoj.
  * Stariji listić od najnovijeg sačuvanog ne predlaže globalna podešavanja (koeficijent, porez, staž).
  */
-internal fun payslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey): PayslipPickOutcome {
+internal fun payslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey?): PayslipPickOutcome {
     val scanned = when (result) {
         is PayslipParseResult.Failure -> return PayslipPickOutcome.Rejected(payslipImportErrorText(result.reason).orEmpty())
         is PayslipParseResult.Success -> result.payslip
         is PayslipParseResult.SideRun -> return PayslipPickOutcome.Rejected(payslipSideRunPickText(result))
     }
-    payslipWrongMonthError(scanned.month, month)?.let { return PayslipPickOutcome.Rejected(it) }
+    if (month != null) payslipWrongMonthError(scanned.month, month)?.let { return PayslipPickOutcome.Rejected(it) }
     val latest = repo.getLatestSavedPayslipMonth()
     val plan = buildPayslipImportPlan(
         repo = repo,

@@ -21,7 +21,6 @@ internal data class ShiftRepositorySnapshot(
     val hourlyValueChanges: Map<MonthKey, Double>,
     val foodPerDay: Double,
     val transportDailyAmount: Double,
-    val autoAdvanceImportEnabled: Boolean,
     val notificationAccessPromptSuppressed: Boolean,
     val lastBloodDonationDate: LocalDate?,
     val bloodDonationCount: Int,

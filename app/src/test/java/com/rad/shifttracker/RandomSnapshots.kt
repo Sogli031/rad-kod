@@ -43,7 +43,6 @@ internal fun randomSnapshot(random: Random): ShiftRepositorySnapshot {
         hourlyValueChanges = randomMap(random.nextInt(0, 4), ::month) { positive() },
         foodPerDay = random.nextInt(0, 100_000) / 100.0,
         transportDailyAmount = random.nextInt(0, 100_000) / 100.0,
-        autoAdvanceImportEnabled = random.nextBoolean(),
         notificationAccessPromptSuppressed = random.nextBoolean(),
         lastBloodDonationDate = history.firstOrNull(),
         bloodDonationCount = history.size + random.nextInt(0, 4),

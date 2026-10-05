@@ -147,6 +147,7 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = { recheckOpen = true }
         )
+        ManualPayslipImportButton(repo = repo)
         PayslipFillAllButton(repo = repo)
     }
 }

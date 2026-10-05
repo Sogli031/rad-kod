@@ -121,7 +121,6 @@ internal class ShiftRepositoryJsonCodec(
         data[DIFFICULT_WORK_CONDITIONS_PERCENT_KEY] = snapshot.difficultWorkConditionsPercent
         data[FOOD_PER_DAY_KEY] = snapshot.foodPerDay
         data[TRANSPORT_DAILY_AMOUNT_KEY] = snapshot.transportDailyAmount
-        data[AUTO_ADVANCE_IMPORT_ENABLED_KEY] = snapshot.autoAdvanceImportEnabled
         data[NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY] = snapshot.notificationAccessPromptSuppressed
         data[MAIN_PAY_INCLUDES_TRANSPORT_KEY] = snapshot.mainPayIncludesTransport
         snapshot.lastBloodDonationDate?.let { date ->
@@ -288,7 +287,6 @@ internal class ShiftRepositoryJsonCodec(
             payCoefficient = parsedCoefficient,
             foodPerDay = parsedFoodPerDay,
             transportDailyAmount = parsedTransportDailyAmount,
-            autoAdvanceImportEnabled = parsedAutoAdvanceImport.enabled,
             notificationAccessPromptSuppressed = parsedAutoAdvanceImport.promptSuppressed,
             mainPayIncludesTransport = json.optBoolean(MAIN_PAY_INCLUDES_TRANSPORT_KEY, true),
             lastBloodDonationDate = parsedBloodDonationHistory.firstOrNull() ?: parsedLastBloodDonationDate,
@@ -338,9 +336,8 @@ internal class ShiftRepositoryJsonCodec(
         else -> config.pay.defaultCoefficient
     }
 
-    // Stari bekapi nemaju ove ključeve — auto akontacija ostaje uključena kao i pre.
+    // Auto akontacija je uvek uključena; stari ključ AUTO_ADVANCE_IMPORT_ENABLED_KEY se ignoriše.
     private fun parseAutoAdvanceImportFlags(json: JSONObject) = ParsedAutoAdvanceImportFlags(
-        enabled = json.optBoolean(AUTO_ADVANCE_IMPORT_ENABLED_KEY, true),
         promptSuppressed = json.optBoolean(NOTIFICATION_ACCESS_PROMPT_SUPPRESSED_KEY, false)
     )
 
@@ -708,7 +705,6 @@ internal class ShiftRepositoryJsonCodec(
     }
 
     private data class ParsedAutoAdvanceImportFlags(
-        val enabled: Boolean,
         val promptSuppressed: Boolean
     )
 

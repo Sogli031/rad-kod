@@ -244,18 +244,15 @@ internal fun advancesFromImport(
 
 /**
  * Uvoz iz Gmail-a (onboarding i „Proveri po listićima“): listići od januara prošle godine i
- * posebni obračuni; upisuje sve što se razlikuje i vraća spisak razlika. [enableAutoAdvance] kad
- * je Gmail upravo povezan (povezan Gmail = korisnik želi da se akontacija upisuje sama).
+ * posebni obračuni; upisuje sve što se razlikuje (i akontacije) i vraća spisak razlika.
  * Radi mrežu — zvati van glavne niti.
  */
 internal fun importFromGmailForOnboarding(
     context: Context,
     repo: ShiftRepository,
     today: LocalDate = LocalDate.now(),
-    enableAutoAdvance: Boolean = true,
     onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
 ): OnboardingImportResult {
-    if (enableAutoAdvance) repo.autoAdvanceImportEnabled = true
     val months = onboardingPayslipMonths(today)
     val sideMonths = months + sideRunCheckMonths(today).last()
     // Jedan prolaz kroz Gmail za ceo period; folder samo ako Gmail ne radi.
@@ -306,7 +303,7 @@ internal fun importFromGmailForOnboarding(
     return OnboardingImportResult(
         payslips = plan?.payslips.orEmpty().sortedBy { it.month },
         transportDaily = latestTransportDaily(runs),
-        advanceMonths = if (repo.autoAdvanceImportEnabled) advances.keys.sorted() else emptyList(),
+        advanceMonths = advances.keys.sorted(),
         gmailFailed = gmailFailed,
         gmailNoAccess = range == GmailRangeResult.NoAccess,
         vacationNote = vacationNote,
@@ -464,7 +461,7 @@ internal object GmailImportRunner {
 
     val isRunning: Boolean get() = _state.value is GmailImportState.Running
 
-    fun start(context: Context, repo: ShiftRepository, enableAutoAdvance: Boolean) {
+    fun start(context: Context, repo: ShiftRepository) {
         synchronized(this) {
             if (isRunning) return
             _state.value = GmailImportState.Running(0, 0)
@@ -472,7 +469,7 @@ internal object GmailImportRunner {
         val appContext = context.applicationContext
         scope.launch {
             val result = runPayslipSafely {
-                importFromGmailForOnboarding(appContext, repo, enableAutoAdvance = enableAutoAdvance) { done, total ->
+                importFromGmailForOnboarding(appContext, repo) { done, total ->
                     _state.value = GmailImportState.Running(done, total)
                 }
             }
@@ -729,10 +726,10 @@ internal fun GmailOnboardingDialog(
         GmailImportRunner.reset()
         onFinished()
     }
-    val connector = rememberGmailPayslipConnector { GmailImportRunner.start(context, repo, enableAutoAdvance = true) }
+    val connector = rememberGmailPayslipConnector { GmailImportRunner.start(context, repo) }
     LaunchedEffect(Unit) {
         if (mode == GmailImportMode.RECHECK && hasGmailPayslipAccess(context) && importState == GmailImportState.Idle) {
-            GmailImportRunner.start(context, repo, enableAutoAdvance = false)
+            GmailImportRunner.start(context, repo)
         }
     }
 

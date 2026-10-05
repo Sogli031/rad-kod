@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.update
  * akontaciju upisanu pod septembar; iznos je ono što je uplaćeno na račun. Prevoz po danu se
  * uzima iz najnovijeg obračuna prevoza i više se ne unosi ručno.
  */
-const val AUTO_ADVANCE_IMPORT_SECTION_LABEL = "Auto akontacija"
-const val AUTO_ADVANCE_IMPORT_ENABLED_LABEL = "Upiši akontaciju iz obračuna"
 
 private const val SIDE_RUN_CHECK_PREFS = "rad_advance_check_prefs"
 private const val KEY_TRANSPORT_WORK_MONTH = "transport_work_month"
@@ -47,10 +45,8 @@ internal fun advancePaymentMonthsToConfirm(today: LocalDate): List<MonthKey> {
  * pa je obračun iz mejla treba zameniti. [confirmed] = meseci isplate već viđeni u obračunu
  * (ili prošli mesec za koji je pretraga uspela a obračuna nema).
  */
-internal fun unconfirmedAdvanceMonths(repo: ShiftRepository, today: LocalDate, confirmed: Set<MonthKey>): List<MonthKey> {
-    if (!repo.autoAdvanceImportEnabled) return emptyList()
-    return advancePaymentMonthsToConfirm(today).filter { it !in confirmed }
-}
+internal fun unconfirmedAdvanceMonths(today: LocalDate, confirmed: Set<MonthKey>): List<MonthKey> =
+    advancePaymentMonthsToConfirm(today).filter { it !in confirmed }
 
 /**
  * Da li pri ulasku ima šta da se traži: akontacija za tekući ili prošli mesec isplate nije potvrđena
@@ -58,14 +54,13 @@ internal fun unconfirmedAdvanceMonths(repo: ShiftRepository, today: LocalDate, c
  * ([transportWorkMonth] = mesec rada poslednjeg primenjenog obračuna prevoza).
  */
 internal fun sideRunCheckNeeded(
-    repo: ShiftRepository,
     today: LocalDate,
     transportWorkMonth: MonthKey?,
     confirmedAdvanceMonths: Set<MonthKey> = emptySet(),
     lastFullCheckMillis: Long = 0L,
     nowMillis: Long = System.currentTimeMillis()
 ): Boolean {
-    val advanceMissing = unconfirmedAdvanceMonths(repo, today, confirmedAdvanceMonths).isNotEmpty()
+    val advanceMissing = unconfirmedAdvanceMonths(today, confirmedAdvanceMonths).isNotEmpty()
     val previousWorkMonth = sideRunCheckMonths(today).first()
     val transportMissing = transportWorkMonth == null || transportWorkMonth < previousWorkMonth
     return advanceMissing || transportMissing || dailyCheckDue(lastFullCheckMillis, nowMillis)
@@ -90,10 +85,10 @@ internal fun runSideRunCheckOnEntry(context: Context, repo: ShiftRepository, tod
     val confirmed = prefs.getStringSet(KEY_CONFIRMED_ADVANCE_MONTHS, emptySet()).orEmpty()
         .mapNotNull(::parseMonthKeyOrNull).toSet()
     val lastFullCheck = prefs.getLong(KEY_LAST_FULL_CHECK_MILLIS, 0L)
-    val needed = sideRunCheckNeeded(repo, today, transportWorkMonth, confirmed, lastFullCheck)
+    val needed = sideRunCheckNeeded(today, transportWorkMonth, confirmed, lastFullCheck)
     Log.i(
         SIDE_RUN_LOG_TAG,
-        "ulaz: potrebno=$needed auto=${repo.autoAdvanceImportEnabled} gmail=${hasGmailPayslipAccess(context)} " +
+        "ulaz: potrebno=$needed gmail=${hasGmailPayslipAccess(context)} " +
             "prevozZa=$transportWorkMonth"
     )
     if (!needed) return
@@ -101,7 +96,7 @@ internal fun runSideRunCheckOnEntry(context: Context, repo: ShiftRepository, tod
     val now = System.currentTimeMillis()
     if (now - prefs.getLong(KEY_LAST_CHECK_MILLIS, 0L) in 0 until SIDE_RUN_CHECK_INTERVAL_MS) return
     prefs.edit().putLong(KEY_LAST_CHECK_MILLIS, now).apply()
-    val unconfirmed = unconfirmedAdvanceMonths(repo, today, confirmed)
+    val unconfirmed = unconfirmedAdvanceMonths(today, confirmed)
     val previousPaymentMonth = advancePaymentMonthsToConfirm(today).first()
     val collected = collectSideRuns(context, sideRunCheckMonths(today, withPreviousAdvance = previousPaymentMonth in unconfirmed))
     applySideRuns(

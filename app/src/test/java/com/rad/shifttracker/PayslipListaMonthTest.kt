@@ -358,6 +358,45 @@ class PayslipListaMonthTest {
     }
 
     @Test
+    fun manualImportFromOptionsSavesPayslipForItsOwnMonth() {
+        val repo = testRepository()
+
+        val (text, isError) = importManualPayslip(repo, PayslipParseResult.Success(august()))
+
+        assertTrue(text, !isError)
+        assertTrue(text, text.startsWith("Lista za ${monthYearText(MonthKey(2026, 8))} je sačuvana"))
+        assertEquals(august(), repo.getSavedPayslip(2026, 8))
+
+        val (again, _) = importManualPayslip(repo, PayslipParseResult.Success(august().copy(runLabel = "rb.4/konačna")))
+        assertTrue(again, again.contains("zamenjena"))
+        assertEquals("ponovo učitana lista menja staru", "rb.4/konačna", repo.getSavedPayslip(2026, 8)?.runLabel)
+        assertNull("druge mesece ne dira", repo.getSavedPayslip(2026, 7))
+    }
+
+    @Test
+    fun manualImportWritesAdvanceForNextMonthLikeGmail() {
+        val repo = testRepository()
+        val slip = august()
+        val expected = repo.payslipAdvanceNet(slip)
+
+        importManualPayslip(repo, PayslipParseResult.Success(slip))
+
+        if (expected != null && expected > 0.0) {
+            assertEquals(expected, repo.getMonthlyNetAdjustments(2026, 9).advancePaymentNet, 0.001)
+        }
+    }
+
+    @Test
+    fun manualImportRejectsUnreadablePdfAndSavesNothing() {
+        val repo = testRepository()
+
+        val (_, isError) = importManualPayslip(repo, parsePayslip(listOf("nije lista")))
+
+        assertTrue(isError)
+        assertNull(repo.getSavedPayslip(2026, 8))
+    }
+
+    @Test
     fun bottomBarHasOnlyLista() {
         assertEquals("Lista", bottomBarButtonLabels().basePay)
     }
