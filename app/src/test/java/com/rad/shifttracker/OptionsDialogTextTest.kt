@@ -43,8 +43,8 @@ class OptionsDialogTextTest {
         assertTrue(optionsSource.contains("repo.mainPaySalaryOnly = checked"))
 
         val screenSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt")
+            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerContent.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerContent.kt")
         ).first { it.exists() }.readText()
         assertEquals(2, screenSource.split("salaryOnly = mainPaySalaryOnly").size - 1)
     }

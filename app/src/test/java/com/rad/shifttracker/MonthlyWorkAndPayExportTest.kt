@@ -36,8 +36,8 @@ class MonthlyWorkAndPayExportTest {
     @Test
     fun `document export explicitly truncates an existing file`() {
         val screenSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerScreen.kt")
+            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerExports.kt"),
+            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerExports.kt")
         ).first { it.exists() }.readText()
 
         assertEquals("wt", MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE)

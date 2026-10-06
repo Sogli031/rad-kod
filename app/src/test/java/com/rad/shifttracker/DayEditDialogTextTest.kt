@@ -83,7 +83,7 @@ class DayEditDialogTextTest {
 
     @Test
     fun calendarDoesNotRenderLegendAboveGrid() {
-        val screenSource = appSource("ShiftTrackerScreen.kt")
+        val screenSource = appSource("ShiftTrackerScreen.kt") + appSource("ShiftTrackerContent.kt")
         val calendarSource = appSource("ShiftCalendar.kt")
 
         assertEquals(false, screenSource.contains("CalendarLegend()"))
