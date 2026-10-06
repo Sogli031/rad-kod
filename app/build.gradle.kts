@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.detekt)
     alias(libs.plugins.roborazzi)
@@ -44,7 +43,7 @@ kotlin {
 
 android {
     namespace = "com.rad.shifttracker"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.rad.shifttracker"
@@ -134,6 +133,14 @@ android {
         unitTests.isReturnDefaultValues = true
         // Robolectric + Compose UI testovi na računaru traže resurse (tema, manifest) u unit testovima.
         unitTests.isIncludeAndroidResources = true
+    }
+}
+
+// AGP 9 pravi unit testove samo za testBuildType ("uiTest"); testovi, Roborazzi i Kover idu preko debug-a
+// (testDebugUnitTest, verifyRoborazziDebug, koverVerifyDebug), pa se debug unit testovi uključuju ručno.
+androidComponents {
+    beforeVariants(selector().withBuildType("debug")) { variant ->
+        variant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
     }
 }
 

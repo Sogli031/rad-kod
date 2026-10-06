@@ -5,12 +5,11 @@
 // deinstalira, pa prava instalacija i njeni podaci ostaju netaknuti.
 plugins {
     alias(libs.plugins.android.test)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
     namespace = "com.rad.shifttracker.baselineprofile"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 28
