@@ -20,8 +20,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
-// Existing dialog flow is intentionally grouped; detekt stays active for newly added methods.
-@Suppress("LongMethod")
 @Composable
 fun CloudBackupDialog(
     signInState: com.rad.shifttracker.data.backup.SignInState,
@@ -44,96 +42,13 @@ fun CloudBackupDialog(
         onDismiss = onDismiss,
         scrollable = true
     ) {
-        PopupCard {
-            SectionLabel(text = "Status")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Nalog:",
-                    color = MaterialTheme.extendedColors.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = email ?: "Nije povezano",
-                    color = if (isSignedIn) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMediumEmphasized,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (isSyncing) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Status:",
-                        color = MaterialTheme.extendedColors.textSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Row(
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = MaterialTheme.extendedColors.info,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.sm))
-                        Text(
-                            text = "Sinhronizacija...",
-                            color = MaterialTheme.extendedColors.info,
-                            style = MaterialTheme.typography.bodyMediumEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-            if (lastSyncTime != null && !isSyncing) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Poslednji backup:",
-                        color = MaterialTheme.extendedColors.textSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = formatSyncTime(lastSyncTime),
-                        color = MaterialTheme.extendedColors.success,
-                        style = MaterialTheme.typography.bodyMediumEmphasized,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            // Show sync error if present
-            if (syncError != null && !isSyncing) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), MaterialTheme.shapes.small)
-                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
-                ) {
-                    FormErrorText(
-                        message = syncError,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
+        CloudBackupStatusCard(
+            email = email,
+            isSignedIn = isSignedIn,
+            isSyncing = isSyncing,
+            lastSyncTime = lastSyncTime,
+            syncError = syncError
+        )
 
         if (!isSignedIn) {
             GlowButton(
@@ -145,60 +60,179 @@ fun CloudBackupDialog(
                 onClick = onSignIn
             )
         } else {
-            PopupCard {
-                SectionLabel(text = "Akcije")
-                RoundedButton(
-                    text = "Backup",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    bgColor = MaterialTheme.extendedColors.success,
-                    textColor = MaterialTheme.colorScheme.onPrimary,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    enabled = !isSyncing,
-                    onClick = onBackup
+            CloudBackupActionsCard(
+                isSyncing = isSyncing,
+                onBackup = onBackup,
+                onRestore = onRestore,
+                onShowVersions = onShowVersions,
+                onSignOut = onSignOut
+            )
+        }
+    }
+}
+
+/** Nalog, sinhronizacija u toku, vreme poslednjeg backup-a i greška poslednje sinhronizacije. */
+@Composable
+private fun CloudBackupStatusCard(
+    email: String?,
+    isSignedIn: Boolean,
+    isSyncing: Boolean,
+    lastSyncTime: Long?,
+    syncError: String?
+) {
+    PopupCard {
+        SectionLabel(text = "Status")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Nalog:",
+                color = MaterialTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = email ?: "Nije povezano",
+                color = if (isSignedIn) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMediumEmphasized,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (isSyncing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Status:",
+                    color = MaterialTheme.extendedColors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                RoundedButton(
-                    text = "Restore (najnovije)",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    bgColor = MaterialTheme.extendedColors.info,
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    enabled = !isSyncing,
-                    onClick = onRestore
+                Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.extendedColors.info,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Text(
+                        text = "Sinhronizacija...",
+                        color = MaterialTheme.extendedColors.info,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        if (lastSyncTime != null && !isSyncing) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Poslednji backup:",
+                    color = MaterialTheme.extendedColors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                RoundedButton(
-                    text = "Vrati raniju verziju…",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    textColor = MaterialTheme.extendedColors.info,
-                    borderColor = MaterialTheme.extendedColors.info,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    enabled = !isSyncing,
-                    onClick = onShowVersions
-                )
-                RoundedButton(
-                    text = "Odjavi se",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    textColor = MaterialTheme.colorScheme.error,
-                    borderColor = MaterialTheme.colorScheme.error,
-                    textStyle = MaterialTheme.typography.labelLarge,
-                    bold = true,
-                    enabled = !isSyncing,
-                    onClick = onSignOut
+                Text(
+                    text = formatSyncTime(lastSyncTime),
+                    color = MaterialTheme.extendedColors.success,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
+        // Show sync error if present
+        if (syncError != null && !isSyncing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), MaterialTheme.shapes.small)
+                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+            ) {
+                FormErrorText(
+                    message = syncError,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+/** Backup, vraćanje najnovije ili ranije verzije i odjava; sve je onemogućeno dok sinhronizacija traje. */
+@Composable
+private fun CloudBackupActionsCard(
+    isSyncing: Boolean,
+    onBackup: () -> Unit,
+    onRestore: () -> Unit,
+    onShowVersions: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    PopupCard {
+        SectionLabel(text = "Akcije")
+        RoundedButton(
+            text = "Backup",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            bgColor = MaterialTheme.extendedColors.success,
+            textColor = MaterialTheme.colorScheme.onPrimary,
+            textStyle = MaterialTheme.typography.labelLarge,
+            bold = true,
+            enabled = !isSyncing,
+            onClick = onBackup
+        )
+        RoundedButton(
+            text = "Restore (najnovije)",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            bgColor = MaterialTheme.extendedColors.info,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            textStyle = MaterialTheme.typography.labelLarge,
+            bold = true,
+            enabled = !isSyncing,
+            onClick = onRestore
+        )
+        RoundedButton(
+            text = "Vrati raniju verziju…",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.extendedColors.info,
+            borderColor = MaterialTheme.extendedColors.info,
+            textStyle = MaterialTheme.typography.labelLarge,
+            bold = true,
+            enabled = !isSyncing,
+            onClick = onShowVersions
+        )
+        RoundedButton(
+            text = "Odjavi se",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            textColor = MaterialTheme.colorScheme.error,
+            borderColor = MaterialTheme.colorScheme.error,
+            textStyle = MaterialTheme.typography.labelLarge,
+            bold = true,
+            enabled = !isSyncing,
+            onClick = onSignOut
+        )
     }
 }
 

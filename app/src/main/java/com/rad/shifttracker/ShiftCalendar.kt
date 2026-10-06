@@ -227,7 +227,6 @@ internal fun CalendarSection(
  * Ćelija dana: tonirana bojom smene (18%), broj dana u punoj boji smene,
  * naziv smene i sati ispod. Bez senke na tekstu. Današnji dan ima cijan okvir.
  */
-@Suppress("CyclomaticComplexMethod")
 @Composable
 private fun RowScope.DayButton(
     day: Int,

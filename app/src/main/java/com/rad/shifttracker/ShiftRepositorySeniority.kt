@@ -1,5 +1,3 @@
-@file:Suppress("TooManyFunctions", "LongMethod")
-
 package com.rad.shifttracker
 
 import com.rad.shifttracker.ShiftRepository.Companion.MAX_COMP_BALANCE

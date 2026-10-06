@@ -24,8 +24,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 
-// Existing vacation setup flow is intentionally grouped; detekt stays active for newly added methods.
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 fun VacationBalanceDialog(
     year: Int,
@@ -35,10 +33,7 @@ fun VacationBalanceDialog(
 ) {
     val summary = remember(year, today) { repo.getVacationBalanceSummary(year, today) }
     val savedBalance = remember(year) { repo.getVacationYearBalance(year) }
-    val beforeJuly = today.isBefore(summary.currentYearAvailableFrom)
     val setupFieldLabels = vacationSetupFieldLabels(year)
-    val currentYearAvailableFrom = formatVacationDate(summary.currentYearAvailableFrom)
-    val currentYearExpiresOn = formatVacationDate(summary.currentYearExpiresOn)
     val initialInputs = vacationSetupInitialInputs(savedBalance, summary)
     // Skriveno polje zadržava početnu vrednost (sačuvanu ili izračunatu), pa se čuva nepromenjeno.
     val visibility = vacationSetupVisibility(
@@ -91,76 +86,12 @@ fun VacationBalanceDialog(
         onDismiss = onDismiss,
         scrollable = true
     ) {
-        PopupCard {
-            SectionLabel(text = "Stanje")
-            if (beforeJuly) {
-                VacationStateRow("Stari odmor:", "${formatVacationInput(summary.availableNow)} dana", MaterialTheme.extendedColors.vacation)
-                if (summary.carryoverInitial > 0.0) {
-                    VacationStateRow(
-                        "Stari potrošeno:",
-                        "${formatVacationInput(summary.carryoverUsed)}/${formatVacationInput(summary.carryoverInitial)}",
-                        MaterialTheme.colorScheme.onSurface
-                    )
-                    VacationStateRow("Stari važi do:", currentYearAvailableFrom, MaterialTheme.colorScheme.onSurface)
-                }
-                VacationStateRow(
-                    "Novi odmor:",
-                    "${formatVacationInput(summary.currentYearRemaining)} dana od $currentYearAvailableFrom",
-                    MaterialTheme.extendedColors.info
-                )
-            } else {
-                VacationStateRow("Novi odmor:", "${formatVacationInput(summary.currentYearRemaining)} dana", MaterialTheme.extendedColors.vacation)
-                VacationStateRow(
-                    "Potrošeno:",
-                    "${formatVacationInput(summary.currentYearUsed)}/${formatVacationInput(summary.currentYearTotal)}",
-                    MaterialTheme.colorScheme.onSurface
-                )
-                VacationStateRow("Važi do:", currentYearExpiresOn, MaterialTheme.colorScheme.onSurface)
-                if (summary.carryoverExpired > 0.0) {
-                    VacationStateRow(
-                        "Propalo starog:",
-                        "${formatVacationInput(summary.carryoverExpired)} dana",
-                        MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            if (summary.warnings.contains(VacationWarnings.VACATION_EXCEEDED)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f), MaterialTheme.shapes.small)
-                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
-                ) {
-                    Text(
-                        text = "Prekora\u010den fond godi\u0161njeg!",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelMediumEmphasized.copy(
-                            textAlign = TextAlign.Center
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+        VacationStateCard(
+            summary = summary,
+            beforeJuly = today.isBefore(summary.currentYearAvailableFrom)
+        )
 
-        PopupCard {
-            SectionLabel(text = "Iskorišćeno $year.")
-            if (summary.usageByMonth.isEmpty() && summary.carryoverUsed == 0.0) {
-                Text(
-                    text = "Nema godišnjeg ni na listama ni u kalendaru.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            summary.usageByMonth.forEach { usage ->
-                VacationStateRow("${MONTH_NAMES[usage.month]}:", vacationMonthUsageText(usage), MaterialTheme.colorScheme.onSurface)
-            }
-            savedBalance?.currentYearDaysUsedBeforeAvailability?.takeIf { it > 0.0 }?.let { outside ->
-                VacationStateRow("Van aplikacije:", "${formatVacationInput(outside)} dana", MaterialTheme.colorScheme.onSurface)
-            }
-        }
+        VacationUsageCard(year = year, summary = summary, savedBalance = savedBalance)
 
         VacationPayslipScanCard()
 
@@ -212,6 +143,87 @@ fun VacationBalanceDialog(
                 }
             }
         )
+    }
+}
+
+/** Stanje godišnjeg: pre jula stari odmor i novi od 1. jula, posle jula novi i propali stari. */
+@Composable
+private fun VacationStateCard(summary: VacationBalanceSummary, beforeJuly: Boolean) {
+    val currentYearAvailableFrom = formatVacationDate(summary.currentYearAvailableFrom)
+    val currentYearExpiresOn = formatVacationDate(summary.currentYearExpiresOn)
+    PopupCard {
+        SectionLabel(text = "Stanje")
+        if (beforeJuly) {
+            VacationStateRow("Stari odmor:", "${formatVacationInput(summary.availableNow)} dana", MaterialTheme.extendedColors.vacation)
+            if (summary.carryoverInitial > 0.0) {
+                VacationStateRow(
+                    "Stari potrošeno:",
+                    "${formatVacationInput(summary.carryoverUsed)}/${formatVacationInput(summary.carryoverInitial)}",
+                    MaterialTheme.colorScheme.onSurface
+                )
+                VacationStateRow("Stari važi do:", currentYearAvailableFrom, MaterialTheme.colorScheme.onSurface)
+            }
+            VacationStateRow(
+                "Novi odmor:",
+                "${formatVacationInput(summary.currentYearRemaining)} dana od $currentYearAvailableFrom",
+                MaterialTheme.extendedColors.info
+            )
+        } else {
+            VacationStateRow("Novi odmor:", "${formatVacationInput(summary.currentYearRemaining)} dana", MaterialTheme.extendedColors.vacation)
+            VacationStateRow(
+                "Potrošeno:",
+                "${formatVacationInput(summary.currentYearUsed)}/${formatVacationInput(summary.currentYearTotal)}",
+                MaterialTheme.colorScheme.onSurface
+            )
+            VacationStateRow("Važi do:", currentYearExpiresOn, MaterialTheme.colorScheme.onSurface)
+            if (summary.carryoverExpired > 0.0) {
+                VacationStateRow(
+                    "Propalo starog:",
+                    "${formatVacationInput(summary.carryoverExpired)} dana",
+                    MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        if (summary.warnings.contains(VacationWarnings.VACATION_EXCEEDED)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f), MaterialTheme.shapes.small)
+                    .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+            ) {
+                Text(
+                    text = "Prekora\u010den fond godi\u0161njeg!",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelMediumEmphasized.copy(
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/** Iskorišćen godišnji po mesecima (listići i kalendar) i dani uneti van aplikacije. */
+@Composable
+private fun VacationUsageCard(year: Int, summary: VacationBalanceSummary, savedBalance: VacationYearBalance?) {
+    PopupCard {
+        SectionLabel(text = "Iskorišćeno $year.")
+        if (summary.usageByMonth.isEmpty() && summary.carryoverUsed == 0.0) {
+            Text(
+                text = "Nema godišnjeg ni na listama ni u kalendaru.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        summary.usageByMonth.forEach { usage ->
+            VacationStateRow("${MONTH_NAMES[usage.month]}:", vacationMonthUsageText(usage), MaterialTheme.colorScheme.onSurface)
+        }
+        savedBalance?.currentYearDaysUsedBeforeAvailability?.takeIf { it > 0.0 }?.let { outside ->
+            VacationStateRow("Van aplikacije:", "${formatVacationInput(outside)} dana", MaterialTheme.colorScheme.onSurface)
+        }
     }
 }
 

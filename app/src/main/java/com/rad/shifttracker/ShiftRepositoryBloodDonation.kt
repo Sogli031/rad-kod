@@ -1,5 +1,3 @@
-@file:Suppress("TooManyFunctions", "LongMethod")
-
 package com.rad.shifttracker
 
 import java.time.LocalDate

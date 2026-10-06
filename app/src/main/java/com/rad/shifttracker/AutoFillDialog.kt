@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.time.LocalDate
 
-// Existing dialog flow is intentionally grouped; detekt stays active for newly added methods.
-@Suppress("LongMethod")
 @Composable
 fun AutoFillDialog(
     today: LocalDate,
@@ -42,37 +40,12 @@ fun AutoFillDialog(
         onDismiss = onDismiss,
         scrollable = true
     ) {
-        PopupCard {
-            AutoSizeText(
-                text = "Automatsko popunjavanje smena",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                minFontSize = MaterialTheme.typography.titleSmall.fontSize,
-                maxLines = 1
-            )
-            Text(
-                text = "Tekući mesec: ${MONTH_NAMES[today.monthValue]} ${today.year}",
-                color = MaterialTheme.extendedColors.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (fillMode != ShiftFillMode.ONE_SHIFT) {
-                Text(
-                    text = when (fillMode) {
-                        ShiftFillMode.FIRST_SECOND,
-                        ShiftFillMode.THREE_BRIGADE -> "Referentna sedmica: $referenceWeekText"
-                        ShiftFillMode.FOUR_BRIGADE -> "Početni dan ciklusa: $fourBrigadeReferenceDateText"
-                        ShiftFillMode.ONE_SHIFT -> ""
-                    },
-                    color = MaterialTheme.extendedColors.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        AutoFillHeaderCard(
+            today = today,
+            fillMode = fillMode,
+            referenceWeekText = referenceWeekText,
+            fourBrigadeReferenceDateText = fourBrigadeReferenceDateText
+        )
 
         PopupCard {
             SectionLabel(text = "Režim smena")
@@ -87,70 +60,19 @@ fun AutoFillDialog(
             )
         }
 
-        when (fillMode) {
-            ShiftFillMode.ONE_SHIFT -> Unit
-            ShiftFillMode.FIRST_SECOND -> {
-                PopupCard {
-                    SectionLabel(text = "Koja je smena u toj sedmici?")
-                    AutoFillShiftGrid(
-                        options = listOf(
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND)
-                        ),
-                        selectedShift = startShift,
-                        onShiftSelected = {
-                            startShift = it
-                            errorMessage = null
-                        }
-                    )
-                }
+        AutoFillShiftCards(
+            fillMode = fillMode,
+            startShift = startShift,
+            cycleBlockDayIndex = cycleBlockDayIndex,
+            onShiftSelected = {
+                startShift = it
+                errorMessage = null
+            },
+            onBlockDaySelected = {
+                cycleBlockDayIndex = it
+                errorMessage = null
             }
-            ShiftFillMode.THREE_BRIGADE -> {
-                PopupCard {
-                    SectionLabel(text = "Koja je smena u toj sedmici?")
-                    AutoFillShiftGrid(
-                        options = listOf(
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND),
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.THIRD), Shift.THIRD)
-                        ),
-                        selectedShift = startShift,
-                        onShiftSelected = {
-                            startShift = it
-                            errorMessage = null
-                        }
-                    )
-                }
-            }
-            ShiftFillMode.FOUR_BRIGADE -> {
-                PopupCard {
-                    SectionLabel(text = "Koja si smena u početnom danu ciklusa?")
-                    AutoFillShiftGrid(
-                        options = listOf(
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND),
-                            AutoFillShiftChoice(dayEditShiftButtonText(Shift.THIRD), Shift.THIRD),
-                            AutoFillShiftChoice("Slobodan", Shift.OFF)
-                        ),
-                        selectedShift = startShift,
-                        onShiftSelected = {
-                            startShift = it
-                            errorMessage = null
-                        }
-                    )
-                }
-                PopupCard {
-                    SectionLabel(text = "Koji je dan u tom bloku?")
-                    AutoFillBlockDayGrid(
-                        selectedIndex = cycleBlockDayIndex,
-                        onSelected = {
-                            cycleBlockDayIndex = it
-                            errorMessage = null
-                        }
-                    )
-                }
-            }
-        }
+        )
 
         PopupCard {
             SectionLabel(text = "Meseci unapred")
@@ -179,43 +101,19 @@ fun AutoFillDialog(
                 .height(50.dp),
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
-                val monthsAhead = monthsInput.toIntOrNull()
-                when {
-                    monthsAhead == null -> {
-                        errorMessage = "Unesi broj meseci."
-                        return@GlowButton
-                    }
-                    monthsAhead < 1 -> {
-                        errorMessage = "Broj meseci mora biti najmanje 1."
-                        return@GlowButton
-                    }
-                    monthsAhead > 24 -> {
-                        errorMessage = "Maksimalno 24 meseca unapred."
-                        return@GlowButton
-                    }
+                val monthsError = autoFillMonthsError(monthsInput)
+                if (monthsError != null) {
+                    errorMessage = monthsError
+                    return@GlowButton
                 }
-                val settings = when (fillMode) {
-                    ShiftFillMode.ONE_SHIFT -> ShiftFillSettings(
-                        mode = fillMode,
-                        anchorDate = today,
-                        selectedShift = Shift.FIRST
-                    )
-                    ShiftFillMode.FIRST_SECOND,
-                    ShiftFillMode.THREE_BRIGADE -> ShiftFillSettings(
-                        mode = fillMode,
-                        anchorDate = referenceWorkWeek.start,
-                        selectedShift = startShift
-                    )
-                    ShiftFillMode.FOUR_BRIGADE -> ShiftFillSettings(
-                        mode = fillMode,
-                        anchorDate = today,
-                        selectedShift = startShift,
-                        cycleDayIndex = scheduler.getFourBrigadeCycleStartIndex(
-                            startShift,
-                            cycleBlockDayIndex
-                        )
-                    )
-                }
+                val monthsAhead = monthsInput.toInt()
+                val settings = autoFillSettings(
+                    mode = fillMode,
+                    today = today,
+                    referenceWeekStart = referenceWorkWeek.start,
+                    startShift = startShift,
+                    fourBrigadeCycleDayIndex = { scheduler.getFourBrigadeCycleStartIndex(startShift, cycleBlockDayIndex) }
+                )
                 scheduler.populateMonthsAhead(
                     repo,
                     today,
@@ -228,3 +126,144 @@ fun AutoFillDialog(
     }
 }
 
+/** Naslov, tekući mesec i referentna sedmica ili početni dan ciklusa za izabrani režim. */
+@Composable
+private fun AutoFillHeaderCard(
+    today: LocalDate,
+    fillMode: ShiftFillMode,
+    referenceWeekText: String,
+    fourBrigadeReferenceDateText: String
+) {
+    PopupCard {
+        AutoSizeText(
+            text = "Automatsko popunjavanje smena",
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
+            minFontSize = MaterialTheme.typography.titleSmall.fontSize,
+            maxLines = 1
+        )
+        Text(
+            text = "Tekući mesec: ${MONTH_NAMES[today.monthValue]} ${today.year}",
+            color = MaterialTheme.extendedColors.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (fillMode != ShiftFillMode.ONE_SHIFT) {
+            Text(
+                text = when (fillMode) {
+                    ShiftFillMode.FIRST_SECOND,
+                    ShiftFillMode.THREE_BRIGADE -> "Referentna sedmica: $referenceWeekText"
+                    ShiftFillMode.FOUR_BRIGADE -> "Početni dan ciklusa: $fourBrigadeReferenceDateText"
+                    ShiftFillMode.ONE_SHIFT -> ""
+                },
+                color = MaterialTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/** Izbor smene (i dana u bloku za četvorobrigadu) za izabrani režim; jedna smena nema izbor. */
+@Composable
+private fun AutoFillShiftCards(
+    fillMode: ShiftFillMode,
+    startShift: Shift,
+    cycleBlockDayIndex: Int,
+    onShiftSelected: (Shift) -> Unit,
+    onBlockDaySelected: (Int) -> Unit
+) {
+    when (fillMode) {
+        ShiftFillMode.ONE_SHIFT -> Unit
+        ShiftFillMode.FIRST_SECOND -> {
+            PopupCard {
+                SectionLabel(text = "Koja je smena u toj sedmici?")
+                AutoFillShiftGrid(
+                    options = listOf(
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND)
+                    ),
+                    selectedShift = startShift,
+                    onShiftSelected = onShiftSelected
+                )
+            }
+        }
+        ShiftFillMode.THREE_BRIGADE -> {
+            PopupCard {
+                SectionLabel(text = "Koja je smena u toj sedmici?")
+                AutoFillShiftGrid(
+                    options = listOf(
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND),
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.THIRD), Shift.THIRD)
+                    ),
+                    selectedShift = startShift,
+                    onShiftSelected = onShiftSelected
+                )
+            }
+        }
+        ShiftFillMode.FOUR_BRIGADE -> {
+            PopupCard {
+                SectionLabel(text = "Koja si smena u početnom danu ciklusa?")
+                AutoFillShiftGrid(
+                    options = listOf(
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.FIRST), Shift.FIRST),
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.SECOND), Shift.SECOND),
+                        AutoFillShiftChoice(dayEditShiftButtonText(Shift.THIRD), Shift.THIRD),
+                        AutoFillShiftChoice("Slobodan", Shift.OFF)
+                    ),
+                    selectedShift = startShift,
+                    onShiftSelected = onShiftSelected
+                )
+            }
+            PopupCard {
+                SectionLabel(text = "Koji je dan u tom bloku?")
+                AutoFillBlockDayGrid(
+                    selectedIndex = cycleBlockDayIndex,
+                    onSelected = onBlockDaySelected
+                )
+            }
+        }
+    }
+}
+
+/** Greška za uneti broj meseci unapred (1–24), ili null kad je ispravan. */
+internal fun autoFillMonthsError(monthsInput: String): String? {
+    val monthsAhead = monthsInput.toIntOrNull()
+    return when {
+        monthsAhead == null -> "Unesi broj meseci."
+        monthsAhead < 1 -> "Broj meseci mora biti najmanje 1."
+        monthsAhead > 24 -> "Maksimalno 24 meseca unapred."
+        else -> null
+    }
+}
+
+/** Podešavanja popune: sidro je danas (jedna smena, četvorobrigada) ili ponedeljak referentne sedmice. */
+internal fun autoFillSettings(
+    mode: ShiftFillMode,
+    today: LocalDate,
+    referenceWeekStart: LocalDate,
+    startShift: Shift,
+    fourBrigadeCycleDayIndex: () -> Int
+): ShiftFillSettings = when (mode) {
+    ShiftFillMode.ONE_SHIFT -> ShiftFillSettings(
+        mode = mode,
+        anchorDate = today,
+        selectedShift = Shift.FIRST
+    )
+    ShiftFillMode.FIRST_SECOND,
+    ShiftFillMode.THREE_BRIGADE -> ShiftFillSettings(
+        mode = mode,
+        anchorDate = referenceWeekStart,
+        selectedShift = startShift
+    )
+    ShiftFillMode.FOUR_BRIGADE -> ShiftFillSettings(
+        mode = mode,
+        anchorDate = today,
+        selectedShift = startShift,
+        cycleDayIndex = fourBrigadeCycleDayIndex()
+    )
+}

@@ -154,56 +154,45 @@ private fun blockStyle(calendar: FillCalendar, group: List<FillSlot>, hints: Fil
  * Najjeftiniji raspored blokova za svaki mogući broj pokrivenih dana treće smene
  * (samo taj broj utiče na ostatak meseca). Blok je najjeftiniji kao jedan uzastopni niz.
  */
-@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun planBlocks(group: List<FillSlot>, blocks: List<FillLeaveBlock>, style: BlockStyle): Map<Int, BlockPlan> {
-    val n = group.size
-    val k = blocks.size
-    val sizes = blocks.map { it.days }
-    if (sizes.sum() > n) return emptyMap()
-    if (k == 0) return mapOf(0 to BlockPlan(0.0, IntArray(n) { -1 }))
-    fun startCost(block: Int, index: Int): Double {
-        val kind = blocks[block].kind
-        var cost = COST_RUN + index * COST_EARLIER_START
-        if (!style.startAligned[index]) cost += COST_RUN_NOT_ALIGNED
-        if (index == 0 && kind in style.hints.continuesFromPrevious) cost -= COST_CONTINUATION_BONUS
-        if (group[index].date in style.hints.preferredStarts[kind].orEmpty()) cost -= COST_DONATION_BONUS
-        return cost
-    }
-    fun endCost(block: Int, index: Int): Double {
-        var cost = if (style.endAligned[index]) 0.0 else COST_RUN_NOT_ALIGNED
-        if (index == n - 1 && blocks[block].kind in style.hints.continuesIntoNext) cost -= COST_CONTINUATION_BONUS
-        return cost
-    }
-    val radix = sizes.map { it + 1 }
-    fun encodeRemaining(remaining: IntArray): Long = remaining.indices.fold(0L) { code, i -> code * radix[i] + remaining[i] }
-    fun decodeRemaining(code: Long): IntArray {
-        val remaining = IntArray(k)
-        var rest = code
-        for (i in k - 1 downTo 0) {
-            remaining[i] = (rest % radix[i]).toInt()
-            rest /= radix[i]
+    if (blocks.sumOf { it.days } > group.size) return emptyMap()
+    if (blocks.isEmpty()) return mapOf(0 to BlockPlan(0.0, IntArray(group.size) { -1 }))
+    return BlockPlanner(group, blocks, style).plan()
+}
+
+/**
+ * Dinamičko programiranje po običnim radnim danima. Stanje posle dana je (preostali dani svakog bloka,
+ * blok prethodnog dana ili -1, broj dana treće smene u blokovima), spakovano u [Long] ključ.
+ */
+private class BlockPlanner(
+    private val group: List<FillSlot>,
+    private val blocks: List<FillLeaveBlock>,
+    private val style: BlockStyle
+) {
+    private val n = group.size
+    private val k = blocks.size
+    private val sizes = blocks.map { it.days }
+    private val radix = sizes.map { it + 1 }
+
+    fun plan(): Map<Int, BlockPlan> {
+        val layers = ArrayList<HashMap<Long, BlockStep>>(n + 1)
+        layers += hashMapOf(key(encodeRemaining(sizes.toIntArray()), -1, 0) to BlockStep(0.0, -1L, -1))
+        for (i in 0 until n) {
+            layers += nextLayer(layers[i], i)
         }
-        return remaining
-    }
-    fun key(remainingCode: Long, previous: Int, night: Int): Long = (remainingCode * (k + 1) + (previous + 1)) * 64 + night
-    fun relax(layer: HashMap<Long, BlockStep>, key: Long, step: BlockStep) {
-        val current = layer[key]
-        if (current == null || step.cost < current.cost) layer[key] = step
+        return bestByNight(layers[n]).mapValues { (_, final) -> reconstruct(layers, final.first, final.second) }
     }
 
-    val layers = ArrayList<HashMap<Long, BlockStep>>(n + 1)
-    layers += hashMapOf(key(encodeRemaining(sizes.toIntArray()), -1, 0) to BlockStep(0.0, -1L, -1))
-    for (i in 0 until n) {
+    private fun nextLayer(layer: HashMap<Long, BlockStep>, i: Int): HashMap<Long, BlockStep> {
         val next = HashMap<Long, BlockStep>()
         val daysLeftAfter = n - i - 1
         val isNight = group[i].template == Shift.THIRD
-        for ((stateKey, step) in layers[i]) {
-            val night = (stateKey % 64).toInt()
-            val previous = ((stateKey / 64) % (k + 1)).toInt() - 1
-            val remainingCode = stateKey / 64 / (k + 1)
+        for ((stateKey, step) in layer) {
+            val night = nightOf(stateKey)
+            val previous = previousOf(stateKey)
+            val remainingCode = remainingCodeOf(stateKey)
             val remaining = decodeRemaining(remainingCode)
-            val remainingTotal = remaining.sum()
-            if (remainingTotal <= daysLeftAfter) {
+            if (remaining.sum() <= daysLeftAfter) {
                 val closed = if (previous >= 0) endCost(previous, i - 1) else 0.0
                 relax(next, key(remainingCode, -1, night), BlockStep(step.cost + closed, stateKey, -1))
             }
@@ -219,27 +208,79 @@ private fun planBlocks(group: List<FillSlot>, blocks: List<FillLeaveBlock>, styl
                 remaining[b] += 1
             }
         }
-        layers += next
+        return next
     }
 
-    val best = HashMap<Int, Pair<Long, Double>>()
-    for ((stateKey, step) in layers[n]) {
-        if (stateKey / 64 / (k + 1) != 0L) continue
-        val night = (stateKey % 64).toInt()
-        val previous = ((stateKey / 64) % (k + 1)).toInt() - 1
-        val cost = step.cost + if (previous >= 0) endCost(previous, n - 1) else 0.0
-        val current = best[night]
-        if (current == null || cost < current.second) best[night] = stateKey to cost
+    /** Za svaki broj pokrivenih noćnih dana: završno stanje sa svim blokovima iskorišćenim i njegova cena. */
+    private fun bestByNight(last: HashMap<Long, BlockStep>): Map<Int, Pair<Long, Double>> {
+        val best = HashMap<Int, Pair<Long, Double>>()
+        for ((stateKey, step) in last) {
+            if (remainingCodeOf(stateKey) != 0L) continue
+            val night = nightOf(stateKey)
+            val previous = previousOf(stateKey)
+            val cost = step.cost + if (previous >= 0) endCost(previous, n - 1) else 0.0
+            val current = best[night]
+            if (current == null || cost < current.second) best[night] = stateKey to cost
+        }
+        return best
     }
-    return best.mapValues { (_, final) ->
+
+    private fun reconstruct(layers: List<HashMap<Long, BlockStep>>, finalKey: Long, cost: Double): BlockPlan {
         val assignment = IntArray(n)
-        var stateKey = final.first
+        var stateKey = finalKey
         for (i in n downTo 1) {
             val step = layers[i].getValue(stateKey)
             assignment[i - 1] = step.choice
             stateKey = step.previous
         }
-        BlockPlan(final.second, assignment)
+        return BlockPlan(cost, assignment)
+    }
+
+    private fun startCost(block: Int, index: Int): Double {
+        val kind = blocks[block].kind
+        var cost = COST_RUN + index * COST_EARLIER_START
+        if (!style.startAligned[index]) cost += COST_RUN_NOT_ALIGNED
+        if (index == 0 && kind in style.hints.continuesFromPrevious) cost -= COST_CONTINUATION_BONUS
+        if (group[index].date in style.hints.preferredStarts[kind].orEmpty()) cost -= COST_DONATION_BONUS
+        return cost
+    }
+
+    private fun endCost(block: Int, index: Int): Double {
+        var cost = if (style.endAligned[index]) 0.0 else COST_RUN_NOT_ALIGNED
+        if (index == n - 1 && blocks[block].kind in style.hints.continuesIntoNext) cost -= COST_CONTINUATION_BONUS
+        return cost
+    }
+
+    private fun encodeRemaining(remaining: IntArray): Long =
+        remaining.indices.fold(0L) { code, i -> code * radix[i] + remaining[i] }
+
+    private fun decodeRemaining(code: Long): IntArray {
+        val remaining = IntArray(k)
+        var rest = code
+        for (i in k - 1 downTo 0) {
+            remaining[i] = (rest % radix[i]).toInt()
+            rest /= radix[i]
+        }
+        return remaining
+    }
+
+    private fun key(remainingCode: Long, previous: Int, night: Int): Long =
+        (remainingCode * (k + 1) + (previous + 1)) * NIGHT_KEY_RADIX + night
+
+    private fun nightOf(stateKey: Long): Int = (stateKey % NIGHT_KEY_RADIX).toInt()
+
+    private fun previousOf(stateKey: Long): Int = ((stateKey / NIGHT_KEY_RADIX) % (k + 1)).toInt() - 1
+
+    private fun remainingCodeOf(stateKey: Long): Long = stateKey / NIGHT_KEY_RADIX / (k + 1)
+
+    private fun relax(layer: HashMap<Long, BlockStep>, key: Long, step: BlockStep) {
+        val current = layer[key]
+        if (current == null || step.cost < current.cost) layer[key] = step
+    }
+
+    private companion object {
+        /** Broj noćnih dana u ključu stanja (mesec ima najviše 23 obična radna dana). */
+        const val NIGHT_KEY_RADIX = 64
     }
 }
 

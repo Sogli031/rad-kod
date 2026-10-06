@@ -1,0 +1,56 @@
+package com.rad.shifttracker
+
+import java.time.LocalDate
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/** Pravila unosa izdvojena iz dijaloga „Auto-popuna“ i „Bolovanje / Godišnji“. */
+class DialogInputRulesTest {
+    @Test
+    fun `broj meseci unapred mora biti od 1 do 24`() {
+        assertEquals("Unesi broj meseci.", autoFillMonthsError(""))
+        assertEquals("Broj meseci mora biti najmanje 1.", autoFillMonthsError("0"))
+        assertEquals("Maksimalno 24 meseca unapred.", autoFillMonthsError("25"))
+        assertNull(autoFillMonthsError("1"))
+        assertNull(autoFillMonthsError("24"))
+    }
+
+    @Test
+    fun `sidro popune zavisi od rezima`() {
+        val today = LocalDate.of(2026, 10, 7)
+        val monday = LocalDate.of(2026, 10, 5)
+
+        val one = autoFillSettings(ShiftFillMode.ONE_SHIFT, today, monday, Shift.THIRD) { error("ne treba") }
+        assertEquals(today, one.anchorDate)
+        assertEquals(Shift.FIRST, one.selectedShift)
+
+        val three = autoFillSettings(ShiftFillMode.THREE_BRIGADE, today, monday, Shift.SECOND) { error("ne treba") }
+        assertEquals(monday, three.anchorDate)
+        assertEquals(Shift.SECOND, three.selectedShift)
+
+        val four = autoFillSettings(ShiftFillMode.FOUR_BRIGADE, today, monday, Shift.THIRD) { 5 }
+        assertEquals(today, four.anchorDate)
+        assertEquals(5, four.cycleDayIndex)
+    }
+
+    @Test
+    fun `opseg odsustva je ispravan samo unutar meseca i redom`() {
+        assertEquals(3..7, absenceDayRangeOrNull("3", "7", 30))
+        assertEquals(30..30, absenceDayRangeOrNull("30", "30", 30))
+        assertNull(absenceDayRangeOrNull("", "7", 30))
+        assertNull(absenceDayRangeOrNull("8", "7", 30))
+        assertNull(absenceDayRangeOrNull("1", "31", 30))
+        assertNull(absenceDayRangeOrNull("0", "3", 30))
+    }
+
+    @Test
+    fun `greska opsega odsustva prati redosled provera`() {
+        assertEquals("Unesite početni dan.", absenceDayRangeError("", "", 30))
+        assertEquals("Unesite krajnji dan.", absenceDayRangeError("3", "", 30))
+        assertEquals("Početni dan mora biti između 1 i 30.", absenceDayRangeError("31", "2", 30))
+        assertEquals("Krajnji dan mora biti između 1 i 30.", absenceDayRangeError("2", "31", 30))
+        assertEquals("Početni dan mora biti manji ili jednak krajnjem.", absenceDayRangeError("9", "2", 30))
+        assertNull(absenceDayRangeError("2", "9", 30))
+    }
+}

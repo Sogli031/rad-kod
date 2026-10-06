@@ -30,8 +30,6 @@ import java.time.YearMonth
 import kotlin.math.abs
 
 
-// Existing dialog flow is intentionally grouped; detekt stays active for newly added methods.
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 fun SickVacationDialog(
     initialYear: Int,
@@ -54,22 +52,12 @@ fun SickVacationDialog(
     val maxDays = shownMonth.lengthOfMonth()
     val previewImpact by remember(year, month, maxDays, absenceType, sickPayRate, startText, endText, repo) {
         derivedStateOf {
-            val start = startText.toIntOrNull()
-            val end = endText.toIntOrNull()
-            if (
-                start == null ||
-                end == null ||
-                start !in 1..maxDays ||
-                end !in 1..maxDays ||
-                start > end
-            ) {
-                null
-            } else {
+            absenceDayRangeOrNull(startText, endText, maxDays)?.let { range ->
                 repo.previewAbsenceRangeNetImpact(
                     year = year,
                     month = month,
-                    startDay = start,
-                    endDay = end,
+                    startDay = range.first,
+                    endDay = range.last,
                     absenceShift = if (absenceType == AbsenceType.SICK) Shift.SICK else Shift.VACATION,
                     sickPayRate = if (absenceType == AbsenceType.SICK) sickPayRate else null
                 )
@@ -78,20 +66,9 @@ fun SickVacationDialog(
     }
     val vacationPreview by remember(year, month, maxDays, absenceType, startText, endText, repo) {
         derivedStateOf {
-            val start = startText.toIntOrNull()
-            val end = endText.toIntOrNull()
-            if (
-                absenceType != AbsenceType.VACATION ||
-                start == null ||
-                end == null ||
-                start !in 1..maxDays ||
-                end !in 1..maxDays ||
-                start > end
-            ) {
-                null
-            } else {
-                scheduler.previewVacationRange(repo, year, month, start, end)
-            }
+            absenceDayRangeOrNull(startText, endText, maxDays)
+                ?.takeIf { absenceType == AbsenceType.VACATION }
+                ?.let { range -> scheduler.previewVacationRange(repo, year, month, range.first, range.last) }
         }
     }
 
@@ -100,107 +77,41 @@ fun SickVacationDialog(
         onDismiss = onDismiss,
         scrollable = true
     ) {
-        PopupCard {
-            SectionLabel(text = "Mesec odsustva")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec") {
-                    shownMonth = shownMonth.minusMonths(1)
-                    errorMessage = null
-                }
-                Text(
-                    text = "${MONTH_NAMES[month]} $year",
-                    color = MaterialTheme.extendedColors.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                HeaderChevron(icon = Icons.Filled.ChevronRight, label = "Sledeći mesec") {
-                    shownMonth = shownMonth.plusMonths(1)
-                    errorMessage = null
-                }
+        AbsenceMonthCard(
+            year = year,
+            month = month,
+            onPrevious = {
+                shownMonth = shownMonth.minusMonths(1)
+                errorMessage = null
+            },
+            onNext = {
+                shownMonth = shownMonth.plusMonths(1)
+                errorMessage = null
             }
-        }
+        )
 
-        PopupCard {
-            SectionLabel(text = "Opseg dana")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                ModernTextField(
-                    value = startText,
-                    onValueChange = {
-                        startText = it.filter(Char::isDigit)
-                        errorMessage = null
-                    },
-                    hintText = "Početak",
-                    label = "Od",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
-                    modifier = Modifier.weight(1f)
-                )
-                ModernTextField(
-                    value = endText,
-                    onValueChange = {
-                        endText = it.filter(Char::isDigit)
-                        errorMessage = null
-                    },
-                    hintText = "Kraj",
-                    label = "Do",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    modifier = Modifier.weight(1f)
-                )
+        AbsenceDayRangeCard(
+            startText = startText,
+            endText = endText,
+            onStartChange = {
+                startText = it.filter(Char::isDigit)
+                errorMessage = null
+            },
+            onEndChange = {
+                endText = it.filter(Char::isDigit)
+                errorMessage = null
             }
-        }
+        )
 
-        // Isti izgled izbora kao u prozoru dana (DayEditChoiceButton).
-        PopupCard {
-            SectionLabel(text = "Tip odsustva")
-            val isSick = absenceType == AbsenceType.SICK
-            Row(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                DayEditChoiceButton(
-                    text = "Bolovanje",
-                    selected = isSick,
-                    minHeight = DAY_TYPE_CHOICE_HEIGHT,
-                    onClick = {
-                        absenceType = AbsenceType.SICK
-                        errorMessage = null
-                    }
-                )
-                DayEditChoiceButton(
-                    text = "Godišnji",
-                    selected = !isSick,
-                    minHeight = DAY_TYPE_CHOICE_HEIGHT,
-                    onClick = {
-                        absenceType = AbsenceType.VACATION
-                        errorMessage = null
-                    }
-                )
-            }
-            DayEditChoiceHeader(text = "Isplata bolovanja")
-            Row(
-                modifier = Modifier.fillMaxWidth().selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {
-                    DayEditChoiceButton(
-                        text = rate.second,
-                        // Za godišnji isplata bolovanja ne važi, pa nijedan procenat nije označen.
-                        selected = isSick && abs(sickPayRate - rate.first) < 0.01,
-                        minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
-                        enabled = isSick,
-                        onClick = { sickPayRate = rate.first }
-                    )
-                }
-            }
-        }
+        AbsenceTypeCard(
+            absenceType = absenceType,
+            sickPayRate = sickPayRate,
+            onAbsenceTypeSelected = {
+                absenceType = it
+                errorMessage = null
+            },
+            onSickPayRateSelected = { sickPayRate = it }
+        )
 
         AbsenceNetImpactCard(previewImpact)
         vacationPreview?.let { preview ->
@@ -218,32 +129,13 @@ fun SickVacationDialog(
                 .height(50.dp),
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
-                val start = startText.toIntOrNull()
-                val end = endText.toIntOrNull()
-
-                // Validate inputs
-                when {
-                    start == null -> {
-                        errorMessage = "Unesite početni dan."
-                        return@GlowButton
-                    }
-                    end == null -> {
-                        errorMessage = "Unesite krajnji dan."
-                        return@GlowButton
-                    }
-                    start < 1 || start > maxDays -> {
-                        errorMessage = "Početni dan mora biti između 1 i $maxDays."
-                        return@GlowButton
-                    }
-                    end < 1 || end > maxDays -> {
-                        errorMessage = "Krajnji dan mora biti između 1 i $maxDays."
-                        return@GlowButton
-                    }
-                    start > end -> {
-                        errorMessage = "Početni dan mora biti manji ili jednak krajnjem."
-                        return@GlowButton
-                    }
+                absenceDayRangeError(startText, endText, maxDays)?.let { message ->
+                    errorMessage = message
+                    return@GlowButton
                 }
+                val range = absenceDayRangeOrNull(startText, endText, maxDays) ?: return@GlowButton
+                val start = range.first
+                val end = range.last
 
                 if (absenceType == AbsenceType.SICK) {
                     scheduler.applySickRange(repo, year, month, start, end, sickPayRate)
@@ -258,6 +150,131 @@ fun SickVacationDialog(
                 onDismiss()
             }
         )
+    }
+}
+
+@Composable
+private fun AbsenceMonthCard(year: Int, month: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+    PopupCard {
+        SectionLabel(text = "Mesec odsustva")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec", onClick = onPrevious)
+            Text(
+                text = "${MONTH_NAMES[month]} $year",
+                color = MaterialTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            HeaderChevron(icon = Icons.Filled.ChevronRight, label = "Sledeći mesec", onClick = onNext)
+        }
+    }
+}
+
+@Composable
+private fun AbsenceDayRangeCard(
+    startText: String,
+    endText: String,
+    onStartChange: (String) -> Unit,
+    onEndChange: (String) -> Unit
+) {
+    PopupCard {
+        SectionLabel(text = "Opseg dana")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            ModernTextField(
+                value = startText,
+                onValueChange = onStartChange,
+                hintText = "Početak",
+                label = "Od",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                modifier = Modifier.weight(1f)
+            )
+            ModernTextField(
+                value = endText,
+                onValueChange = onEndChange,
+                hintText = "Kraj",
+                label = "Do",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AbsenceTypeCard(
+    absenceType: AbsenceType,
+    sickPayRate: Double,
+    onAbsenceTypeSelected: (AbsenceType) -> Unit,
+    onSickPayRateSelected: (Double) -> Unit
+) {
+    // Isti izgled izbora kao u prozoru dana (DayEditChoiceButton).
+    PopupCard {
+        SectionLabel(text = "Tip odsustva")
+        val isSick = absenceType == AbsenceType.SICK
+        Row(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            DayEditChoiceButton(
+                text = "Bolovanje",
+                selected = isSick,
+                minHeight = DAY_TYPE_CHOICE_HEIGHT,
+                onClick = { onAbsenceTypeSelected(AbsenceType.SICK) }
+            )
+            DayEditChoiceButton(
+                text = "Godišnji",
+                selected = !isSick,
+                minHeight = DAY_TYPE_CHOICE_HEIGHT,
+                onClick = { onAbsenceTypeSelected(AbsenceType.VACATION) }
+            )
+        }
+        DayEditChoiceHeader(text = "Isplata bolovanja")
+        Row(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            for (rate in listOf(CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%", 1.0 to "100%")) {
+                DayEditChoiceButton(
+                    text = rate.second,
+                    // Za godišnji isplata bolovanja ne važi, pa nijedan procenat nije označen.
+                    selected = isSick && abs(sickPayRate - rate.first) < 0.01,
+                    minHeight = OVERTIME_TYPE_CHOICE_HEIGHT,
+                    enabled = isSick,
+                    onClick = { onSickPayRateSelected(rate.first) }
+                )
+            }
+        }
+    }
+}
+
+/** Opseg dana odsustva iz unosa, ili null dok unos nije potpun i ispravan za mesec od [maxDays] dana. */
+internal fun absenceDayRangeOrNull(startText: String, endText: String, maxDays: Int): IntRange? {
+    val start = startText.toIntOrNull() ?: return null
+    val end = endText.toIntOrNull() ?: return null
+    if (start !in 1..maxDays || end !in 1..maxDays || start > end) return null
+    return start..end
+}
+
+/** Poruka za neispravan opseg dana (prva greška redom: početak, kraj, granice, redosled), ili null. */
+internal fun absenceDayRangeError(startText: String, endText: String, maxDays: Int): String? {
+    val start = startText.toIntOrNull()
+    val end = endText.toIntOrNull()
+    return when {
+        start == null -> "Unesite početni dan."
+        end == null -> "Unesite krajnji dan."
+        start < 1 || start > maxDays -> "Početni dan mora biti između 1 i $maxDays."
+        end < 1 || end > maxDays -> "Krajnji dan mora biti između 1 i $maxDays."
+        start > end -> "Početni dan mora biti manji ili jednak krajnjem."
+        else -> null
     }
 }
 
