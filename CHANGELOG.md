@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.7] - 2026-10-06
+- **Novi alati za build:** Android Gradle Plugin 9.4.1, Kotlin 2.4.20, Gradle 9.6.1, compileSdk 37 (targetSdk ostaje 36). AGP sada sam prevodi Kotlin (`kotlin-android` plugin uklonjen). APK je manji (5,1 → ~4,4 MB) jer R8 uklanja neiskorišćene resurse biblioteka.
+- **Nadograđene biblioteke:** Compose BOM 2026.09.00, core 1.19.1, lifecycle 2.11.0, adaptive 1.3.0, activity 1.13.0, work 2.12.0, material 1.14.0, coroutines 1.11.0; za testove i proveru detekt 1.23.8, kover 0.9.11, roborazzi 1.76.0, mockk 1.14.11, robolectric 4.17, benchmark 1.5.0, uiautomator 2.4.0. Izgled i obračun su isti (svi snimci ekrana nepromenjeni).
+
 ## [6.6] - 2026-10-06
 - **Prijava za cloud backup preko novog Google API-ja:** zastareli GoogleSignIn zamenjen je sa AuthorizationClient (Google Identity Services). Prijava sada prvo otvara sistemski izbor naloga, pa Google dozvolu za Drive (isto kao povezivanje Gmail-a). Nalog pamti aplikacija (`rad_backup_prefs`: `account_email`). Ko je već prijavljen ostaje prijavljen: nalog se jednom preuzima iz stare prijave, a posle odjave više ne. Ako Google povuče dozvolu, korisnik se odjavljuje i treba ponovo da se prijavi.
 

@@ -44,14 +44,14 @@ internal class GmailPayslipCache private constructor(
         cached.names.map { name -> name to (cached.results[name] ?: return null) }
     }
 
-    fun rememberNames(messageId: String, names: List<String>) = synchronized(LOCK) {
+    fun rememberNames(messageId: String, names: List<String>): Unit = synchronized(LOCK) {
         val cached = messages[messageId]
         if (cached?.names == names) return
         messages[messageId] = CachedMessage(names, cached?.results?.filterKeys { it in names }.orEmpty().toMutableMap())
         save()
     }
 
-    fun remember(messageId: String, name: String, result: PayslipParseResult) = synchronized(LOCK) {
+    fun remember(messageId: String, name: String, result: PayslipParseResult): Unit = synchronized(LOCK) {
         if (result !is PayslipParseResult.Success && result !is PayslipParseResult.SideRun) return
         val cached = messages[messageId] ?: return
         cached.results[name] = result
