@@ -1,34 +1,16 @@
 package com.rad.shifttracker.data.storage
 
 import android.util.Log
-import com.rad.shifttracker.AnnualLeaveCalculationInput
 import com.rad.shifttracker.AppConfig
 import com.rad.shifttracker.BrigadeType
 import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MAX_BASE_PAY
 import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.MonthlyGrossAdditions
-import com.rad.shifttracker.MonthlyNetAdjustments
-import com.rad.shifttracker.MonthlyPayBases
 import com.rad.shifttracker.PayBaseSelectionMode
 import com.rad.shifttracker.SeniorityIncreaseFactor
 import com.rad.shifttracker.SeniorityInputMode
-import com.rad.shifttracker.VacationYearBalance
-import com.rad.shifttracker.calculateAnnualLeaveDays
 import com.rad.shifttracker.coefficientFromLegacyGrossHourlyRate
-import com.rad.shifttracker.currentYearVacationAvailableFrom
-import com.rad.shifttracker.sanitizeAnnualLeaveYears
-import com.rad.shifttracker.sanitizeMonthlyGrossAddition
-import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
-import com.rad.shifttracker.sanitizeMonthlyGrossOverrideOrNull
-import com.rad.shifttracker.sanitizeMonthlyGrossPenalty
-import com.rad.shifttracker.sanitizeMonthlySignedAdjustment
-import com.rad.shifttracker.sanitizeMonthlyNetAdjustment
-import com.rad.shifttracker.sanitizePayBaseOrNull
-import com.rad.shifttracker.toMealMoney
 import org.json.JSONArray
 import org.json.JSONObject
-import java.math.BigDecimal
 import java.time.Clock
 import java.time.LocalDate
 import java.time.YearMonth
@@ -36,17 +18,7 @@ import java.util.Locale
 import java.util.TreeMap
 
 private const val TAG = "ShiftRepositoryJsonCodec"
-private const val MEAL_GROSS_KEY = "meal_gross"
-private const val REGRESS_GROSS_KEY = "regress_gross"
-private const val BONUS_GROSS_KEY = "bonus_gross"
-private const val MEAL_SPENT_NET_KEY = "meal_spent_net"
-private const val MEAL_ENTITLEMENT_NET_OVERRIDE_KEY = "meal_entitlement_net_override"
-private const val MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY = "meal_settlement_adjustment_net"
-private const val BONUS_NET_KEY = "bonus_net"
-private const val ABSENCE_PENALTY_GROSS_KEY = "absence_penalty_gross"
 
-// Kodek preslikava celu šemu zapisa jedan-na-jedan (po jedna funkcija po polju); deljenje bi samo razvuklo šemu.
-@Suppress("LargeClass", "TooManyFunctions")
 internal class ShiftRepositoryJsonCodec(
     private val config: AppConfig,
     private val clock: Clock = Clock.systemDefaultZone(),
@@ -105,10 +77,10 @@ internal class ShiftRepositoryJsonCodec(
         data[SCHEMA_VERSION_KEY] = migrations.currentVersion
         data[PAY_COEFFICIENT_KEY] = snapshot.payCoefficient
         if (snapshot.hourlyValueChanges.isNotEmpty()) {
-            data[HOURLY_VALUE_CHANGES_KEY] = buildHourlyValueChangesMapUnsafe(snapshot)
+            data[HOURLY_VALUE_CHANGES_KEY] = buildHourlyValueChangesMap(snapshot.hourlyValueChanges)
         }
         if (snapshot.foodPerDayChanges.isNotEmpty()) {
-            data[FOOD_PER_DAY_CHANGES_KEY] = buildFoodPerDayChangesMapUnsafe(snapshot)
+            data[FOOD_PER_DAY_CHANGES_KEY] = buildFoodPerDayChangesMap(snapshot.foodPerDayChanges)
         }
         RegressNetChangesJsonCodec.write(snapshot.regressNetChanges, data)
         data[SICK_PAY_BASE_HOURLY_KEY] = snapshot.sickPayBaseHourly
@@ -161,20 +133,23 @@ internal class ShiftRepositoryJsonCodec(
         data[BRIGADE_TYPE_KEY] = snapshot.brigadeType.value
         data[INITIAL_VACATION_BALANCE_KEY] = snapshot.initialVacationBalance
         if (snapshot.vacationYearBalances.isNotEmpty()) {
-            data[VACATION_YEAR_BALANCES_KEY] = buildVacationYearBalancesMapUnsafe(snapshot)
+            data[VACATION_YEAR_BALANCES_KEY] = buildVacationYearBalancesMap(snapshot.vacationYearBalances)
         }
         if (snapshot.annualLeaveCalculationInput != null || snapshot.annualLeaveLastCalculatedDays > 0) {
-            data[ANNUAL_LEAVE_CALCULATION_KEY] = buildAnnualLeaveCalculationMapUnsafe(snapshot)
+            data[ANNUAL_LEAVE_CALCULATION_KEY] = buildAnnualLeaveCalculationMap(
+                snapshot.annualLeaveCalculationInput,
+                snapshot.annualLeaveLastCalculatedDays
+            )
         }
 
         if (snapshot.monthlyPayBases.isNotEmpty()) {
-            data[MONTHLY_PAY_BASES_KEY] = buildMonthlyPayBasesMapUnsafe(snapshot)
+            data[MONTHLY_PAY_BASES_KEY] = buildMonthlyPayBasesMap(snapshot.monthlyPayBases)
         }
         if (snapshot.monthlyGrossAdditions.isNotEmpty()) {
-            data[MONTHLY_GROSS_ADDITIONS_KEY] = buildMonthlyGrossAdditionsMapUnsafe(snapshot)
+            data[MONTHLY_GROSS_ADDITIONS_KEY] = buildMonthlyGrossAdditionsMap(snapshot.monthlyGrossAdditions)
         }
         if (snapshot.monthlyNetAdjustments.isNotEmpty()) {
-            data[MONTHLY_NET_ADJUSTMENTS_KEY] = buildMonthlyNetAdjustmentsMapUnsafe(snapshot)
+            data[MONTHLY_NET_ADJUSTMENTS_KEY] = buildMonthlyNetAdjustmentsMap(snapshot.monthlyNetAdjustments)
         }
 
         for (record in snapshot.records) {
@@ -193,23 +168,9 @@ internal class ShiftRepositoryJsonCodec(
         return data
     }
 
-    // Existing schema migration parser keeps old backup compatibility in one place.
-    @Suppress("CyclomaticComplexMethod")
     private fun parseJson(json: JSONObject): ShiftRepositorySnapshot {
         val parsedSickPayBaseHourly = json.optDouble(SICK_PAY_BASE_HOURLY_KEY, config.pay.sickPayBaseHourly)
-        val parsedDefaultPayBaseSelectionMode = json.optString(DEFAULT_PAY_BASE_SELECTION_MODE_KEY, "")
-            .let { raw ->
-                if (raw.isEmpty()) {
-                    null
-                } else {
-                    val parsed = runCatching { PayBaseSelectionMode.valueOf(raw) }.getOrNull()
-                    if (parsed == null) {
-                        Log.w(TAG, "Nepoznata vrednost za $DEFAULT_PAY_BASE_SELECTION_MODE_KEY: '$raw'.")
-                    }
-                    parsed
-                }
-            }
-            ?: PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+        val parsedDefaultPayBaseSelectionMode = parseDefaultPayBaseSelectionMode(json)
         val parsedKnownPayBaseAnchors = KnownPayBaseAnchorsJsonCodec.parse(json)
         val parsedEmployeeContributionsPercent = json.optDouble(
             EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY,
@@ -237,17 +198,7 @@ internal class ShiftRepositoryJsonCodec(
         val parsedBloodDonationLeaves = BloodDonationLeaveJsonCodec.parse(json.optJSONObject(BLOOD_DONATION_LEAVE_KEY))
         val parsedInitialComp = json.optInt(INITIAL_COMP_BALANCE_KEY, 0)
         val parsedInitialCompMinutes = parseInitialCompBalanceMinutes(json, parsedInitialComp)
-        val parsedStartYear = if (json.has(MINULI_RAD_START_YEAR_KEY)) {
-            json.optInt(MINULI_RAD_START_YEAR_KEY, 0)
-        } else {
-            val oldYears = json.optInt(YEARS_OF_SERVICE_KEY, 0)
-            if (oldYears > 0) {
-                val now = LocalDate.now(clock)
-                if (now.monthValue >= 2) now.year - oldYears else now.year - 1 - oldYears
-            } else {
-                0
-            }
-        }
+        val parsedStartYear = parseMinuliRadStartYear(json)
         val parsedStartMonth = json.optInt(MINULI_RAD_START_MONTH_KEY, 2).coerceIn(1, 12)
         val parsedSeniorityInputMode = SeniorityInputMode.fromJson(json.optString(SENIORITY_INPUT_MODE_KEY, ""))
         val parsedMinuliRadBenefitEnabled = json.optBoolean(MINULI_RAD_BENEFIT_ENABLED_KEY, false)
@@ -256,10 +207,7 @@ internal class ShiftRepositoryJsonCodec(
         )
         val parsedLastPayslipYear = json.optInt(MINULI_RAD_LAST_PAYSLIP_YEAR_KEY, 0).coerceAtLeast(0)
         val parsedLastPayslipMonth = json.optInt(MINULI_RAD_LAST_PAYSLIP_MONTH_KEY, 1).coerceIn(1, 12)
-        val parsedPayslipPercent = json.optDouble(MINULI_RAD_PAYSLIP_PERCENT_KEY, 0.0)
-            .takeIf { it.isFinite() }
-            ?.coerceIn(0.0, 100.0)
-            ?: 0.0
+        val parsedPayslipPercent = parsePayslipPercent(json)
         val parsedBrigade = BrigadeType.fromValue(
             json.optString(BRIGADE_TYPE_KEY, BrigadeType.TROBRIGADA.value)
         )
@@ -325,6 +273,32 @@ internal class ShiftRepositoryJsonCodec(
             deletedMonths = parseDeletedMonths(json.optJSONArray(DELETED_MONTHS_KEY)),
             deletedHourlyValueMonths = parseDeletedMonths(json.optJSONArray(DELETED_HOURLY_VALUE_MONTHS_KEY))
         )
+    }
+
+    private fun parseDefaultPayBaseSelectionMode(json: JSONObject): PayBaseSelectionMode {
+        val raw = json.optString(DEFAULT_PAY_BASE_SELECTION_MODE_KEY, "")
+        if (raw.isEmpty()) return PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+        val parsed = runCatching { PayBaseSelectionMode.valueOf(raw) }.getOrNull()
+        if (parsed == null) {
+            Log.w(TAG, "Nepoznata vrednost za $DEFAULT_PAY_BASE_SELECTION_MODE_KEY: '$raw'.")
+        }
+        return parsed ?: PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
+    }
+
+    /** Stari backup ima samo broj godina staža; početak se procenjuje od današnjeg datuma. */
+    private fun parseMinuliRadStartYear(json: JSONObject): Int {
+        if (json.has(MINULI_RAD_START_YEAR_KEY)) return json.optInt(MINULI_RAD_START_YEAR_KEY, 0)
+        val oldYears = json.optInt(YEARS_OF_SERVICE_KEY, 0)
+        if (oldYears <= 0) return 0
+        val now = LocalDate.now(clock)
+        return if (now.monthValue >= 2) now.year - oldYears else now.year - 1 - oldYears
+    }
+
+    private fun parsePayslipPercent(json: JSONObject): Double {
+        return json.optDouble(MINULI_RAD_PAYSLIP_PERCENT_KEY, 0.0)
+            .takeIf { it.isFinite() }
+            ?.coerceIn(0.0, 100.0)
+            ?: 0.0
     }
 
     private fun parseCoefficient(json: JSONObject, representativeImportMonth: MonthKey): Double = when {
@@ -428,94 +402,6 @@ internal class ShiftRepositoryJsonCodec(
         return parsedRecords
     }
 
-    private fun buildVacationYearBalancesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, Any>()
-        for ((year, balance) in snapshot.vacationYearBalances.toSortedMap()) {
-            val data = TreeMap<String, Any>()
-            data[VACATION_TRACKING_START_DATE_KEY] = balance.trackingStartDate.toString()
-            data[VACATION_CARRYOVER_DAYS_INITIAL_KEY] = balance.carryoverDaysInitial
-            data[VACATION_CURRENT_YEAR_DAYS_TOTAL_KEY] = balance.currentYearDaysTotal
-            data[VACATION_CURRENT_YEAR_USED_BEFORE_AVAILABILITY_KEY] =
-                balance.currentYearDaysUsedBeforeAvailability
-            data[VACATION_CURRENT_YEAR_AVAILABLE_FROM_KEY] = balance.currentYearAvailableFrom.toString()
-            data[VACATION_MANUAL_BASELINE_KEY] = balance.manualBaseline
-            if (balance.carryoverFrozen) data[VACATION_CARRYOVER_FROZEN_KEY] = true
-            root[year.toString()] = data
-        }
-        return root
-    }
-
-    private fun parseVacationYearBalances(root: JSONObject?): Map<Int, VacationYearBalance> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<Int, VacationYearBalance>()
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val data = root.optJSONObject(yearKey) ?: continue
-            val trackingStart = data.optLocalDateOrNull(VACATION_TRACKING_START_DATE_KEY) ?: continue
-            val availableFrom = data.optLocalDateOrNull(VACATION_CURRENT_YEAR_AVAILABLE_FROM_KEY)
-                ?: currentYearVacationAvailableFrom(year)
-            parsed[year] = VacationYearBalance(
-                year = year,
-                trackingStartDate = trackingStart,
-                carryoverDaysInitial = data.optDouble(VACATION_CARRYOVER_DAYS_INITIAL_KEY, 0.0).coerceAtLeast(0.0),
-                currentYearDaysTotal = data.optDouble(VACATION_CURRENT_YEAR_DAYS_TOTAL_KEY, 0.0).coerceAtLeast(0.0),
-                currentYearDaysUsedBeforeAvailability = data
-                    .optDouble(VACATION_CURRENT_YEAR_USED_BEFORE_AVAILABILITY_KEY, 0.0)
-                    .coerceAtLeast(0.0),
-                currentYearAvailableFrom = availableFrom,
-                manualBaseline = data.optBoolean(VACATION_MANUAL_BASELINE_KEY, true),
-                carryoverFrozen = data.optBoolean(VACATION_CARRYOVER_FROZEN_KEY, false)
-            )
-        }
-        return parsed
-    }
-
-    private fun buildAnnualLeaveCalculationMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val data = TreeMap<String, Any>()
-        snapshot.annualLeaveCalculationInput?.let { input ->
-            data[ANNUAL_LEAVE_TOTAL_SENIORITY_YEARS_KEY] = input.totalSeniorityYears
-            data[ANNUAL_LEAVE_YEARS_AT_EMPLOYER_KEY] = input.yearsAtEmployer
-            data[ANNUAL_LEAVE_INCREASED_RISK_KEY] = input.hasIncreasedRiskOrBenefitedSeniority
-            data[ANNUAL_LEAVE_NIGHT_WORK_KEY] = input.worksNightShiftSystem
-            data[ANNUAL_LEAVE_WEEKEND_WORK_KEY] = input.worksWeekendShiftSystem
-            data[ANNUAL_LEAVE_THIRD_DEGREE_KEY] = input.requiresAtLeastThirdDegree
-            data[ANNUAL_LEAVE_WORK_INVALID_KEY] = input.isWorkInvalidFromWorkInjuryOrDisease
-            data[ANNUAL_LEAVE_WAR_INVALID_KEY] = input.isWarMilitaryInvalid
-            data[ANNUAL_LEAVE_SINGLE_PARENT_KEY] = input.isSingleParentOfChildUnder14
-            data[ANNUAL_LEAVE_THREE_CHILDREN_KEY] = input.hasThreeOrMoreChildrenUnder14
-        }
-        data[ANNUAL_LEAVE_LAST_CALCULATED_DAYS_KEY] = snapshot.annualLeaveLastCalculatedDays
-        return data
-    }
-
-    private fun parseAnnualLeaveCalculation(root: JSONObject?): ParsedAnnualLeaveCalculation {
-        if (root == null) return ParsedAnnualLeaveCalculation(input = null, lastCalculatedDays = 0)
-        val input = AnnualLeaveCalculationInput(
-            totalSeniorityYears = root.optDouble(ANNUAL_LEAVE_TOTAL_SENIORITY_YEARS_KEY, 0.0)
-                .sanitizeAnnualLeaveYears(),
-            yearsAtEmployer = root.optDouble(ANNUAL_LEAVE_YEARS_AT_EMPLOYER_KEY, 0.0)
-                .sanitizeAnnualLeaveYears(),
-            hasIncreasedRiskOrBenefitedSeniority = root.optBoolean(ANNUAL_LEAVE_INCREASED_RISK_KEY, false),
-            worksNightShiftSystem = root.optBoolean(ANNUAL_LEAVE_NIGHT_WORK_KEY, false),
-            worksWeekendShiftSystem = root.optBoolean(ANNUAL_LEAVE_WEEKEND_WORK_KEY, false),
-            requiresAtLeastThirdDegree = root.optBoolean(ANNUAL_LEAVE_THIRD_DEGREE_KEY, false),
-            isWorkInvalidFromWorkInjuryOrDisease = root.optBoolean(ANNUAL_LEAVE_WORK_INVALID_KEY, false),
-            isWarMilitaryInvalid = root.optBoolean(ANNUAL_LEAVE_WAR_INVALID_KEY, false),
-            isSingleParentOfChildUnder14 = root.optBoolean(ANNUAL_LEAVE_SINGLE_PARENT_KEY, false),
-            hasThreeOrMoreChildrenUnder14 = root.optBoolean(ANNUAL_LEAVE_THREE_CHILDREN_KEY, false)
-        )
-        return ParsedAnnualLeaveCalculation(
-            input = input,
-            lastCalculatedDays = root.optInt(
-                ANNUAL_LEAVE_LAST_CALCULATED_DAYS_KEY,
-                calculateAnnualLeaveDays(input).totalDays
-            ).coerceAtLeast(0)
-        )
-    }
-
     private fun parseInitialCompBalanceMinutes(json: JSONObject, initialCompBalance: Int): Int {
         return if (json.has(INITIAL_COMP_BALANCE_MINUTES_KEY)) {
             json.optInt(INITIAL_COMP_BALANCE_MINUTES_KEY, initialCompBalance * 60)
@@ -524,193 +410,8 @@ internal class ShiftRepositoryJsonCodec(
         }
     }
 
-    private fun buildMonthlyPayBasesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, TreeMap<String, Any>>()
-        for ((key, bases) in snapshot.monthlyPayBases.toSortedMap()) {
-            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            val monthData = TreeMap<String, Any>()
-            bases.selectionMode?.let { monthData[SELECTION_MODE_KEY] = it.name }
-            bases.vacationHourlyBase?.let { monthData[VACATION_HOURLY_BASE_KEY] = it }
-            bases.paidHolidayHourlyBase?.let { monthData[PAID_HOLIDAY_HOURLY_BASE_KEY] = it }
-            bases.sickHourlyBase?.let { monthData[SICK_HOURLY_BASE_KEY] = it }
-            if (monthData.isNotEmpty()) {
-                yearMap[String.format(Locale.ROOT, "%02d", key.month)] = monthData
-            }
-        }
-        return TreeMap(root)
-    }
-
-    private fun parseMonthlyPayBases(root: JSONObject?): Map<MonthKey, MonthlyPayBases> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<MonthKey, MonthlyPayBases>()
-        forEachMonthlyPayBaseObject(root) { year, month, data ->
-            parseMonthlyPayBase(year, month, data)?.let { bases ->
-                parsed[MonthKey(year, month)] = bases
-            }
-        }
-        return parsed
-    }
-
-    private fun forEachMonthlyPayBaseObject(root: JSONObject, block: (Int, Int, JSONObject) -> Unit) {
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val monthsObj = root.optJSONObject(yearKey) ?: continue
-            val monthKeys = monthsObj.keys()
-            while (monthKeys.hasNext()) {
-                val monthKey = monthKeys.next()
-                val month = monthKey.toIntOrNull() ?: continue
-                if (month !in 1..12) continue
-                val data = monthsObj.optJSONObject(monthKey) ?: continue
-                block(year, month, data)
-            }
-        }
-    }
-
-    private fun parseMonthlyPayBase(year: Int, month: Int, data: JSONObject): MonthlyPayBases? {
-        val selectionMode = data.optString(SELECTION_MODE_KEY, "")
-            .takeIf { it.isNotBlank() }
-            ?.let { runCatching { PayBaseSelectionMode.valueOf(it) }.getOrNull() }
-        val bases = MonthlyPayBases(
-            year = year,
-            month = month,
-            vacationHourlyBase = data.optPositiveFiniteDoubleOrNull(VACATION_HOURLY_BASE_KEY),
-            paidHolidayHourlyBase = data.optPositiveFiniteDoubleOrNull(PAID_HOLIDAY_HOURLY_BASE_KEY),
-            sickHourlyBase = data.optPositiveFiniteDoubleOrNull(SICK_HOURLY_BASE_KEY),
-            selectionMode = selectionMode
-        )
-        return bases.takeIf { it.hasAnyConfiguredPayBase() }
-    }
-
-    private fun MonthlyPayBases.hasAnyConfiguredPayBase(): Boolean {
-        return vacationHourlyBase != null ||
-            paidHolidayHourlyBase != null ||
-            sickHourlyBase != null ||
-            selectionMode != null
-    }
-
-    private fun buildMonthlyNetAdjustmentsMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, TreeMap<String, Any>>()
-        for ((key, adjustments) in snapshot.monthlyNetAdjustments.toSortedMap()) {
-            val sanitized = adjustments.sanitizedFor(key.year, key.month)
-            if (!sanitized.hasAny) continue
-            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
-                put(ADVANCE_PAYMENT_NET_KEY, sanitized.advancePaymentNet)
-            }
-        }
-        return TreeMap(root)
-    }
-
-    private fun parseMonthlyNetAdjustments(root: JSONObject?): Map<MonthKey, MonthlyNetAdjustments> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<MonthKey, MonthlyNetAdjustments>()
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val monthsObj = root.optJSONObject(yearKey) ?: continue
-            val monthKeys = monthsObj.keys()
-            while (monthKeys.hasNext()) {
-                val monthKey = monthKeys.next()
-                val month = monthKey.toIntOrNull() ?: continue
-                if (month !in 1..12) continue
-                val data = monthsObj.optJSONObject(monthKey) ?: continue
-                val adjustments = MonthlyNetAdjustments(
-                    year = year,
-                    month = month,
-                    advancePaymentNet = data.optMonthlyNetAdjustment(ADVANCE_PAYMENT_NET_KEY)
-                ).sanitizedFor(year, month)
-                if (adjustments.hasAny) {
-                    parsed[MonthKey(year, month)] = adjustments
-                }
-            }
-        }
-        return parsed
-    }
-
-    private fun buildHourlyValueChangesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, TreeMap<String, Any>>()
-        for ((key, value) in snapshot.hourlyValueChanges.toSortedMap()) {
-            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
-                put(HOURLY_VALUE_KEY, value)
-            }
-        }
-        return TreeMap(root)
-    }
-
-    private fun parseHourlyValueChanges(root: JSONObject?): Map<MonthKey, Double> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<MonthKey, Double>()
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val monthsObj = root.optJSONObject(yearKey) ?: continue
-            val monthKeys = monthsObj.keys()
-            while (monthKeys.hasNext()) {
-                val monthKey = monthKeys.next()
-                val month = monthKey.toIntOrNull() ?: continue
-                if (month !in 1..12) continue
-                val value = monthsObj.optJSONObject(monthKey)
-                    ?.optDouble(HOURLY_VALUE_KEY, Double.NaN)
-                    ?: continue
-                if (value.isFinite() && value > 0.0) {
-                    parsed[MonthKey(year, month)] = value.coerceAtMost(MAX_BASE_PAY)
-                }
-            }
-        }
-        return parsed
-    }
-
-    private fun buildFoodPerDayChangesMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-        val root = TreeMap<String, TreeMap<String, Any>>()
-        for ((key, value) in snapshot.foodPerDayChanges.toSortedMap()) {
-            val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = TreeMap<String, Any>().apply {
-                put(FOOD_PER_DAY_VALUE_KEY, value)
-            }
-        }
-        return TreeMap(root)
-    }
-
-    private fun parseFoodPerDayChanges(root: JSONObject?): Map<MonthKey, Double> {
-        if (root == null) return emptyMap()
-        val parsed = mutableMapOf<MonthKey, Double>()
-        val yearKeys = root.keys()
-        while (yearKeys.hasNext()) {
-            val yearKey = yearKeys.next()
-            val year = yearKey.toIntOrNull() ?: continue
-            if (year < 1900 || year > 2200) continue
-            val monthsObj = root.optJSONObject(yearKey) ?: continue
-            val monthKeys = monthsObj.keys()
-            while (monthKeys.hasNext()) {
-                val monthKey = monthKeys.next()
-                val month = monthKey.toIntOrNull() ?: continue
-                if (month !in 1..12) continue
-                val value = monthsObj.optJSONObject(monthKey)
-                    ?.optDouble(FOOD_PER_DAY_VALUE_KEY, Double.NaN)
-                    ?: continue
-                if (value.isFinite() && value >= 0.0) {
-                    parsed[MonthKey(year, month)] = value.coerceAtMost(10_000.0)
-                }
-            }
-        }
-        return parsed
-    }
-
     private data class ParsedAutoAdvanceImportFlags(
         val promptSuppressed: Boolean
-    )
-
-    private data class ParsedAnnualLeaveCalculation(
-        val input: AnnualLeaveCalculationInput?,
-        val lastCalculatedDays: Int
     )
 
     private companion object {
@@ -718,9 +419,7 @@ internal class ShiftRepositoryJsonCodec(
         const val GROSS_HOURLY_RATE_KEY = "config_gross_hourly_rate"
         const val PAY_COEFFICIENT_KEY = "pay_coefficient"
         const val HOURLY_VALUE_CHANGES_KEY = "hourly_value_changes"
-        const val HOURLY_VALUE_KEY = "hourly_value"
         const val FOOD_PER_DAY_CHANGES_KEY = "food_per_day_changes"
-        const val FOOD_PER_DAY_VALUE_KEY = "food_per_day"
         const val SICK_PAY_BASE_HOURLY_KEY = "config_sick_pay_base_hourly"
         const val DEFAULT_PAY_BASE_SELECTION_MODE_KEY = "default_pay_base_selection_mode"
         const val EMPLOYEE_CONTRIBUTIONS_PERCENT_KEY = "config_employee_contributions_percent"
@@ -768,30 +467,6 @@ internal class ShiftRepositoryJsonCodec(
         const val MONTHLY_PAY_BASES_KEY = "monthly_pay_bases"
         const val MONTHLY_GROSS_ADDITIONS_KEY = "monthly_gross_additions"
         const val MONTHLY_NET_ADJUSTMENTS_KEY = "monthly_net_adjustments"
-        const val VACATION_TRACKING_START_DATE_KEY = "tracking_start_date"
-        const val VACATION_CARRYOVER_DAYS_INITIAL_KEY = "carryover_days_initial"
-        const val VACATION_CURRENT_YEAR_DAYS_TOTAL_KEY = "current_year_days_total"
-        const val VACATION_CURRENT_YEAR_USED_BEFORE_AVAILABILITY_KEY =
-            "current_year_days_used_before_availability"
-        const val VACATION_CURRENT_YEAR_AVAILABLE_FROM_KEY = "current_year_available_from"
-        const val VACATION_MANUAL_BASELINE_KEY = "manual_baseline"
-        const val VACATION_CARRYOVER_FROZEN_KEY = "carryover_frozen"
-        const val ANNUAL_LEAVE_TOTAL_SENIORITY_YEARS_KEY = "total_seniority_years"
-        const val ANNUAL_LEAVE_YEARS_AT_EMPLOYER_KEY = "years_at_employer"
-        const val ANNUAL_LEAVE_INCREASED_RISK_KEY = "increased_risk_or_benefited_seniority"
-        const val ANNUAL_LEAVE_NIGHT_WORK_KEY = "night_work_shift_system"
-        const val ANNUAL_LEAVE_WEEKEND_WORK_KEY = "weekend_work_shift_system"
-        const val ANNUAL_LEAVE_THIRD_DEGREE_KEY = "requires_at_least_third_degree"
-        const val ANNUAL_LEAVE_WORK_INVALID_KEY = "work_invalid_from_work_injury_or_disease"
-        const val ANNUAL_LEAVE_WAR_INVALID_KEY = "war_military_invalid"
-        const val ANNUAL_LEAVE_SINGLE_PARENT_KEY = "single_parent_child_under_14"
-        const val ANNUAL_LEAVE_THREE_CHILDREN_KEY = "three_or_more_children_under_14"
-        const val ANNUAL_LEAVE_LAST_CALCULATED_DAYS_KEY = "last_calculated_days"
-        const val VACATION_HOURLY_BASE_KEY = "vacation_hourly_base"
-        const val PAID_HOLIDAY_HOURLY_BASE_KEY = "paid_holiday_hourly_base"
-        const val SICK_HOURLY_BASE_KEY = "sick_hourly_base"
-        const val SELECTION_MODE_KEY = "selection_mode"
-        const val ADVANCE_PAYMENT_NET_KEY = "advance_payment_net"
         val METADATA_KEYS = setOf(
             BASE_PAY_KEY,
             INITIAL_COMP_BALANCE_KEY,
@@ -851,119 +526,4 @@ internal class ShiftRepositoryJsonCodec(
             SavedPayslipsJsonCodec.KEY
         )
     }
-}
-
-@Suppress("DEPRECATION")
-private fun buildMonthlyGrossAdditionsMapUnsafe(snapshot: ShiftRepositorySnapshot): TreeMap<String, Any> {
-    val root = TreeMap<String, TreeMap<String, Any>>()
-    for ((key, additions) in snapshot.monthlyGrossAdditions.toSortedMap()) {
-        val sanitized = additions.sanitizeMonthlyGrossAdditions(key.year, key.month)
-        if (!sanitized.hasAny) continue
-        val yearMap = root.getOrPut(key.year.toString()) { TreeMap() }
-        val monthData = TreeMap<String, Any>()
-        sanitized.mealGross?.let { monthData[MEAL_GROSS_KEY] = it }
-        if (sanitized.regressGross > 0.0) monthData[REGRESS_GROSS_KEY] = sanitized.regressGross
-        if (sanitized.bonusGross > 0.0) monthData[BONUS_GROSS_KEY] = sanitized.bonusGross
-        sanitized.mealSpentNet?.let { monthData[MEAL_SPENT_NET_KEY] = it }
-        sanitized.mealEntitlementNetOverride?.let { monthData[MEAL_ENTITLEMENT_NET_OVERRIDE_KEY] = it }
-        if (sanitized.bonusNet > 0.0) monthData[BONUS_NET_KEY] = sanitized.bonusNet
-        if (sanitized.absencePenaltyGross.signum() > 0) {
-            monthData[ABSENCE_PENALTY_GROSS_KEY] = sanitized.absencePenaltyGross
-        }
-        monthData.putIfNonZero(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY, sanitized.mealSettlementAdjustmentNet)
-        if (monthData.isNotEmpty()) {
-            yearMap[String.format(Locale.ROOT, "%02d", key.month)] = monthData
-        }
-    }
-    return TreeMap(root)
-}
-
-@Suppress("DEPRECATION")
-private fun parseMonthlyGrossAdditions(root: JSONObject?): Map<MonthKey, MonthlyGrossAdditions> {
-    if (root == null) return emptyMap()
-    val parsed = mutableMapOf<MonthKey, MonthlyGrossAdditions>()
-    val yearKeys = root.keys()
-    while (yearKeys.hasNext()) {
-        val yearKey = yearKeys.next()
-        val year = yearKey.toIntOrNull() ?: continue
-        if (year < 1900 || year > 2200) continue
-        val monthsObj = root.optJSONObject(yearKey) ?: continue
-        val monthKeys = monthsObj.keys()
-        while (monthKeys.hasNext()) {
-            val monthKey = monthKeys.next()
-            val month = monthKey.toIntOrNull() ?: continue
-            if (month !in 1..12) continue
-            val data = monthsObj.optJSONObject(monthKey) ?: continue
-            val additions = MonthlyGrossAdditions(
-                year = year,
-                month = month,
-                mealGross = data.optMonthlyGrossOverrideOrNull(MEAL_GROSS_KEY),
-                regressGross = data.optMonthlyGrossAddition(REGRESS_GROSS_KEY),
-                bonusGross = data.optMonthlyGrossAddition(BONUS_GROSS_KEY),
-                mealSpentNet = data.optMonthlyNetDeductionOrNull(MEAL_SPENT_NET_KEY),
-                bonusNet = data.optMonthlyGrossAddition(BONUS_NET_KEY),
-                mealSettlementAdjustmentNet = data.optMonthlySignedAdjustment(MEAL_SETTLEMENT_ADJUSTMENT_NET_KEY),
-                absencePenaltyGross = data.optMonthlyGrossPenalty(ABSENCE_PENALTY_GROSS_KEY),
-                mealEntitlementNetOverride = data.optMonthlyMoneyOrNull(MEAL_ENTITLEMENT_NET_OVERRIDE_KEY)
-            ).sanitizeMonthlyGrossAdditions(year, month)
-            if (additions.hasAny) {
-                parsed[MonthKey(year, month)] = additions
-            }
-        }
-    }
-    return parsed
-}
-
-private fun JSONObject.optMonthlyGrossPenalty(key: String): BigDecimal {
-    if (!has(key)) return BigDecimal.ZERO
-    return optString(key).toBigDecimalOrNull()?.sanitizeMonthlyGrossPenalty() ?: BigDecimal.ZERO
-}
-
-private fun JSONObject.optMonthlyMoneyOrNull(key: String): BigDecimal? {
-    if (!has(key) || isNull(key)) return null
-    return optString(key).toBigDecimalOrNull()?.takeIf { it.signum() >= 0 }?.toMealMoney()
-}
-
-private fun JSONObject.optPositiveFiniteDoubleOrNull(key: String): Double? {
-    if (!has(key)) return null
-    val value = optDouble(key, Double.NaN)
-    return value.sanitizePayBaseOrNull()
-}
-
-private fun JSONObject.optMonthlyGrossAddition(key: String): Double {
-    if (!has(key)) return 0.0
-    val value = optDouble(key, Double.NaN)
-    return value.sanitizeMonthlyGrossAddition()
-}
-
-private fun MutableMap<String, Any>.putIfNonZero(key: String, value: Double) {
-    if (value != 0.0) this[key] = value
-}
-
-private fun JSONObject.optMonthlyGrossOverrideOrNull(key: String): Double? {
-    if (!has(key)) return null
-    val value = optDouble(key, Double.NaN)
-    return value.sanitizeMonthlyGrossOverrideOrNull()
-}
-
-private fun JSONObject.optMonthlyNetDeductionOrNull(key: String): Double? {
-    if (!has(key)) return null
-    val value = optDouble(key, Double.NaN)
-    return value.sanitizeMonthlyGrossAddition()
-}
-
-private fun JSONObject.optMonthlySignedAdjustment(key: String): Double {
-    if (!has(key)) return 0.0
-    return optDouble(key, Double.NaN).sanitizeMonthlySignedAdjustment()
-}
-
-private fun JSONObject.optMonthlyNetAdjustment(key: String): Double {
-    if (!has(key)) return 0.0
-    val value = optDouble(key, Double.NaN)
-    return value.sanitizeMonthlyNetAdjustment()
-}
-
-private fun JSONObject.optLocalDateOrNull(key: String): LocalDate? {
-    if (!has(key)) return null
-    return runCatching { LocalDate.parse(optString(key)) }.getOrNull()
 }
