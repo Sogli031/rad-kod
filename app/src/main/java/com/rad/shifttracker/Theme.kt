@@ -53,18 +53,12 @@ private val RadTypography = Typography(
  * UI ne menja `fontWeight` ručno, nego bira stil.
  */
 private val EmphasizedWeight = FontWeight.Bold
-val Typography.displayLargeEmphasized: TextStyle get() = displayLarge.copy(fontWeight = EmphasizedWeight)
-val Typography.displayMediumEmphasized: TextStyle get() = displayMedium.copy(fontWeight = EmphasizedWeight)
-val Typography.displaySmallEmphasized: TextStyle get() = displaySmall.copy(fontWeight = EmphasizedWeight)
-val Typography.headlineLargeEmphasized: TextStyle get() = headlineLarge.copy(fontWeight = EmphasizedWeight)
 val Typography.headlineMediumEmphasized: TextStyle get() = headlineMedium.copy(fontWeight = EmphasizedWeight)
 val Typography.headlineSmallEmphasized: TextStyle get() = headlineSmall.copy(fontWeight = EmphasizedWeight)
 val Typography.titleLargeEmphasized: TextStyle get() = titleLarge.copy(fontWeight = EmphasizedWeight)
 val Typography.titleMediumEmphasized: TextStyle get() = titleMedium.copy(fontWeight = EmphasizedWeight)
-val Typography.titleSmallEmphasized: TextStyle get() = titleSmall.copy(fontWeight = EmphasizedWeight)
 val Typography.bodyLargeEmphasized: TextStyle get() = bodyLarge.copy(fontWeight = EmphasizedWeight)
 val Typography.bodyMediumEmphasized: TextStyle get() = bodyMedium.copy(fontWeight = EmphasizedWeight)
-val Typography.bodySmallEmphasized: TextStyle get() = bodySmall.copy(fontWeight = EmphasizedWeight)
 val Typography.labelLargeEmphasized: TextStyle get() = labelLarge.copy(fontWeight = EmphasizedWeight)
 val Typography.labelMediumEmphasized: TextStyle get() = labelMedium.copy(fontWeight = EmphasizedWeight)
 val Typography.labelSmallEmphasized: TextStyle get() = labelSmall.copy(fontWeight = EmphasizedWeight)

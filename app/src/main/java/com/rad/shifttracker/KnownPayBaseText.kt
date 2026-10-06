@@ -1,10 +1,5 @@
 package com.rad.shifttracker
 
-internal const val KNOWN_PAY_BASE_LIST_EMPTY_TEXT = "Još nema unetih osnovica sa lista."
-
-internal const val KNOWN_PAY_BASE_INPUT_ERROR_TEXT =
-    "Unesi ispravnu godinu, mesec (1-12) i osnovicu sa liste."
-
 internal fun knownPayBaseAnchorSummaryText(anchor: KnownPayBaseAnchor): String {
     return "${monthYearText(anchor.month)}: ${formatPayBaseRateText(anchor.grossHourlyBase)}"
 }

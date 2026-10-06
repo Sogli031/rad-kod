@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.9] - 2026-10-06
+- **Čišćenje mrtvog koda (bez promene ponašanja):** obrisane funkcije i konstante koje se nigde ne pozivaju (provereno Kotlin LSP-om i grep-om, uključujući manifest, XML, proguard i baseline profil): `ShiftScheduler.populateMonth`/`populateYear`, `calculateFoodAllowanceForAccountingMonth`, `getCurrentCompBalance`, `setMonthlyActualFoodSpentNetDecimal`, `hasLocalData`, `yearsOfServiceValue`, `canDisplayMealUnused`, `fillDayText` i `weekdayShortText` (ostatak pregleda pre upisa u „Popuni iz liste“), `payslipDisplayName`, nekorišćeni tekstovi i UI konstante, `Spacing.xxl` i 6 nekorišćenih naglašenih stilova teksta. Iz baseline profila izbačeno 15 pravila za stari GoogleSignIn.
+- **Neiskorišćeni parametri:** `brigadeType` izbačen iz računanja nedeljnih sati/minuta (pravilo je isto za tro- i četvorobrigadu), `baseRate` i `brigadeType` iz plaćanja neupisanih praznika (plaća se po osnovici za praznik), `lastPayslipMonth` iz procene staža po procentu sa listića. Ugašena upozorenja `UnusedParameter` su uklonjena. @Deprecated polja za stare backup-ove su ostala.
+
 ## [6.8] - 2026-10-06
 - **Bez starog GoogleSignIn-a:** `play-services-auth` 22.0.0 (Google je u njoj uklonio GoogleSignIn). Uklonjeno je jednokratno preuzimanje naloga iz stare prijave (iz 6.6), pa ko nije prijavljen preko nove prijave treba ponovo da se prijavi. Nalog za backup je samo `account_email` u `rad_backup_prefs`; Gmail za listiće koristi samo nalog izabran u aplikaciji.
 - **Ponuda „Prijavi se ponovo za Google backup“:** pri pokretanju, ko je ranije imao backup (`last_sync_time` > 0), a sada nije prijavljen, dobija prozor sa dugmetom „Prijavi se“ (izbor naloga, pa Drive dozvola) i „Kasnije“ (do sledećeg pokretanja). Ne prikazuje se pri prvom pokretanju, onima koji nikad nisu imali backup, ni onome ko se sam odjavio u Opcijama (`signed_out_by_user`; briše se pri sledećoj prijavi).

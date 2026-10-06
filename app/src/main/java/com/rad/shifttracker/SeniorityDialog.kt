@@ -82,7 +82,6 @@ fun MinuliRadDialog(
         derivedStateOf {
             estimateSeniorityFromPayslipPercent(
                 lastPayslipYear = lastPayslipYearInput.toIntOrNull() ?: 0,
-                lastPayslipMonth = selectedLastPayslipMonth,
                 payslipPercent = payslipPercentInput.toDoubleOrNull() ?: 0.0,
                 increaseFactor = selectedIncreaseFactor,
                 ratePerYear = CONFIG.pay.minuliRadPerYear

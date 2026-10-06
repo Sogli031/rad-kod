@@ -37,8 +37,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SUNDAY,
             Shift.SICK,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(0, result)
     }
@@ -48,8 +47,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SUNDAY,
             Shift.VACATION,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(0, result)
     }
@@ -59,8 +57,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SUNDAY,
             Shift.FIRST,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(8, result)
     }
@@ -70,8 +67,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SUNDAY,
             Shift.SECOND,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(8, result)
     }
@@ -81,8 +77,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SUNDAY,
             Shift.THIRD,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(2, result)
     }
@@ -92,8 +87,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SATURDAY,
             Shift.THIRD,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(6, result)
     }
@@ -103,8 +97,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.SATURDAY,
             Shift.FIRST,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(0, result)
     }
@@ -114,8 +107,7 @@ class PayCalculatorTest {
         val result = calculator.getSundayHoursForShift(
             Weekday.MONDAY,
             Shift.FIRST,
-            8,
-            BrigadeType.TROBRIGADA
+            8
         )
         assertEquals(0, result)
     }
@@ -1124,7 +1116,7 @@ class PayCalculatorTest {
         // 8h sa 120 min prekovremenih na kraju: redovnih 360 min sadrži 240
         // nedeljnih, prekovremenih 120 min je celo u nedelji.
         val (satRegular, satOvertime) = splitSundayMinutes(
-            Weekday.SATURDAY, Shift.THIRD, 360, 120, BrigadeType.CETVOROBRIGADA
+            Weekday.SATURDAY, Shift.THIRD, 360, 120
         )
         assertEquals(240, satRegular)
         assertEquals(120, satOvertime)
@@ -1132,7 +1124,7 @@ class PayCalculatorTest {
         // Nedeljna treća smena: samo prvih 120 min (do ponoći) je nedelja —
         // prekovremeni deo na kraju smene pada u ponedeljak, bez dodatka.
         val (sunRegular, sunOvertime) = splitSundayMinutes(
-            Weekday.SUNDAY, Shift.THIRD, 420, 60, BrigadeType.CETVOROBRIGADA
+            Weekday.SUNDAY, Shift.THIRD, 420, 60
         )
         assertEquals(120, sunRegular)
         assertEquals(0, sunOvertime)
@@ -1579,7 +1571,7 @@ class PayCalculatorTest {
         // Januar 2025: 1. i 2. su praznici (sreda i četvrtak), 7. je Božić (utorak)
         val recordedDays = setOf(7) // Samo Božić je upisan
         val result = calculator.calculateUnrecordedHolidayPay(
-            2025, 1, recordedDays, 300.0, BrigadeType.TROBRIGADA
+            2025, 1, recordedDays
         )
         // Neupisani praznici na radnim danima: 1. jan (sreda), 2. jan (četvrtak)
         // 2 * 8 * 300 = 4800
@@ -1591,7 +1583,7 @@ class PayCalculatorTest {
         // Februar 2025: 15. je subota, 16. nedelja
         val recordedDays = emptySet<Int>()
         val result = calculator.calculateUnrecordedHolidayPay(
-            2025, 2, recordedDays, 300.0, BrigadeType.TROBRIGADA
+            2025, 2, recordedDays
         )
         // 15. feb subota - nije radni dan, preskače se
         // 16. feb nedelja - nije radni dan, preskače se
@@ -1618,7 +1610,7 @@ class PayCalculatorTest {
             2025, 1, 5, Shift.FIRST, 8, // Nedelja
             weekendOvertimeType = OvertimeType.COMP_TIME
         )
-        val result = calculator.getSundayHours(record, BrigadeType.TROBRIGADA)
+        val result = calculator.getSundayHours(record)
         assertEquals(0, result)
     }
 

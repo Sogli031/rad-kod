@@ -2,7 +2,6 @@ package com.rad.shifttracker
 
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -53,15 +52,6 @@ internal inline fun <T> runPayslipSafely(block: () -> T): T? = try {
 } catch (e: StackOverflowError) {
     null
 }
-
-/** Ime fajla za poruku o grešci; ako nije dostupno, koristi se opšti naziv. */
-internal fun payslipDisplayName(context: Context, uri: Uri): String = try {
-    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) cursor.getString(0) else null
-    }
-} catch (e: Exception) {
-    null
-} ?: "PDF fajl"
 
 /** Listić je PDF od par stotina KB i jedne-dve strane; veće se ne čita. */
 private const val MAX_PAYSLIP_PDF_BYTES = 10 * 1024 * 1024

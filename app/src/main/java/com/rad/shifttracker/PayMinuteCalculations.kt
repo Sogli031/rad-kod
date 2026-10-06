@@ -5,12 +5,10 @@ import kotlin.math.min
 
 private const val MINUTES_PER_HOUR = 60
 
-@Suppress("UnusedParameter")
 internal fun getSundayMinutesForShift(
     weekday: Weekday,
     shift: Shift,
-    shiftMinutes: Int,
-    brigadeType: BrigadeType
+    shiftMinutes: Int
 ): Int {
     if (shiftMinutes <= 0 || shift == Shift.SICK || shift == Shift.VACATION) return 0
 
@@ -42,13 +40,12 @@ internal fun splitSundayMinutes(
     weekday: Weekday,
     shift: Shift,
     regularMinutes: Int,
-    overtimeMinutes: Int,
-    brigadeType: BrigadeType
+    overtimeMinutes: Int
 ): Pair<Int, Int> {
     val totalMinutes = regularMinutes + overtimeMinutes
-    val sundayTotal = getSundayMinutesForShift(weekday, shift, totalMinutes, brigadeType)
+    val sundayTotal = getSundayMinutesForShift(weekday, shift, totalMinutes)
         .coerceIn(0, totalMinutes)
-    val sundayRegular = getSundayMinutesForShift(weekday, shift, regularMinutes, brigadeType)
+    val sundayRegular = getSundayMinutesForShift(weekday, shift, regularMinutes)
         .coerceIn(0, minOf(regularMinutes, sundayTotal))
     val sundayOvertime = (sundayTotal - sundayRegular).coerceIn(0, overtimeMinutes)
     return sundayRegular to sundayOvertime
@@ -72,12 +69,11 @@ internal fun calculatePayForSegmentMinutes(
     shift: Shift,
     minutes: Int,
     baseRate: Double,
-    brigadeType: BrigadeType,
     bonuses: List<Double>,
     sundayBonus: Double
 ): Double {
     if (minutes <= 0) return 0.0
-    val sundayMinutes = getSundayMinutesForShift(weekday, shift, minutes, brigadeType).coerceIn(0, minutes)
+    val sundayMinutes = getSundayMinutesForShift(weekday, shift, minutes).coerceIn(0, minutes)
     val regularMinutes = minutes - sundayMinutes
     return calculatePayForMinutes(regularMinutes, baseRate, bonuses) +
         calculatePayForMinutes(sundayMinutes, baseRate, bonuses + sundayBonus)
@@ -156,8 +152,8 @@ internal fun nightWorkMinutes(record: DayRecord): Int {
 }
 
 /** Nedeljni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun). */
-internal fun sundayWorkMinutes(record: DayRecord, brigadeType: BrigadeType): Int {
+internal fun sundayWorkMinutes(record: DayRecord): Int {
     return paidWorkMinuteSegments(record).sumOf { (shift, minutes) ->
-        getSundayMinutesForShift(record.weekday, shift, minutes, brigadeType)
+        getSundayMinutesForShift(record.weekday, shift, minutes)
     }
 }

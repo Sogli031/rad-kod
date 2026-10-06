@@ -15,5 +15,4 @@ object Spacing {
     /** Unutrašnja margina kartica i ivica ekrana. */
     val lg = 16.dp
     val xl = 24.dp
-    val xxl = 32.dp
 }

@@ -378,36 +378,5 @@ private fun writeFillDays(repo: ShiftRepository, days: List<FillDay>, holidayOve
     repo.setBatch(batch)
 }
 
-internal fun fillDayText(day: FillDay): String {
-    val date = "%02d.%02d. %s".format(day.date.dayOfMonth, day.date.monthValue, weekdayShortText(day.date))
-    val shift = day.shift?.displayName.orEmpty()
-    val swapped = day.templateShift?.takeIf { day.shift != null && it != day.shift }?.let { " umesto ${it.displayName}" }.orEmpty()
-    val detail = when (day.kind) {
-        FillDayKind.WORK -> when {
-            day.hours < DAY_HOURS -> "$shift ${day.hours}h (izostanak ${DAY_HOURS - day.hours}h)"
-            day.hours > DAY_HOURS -> "$shift ${day.hours}h (prekovremeno ${day.hours - DAY_HOURS}h)"
-            else -> "$shift ${day.hours}h$swapped"
-        }
-        FillDayKind.VACATION -> "Godišnji odmor"
-        FillDayKind.PAID_LEAVE -> "Plaćeno odsustvo"
-        FillDayKind.SICK -> "Bolovanje"
-        FillDayKind.ABSENT -> "Nije radio (izostanak 8h)"
-        FillDayKind.HOLIDAY_OFF -> "Praznik"
-        FillDayKind.HOLIDAY_WORK -> "Rad na praznik $shift ${day.hours}h"
-        FillDayKind.WEEKEND_WORK -> "$shift ${day.hours}h (prekovremeno)"
-    }
-    return "$date — $detail"
-}
-
-private fun weekdayShortText(date: LocalDate): String = when (date.dayOfWeek) {
-    DayOfWeek.MONDAY -> "pon"
-    DayOfWeek.TUESDAY -> "uto"
-    DayOfWeek.WEDNESDAY -> "sre"
-    DayOfWeek.THURSDAY -> "čet"
-    DayOfWeek.FRIDAY -> "pet"
-    DayOfWeek.SATURDAY -> "sub"
-    DayOfWeek.SUNDAY -> "ned"
-}
-
 /** Dani koji odstupaju od običnog rada po rasporedu (za pregled pre upisa). */
 internal fun FillDay.isSpecial(): Boolean = !(kind == FillDayKind.WORK && hours == DAY_HOURS && shift == templateShift)

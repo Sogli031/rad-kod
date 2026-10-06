@@ -69,10 +69,6 @@ data class MonthlyNetPayBreakdown(
     val estimateAffectsPayroll: Boolean
         get() = false
 
-    val canDisplayMealUnused: Boolean
-        get() = mealEntitlementSource == MealEntitlementSource.CONFIRMED_MONTHLY_OVERRIDE ||
-            mealEntitlementSource == MealEntitlementSource.VERIFIED_COMPANY_RULE
-
     val mealEntitlementGross: Double
         get() = grossMealAddition
 

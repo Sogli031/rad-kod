@@ -77,7 +77,6 @@ class SeniorityRulesTest {
     fun `procenat 6_4 sa stopom 0_5 zaokruzuje na 13 obracunskih godina`() {
         val estimate = estimateSeniorityFromPayslipPercent(
             lastPayslipYear = 2026,
-            lastPayslipMonth = 4,
             payslipPercent = 6.4,
             increaseFactor = SeniorityIncreaseFactor.NONE,
             ratePerYear = 0.005
@@ -93,7 +92,6 @@ class SeniorityRulesTest {
     fun `procenat 8_0 sa 12 16 daje oko 12 efektivnih godina`() {
         val estimate = estimateSeniorityFromPayslipPercent(
             lastPayslipYear = 2026,
-            lastPayslipMonth = 4,
             payslipPercent = 8.0,
             increaseFactor = SeniorityIncreaseFactor.TWELVE_SIXTEEN,
             ratePerYear = 0.005

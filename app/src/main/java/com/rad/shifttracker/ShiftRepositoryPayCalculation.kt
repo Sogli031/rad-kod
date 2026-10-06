@@ -42,10 +42,6 @@ fun ShiftRepository.calculateBasePayFromNet(
     netPay / coefficient
 }
 
-fun ShiftRepository.getCurrentCompBalance(year: Int, month: Int): Int {
-    return getSummary(year, month).compTimeEnding
-}
-
 fun ShiftRepository.calculateDailyPay(record: DayRecord): Double = synchronized(lock) {
     payQueries.calculateDailyPayUnsafe(record)
 }

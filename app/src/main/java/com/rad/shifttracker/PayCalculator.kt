@@ -28,12 +28,10 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         return !record.workedOnHoliday && isCalendarWeekendOvertime(record.weekday, brigadeType)
     }
 
-    @Suppress("UnusedParameter")
     fun getSundayHoursForShift(
         weekday: Weekday,
         shift: Shift,
-        shiftHours: Int,
-        brigadeType: BrigadeType
+        shiftHours: Int
     ): Int {
         if (shiftHours <= 0 || shift == Shift.SICK || shift == Shift.VACATION) return 0
 
@@ -52,9 +50,9 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         return 0
     }
 
-    fun getSundayHours(record: DayRecord, brigadeType: BrigadeType): Int {
+    fun getSundayHours(record: DayRecord): Int {
         return paidWorkSegments(record).sumOf { (shift, hours) ->
-            getSundayHoursForShift(record.weekday, shift, hours, brigadeType)
+            getSundayHoursForShift(record.weekday, shift, hours)
         }
     }
 
@@ -89,10 +87,6 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     fun getFoodAllowanceForAccountingMonth(record: DayRecord, month: MonthKey): Double {
         if (foodAccountingMonth(record.date, record.shift) != month) return 0.0
         return getFoodAllowance(record)
-    }
-
-    fun calculateFoodAllowanceForAccountingMonth(records: List<DayRecord>, month: MonthKey): Double {
-        return records.sumOf { record -> getFoodAllowanceForAccountingMonth(record, month) }
     }
 
     fun getNightHours(record: DayRecord): Int {
@@ -220,7 +214,6 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     shift = shift,
                     minutes = shiftMinutes,
                     baseRate = baseRate,
-                    brigadeType = brigadeType,
                     bonuses = bonuses,
                     sundayBonus = config.sundayBonus
                 )
@@ -262,8 +255,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     weekday = weekday,
                     shift = shift,
                     regularMinutes = regularMinutes,
-                    overtimeMinutes = overtimeMinutes,
-                    brigadeType = brigadeType
+                    overtimeMinutes = overtimeMinutes
                 )
                 var pay = calculatePayForSegmentMinutesWithSunday(
                     minutes = regularMinutes,
@@ -375,8 +367,6 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                 summary.year,
                 summary.month,
                 recordedDays,
-                baseRate,
-                brigadeType,
                 payBases
             )
         } else {
@@ -745,7 +735,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                 summary.workDays += 1
                 summary.overtimeHours += monthlyOvertimeMinutes?.let { it / MINUTES_PER_HOUR }
                     ?: getOvertimeHours(record, brigadeType)
-                summary.sundayHours += getSundayHours(record, brigadeType)
+                summary.sundayHours += getSundayHours(record)
                 summary.nightHours += getNightHours(record)
                 summary.totalPay += calculateDailyPay(
                     record = record,
@@ -771,7 +761,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
 
         // Dodaj platu za neupisane državne praznike samo kada mesec već ima korisnički unos.
         if (records.isNotEmpty()) {
-            summary.totalPay += calculateUnrecordedHolidayPay(year, month, recordedDays, baseRate, brigadeType, payBases)
+            summary.totalPay += calculateUnrecordedHolidayPay(year, month, recordedDays, payBases)
         }
 
         // Net se računa po danu (manjak i iskorišćeni sati istog dana se
@@ -889,7 +879,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     shift = shift,
                     minutes = minutes,
                     isOvertime = true,
-                    sundayMinutes = getSundayMinutesForShift(record.weekday, shift, minutes, brigadeType),
+                    sundayMinutes = getSundayMinutesForShift(record.weekday, shift, minutes),
                     nightMinutes = nightPremiumMinutes(shift, minutes),
                     holidayMinutes = record.holidayPremiumMinutes(shift, minutes)
                 )
@@ -916,8 +906,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                     weekday = record.weekday,
                     shift = shift,
                     regularMinutes = regularMinutes,
-                    overtimeMinutes = overtimeMinutes,
-                    brigadeType = brigadeType
+                    overtimeMinutes = overtimeMinutes
                 )
                 // Noćni pun sat se prvo pripisuje redovnom delu smene, ostatak prekovremenom.
                 val nightMinutes = nightPremiumMinutes(shift, shiftMinutes)
@@ -986,10 +975,6 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         year: Int,
         month: Int,
         recordedDays: Set<Int>,
-        @Suppress("UnusedParameter")
-        baseRate: Double,
-        @Suppress("UnusedParameter")
-        brigadeType: BrigadeType = BrigadeType.TROBRIGADA,
         payBases: ResolvedPayBases = defaultPayBases()
     ): Double {
         val daysInMonth = YearMonth.of(year, month).lengthOfMonth()

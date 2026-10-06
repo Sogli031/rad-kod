@@ -76,9 +76,6 @@ internal fun ShiftRepository.calculateKnownStartYearsOfServiceUnsafe(year: Int, 
     ).fullAccountingYears
 }
 
-val ShiftRepository.yearsOfServiceValue: Int
-    get() = synchronized(lock) { calculateYearsOfServiceUnsafe() }
-
 /** Staž 0 god. je ispravan za novog radnika; upozorava se samo kad početak uopšte nije unet. */
 val ShiftRepository.isSeniorityConfiguredValue: Boolean
     get() = synchronized(lock) {

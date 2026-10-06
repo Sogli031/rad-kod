@@ -66,7 +66,7 @@ internal fun workVector(date: LocalDate, shift: Shift, hours: Int, holidayOverri
     val minutes = record.paidWorkMinutes
     val total = minutes / MINUTES
     val night = nightPremiumMinutes(shift, minutes) / MINUTES
-    val sunday = getSundayMinutesForShift(record.weekday, shift, minutes, BrigadeType.TROBRIGADA) / MINUTES
+    val sunday = getSundayMinutesForShift(record.weekday, shift, minutes) / MINUTES
     val premium = record.holidayPremiumMinutes(shift, minutes) / MINUTES
     if (record.weekday.isWeekend && !record.workedOnHoliday) {
         return HoursVec(premium = premium, night = night, sunday = sunday, overtime = total)

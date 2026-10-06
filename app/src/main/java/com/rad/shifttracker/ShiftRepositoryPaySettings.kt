@@ -400,10 +400,6 @@ fun ShiftRepository.setMonthlyActualFoodSpentNet(year: Int, month: Int, amount: 
     notifyChange()
 }
 
-fun ShiftRepository.setMonthlyActualFoodSpentNetDecimal(year: Int, month: Int, amount: BigDecimal?) {
-    setMonthlyActualFoodSpentNet(year, month, amount?.toMealMoney()?.toDouble())
-}
-
 internal fun ShiftRepository.setMonthlyMealEntitlementNetOverride(year: Int, month: Int, amount: BigDecimal?) {
     if (year <= 0 || month !in 1..12 || amount?.signum() == -1) return
     synchronized(lock) {

@@ -156,49 +156,6 @@ class ShiftScheduler(
         }
     }
 
-    fun populateMonth(repo: ShiftRepository, year: Int, month: Int, startShift: Shift): Int {
-        val firstWorkday = (1..LocalDate.of(year, month, 1).lengthOfMonth()).firstOrNull { day ->
-            LocalDate.of(year, month, day).dayOfWeek.value <= DayOfWeek.FRIDAY.value
-        } ?: return 0
-
-        val records = mutableListOf<BatchRecord>()
-        val referenceDate = LocalDate.of(year, month, firstWorkday)
-
-        for (day in 1..LocalDate.of(year, month, 1).lengthOfMonth()) {
-            val target = LocalDate.of(year, month, day)
-            val shift = getShiftForDate(target, referenceDate, startShift)
-            if (shift != null) {
-                records.add(BatchRecord(year, month, day, shift, defaultHours, source = DayRecordSource.AUTO_FILL))
-            }
-        }
-
-        repo.setBatch(records)
-        return records.size
-    }
-
-    fun populateYear(repo: ShiftRepository, year: Int, startShift: Shift): Int {
-        val firstWorkday = (1..7).firstOrNull { day ->
-            LocalDate.of(year, 1, day).dayOfWeek.value <= DayOfWeek.FRIDAY.value
-        } ?: return 0
-
-        val records = mutableListOf<BatchRecord>()
-        val referenceDate = LocalDate.of(year, 1, firstWorkday)
-
-        for (month in 1..12) {
-            val daysInMonth = LocalDate.of(year, month, 1).lengthOfMonth()
-            for (day in 1..daysInMonth) {
-                val target = LocalDate.of(year, month, day)
-                val shift = getShiftForDate(target, referenceDate, startShift)
-                if (shift != null) {
-                    records.add(BatchRecord(year, month, day, shift, defaultHours, source = DayRecordSource.AUTO_FILL))
-                }
-            }
-        }
-
-        repo.setBatch(records)
-        return records.size
-    }
-
     fun populateMonthsAhead(
         repo: ShiftRepository,
         referenceDate: LocalDate,

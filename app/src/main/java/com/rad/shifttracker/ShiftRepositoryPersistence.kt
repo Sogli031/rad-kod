@@ -470,7 +470,3 @@ fun ShiftRepository.loadFromLocal(context: Context): Boolean {
     }
     return imported
 }
-
-fun ShiftRepository.hasLocalData(context: Context): Boolean {
-    return localStorage.hasData(context)
-}

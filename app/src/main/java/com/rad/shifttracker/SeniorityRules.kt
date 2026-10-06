@@ -70,7 +70,6 @@ fun calculateKnownStartSeniorityPreview(
 
 fun estimateSeniorityFromPayslipPercent(
     lastPayslipYear: Int,
-    @Suppress("UNUSED_PARAMETER") lastPayslipMonth: Int,
     payslipPercent: Double,
     increaseFactor: SeniorityIncreaseFactor,
     ratePerYear: Double
@@ -104,7 +103,6 @@ internal fun calculatePayslipAnchoredSeniorityYears(
     if (lastPayslipYear <= 0) return 0
     val estimate = estimateSeniorityFromPayslipPercent(
         lastPayslipYear = lastPayslipYear,
-        lastPayslipMonth = lastPayslipMonth,
         payslipPercent = payslipPercent,
         increaseFactor = increaseFactor,
         ratePerYear = ratePerYear

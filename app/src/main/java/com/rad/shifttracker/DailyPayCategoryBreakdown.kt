@@ -124,7 +124,7 @@ internal class DailyPayCategoryBreakdownCalculator(
     ): DailyPayCategoryBreakdown {
         val paidWorkMinutes = paidWorkMinutes(record)
         val overtimeMinutes = overtimeMinutes(record, brigadeType, monthlyOvertimeMinutes, paidWorkMinutes)
-        val sundayMinutes = sundayWorkMinutes(record, brigadeType)
+        val sundayMinutes = sundayWorkMinutes(record)
         val nightMinutes = nightWorkMinutes(record)
         val holidayWorkMinutes = paidWorkMinuteSegments(record).sumOf { (shift, minutes) ->
             record.holidayPremiumMinutes(shift, minutes)
