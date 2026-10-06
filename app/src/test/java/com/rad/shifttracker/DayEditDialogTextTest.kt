@@ -233,7 +233,7 @@ class DayEditDialogTextTest {
             source.indexOf("Shift.SICK -> "),
             source.indexOf("Shift.VACATION -> DayEditVacationControls(")
         )
-        val sickControls = functionSource(source, "private fun DayEditSickControls(")
+        val sickControls = functionSource(source, "fun DayEditSickControls(")
 
         assertEquals(false, sickBranch.contains("HoursPickerState("))
         assertEquals(false, sickBranch.contains("onHoursClick"))
@@ -252,7 +252,7 @@ class DayEditDialogTextTest {
             source.indexOf("Shift.VACATION -> DayEditVacationControls("),
             source.indexOf("Shift.OFF -> DayEditOffControls()")
         )
-        val vacationControls = functionSource(source, "private fun DayEditVacationControls(")
+        val vacationControls = functionSource(source, "fun DayEditVacationControls(")
 
         assertEquals(false, vacationBranch.contains("HoursPickerState("))
         assertEquals(false, vacationBranch.contains("onHoursClick"))
@@ -265,7 +265,7 @@ class DayEditDialogTextTest {
     @Test
     fun dayEditSaveButtonUsesVacationValidationAsEnabledState() {
         val source = dayEditDialogSource()
-        val saveButton = functionSource(source, "private fun DayEditSaveButton(")
+        val saveButton = functionSource(source, "fun DayEditSaveButton(")
 
         assertEquals(true, saveButton.contains("val isSaveEnabled = saveState.shift1 != Shift.VACATION || vacationValidation.isAllowed"))
         assertEquals(true, saveButton.contains("enabled = isSaveEnabled"))
@@ -342,7 +342,8 @@ class DayEditDialogTextTest {
         val source = dayEditDialogSource()
 
         assertEquals(true, source.contains("repo.validateVacationRequest(listOf(dayDate))"))
-        assertEquals(true, source.contains("warningMessage = vacationValidation.message"))
+        assertEquals(true, source.contains("vacationWarning = vacationValidation.message"))
+        assertEquals(true, source.contains("warningMessage = vacationWarning"))
         assertEquals(true, source.contains("saveState.shift1 == Shift.VACATION && !vacationValidation.isAllowed"))
     }
 
@@ -353,14 +354,14 @@ class DayEditDialogTextTest {
         val lockIndex = source.indexOf("isDayEditLockedByBloodDonation(record)")
         val lockedDialogIndex = source.indexOf("BloodDonationLockedDayDialog(")
         val lockReturnIndex = source.indexOf("return", lockedDialogIndex)
-        val autoHolidayIndex = source.indexOf("val autoHoliday")
+        val formIndex = source.indexOf("rememberDayEditForm(")
         val statusIndex = source.indexOf("DayEditStatusHeader(")
         val normalPopupIndex = source.indexOf("PopupDialog(")
 
         assertEquals(true, lockIndex >= 0)
         assertEquals(true, lockedDialogIndex > lockIndex)
         assertEquals(true, lockReturnIndex > lockedDialogIndex)
-        assertEquals(true, autoHolidayIndex > lockReturnIndex)
+        assertEquals(true, formIndex > lockReturnIndex)
         assertEquals(true, statusIndex > lockedDialogIndex)
         assertEquals(true, lockedDialogIndex < normalPopupIndex)
         assertEquals(true, fullSource.contains("Poništi dane"))
@@ -370,7 +371,7 @@ class DayEditDialogTextTest {
     fun dayEditDialogUsesVisualSectionHelpersAndKeepsBloodDonationLockFirst() {
         val source = dayEditDialogSource()
 
-        assertEquals(true, source.contains("private fun DayEditSectionCard("))
+        assertEquals(true, source.contains("fun DayEditSectionCard("))
         assertEquals(true, source.contains("internal fun DayEditChoiceHeader("))
         assertEquals(true, source.contains("DayEditSectionCard("))
         assertEquals(true, source.contains("DayEditChoiceHeader("))
@@ -549,15 +550,15 @@ class DayEditDialogTextTest {
     }
 }
 
+/** Dijalog za dan je podeljen na sam dijalog, kontrole i stanje forme; provere gledaju sva tri fajla. */
 private fun dayEditDialogSource(): String {
-    return listOf(
-        File("src/main/java/com/rad/shifttracker/DayEditDialog.kt"),
-        File("app/src/main/java/com/rad/shifttracker/DayEditDialog.kt")
-    ).first { it.isFile }.readText()
+    return listOf("DayEditDialog.kt", "DayEditControls.kt", "DayEditForm.kt").joinToString("\n") { appSource(it) }
 }
 
+/** Tok dijaloga: sam dijalog i kontrole izabranog tipa dana (DayEditShiftControls). */
 private fun dayEditDialogBodySource(): String {
-    return functionSource(dayEditDialogSource(), "fun DayEditDialog(")
+    val source = dayEditDialogSource()
+    return functionSource(source, "fun DayEditDialog(") + "\n" + functionSource(source, "fun DayEditShiftControls(")
 }
 
 private fun popupDialogSource(): String {
