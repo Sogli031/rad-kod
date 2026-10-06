@@ -8,8 +8,8 @@ import android.util.Log
 import com.google.android.gms.auth.GoogleAuthException
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.Scope
+import com.rad.shifttracker.data.backup.legacySignedInAccount
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -49,15 +49,14 @@ private const val GMAIL_PREFS_NAME = "rad_gmail_payslip_prefs"
 private const val KEY_GMAIL_ACCOUNT = "account_email"
 
 /**
- * Nalog iz kog se čitaju listići. Bira se posebno od backup naloga (GoogleSignIn se ne dira,
- * pa backup ostaje na svom nalogu); dok se ne izabere, koristi se backup nalog ako ima Gmail dozvolu.
+ * Nalog iz kog se čitaju listići. Bira se posebno od backup naloga, pa backup ostaje na svom
+ * nalogu; dok se ne izabere, koristi se nalog iz stare GoogleSignIn prijave ako ima Gmail dozvolu.
  */
 internal fun gmailPayslipAccount(context: Context): Account? {
     val saved = context.getSharedPreferences(GMAIL_PREFS_NAME, Context.MODE_PRIVATE)
         .getString(KEY_GMAIL_ACCOUNT, null)
     if (!saved.isNullOrBlank()) return Account(saved, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)
-    val backup = GoogleSignIn.getLastSignedInAccount(context) ?: return null
-    return backup.account?.takeIf { GoogleSignIn.hasPermissions(backup, GMAIL_SCOPE) }
+    return legacySignedInAccount(context, GMAIL_SCOPE)
 }
 
 fun hasGmailPayslipAccess(context: Context): Boolean = gmailPayslipAccount(context) != null

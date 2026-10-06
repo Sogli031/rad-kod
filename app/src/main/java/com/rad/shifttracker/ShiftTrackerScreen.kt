@@ -56,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.rad.shifttracker.data.backup.BackupOutcome
 import com.rad.shifttracker.data.backup.BackupScheduler
 import com.rad.shifttracker.data.backup.BackupVersion
@@ -231,21 +230,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     // Backup u oblaku koji ovaj uređaj još nije preuzeo (nova instalacija): čim se
     // korisnik prijavi, ponudi Restore umesto da sveže stanje ode preko njega.
     val cloudBackupFound = remember { mutableStateOf<BackupVersion?>(null) }
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-        val account = try {
-            task.result
-        } catch (e: Exception) {
-            showMessage("Prijava neuspešna: ${e.message}")
-            null
-        }
-        backup.handleSignInResult(account)
-        if (account != null) {
-            showMessage("Prijava uspešna!")
-        }
-    }
+    val startSignIn = rememberDriveBackupSignIn(backup, showMessage)
     val bloodDonationNotificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -508,7 +493,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             signInState = signInState,
             syncState = syncState,
             lastSyncTime = lastSyncTime,
-            onSignIn = { signInLauncher.launch(backup.getSignInIntent()) },
+            onSignIn = startSignIn,
             onBackup = {
                 scope.launch {
                     val outcome = backupUnlessCloudUnadopted(backup, repo) { cloudBackupFound.value = it }

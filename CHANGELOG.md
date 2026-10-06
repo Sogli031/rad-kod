@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.6] - 2026-10-06
+- **Prijava za cloud backup preko novog Google API-ja:** zastareli GoogleSignIn zamenjen je sa AuthorizationClient (Google Identity Services). Prijava sada prvo otvara sistemski izbor naloga, pa Google dozvolu za Drive (isto kao povezivanje Gmail-a). Nalog pamti aplikacija (`rad_backup_prefs`: `account_email`). Ko je već prijavljen ostaje prijavljen: nalog se jednom preuzima iz stare prijave, a posle odjave više ne. Ako Google povuče dozvolu, korisnik se odjavljuje i treba ponovo da se prijavi.
+
 ## [6.5] - 2026-10-06
 - **Kopiranje crash loga preko novog Compose API-ja:** zastareli `LocalClipboardManager` zamenjen sa `LocalClipboard`. Dugme „Kopiraj crash log“ radi isto kao ranije.
 - **Verzija u crash logu** se čita iz `BuildConfig` umesto preko zastarelog `getPackageInfo`. Upis je isti: „6.5 (53)“.
