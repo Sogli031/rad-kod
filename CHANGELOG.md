@@ -3,6 +3,13 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.0] - 2026-10-07
+Unutrašnje sređivanje koda, bez promene obračuna i izgleda (svi testovi i snimci ekrana isti, pokrivenost testovima 95,8%). Uključuje i 6.9, koja nije objavljena posebno.
+- **Veliki fajlovi podeljeni:** obračun plate (`PayCalculator`), čuvanje podataka u JSON (`ShiftRepositoryJsonCodec`), prozor za dan, glavni ekran i uvoz listića iz Gmail-a su podeljeni na manje celine. Format backup-a je isti bajt po bajt.
+- **Bez ugašenih upozorenja:** svih 28 mesta gde je provera koda (detekt) bila ugašena za predugačke ili presložene funkcije i prevelike fajlove je sređeno; nova pravila (prelazi u prozoru za dan, unos dana odsustva i meseci za popunu, ključevi otvorenog prozora) imaju svoje testove.
+- **Kod po paketima:** `smene`, `obracun`, `listici`, `godisnji`, `krv`, `repo`, `ui`, `ui.dialozi`. Klase koje telefon pamti po imenu (aplikacija, glavni ekran, podsetnik za krv, provera obračuna u pozadini) su ostale gde su bile, pa zakazani podsetnici i provere rade i posle nadogradnje.
+- **Novi Baseline Profile** (brži start) napravljen na emulatoru za nov raspored koda.
+
 ## [6.9] - 2026-10-06
 - **Čišćenje mrtvog koda (bez promene ponašanja):** obrisane funkcije i konstante koje se nigde ne pozivaju (provereno Kotlin LSP-om i grep-om, uključujući manifest, XML, proguard i baseline profil): `ShiftScheduler.populateMonth`/`populateYear`, `calculateFoodAllowanceForAccountingMonth`, `getCurrentCompBalance`, `setMonthlyActualFoodSpentNetDecimal`, `hasLocalData`, `yearsOfServiceValue`, `canDisplayMealUnused`, `fillDayText` i `weekdayShortText` (ostatak pregleda pre upisa u „Popuni iz liste“), `payslipDisplayName`, nekorišćeni tekstovi i UI konstante, `Spacing.xxl` i 6 nekorišćenih naglašenih stilova teksta. Iz baseline profila izbačeno 15 pravila za stari GoogleSignIn.
 - **Neiskorišćeni parametri:** `brigadeType` izbačen iz računanja nedeljnih sati/minuta (pravilo je isto za tro- i četvorobrigadu), `baseRate` i `brigadeType` iz plaćanja neupisanih praznika (plaća se po osnovici za praznik), `lastPayslipMonth` iz procene staža po procentu sa listića. Ugašena upozorenja `UnusedParameter` su uklonjena. @Deprecated polja za stare backup-ove su ostala.
