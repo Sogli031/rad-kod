@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.8] - 2026-10-06
+- **Bez starog GoogleSignIn-a:** `play-services-auth` 22.0.0 (Google je u njoj uklonio GoogleSignIn). Uklonjeno je jednokratno preuzimanje naloga iz stare prijave (iz 6.6), pa ko nije prijavljen preko nove prijave treba ponovo da se prijavi. Nalog za backup je samo `account_email` u `rad_backup_prefs`; Gmail za listiće koristi samo nalog izabran u aplikaciji.
+- **Ponuda „Prijavi se ponovo za Google backup“:** pri pokretanju, ko je ranije imao backup (`last_sync_time` > 0), a sada nije prijavljen, dobija prozor sa dugmetom „Prijavi se“ (izbor naloga, pa Drive dozvola) i „Kasnije“ (do sledećeg pokretanja). Ne prikazuje se pri prvom pokretanju ni onima koji nikad nisu imali backup.
+
 ## [6.7] - 2026-10-06
 - **Novi alati za build:** Android Gradle Plugin 9.4.1, Kotlin 2.4.20, Gradle 9.6.1, compileSdk 37 (targetSdk ostaje 36). AGP sada sam prevodi Kotlin (`kotlin-android` plugin uklonjen). APK je manji (5,1 → ~4,4 MB) jer R8 uklanja neiskorišćene resurse biblioteka.
 - **Nadograđene biblioteke:** Compose BOM 2026.09.00, core 1.19.1, lifecycle 2.11.0, adaptive 1.3.0, activity 1.13.0, work 2.12.0, material 1.14.0, coroutines 1.11.0; za testove i proveru detekt 1.23.8, kover 0.9.11, roborazzi 1.76.0, mockk 1.14.11, robolectric 4.17, benchmark 1.5.0, uiautomator 2.4.0. Izgled i obračun su isti (svi snimci ekrana nepromenjeni).

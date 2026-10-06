@@ -231,6 +231,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     // korisnik prijavi, ponudi Restore umesto da sveže stanje ode preko njega.
     val cloudBackupFound = remember { mutableStateOf<BackupVersion?>(null) }
     val startSignIn = rememberDriveBackupSignIn(backup, showMessage)
+    // Prvo pokretanje se čita jednom: ko tek završi uvod, ne dobija odmah i ponudu za prijavu.
+    val firstLaunchAtStart = rememberSaveable { backup.isFirstLaunch() }
     val bloodDonationNotificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -567,6 +569,16 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         backup = backup,
         repo = repo,
         showMessage = showMessage
+    )
+
+    // Imao backup, a nije prijavljen (npr. posle prelaska na novu Google prijavu): ponudi prijavu.
+    BackupSignInPromptHost(
+        lastSyncTime = lastSyncTime,
+        signedIn = signInState is SignInState.SignedIn,
+        firstLaunch = firstLaunchAtStart,
+        otherDialogOpen = dialogState != DialogState.None || sideRunMessages.isNotEmpty() ||
+            showBackupVersionsDialog || showRestoreLatestConfirm || cloudBackupFound.value != null,
+        onSignIn = startSignIn
     )
 }
 

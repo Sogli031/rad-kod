@@ -33,7 +33,6 @@ private const val KEY_FIRST_LAUNCH_DONE = "first_launch_done"
 private const val KEY_LAST_SYNC_TIME = "last_sync_time"
 private const val KEY_CLOUD_ADOPTED = "cloud_adopted"
 private const val KEY_ACCOUNT_EMAIL = "account_email"
-private const val KEY_LEGACY_SIGN_IN_CHECKED = "legacy_sign_in_checked"
 private const val NETWORK_TIMEOUT_MS = 30_000L
 private val DRIVE_SCOPE = Scope(DriveScopes.DRIVE_APPDATA)
 
@@ -71,18 +70,8 @@ class GoogleDriveBackup(private val context: Context) {
             _lastSyncTime.value = savedTime
         }
 
-        // Nalog pamti aplikacija (AuthorizationClient ga ne pamti); jednom se preuzme iz GoogleSignIn-a.
-        val resolution = resolveDriveAccount(
-            savedEmail = prefs.getString(KEY_ACCOUNT_EMAIL, null),
-            legacyChecked = prefs.getBoolean(KEY_LEGACY_SIGN_IN_CHECKED, false)
-        ) { legacySignedInAccount(context, DRIVE_SCOPE)?.name }
-        if (resolution.persist) {
-            prefs.edit()
-                .putString(KEY_ACCOUNT_EMAIL, resolution.email)
-                .putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true)
-                .apply()
-        }
-        resolution.email?.let { email ->
+        // Nalog pamti aplikacija (AuthorizationClient ga ne pamti); bez sačuvanog naloga nema prijave.
+        savedAccountEmail()?.let { email ->
             _signInState.value = SignInState.SignedIn(email)
             initDriveService(googleAccount(email))
         }
@@ -132,17 +121,14 @@ class GoogleDriveBackup(private val context: Context) {
 
     /** Završava prijavu kad nalog [email] ima Drive dozvolu. */
     fun completeSignIn(email: String) {
-        prefs.edit()
-            .putString(KEY_ACCOUNT_EMAIL, email)
-            .putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true)
-            .apply()
+        prefs.edit().putString(KEY_ACCOUNT_EMAIL, email).apply()
         _signInState.value = SignInState.SignedIn(email)
         initDriveService(googleAccount(email))
         Log.d(TAG, "Signed in successfully")
     }
 
     private fun forgetAccount() {
-        prefs.edit().remove(KEY_ACCOUNT_EMAIL).putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true).apply()
+        prefs.edit().remove(KEY_ACCOUNT_EMAIL).apply()
         _signInState.value = SignInState.SignedOut
         driveService = null
     }

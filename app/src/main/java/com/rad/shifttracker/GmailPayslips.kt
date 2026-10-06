@@ -8,8 +8,6 @@ import android.util.Log
 import com.google.android.gms.auth.GoogleAuthException
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
-import com.google.android.gms.common.api.Scope
-import com.rad.shifttracker.data.backup.legacySignedInAccount
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -42,7 +40,6 @@ private const val MAX_GMAIL_ATTACHMENT_BYTES = 1024 * 1024
 /** Listić za mesec stiže narednih meseci (ispravke rb.2, rb.3...), pa se gleda prozor od 3 meseca. */
 private const val GMAIL_SEARCH_MONTHS = 3L
 
-private val GMAIL_SCOPE = Scope(GmailScopes.GMAIL_READONLY)
 private const val GMAIL_TOKEN_SCOPE = "oauth2:${GmailScopes.GMAIL_READONLY}"
 
 private const val GMAIL_PREFS_NAME = "rad_gmail_payslip_prefs"
@@ -50,13 +47,12 @@ private const val KEY_GMAIL_ACCOUNT = "account_email"
 
 /**
  * Nalog iz kog se čitaju listići. Bira se posebno od backup naloga, pa backup ostaje na svom
- * nalogu; dok se ne izabere, koristi se nalog iz stare GoogleSignIn prijave ako ima Gmail dozvolu.
+ * nalogu; dok se ne izabere, nema naloga (null).
  */
 internal fun gmailPayslipAccount(context: Context): Account? {
     val saved = context.getSharedPreferences(GMAIL_PREFS_NAME, Context.MODE_PRIVATE)
         .getString(KEY_GMAIL_ACCOUNT, null)
-    if (!saved.isNullOrBlank()) return Account(saved, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)
-    return legacySignedInAccount(context, GMAIL_SCOPE)
+    return saved?.takeIf { it.isNotBlank() }?.let { Account(it, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE) }
 }
 
 fun hasGmailPayslipAccess(context: Context): Boolean = gmailPayslipAccount(context) != null
