@@ -24,18 +24,20 @@ internal const val BACKUP_SIGN_IN_PROMPT_LATER = "Kasnije"
 
 /**
  * Da li pri pokretanju ponuditi ponovnu prijavu za backup: korisnik je ranije imao backup
- * ([lastSyncTime] > 0), a sada nije prijavljen. Ne prikazuje se pri prvom pokretanju (uvod),
+ * ([lastSyncTime] > 0), a sada nije prijavljen. Ne prikazuje se ako se sam odjavio ([signedOutByUser]),
+ * pri prvom pokretanju (uvod),
  * posle „Kasnije“ ([dismissed], do sledećeg pokretanja) ni preko drugog otvorenog prozora.
  */
 internal fun shouldShowBackupSignInPrompt(
     lastSyncTime: Long?,
     signedIn: Boolean,
+    signedOutByUser: Boolean,
     firstLaunch: Boolean,
     dismissed: Boolean,
     otherDialogOpen: Boolean
 ): Boolean {
     val hadBackup = (lastSyncTime ?: 0L) > 0L
-    return hadBackup && !signedIn && !firstLaunch && !dismissed && !otherDialogOpen
+    return hadBackup && !signedIn && !signedOutByUser && !firstLaunch && !dismissed && !otherDialogOpen
 }
 
 /**
@@ -46,13 +48,14 @@ internal fun shouldShowBackupSignInPrompt(
 internal fun BackupSignInPromptHost(
     lastSyncTime: Long?,
     signedIn: Boolean,
+    signedOutByUser: Boolean,
     firstLaunch: Boolean,
     otherDialogOpen: Boolean,
     onSignIn: () -> Unit
 ) {
     // Važi samo za ovo pokretanje (preživi okretanje telefona); sledeće pokretanje ponovo pita.
     var dismissed by rememberSaveable { mutableStateOf(false) }
-    if (!shouldShowBackupSignInPrompt(lastSyncTime, signedIn, firstLaunch, dismissed, otherDialogOpen)) return
+    if (!shouldShowBackupSignInPrompt(lastSyncTime, signedIn, signedOutByUser, firstLaunch, dismissed, otherDialogOpen)) return
     BackupSignInPromptDialog(
         onSignIn = {
             // Neuspela ili otkazana prijava ne otvara prozor odmah ponovo; ostaje „Poveži Google“ u Opcijama.

@@ -575,6 +575,8 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     BackupSignInPromptHost(
         lastSyncTime = lastSyncTime,
         signedIn = signInState is SignInState.SignedIn,
+        // Čita se pri svakoj promeni stanja prijave (signInState), pa odjava odmah važi.
+        signedOutByUser = backup.isSignedOutByUser(),
         firstLaunch = firstLaunchAtStart,
         otherDialogOpen = dialogState != DialogState.None || sideRunMessages.isNotEmpty() ||
             showBackupVersionsDialog || showRestoreLatestConfirm || cloudBackupFound.value != null,

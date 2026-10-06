@@ -33,6 +33,7 @@ private const val KEY_FIRST_LAUNCH_DONE = "first_launch_done"
 private const val KEY_LAST_SYNC_TIME = "last_sync_time"
 private const val KEY_CLOUD_ADOPTED = "cloud_adopted"
 private const val KEY_ACCOUNT_EMAIL = "account_email"
+private const val KEY_SIGNED_OUT_BY_USER = "signed_out_by_user"
 private const val NETWORK_TIMEOUT_MS = 30_000L
 private val DRIVE_SCOPE = Scope(DriveScopes.DRIVE_APPDATA)
 
@@ -121,7 +122,7 @@ class GoogleDriveBackup(private val context: Context) {
 
     /** Završava prijavu kad nalog [email] ima Drive dozvolu. */
     fun completeSignIn(email: String) {
-        prefs.edit().putString(KEY_ACCOUNT_EMAIL, email).apply()
+        prefs.edit().putString(KEY_ACCOUNT_EMAIL, email).remove(KEY_SIGNED_OUT_BY_USER).apply()
         _signInState.value = SignInState.SignedIn(email)
         initDriveService(googleAccount(email))
         Log.d(TAG, "Signed in successfully")
@@ -185,6 +186,8 @@ class GoogleDriveBackup(private val context: Context) {
     suspend fun signOut() {
         // Wait for any ongoing sync operations to complete
         syncMutex.withLock {
+            // Upisuje se pre promene stanja, da ponuda za ponovnu prijavu ne iskoči odmah posle odjave.
+            prefs.edit().putBoolean(KEY_SIGNED_OUT_BY_USER, true).apply()
             forgetAccount()
             Log.d(TAG, "Signed out")
         }
@@ -207,6 +210,9 @@ class GoogleDriveBackup(private val context: Context) {
     }
 
     fun isSignedIn(): Boolean = _signInState.value is SignInState.SignedIn
+
+    /** true ako se korisnik sam odjavio (Opcije); tada se ponovna prijava ne nudi. */
+    fun isSignedOutByUser(): Boolean = prefs.getBoolean(KEY_SIGNED_OUT_BY_USER, false)
 
     fun isFirstLaunch(): Boolean {
         return !prefs.getBoolean(KEY_FIRST_LAUNCH_DONE, false)

@@ -23,10 +23,11 @@ class BackupSignInPromptTest {
     private fun show(
         lastSyncTime: Long? = 1_700_000_000_000L,
         signedIn: Boolean = false,
+        signedOutByUser: Boolean = false,
         firstLaunch: Boolean = false,
         dismissed: Boolean = false,
         otherDialogOpen: Boolean = false
-    ) = shouldShowBackupSignInPrompt(lastSyncTime, signedIn, firstLaunch, dismissed, otherDialogOpen)
+    ) = shouldShowBackupSignInPrompt(lastSyncTime, signedIn, signedOutByUser, firstLaunch, dismissed, otherDialogOpen)
 
     @Test
     fun `imao backup a nije prijavljen dobija ponudu`() {
@@ -42,6 +43,11 @@ class BackupSignInPromptTest {
     @Test
     fun `prijavljen korisnik ne dobija ponudu`() {
         assertFalse(show(signedIn = true))
+    }
+
+    @Test
+    fun `ko se sam odjavio ne dobija ponudu`() {
+        assertFalse(show(signedOutByUser = true))
     }
 
     @Test
@@ -84,6 +90,7 @@ class BackupSignInPromptTest {
                 BackupSignInPromptHost(
                     lastSyncTime = 1L,
                     signedIn = false,
+                    signedOutByUser = false,
                     firstLaunch = false,
                     otherDialogOpen = false,
                     onSignIn = { signIn++ }
@@ -104,6 +111,7 @@ class BackupSignInPromptTest {
                 BackupSignInPromptHost(
                     lastSyncTime = 1L,
                     signedIn = false,
+                    signedOutByUser = false,
                     firstLaunch = false,
                     otherDialogOpen = false,
                     onSignIn = { signIn++ }
