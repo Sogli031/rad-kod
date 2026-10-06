@@ -41,7 +41,7 @@ object CrashLogStorage {
         val logText = CrashLogFormatter.format(
             appName = appName,
             packageName = context.packageName,
-            appVersion = appVersion(context),
+            appVersion = appVersion(),
             androidVersion = Build.VERSION.RELEASE
                 .takeIf { it.isNotBlank() }
                 ?: Build.VERSION.SDK_INT.toString(),
@@ -67,12 +67,7 @@ object CrashLogStorage {
         file.writeText(kept.joinToString(ENTRY_SEPARATOR), Charsets.UTF_8)
     }
 
-    @Suppress("DEPRECATION")
-    private fun appVersion(context: Context): String = runCatching {
-        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else info.versionCode.toLong()
-        "${info.versionName} ($code)"
-    }.getOrDefault("nepoznata")
+    private fun appVersion(): String = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 }
 
 /** Poslednji ekran/dijalog koji je korisnik otvorio; ulazi u crash log da se zna gde je pukla aplikacija. */

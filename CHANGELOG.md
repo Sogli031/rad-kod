@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [6.5] - 2026-10-06
+- **Kopiranje crash loga preko novog Compose API-ja:** zastareli `LocalClipboardManager` zamenjen sa `LocalClipboard`. Dugme „Kopiraj crash log“ radi isto kao ranije.
+- **Verzija u crash logu** se čita iz `BuildConfig` umesto preko zastarelog `getPackageInfo`. Upis je isti: „6.5 (53)“.
+
 ## [6.4] - 2026-10-06
 - **Glavni ekran bez minulog rada:** ispod kalendara su tri stavke (Sati rada, Prekovremeno, Hrana), pa se prekovremeno vidi ceo naziv. Minuli rad se i dalje računa sa liste i vidi u „Sati rada“.
 - **„Sati rada“ jasniji:** iznos pored običnih sati je zelen; uklonjen red „Izostanci po fondu (lista)“ (bio je bez iznosa); umesto „Odbici“ piše šta je skinuto — „Odbitak – topli obrok“ i, ako postoje, „Obustave (sindikat, fond)“.

@@ -1,5 +1,6 @@
 package com.rad.shifttracker
 
+import android.content.ClipData
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -20,17 +21,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.launch
 
 @Composable
 fun CrashLogScreen(crashLog: String) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
 
     Box(
@@ -58,8 +62,10 @@ fun CrashLogScreen(crashLog: String) {
 
             Button(
                 onClick = {
-                    clipboardManager.setText(AnnotatedString(crashLog))
-                    copied = true
+                    scope.launch {
+                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("crash log", crashLog)))
+                        copied = true
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (copied) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.error
