@@ -6,6 +6,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.DIFFICULT_WORK_CONDITIONS_CODE
+import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.applyPayslipChanges
+import com.rad.shifttracker.listici.buildPayslipImportPlan
+import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.payslipFromJsonOrNull
+import com.rad.shifttracker.listici.payslipToJson
+import com.rad.shifttracker.listici.unknownHourItems
+import com.rad.shifttracker.repo.difficultWorkConditionsPercentValue
+import com.rad.shifttracker.repo.getAnnualLeaveEntitlement
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillMode
+import com.rad.shifttracker.smene.ShiftFillSettings
+import com.rad.shifttracker.smene.ShiftScheduler
 
 /** Listić livnice (četvorobrigada) 08/2026 skraćen na redove koje parser koristi; bez imena, JMBG-a i računa. */
 private val FOUNDRY_AUGUST_2026 = """

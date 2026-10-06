@@ -1,10 +1,10 @@
 package com.rad.shifttracker.data.repository
 
 import com.rad.shifttracker.AppConfig
-import com.rad.shifttracker.BatchRecord
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.Shift
+import com.rad.shifttracker.repo.BatchRecord
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 
 internal data class DeleteMonthOutcome(
     val recordsDeletedCount: Int,

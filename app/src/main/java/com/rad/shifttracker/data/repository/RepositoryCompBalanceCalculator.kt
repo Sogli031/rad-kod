@@ -1,8 +1,8 @@
 package com.rad.shifttracker.data.repository
 
 import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.shortageMinutesCoveredByExtraWork
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.shortageMinutesCoveredByExtraWork
 
 private const val MINUTES_PER_HOUR = 60
 

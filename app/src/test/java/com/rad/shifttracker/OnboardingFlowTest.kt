@@ -3,13 +3,14 @@ package com.rad.shifttracker
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.repo.getLatestSavedPayslipMonth
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.getNetPayBreakdown
+import com.rad.shifttracker.repo.payCoefficientValue
 
 class OnboardingFlowTest {
 
-    private fun source(name: String): String = listOf(
-        java.io.File("src/main/java/com/rad/shifttracker/$name"),
-        java.io.File("app/src/main/java/com/rad/shifttracker/$name")
-    ).first { it.exists() }.readText()
+    private fun source(name: String): String = mainSource(name)
 
     @Test
     fun `first launch opens auto fill and then gmail`() {

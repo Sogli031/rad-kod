@@ -2,13 +2,13 @@ package com.rad.shifttracker.data.storage
 
 import android.util.Log
 import com.rad.shifttracker.AppConfig
-import com.rad.shifttracker.BrigadeType
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.PayBaseSelectionMode
-import com.rad.shifttracker.SeniorityIncreaseFactor
-import com.rad.shifttracker.SeniorityInputMode
-import com.rad.shifttracker.coefficientFromLegacyGrossHourlyRate
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
+import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.obracun.coefficientFromLegacyGrossHourlyRate
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Clock
@@ -16,6 +16,11 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 import java.util.TreeMap
+import com.rad.shifttracker.repo.bloodDonationCount
+import com.rad.shifttracker.repo.bloodDonationHistory
+import com.rad.shifttracker.repo.lastBloodDonationDate
+import com.rad.shifttracker.repo.mainPaySalaryOnly
+import com.rad.shifttracker.repo.notificationAccessPromptSuppressed
 
 private const val TAG = "ShiftRepositoryJsonCodec"
 

@@ -14,6 +14,18 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.getMonthlyReceipt
+import com.rad.shifttracker.repo.getNetPayBreakdown
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.ui.SalaryCard
+import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
+import com.rad.shifttracker.ui.dialozi.monthYearText
+import com.rad.shifttracker.ui.salaryCardLabel
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali

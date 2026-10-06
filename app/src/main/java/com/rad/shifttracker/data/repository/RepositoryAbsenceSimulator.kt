@@ -1,11 +1,11 @@
 package com.rad.shifttracker.data.repository
 
-import com.rad.shifttracker.AbsenceRangeNetImpact
+import com.rad.shifttracker.repo.AbsenceRangeNetImpact
 import com.rad.shifttracker.AppConfig
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.Shift
-import com.rad.shifttracker.Weekday
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.Weekday
 import java.time.LocalDate
 import java.time.YearMonth
 

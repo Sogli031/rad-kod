@@ -1,8 +1,8 @@
 package com.rad.shifttracker.data.repository
 
-import com.rad.shifttracker.DayKey
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
 
 internal class ShiftRecordStore(private val onMonthChanged: (MonthKey) -> Unit) {
     private val records = mutableMapOf<DayKey, DayRecord>()

@@ -1,15 +1,18 @@
 package com.rad.shifttracker.data.repository
 
-import com.rad.shifttracker.AnnualLeaveCalculationInput
-import com.rad.shifttracker.Shift
-import com.rad.shifttracker.VacationBalanceSummary
-import com.rad.shifttracker.VacationWarnings
-import com.rad.shifttracker.VacationYearBalance
-import com.rad.shifttracker.calculateVacationBalanceSummary
-import com.rad.shifttracker.currentYearVacationAvailableFrom
-import com.rad.shifttracker.sanitizeAnnualLeaveYears
+import com.rad.shifttracker.godisnji.AnnualLeaveCalculationInput
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.godisnji.VacationBalanceSummary
+import com.rad.shifttracker.godisnji.VacationWarnings
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.godisnji.calculateVacationBalanceSummary
+import com.rad.shifttracker.godisnji.currentYearVacationAvailableFrom
+import com.rad.shifttracker.repo.sanitizeAnnualLeaveYears
 import java.time.Clock
 import java.time.LocalDate
+import com.rad.shifttracker.repo.getVacationBalanceSummary
+import com.rad.shifttracker.repo.getVacationDaysRemaining
+import com.rad.shifttracker.repo.getVacationDaysUsed
 
 internal class RepositoryVacationTracker(
     private val recordStore: ShiftRecordStore,

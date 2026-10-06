@@ -45,6 +45,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.ui.FormErrorText
+import com.rad.shifttracker.ui.GlowButton
+import com.rad.shifttracker.ui.HeaderChevron
+import com.rad.shifttracker.ui.LabeledCheckboxRow
+import com.rad.shifttracker.ui.LabeledSwitchRow
+import com.rad.shifttracker.ui.ModernTextField
+import com.rad.shifttracker.ui.PopupDialog
+import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.ui.RoundedButton
+import com.rad.shifttracker.ui.calendarDayDescription
+import com.rad.shifttracker.ui.dialozi.DayEditChoiceButton
 
 /**
  * Pristupačnost zajedničkih komponenti: semantika (uloga, ime, stanje, liveRegion) i dodirne površine

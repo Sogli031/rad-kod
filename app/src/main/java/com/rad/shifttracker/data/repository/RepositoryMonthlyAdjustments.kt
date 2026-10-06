@@ -1,9 +1,9 @@
 package com.rad.shifttracker.data.repository
 
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.MonthlyGrossAdditions
-import com.rad.shifttracker.MonthlyNetAdjustments
-import com.rad.shifttracker.sanitizeMonthlyGrossAdditions
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.MonthlyNetAdjustments
+import com.rad.shifttracker.repo.sanitizeMonthlyGrossAdditions
 import java.math.BigDecimal
 
 internal class RepositoryMonthlyAdjustments(

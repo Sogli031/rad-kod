@@ -3,6 +3,11 @@ package com.rad.shifttracker
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.obracun.fundAbsenceMinutes
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
 
 /** Automatska odrada (višak radnim danom odrađuje cele neradne dane) i vrste prekovremenog. */
 class OvertimeTypeMakeUpTest {

@@ -4,8 +4,41 @@ import com.rad.shifttracker.ui.components.AppIcons
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.File
 import java.time.LocalDate
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.COMPACT_PAY_CARD_HEIGHT
+import com.rad.shifttracker.ui.DarkExtendedColors
+import com.rad.shifttracker.ui.PAY_CARDS_SPACING
+import com.rad.shifttracker.ui.RadDarkColorScheme
+import com.rad.shifttracker.ui.bottomBarButtonLabels
+import com.rad.shifttracker.ui.bottomBarButtonSpecs
+import com.rad.shifttracker.ui.calendarDayDetailText
+import com.rad.shifttracker.ui.calendarDayTint
+import com.rad.shifttracker.ui.dialozi.DAY_EDIT_PRIMARY_SHIFT_QUESTION_TEXT
+import com.rad.shifttracker.ui.dialozi.DayEditSaveState
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_CANCEL_LABEL
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_DIALOG_DESCRIPTION
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_DIALOG_TITLE
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_MINUTES_NOTE
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_RESET_LABEL
+import com.rad.shifttracker.ui.dialozi.INITIAL_COMP_BALANCE_SAVE_LABEL
+import com.rad.shifttracker.ui.dialozi.dayEditNonWorkDayDetailText
+import com.rad.shifttracker.ui.dialozi.dayEditShiftButtonText
+import com.rad.shifttracker.ui.dialozi.formatAbsenceNetDifference
+import com.rad.shifttracker.ui.dialozi.formatDayEditNetDifference
+import com.rad.shifttracker.ui.dialozi.formatInitialCompBalanceInput
+import com.rad.shifttracker.ui.dialozi.parseInitialCompBalanceInputMinutes
+import com.rad.shifttracker.ui.salaryCardLabel
+import com.rad.shifttracker.ui.totalCardLabel
+import com.rad.shifttracker.ui.useCompactTotalCardLayout
+import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
+import com.rad.shifttracker.ui.dialozi.defaultOvertimeShiftAfter
+import com.rad.shifttracker.ui.dialozi.overtimeShiftsAfter
+import com.rad.shifttracker.ui.dialozi.previousWorkedShiftInSameWeek
 
 class DayEditDialogTextTest {
     @Test
@@ -593,10 +626,7 @@ private fun shiftDashboardCardsSource(): String {
 }
 
 private fun appSource(fileName: String): String {
-    return listOf(
-        File("src/main/java/com/rad/shifttracker/$fileName"),
-        File("app/src/main/java/com/rad/shifttracker/$fileName")
-    ).first { it.isFile }.readText()
+    return mainSource(fileName)
 }
 
 private fun String.constantValue(name: String): Int {

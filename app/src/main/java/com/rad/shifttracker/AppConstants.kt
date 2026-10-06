@@ -1,5 +1,8 @@
 package com.rad.shifttracker
 
+import com.rad.shifttracker.obracun.DEFAULT_PAY_COEFFICIENT
+import com.rad.shifttracker.obracun.HOURLY_VALUE_FROM_JANUARY_2026
+
 object UI {
     const val buttonHeight = 48
     const val iconButtonSize = 48

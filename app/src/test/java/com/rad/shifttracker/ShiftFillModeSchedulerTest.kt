@@ -4,6 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.smene.ReferenceWorkWeek
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillMode
+import com.rad.shifttracker.smene.ShiftScheduler
+import com.rad.shifttracker.ui.dialozi.formatReferenceWorkWeek
 
 class ShiftFillModeSchedulerTest {
 

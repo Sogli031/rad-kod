@@ -2,6 +2,7 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.ui.dialozi.estimateAbsenceRoundingGross
 
 class AbsenceRoundingEstimateTest {
     private val rate = 637.32

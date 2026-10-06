@@ -3,6 +3,10 @@ package com.rad.shifttracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.dialozi.DayEditSaveState
 
 class DayEditStateTest {
     @Test

@@ -3,6 +3,11 @@ package com.rad.shifttracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.DialogState
+import com.rad.shifttracker.ui.dialogStateFromKey
+import com.rad.shifttracker.ui.dialogStateToKey
 
 /** Ključevi otvorenog dijaloga se čuvaju pri rotaciji/ubijanju procesa i moraju ostati isti među verzijama. */
 class DialogStateTest {

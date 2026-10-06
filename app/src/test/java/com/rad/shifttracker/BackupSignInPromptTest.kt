@@ -12,6 +12,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.ui.dialozi.BACKUP_SIGN_IN_PROMPT_CONFIRM
+import com.rad.shifttracker.ui.dialozi.BACKUP_SIGN_IN_PROMPT_LATER
+import com.rad.shifttracker.ui.dialozi.BACKUP_SIGN_IN_PROMPT_TEXT
+import com.rad.shifttracker.ui.dialozi.BACKUP_SIGN_IN_PROMPT_TITLE
+import com.rad.shifttracker.ui.dialozi.BackupSignInPromptDialog
+import com.rad.shifttracker.ui.dialozi.BackupSignInPromptHost
+import com.rad.shifttracker.ui.dialozi.shouldShowBackupSignInPrompt
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])

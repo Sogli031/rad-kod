@@ -17,6 +17,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.minuliRadStartYearValue
+import com.rad.shifttracker.repo.tryImportFromJson
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.repo.MAX_BASE_PAY
+import com.rad.shifttracker.repo.exportCloudBackupJson
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.getHourlyValueForMonth
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.payCoefficientValue
+import com.rad.shifttracker.repo.taxReliefValue
 
 /** Dekoder je poslednja linija odbrane od oštećenog backup-a: ne sme da pukne ni da izmisli podatke. */
 class ShiftRepositoryJsonCodecTest {

@@ -9,6 +9,23 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.repo.BatchRecord
+import com.rad.shifttracker.repo.exportCloudBackupJson
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.getSavedPayslip
+import com.rad.shifttracker.repo.getVacationBalanceSummary
+import com.rad.shifttracker.repo.getVacationYearBalance
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.isVacationCarryoverAutomatic
+import com.rad.shifttracker.repo.pruneIrrelevantHistory
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.setVacationYearBalance
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 
 class PayslipRetentionTest {
     /** Listić iz fixture-a prebačen u drugi mesec/godinu (iste stavke). */

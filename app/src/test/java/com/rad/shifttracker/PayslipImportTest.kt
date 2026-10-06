@@ -6,6 +6,32 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipChangeKind
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.PayslipPayBaseResult
+import com.rad.shifttracker.listici.applyPayslipChanges
+import com.rad.shifttracker.listici.buildPayslipImportPlan
+import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.shouldReplaceLastPayslip
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.repo.defaultPayBaseSelectionModeValue
+import com.rad.shifttracker.repo.employeeContributionsPercentValue
+import com.rad.shifttracker.repo.getKnownPayBaseAnchors
+import com.rad.shifttracker.repo.getMonthlyNetAdjustments
+import com.rad.shifttracker.repo.minuliRadLastPayslipMonthValue
+import com.rad.shifttracker.repo.minuliRadLastPayslipYearValue
+import com.rad.shifttracker.repo.minuliRadPayslipPercentValue
+import com.rad.shifttracker.repo.payCoefficientValue
+import com.rad.shifttracker.repo.seniorityInputModeValue
+import com.rad.shifttracker.repo.taxPercentValue
+import com.rad.shifttracker.repo.taxReliefValue
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.listici.payslipFromJsonOrNull
+import com.rad.shifttracker.listici.payslipToJson
+import com.rad.shifttracker.listici.unknownHourItems
 
 /** Listić 08/2026 skraćen na redove koje parser koristi; bez imena, JMBG-a i računa. */
 internal val AUGUST_2026 = """

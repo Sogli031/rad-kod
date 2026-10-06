@@ -127,10 +127,7 @@ private fun popupComponentsSource(): String {
 }
 
 private fun appSource(fileName: String): String {
-    return listOf(
-        File("src/main/java/com/rad/shifttracker/$fileName"),
-        File("app/src/main/java/com/rad/shifttracker/$fileName")
-    ).first { it.isFile }.readText()
+    return mainSource(fileName)
 }
 
 private fun appSourceFiles(): List<File> {

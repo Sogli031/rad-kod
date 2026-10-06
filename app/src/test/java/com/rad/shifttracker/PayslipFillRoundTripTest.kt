@@ -6,6 +6,14 @@ import java.util.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.smene.DayRecordSource
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.isSerbianHoliday
+import com.rad.shifttracker.listici.FillDayKind
+import com.rad.shifttracker.listici.MonthFillResult
+import com.rad.shifttracker.listici.applyMonthFill
+import com.rad.shifttracker.listici.isSpecial
+import com.rad.shifttracker.listici.planMonthFromPayslip
 
 /**
  * Slučajni „pravi“ meseci (GO, bolovanje, plaćeno, izostanci, kraći i produženi dani, zamena smene,

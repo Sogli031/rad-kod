@@ -2,7 +2,6 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 
 class AutoFillDialogComponentsTest {
     @Test
@@ -38,10 +37,7 @@ class AutoFillDialogComponentsTest {
 }
 
 private fun autoFillDialogComponentsSource(): String {
-    return listOf(
-        File("src/main/java/com/rad/shifttracker/AutoFillDialogComponents.kt"),
-        File("app/src/main/java/com/rad/shifttracker/AutoFillDialogComponents.kt")
-    ).first { it.isFile }.readText()
+    return mainSource("AutoFillDialogComponents.kt")
 }
 
 private fun String.constantValue(name: String): Int {

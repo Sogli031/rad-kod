@@ -6,6 +6,14 @@ import androidx.compose.ui.graphics.compositeOver
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.DarkExtendedColors
+import com.rad.shifttracker.ui.ExtendedColors
+import com.rad.shifttracker.ui.LightExtendedColors
+import com.rad.shifttracker.ui.RadDarkColorScheme
+import com.rad.shifttracker.ui.RadLightColorScheme
+import com.rad.shifttracker.ui.calendarDayTint
 
 /** Kontrast (WCAG 2.1) za svaku boju smene i oba reda teksta, u obe teme: najmanje 4.5:1. */
 class ThemeContrastTest {

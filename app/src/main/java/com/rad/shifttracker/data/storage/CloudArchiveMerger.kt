@@ -1,8 +1,11 @@
 package com.rad.shifttracker.data.storage
 
-import com.rad.shifttracker.HISTORY_RETENTION_LOOKBACK_MONTHS
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.minusMonthsForRetention
+import com.rad.shifttracker.repo.HISTORY_RETENTION_LOOKBACK_MONTHS
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.repo.minusMonthsForRetention
+import com.rad.shifttracker.repo.bloodDonationCount
+import com.rad.shifttracker.repo.bloodDonationHistory
+import com.rad.shifttracker.repo.lastBloodDonationDate
 
 /**
  * Spaja postojeću arhivu iz oblaka sa trenutnim (lokalno orezanim) stanjem.

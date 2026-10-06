@@ -3,6 +3,8 @@ package com.rad.shifttracker
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.obracun.foodAccountingDate
+import com.rad.shifttracker.smene.Shift
 
 class FoodAccountingTest {
 

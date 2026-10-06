@@ -10,6 +10,21 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.payslipToJson
+import com.rad.shifttracker.obracun.MonthlyNetAdjustments
+import com.rad.shifttracker.obracun.MonthlyPayBases
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.repo.bloodDonationCount
+import com.rad.shifttracker.repo.bloodDonationHistory
+import com.rad.shifttracker.repo.lastBloodDonationDate
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.repo.buildCloudBackup
+import com.rad.shifttracker.repo.importFromJson
 
 /**
  * Spajanje arhive iz oblaka sa lokalno orezanim stanjem: oblak čuva punu istoriju, ali nikad ne sme

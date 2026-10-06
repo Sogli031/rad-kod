@@ -6,6 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import kotlin.math.pow
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.DarkExtendedColors
+import com.rad.shifttracker.ui.RadDarkColorScheme
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.ui.calendarDayDescription
 
 /** Čuva M3 dizajn: kontrast boja (WCAG), opis dana za čitač ekrana i pokrivenost teme. */
 class DesignSystemTest {
@@ -136,10 +142,5 @@ class DesignSystemTest {
         assertTrue("Težina ide kroz *Emphasized stil ili emphasized():\n" + offenders.joinToString("\n"), offenders.isEmpty())
     }
 
-    private fun themeSourcePath(): String {
-        return listOf(
-            "src/main/java/com/rad/shifttracker/Theme.kt",
-            "app/src/main/java/com/rad/shifttracker/Theme.kt"
-        ).first { File(it).isFile }
-    }
+    private fun themeSourcePath(): String = mainSourceFile("Theme.kt").path
 }

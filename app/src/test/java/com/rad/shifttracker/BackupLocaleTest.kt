@@ -8,6 +8,25 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.obracun.MonthlyPayBases
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.exportCloudBackupJson
+import com.rad.shifttracker.repo.getFoodPerDayForMonth
+import com.rad.shifttracker.repo.getHourlyValueChanges
+import com.rad.shifttracker.repo.getKnownPayBaseAnchors
+import com.rad.shifttracker.repo.getMonthlyPayBases
+import com.rad.shifttracker.repo.getSavedPayslip
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.setFoodPerDayFromMonth
+import com.rad.shifttracker.repo.setHourlyValueChange
+import com.rad.shifttracker.repo.setKnownPayBaseAnchor
+import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
+import com.rad.shifttracker.repo.setMonthlyPayBases
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 
 /** Backup ne sme da zavisi od jezika sistema: jezici sa ne-ASCII ciframa ne smeju da izgube podatke. */
 class BackupLocaleTest {

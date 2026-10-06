@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.calculateAdvancePaymentPrediction
+import com.rad.shifttracker.obracun.unavailableAdvancePaymentPrediction
+import com.rad.shifttracker.smene.MonthKey
 
 class AdvancePaymentPredictionTest {
 

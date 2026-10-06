@@ -4,6 +4,22 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipItem
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.applyOnboardingVacation
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getVacationBalanceSummary
+import com.rad.shifttracker.repo.getVacationYearBalance
+import com.rad.shifttracker.repo.initialVacationBalanceValue
+import com.rad.shifttracker.repo.isVacationCarryoverAutomatic
+import com.rad.shifttracker.repo.pruneIrrelevantHistory
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.setVacationYearBalance
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 
 /**
  * Godišnji podešen iz listića (onboarding): dani iskorišćeni januar–jun su stari (preneti) odmor,

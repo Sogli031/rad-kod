@@ -3,6 +3,7 @@ package com.rad.shifttracker
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
+import com.rad.shifttracker.repo.ShiftRepository
 
 /**
  * Stalno „danas“ za testove (03.10.2026, Beograd): rezultati ne zavise od dana pokretanja,

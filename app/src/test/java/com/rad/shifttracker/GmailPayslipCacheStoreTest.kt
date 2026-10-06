@@ -7,6 +7,14 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.GmailPayslipCache
+import com.rad.shifttracker.listici.PAYSLIP_PARSER_VERSION
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.PayslipSideRunKind
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.payslipToJson
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.listici.PayslipPayBaseResult
 
 /** Keš pročitanih listića preživljava ponovno otvaranje, a oštećen ili nedostupan fajl nikad ne ruši aplikaciju. */
 class GmailPayslipCacheStoreTest {

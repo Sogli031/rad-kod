@@ -4,6 +4,12 @@ import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillMode
+import com.rad.shifttracker.ui.dialozi.absenceDayRangeError
+import com.rad.shifttracker.ui.dialozi.absenceDayRangeOrNull
+import com.rad.shifttracker.ui.dialozi.autoFillMonthsError
+import com.rad.shifttracker.ui.dialozi.autoFillSettings
 
 /** Pravila unosa izdvojena iz dijaloga „Auto-popuna“ i „Bolovanje / Godišnji“. */
 class DialogInputRulesTest {

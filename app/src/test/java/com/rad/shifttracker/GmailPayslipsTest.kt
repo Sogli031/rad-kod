@@ -2,6 +2,8 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.listici.gmailPayslipQuery
+import com.rad.shifttracker.smene.MonthKey
 
 class GmailPayslipsTest {
     @Test

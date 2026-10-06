@@ -2,6 +2,21 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.calculateEstimatedDailyWorkGrossPay
+import com.rad.shifttracker.repo.calculateEstimatedDailyWorkNetPay
+import com.rad.shifttracker.repo.difficultWorkConditionsPercentValue
+import com.rad.shifttracker.repo.employeeContributionsPercentValue
+import com.rad.shifttracker.repo.foodPerDayValue
+import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
+import com.rad.shifttracker.repo.grossHourlyRateValue
+import com.rad.shifttracker.repo.minuliRadStartMonthValue
+import com.rad.shifttracker.repo.minuliRadStartYearValue
+import com.rad.shifttracker.repo.taxPercentValue
+import com.rad.shifttracker.repo.taxReliefValue
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
 
 class MonthlyOvertimeNetImpactTest {
     @Test

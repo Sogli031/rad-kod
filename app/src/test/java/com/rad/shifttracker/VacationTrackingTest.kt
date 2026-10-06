@@ -4,6 +4,10 @@ import java.time.LocalDate
 import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import com.rad.shifttracker.godisnji.VacationWarnings
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.godisnji.calculateVacationBalanceSummary
+import com.rad.shifttracker.godisnji.validateVacationRequestAvailability
 
 class VacationTrackingTest {
     @Test

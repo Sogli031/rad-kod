@@ -20,6 +20,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.ui.MainMonthState
+import com.rad.shifttracker.ui.MainViewModel
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])

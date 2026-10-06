@@ -6,6 +6,30 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.krv.BloodDonationLeaveUsage
+import com.rad.shifttracker.krv.formatBloodDonationDate
+import com.rad.shifttracker.krv.latestPaidLeavePair
+import com.rad.shifttracker.krv.lastBloodDonationLeaveUsage
+import com.rad.shifttracker.krv.bloodDonationLeaveLastUsageText
+import com.rad.shifttracker.krv.bloodDonationLeaveNextUsageText
+import com.rad.shifttracker.krv.bloodDonationLeaveUsageText
+import com.rad.shifttracker.krv.calculateNextBloodDonationLeaveDate
+import com.rad.shifttracker.obracun.MonthlyPayBases
+import com.rad.shifttracker.repo.applyBloodDonationLeave
+import com.rad.shifttracker.repo.bloodDonationCount
+import com.rad.shifttracker.repo.bloodDonationLeaveStartDate
+import com.rad.shifttracker.repo.clearBloodDonationLeave
+import com.rad.shifttracker.repo.deleteBloodDonation
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.grossHourlyRateValue
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.setMonthlyPayBases
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.DayRecordSource
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.calendarDayDetailText
+import com.rad.shifttracker.ui.dialozi.isDayEditLockedByBloodDonation
 
 class BloodDonationLeaveTest {
     @Test
@@ -230,10 +254,7 @@ class BloodDonationLeaveTest {
             sickPayRate = 1.0,
             source = DayRecordSource.BLOOD_DONATION_LEAVE
         )
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/DayEditDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/DayEditDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("DayEditDialog.kt")
 
         assertTrue(isDayEditLockedByBloodDonation(bloodLeave))
         assertTrue(source.contains("BloodDonationLockedDayDialog"))

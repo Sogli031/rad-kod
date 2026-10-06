@@ -10,6 +10,33 @@ import java.math.BigDecimal
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import com.rad.shifttracker.obracun.DailyPayCategoryBreakdownCalculator
+import com.rad.shifttracker.obracun.MANUAL_SPENDING_SAFE_DEFAULT_MODE
+import com.rad.shifttracker.obracun.MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.PayBaseSource
+import com.rad.shifttracker.obracun.PayCalculator
+import com.rad.shifttracker.obracun.exportSelectedMonthWorkAndPayJson
+import com.rad.shifttracker.obracun.monthlyWorkAndPayExportFileName
+import com.rad.shifttracker.obracun.nightWorkMinutes
+import com.rad.shifttracker.obracun.sundayWorkMinutes
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.employeeContributionsPercentValue
+import com.rad.shifttracker.repo.foodPerDayValue
+import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
+import com.rad.shifttracker.repo.getResolvedPayBasesForWorkMonth
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.setDefaultPayBaseSelection
+import com.rad.shifttracker.repo.setKnownPayBaseAnchor
+import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
+import com.rad.shifttracker.repo.setMonthlyGrossAdditions
+import com.rad.shifttracker.repo.taxPercentValue
+import com.rad.shifttracker.repo.taxReliefValue
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayKey
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.Shift
 
 class MonthlyWorkAndPayExportTest {
     @Test
@@ -35,10 +62,7 @@ class MonthlyWorkAndPayExportTest {
 
     @Test
     fun `document export explicitly truncates an existing file`() {
-        val screenSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerExports.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerExports.kt")
-        ).first { it.exists() }.readText()
+        val screenSource = mainSource("ShiftTrackerExports.kt")
 
         assertEquals("wt", MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE)
         assertTrue(screenSource.contains("MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE"))

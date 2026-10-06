@@ -12,6 +12,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.loadFromLocal
+import com.rad.shifttracker.repo.payCoefficientValue
+import com.rad.shifttracker.repo.saveToLocal
+import com.rad.shifttracker.repo.taxReliefValue
+import com.rad.shifttracker.repo.tryImportFromJson
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.repo.buildCloudBackup
 
 /**
  * Restore ne sme da obriše podatke kad fajl nije prava kopija: sve provere su pre brisanja,

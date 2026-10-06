@@ -1,7 +1,7 @@
 package com.rad.shifttracker.data.repository
 
-import com.rad.shifttracker.KnownPayBaseAnchor
-import com.rad.shifttracker.MonthKey
+import com.rad.shifttracker.obracun.KnownPayBaseAnchor
+import com.rad.shifttracker.smene.MonthKey
 
 internal class RepositoryPaySettingsUpdater(
     private val payState: RepositoryPayState,

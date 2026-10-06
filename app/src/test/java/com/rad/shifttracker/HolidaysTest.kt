@@ -7,6 +7,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.smene.orthodoxEasterSunday
+import com.rad.shifttracker.smene.HolidayCategory
+import com.rad.shifttracker.smene.computeSerbianHolidays
+import com.rad.shifttracker.smene.getHolidayName
+import com.rad.shifttracker.smene.getSerbianHolidays
+import com.rad.shifttracker.smene.isSerbianHoliday
 
 class HolidaysTest {
 

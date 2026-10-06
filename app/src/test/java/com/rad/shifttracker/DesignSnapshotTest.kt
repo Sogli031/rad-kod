@@ -27,6 +27,29 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
 import java.time.LocalDate
 import java.time.YearMonth
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getMonthlyReceipt
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.repo.getVacationBalanceSummary
+import com.rad.shifttracker.repo.mainPaySalaryOnly
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.BackgroundLayer
+import com.rad.shifttracker.ui.BottomBar
+import com.rad.shifttracker.ui.CalendarSection
+import com.rad.shifttracker.ui.CompTimeCard
+import com.rad.shifttracker.ui.HeaderSection
+import com.rad.shifttracker.ui.PAY_CARDS_SPACING
+import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.ui.SHOW_TOTAL_CARD
+import com.rad.shifttracker.ui.SalaryCard
+import com.rad.shifttracker.ui.ShiftTrackerScreen
+import com.rad.shifttracker.ui.Spacing
+import com.rad.shifttracker.ui.StatsSection
+import com.rad.shifttracker.ui.TotalCard
+import com.rad.shifttracker.ui.VacationCard
+import com.rad.shifttracker.ui.WeekdayHeader
+import com.rad.shifttracker.ui.dialozi.DayEditDialog
+import com.rad.shifttracker.ui.dialozi.OptionsDialog
 
 /**
  * Referentni snimci ekrana bez telefona (Roborazzi + Robolectric native graphics).

@@ -1,7 +1,7 @@
 package com.rad.shifttracker.data.backup
 
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
 
 /**
  * Sažeti „otisak" jednog backup-a: koliko dana, meseci i radnih minuta sadrži,

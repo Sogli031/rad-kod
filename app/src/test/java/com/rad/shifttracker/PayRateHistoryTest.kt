@@ -2,6 +2,11 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.obracun.coefficientFromLegacyGrossHourlyRate
+import com.rad.shifttracker.obracun.defaultHourlyValueForMonth
+import com.rad.shifttracker.obracun.grossHourlyRateForMonth
+import com.rad.shifttracker.obracun.resolveHourlyValueForMonth
+import com.rad.shifttracker.smene.MonthKey
 
 class PayRateHistoryTest {
 

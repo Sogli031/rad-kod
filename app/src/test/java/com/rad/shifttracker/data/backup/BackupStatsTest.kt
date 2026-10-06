@@ -1,8 +1,8 @@
 package com.rad.shifttracker.data.backup
 
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.Shift
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

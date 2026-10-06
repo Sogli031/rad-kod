@@ -4,6 +4,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.godisnji.VacationMonthUsage
+import com.rad.shifttracker.godisnji.VacationWarnings
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.godisnji.calculateVacationBalanceSummary
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.repo.BatchRecord
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getVacationBalanceSummary
+import com.rad.shifttracker.repo.getVacationMonthsWithoutData
+import com.rad.shifttracker.repo.isVacationCarryoverAutomatic
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.setVacationYearBalance
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.dialozi.VacationSetupVisibility
+import com.rad.shifttracker.ui.dialozi.vacationSetupVisibility
 
 class VacationFromPayslipsTest {
     private val today = LocalDate.of(2026, 9, 24)

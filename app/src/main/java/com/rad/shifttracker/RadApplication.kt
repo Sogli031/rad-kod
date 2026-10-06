@@ -8,6 +8,10 @@ import com.rad.shifttracker.data.backup.GoogleDriveBackupProvider
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import com.rad.shifttracker.krv.BloodDonationReminderScheduler
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.loadFromLocal
+import com.rad.shifttracker.repo.saveToLocal
 
 class RadApplication : Application() {
     @Volatile

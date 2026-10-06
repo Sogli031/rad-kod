@@ -4,6 +4,28 @@ import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
 import java.math.BigDecimal
 import java.time.LocalDate
 import kotlin.random.Random
+import com.rad.shifttracker.godisnji.AnnualLeaveCalculationInput
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.payslipToJson
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.MonthlyNetAdjustments
+import com.rad.shifttracker.obracun.MonthlyPayBases
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
+import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.repo.bloodDonationCount
+import com.rad.shifttracker.repo.bloodDonationHistory
+import com.rad.shifttracker.repo.lastBloodDonationDate
+import com.rad.shifttracker.repo.mainPaySalaryOnly
+import com.rad.shifttracker.repo.notificationAccessPromptSuppressed
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.DayRecordSource
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
 
 /**
  * Slučajni snapshot-ovi za svojstvene testove koda. Svaka vrednost je unutar opsega koji dekoder

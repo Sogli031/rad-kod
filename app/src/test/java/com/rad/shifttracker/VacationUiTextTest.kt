@@ -1,9 +1,22 @@
 package com.rad.shifttracker
 
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.godisnji.VacationBalanceSummary
+import com.rad.shifttracker.godisnji.VacationMonthUsage
+import com.rad.shifttracker.godisnji.VacationRangePreview
+import com.rad.shifttracker.godisnji.VacationWarnings
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.godisnji.calculateVacationBalanceSummary
+import com.rad.shifttracker.godisnji.carryoverExpiresOn
+import com.rad.shifttracker.ui.dialozi.vacationMonthUsageText
+import com.rad.shifttracker.ui.dialozi.vacationRangePreviewText
+import com.rad.shifttracker.ui.dialozi.vacationSetupFieldLabels
+import com.rad.shifttracker.ui.dialozi.vacationSetupInitialInputs
+import com.rad.shifttracker.ui.vacationCardAsOfDate
+import com.rad.shifttracker.ui.vacationCardMainText
+import com.rad.shifttracker.ui.vacationCardSubtitleText
 
 class VacationUiTextTest {
     @Test
@@ -173,5 +186,5 @@ class VacationUiTextTest {
 }
 
 private fun appSource(fileName: String): String {
-    return File("src/main/java/com/rad/shifttracker/$fileName").readText()
+    return mainSource(fileName)
 }

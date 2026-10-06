@@ -7,6 +7,37 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.PayslipSideRunKind
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.sideRunCheckMonths
+import com.rad.shifttracker.obracun.calculateMonthlyNetPayBreakdown
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.isRegressPaidInMonth
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.ui.dialozi.PayslipPickOutcome
+import com.rad.shifttracker.ui.dialozi.monthYearText
+import com.rad.shifttracker.ui.dialozi.payslipPickOutcome
+import com.rad.shifttracker.ui.dialozi.payslipSideRunPickText
+import com.rad.shifttracker.listici.advancePaymentMonthsToConfirm
+import com.rad.shifttracker.listici.advanceRecordedText
+import com.rad.shifttracker.listici.advanceTotalsByPaymentMonth
+import com.rad.shifttracker.listici.applySideRuns
+import com.rad.shifttracker.listici.dailyCheckDue
+import com.rad.shifttracker.listici.latestTransportDaily
+import com.rad.shifttracker.listici.payslipSideRunKind
+import com.rad.shifttracker.listici.regressChangedText
+import com.rad.shifttracker.listici.regressTotalsByMonth
+import com.rad.shifttracker.listici.sideRunCheckNeeded
+import com.rad.shifttracker.listici.sideRuns
+import com.rad.shifttracker.listici.transportChangedText
+import com.rad.shifttracker.obracun.DEFAULT_REGRESS_NET
+import com.rad.shifttracker.repo.getMonthlyNetAdjustments
+import com.rad.shifttracker.repo.getRegressNetForMonth
+import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
+import com.rad.shifttracker.repo.transportDailyAmountValue
 
 private const val DAY_MS = 24 * 60 * 60 * 1000L
 

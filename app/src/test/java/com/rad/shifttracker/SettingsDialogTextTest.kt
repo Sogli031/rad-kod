@@ -2,6 +2,30 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.obracun.HourlyValueChange
+import com.rad.shifttracker.obracun.PayBaseMonthSource
+import com.rad.shifttracker.obracun.PayBaseSource
+import com.rad.shifttracker.obracun.ResolvedPayBases
+import com.rad.shifttracker.obracun.RollingPayBaseCalculation
+import com.rad.shifttracker.obracun.RollingPayBaseMonth
+import com.rad.shifttracker.ui.dialozi.SATNICA_COEFFICIENT_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_DIFFICULT_WORK_CONDITIONS_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_HOURLY_HISTORY_MONTH_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_HOURLY_HISTORY_SECTION_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_HOURLY_HISTORY_VALUE_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_HOURLY_HISTORY_YEAR_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_HOURLY_VALUE_LABEL
+import com.rad.shifttracker.ui.dialozi.SATNICA_TRANSPORT_DAILY_AMOUNT_HINT
+import com.rad.shifttracker.ui.dialozi.SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL
+import com.rad.shifttracker.ui.dialozi.calculatedPayBaseForMonthText
+import com.rad.shifttracker.ui.dialozi.filterDecimalInput
+import com.rad.shifttracker.ui.dialozi.filterSignedDecimalInput
+import com.rad.shifttracker.ui.dialozi.knownPayBaseSourceDetailsText
+import com.rad.shifttracker.ui.dialozi.payBasesSourceSummary
+import com.rad.shifttracker.ui.dialozi.rollingPayBaseSourceDetailsText
+import com.rad.shifttracker.ui.dialozi.satnicaGrossPreviewText
+import com.rad.shifttracker.ui.dialozi.satnicaHourlyChangeSummaryText
+import com.rad.shifttracker.ui.dialozi.satnicaNetDifferencePreviewText
 
 class SettingsDialogTextTest {
 

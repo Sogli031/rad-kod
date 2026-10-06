@@ -2,11 +2,11 @@ package com.rad.shifttracker.data.storage
 
 import android.content.Context
 import android.util.AtomicFile
-import com.rad.shifttracker.ShiftRepository
-import com.rad.shifttracker.getHourlyValueForMonth
-import com.rad.shifttracker.loadFromLocal
-import com.rad.shifttracker.saveToLocal
-import com.rad.shifttracker.setHourlyValueChange
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getHourlyValueForMonth
+import com.rad.shifttracker.repo.loadFromLocal
+import com.rad.shifttracker.repo.saveToLocal
+import com.rad.shifttracker.repo.setHourlyValueChange
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

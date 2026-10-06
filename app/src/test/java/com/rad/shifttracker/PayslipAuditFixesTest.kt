@@ -2,6 +2,19 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.PayCalculator
+import com.rad.shifttracker.obracun.calculateMonthlyNetPayBreakdown
+import com.rad.shifttracker.obracun.nightWorkMinutes
+import com.rad.shifttracker.repo.applyBloodDonationLeave
+import com.rad.shifttracker.repo.calculateDailyPay
+import com.rad.shifttracker.repo.getNetPayBreakdown
+import com.rad.shifttracker.repo.getRollingPayBaseCalculation
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.repo.initialCompBalanceMinutesValue
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.Shift
 
 /** Greške nađene poređenjem sa platnim listićima 05–08/2026 (provera 2026-09-22). */
 class PayslipAuditFixesTest {

@@ -5,6 +5,33 @@ import java.time.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.listici.FillDayKind
+import com.rad.shifttracker.listici.HoursVec
+import com.rad.shifttracker.listici.MonthFillOffer
+import com.rad.shifttracker.listici.MonthFillResult
+import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.applyMonthFill
+import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.listici.fillAllMonths
+import com.rad.shifttracker.listici.fillableMonths
+import com.rad.shifttracker.listici.monthFillOffer
+import com.rad.shifttracker.listici.parsePayslip
+import com.rad.shifttracker.listici.planMonthFromPayslip
+import com.rad.shifttracker.listici.userEnteredDayCount
+import com.rad.shifttracker.listici.workVector
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.listici.FillDiagnostics
+import com.rad.shifttracker.listici.PayslipCheckRow
+import com.rad.shifttracker.listici.bloodDonationLeaveStarts
+import com.rad.shifttracker.listici.fillFailureText
+import com.rad.shifttracker.repo.recordBloodDonation
+import com.rad.shifttracker.smene.DayRecordSource
+import com.rad.shifttracker.ui.dialozi.payslipMonthReplaceQuestionText
 
 class PayslipMonthFillScenariosTest {
 

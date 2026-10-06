@@ -15,6 +15,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.RadApp
+import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.ui.dialozi.DayEditDialog
+import com.rad.shifttracker.ui.dialozi.OptionsDialog
 
 /**
  * Accessibility Test Framework (isti kao Play predlaunch izveštaj) nad pravim ekranima, na telefonu:

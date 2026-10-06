@@ -7,6 +7,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.PayBaseSource
+import com.rad.shifttracker.obracun.ResolvedPayBase
+import com.rad.shifttracker.obracun.SENIORITY_NOT_CONFIGURED_WARNING_TEXT
+import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.obracun.payAccuracyWarningTexts
+import com.rad.shifttracker.obracun.unreliablePayBaseWarningText
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.isSeniorityConfiguredValue
+import com.rad.shifttracker.repo.minuliRadLastPayslipYearValue
+import com.rad.shifttracker.repo.minuliRadPayslipPercentValue
+import com.rad.shifttracker.repo.minuliRadStartYearValue
+import com.rad.shifttracker.repo.seniorityInputModeValue
+import com.rad.shifttracker.repo.setDefaultPayBaseSelection
+import com.rad.shifttracker.repo.setKnownPayBaseAnchor
+import com.rad.shifttracker.smene.Shift
 
 class PayAccuracyWarningsTest {
     @Test

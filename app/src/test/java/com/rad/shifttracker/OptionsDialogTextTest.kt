@@ -4,6 +4,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
+import com.rad.shifttracker.obracun.MonthlyReceipt
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SALARY_ONLY_HINT
+import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SALARY_ONLY_LABEL
+import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SECTION_LABEL
+import com.rad.shifttracker.ui.dialozi.SHOW_TEST_EXPORT_ACTIONS
+import com.rad.shifttracker.ui.dialozi.difficultWorkConditionsStatusText
+import com.rad.shifttracker.ui.dialozi.optionsDialogActionLabels
+import com.rad.shifttracker.ui.mainPayCardAmount
 
 class OptionsDialogTextTest {
     @Test
@@ -35,17 +45,11 @@ class OptionsDialogTextTest {
         assertEquals("Samo plata za rad", MAIN_PAY_SALARY_ONLY_LABEL)
         assertEquals("Bez regresa i prevoza", MAIN_PAY_SALARY_ONLY_HINT)
 
-        val optionsSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
-        ).first { it.exists() }.readText()
+        val optionsSource = mainSource("OptionsDialog.kt")
         assertTrue(optionsSource.contains("title = MAIN_PAY_SALARY_ONLY_LABEL"))
         assertTrue(optionsSource.contains("repo.mainPaySalaryOnly = checked"))
 
-        val screenSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/ShiftTrackerContent.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/ShiftTrackerContent.kt")
-        ).first { it.exists() }.readText()
+        val screenSource = mainSource("ShiftTrackerContent.kt")
         assertEquals(2, screenSource.split("salaryOnly = mainPaySalaryOnly").size - 1)
     }
 
@@ -69,10 +73,7 @@ class OptionsDialogTextTest {
 
     @Test
     fun `options dialog does not expose exact alarm permission action`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("OptionsDialog.kt")
 
         assertFalse(source.contains("ExactAlarmPermissionStatus("))
         assertFalse(source.contains("onExactAlarmSettingsClick"))
@@ -82,10 +83,7 @@ class OptionsDialogTextTest {
 
     @Test
     fun `main activity no longer asks for exact alarm permission`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/MainActivity.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/MainActivity.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("MainActivity.kt")
 
         assertTrue(source.contains("override fun onResume()"))
         assertFalse(source.contains("ExactAlarm"))
@@ -107,14 +105,8 @@ class OptionsDialogTextTest {
 
     @Test
     fun `difficult conditions and transport moved from lista to options`() {
-        val options = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
-        ).first { it.exists() }.readText()
-        val lista = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayslipReaderDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayslipReaderDialog.kt")
-        ).first { it.exists() }.readText()
+        val options = mainSource("OptionsDialog.kt")
+        val lista = mainSource("PayslipReaderDialog.kt")
 
         assertTrue(options.contains("SectionLabel(text = MANUAL_PAY_SETTINGS_SECTION_LABEL)"))
         // Sekcija „Odbici od plate“ (Član sindikata) je ukinuta: obustave su samo sa liste.
@@ -137,10 +129,7 @@ class OptionsDialogTextTest {
 
     @Test
     fun `options dialog has no manual loan anymore`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/OptionsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/OptionsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("OptionsDialog.kt")
 
         assertFalse(source.contains("CreditDeduction"))
         assertFalse(source.contains("Kredit"))

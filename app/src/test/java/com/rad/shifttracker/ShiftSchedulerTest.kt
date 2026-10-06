@@ -7,6 +7,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import com.rad.shifttracker.godisnji.VacationYearBalance
+import com.rad.shifttracker.obracun.holidayPremiumMinutes
+import com.rad.shifttracker.obracun.paidWorkMinuteSegments
+import com.rad.shifttracker.repo.BatchRecord
+import com.rad.shifttracker.repo.brigadeTypeValue
+import com.rad.shifttracker.repo.getMonthlyPayDetails
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.repo.setVacationYearBalance
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillMode
+import com.rad.shifttracker.smene.ShiftFillSettings
+import com.rad.shifttracker.smene.ShiftScheduler
+import com.rad.shifttracker.smene.Weekday
 
 class ShiftSchedulerTest {
 

@@ -7,6 +7,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.DEFAULT_MEAL_PRICE_PERIODS
+import com.rad.shifttracker.obracun.MANUAL_SPENDING_SAFE_DEFAULT_MODE
+import com.rad.shifttracker.obracun.MealEntitlementSource
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.calculateMealEntitlementForAccountingMonth
+import com.rad.shifttracker.obracun.calculateMonthlyNetPayBreakdown
+import com.rad.shifttracker.obracun.exportSelectedMonthWorkAndPayJson
+import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.getMonthlyGrossAdditions
+import com.rad.shifttracker.repo.getNetPayBreakdown
+import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.repo.setMonthlyActualFoodSpentNet
+import com.rad.shifttracker.repo.setMonthlyMealEntitlementNetOverride
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.smene.Shift
 
 class MealEntitlementTest {
     @Test

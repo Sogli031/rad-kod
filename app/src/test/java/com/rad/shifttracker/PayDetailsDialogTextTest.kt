@@ -3,6 +3,37 @@ package com.rad.shifttracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_DIALOG_TITLE
+import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_NET_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_NET_PAY_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_20_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_REGRESS_LABEL
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_UNAVAILABLE_TEXT
+import com.rad.shifttracker.obracun.FOOD_NOT_OVERAGE_TEXT
+import com.rad.shifttracker.obracun.MANUAL_ENTRY_BADGE_TEXT
+import com.rad.shifttracker.obracun.MEAL_SPENT_ASSUMED_HELP_TEXT
+import com.rad.shifttracker.obracun.MEAL_SPENT_MANUAL_HELP_TEXT
+import com.rad.shifttracker.obracun.MonthlyReceipt
+import com.rad.shifttracker.obracun.calculateMonthlyFoodSpendingBreakdown
+import com.rad.shifttracker.obracun.mealSpentSupportingText
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
+import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP
+import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT
+import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_WORK_HOURS_LABEL
+import com.rad.shifttracker.ui.dialozi.defaultHourlyHistoryInfoText
+import com.rad.shifttracker.ui.dialozi.payDetailsNetSalaryLabel
+import com.rad.shifttracker.ui.dialozi.payDetailsReceiptDescriptionText
+import com.rad.shifttracker.ui.dialozi.payDetailsRegressLabel
+import com.rad.shifttracker.ui.dialozi.payDetailsTotalLabel
+import com.rad.shifttracker.ui.dialozi.payDetailsTransportAmountText
+import com.rad.shifttracker.ui.dialozi.payDetailsTransportLabel
+import com.rad.shifttracker.ui.dialozi.paymentMonthTitleText
+import com.rad.shifttracker.ui.dialozi.payrollMonthTitleText
 
 class PayDetailsDialogTextTest {
 
@@ -118,10 +149,7 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `pay details keeps shared bottom safe padding for long content`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("PayDetailsDialog.kt")
 
         assertEquals(72, PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP)
         assertTrue(source.contains("WindowInsets.safeDrawing.asPaddingValues()"))
@@ -133,14 +161,8 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `advance payment action is inside pay details`() {
-        val dialogSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
-        val inputSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
-        ).first { it.exists() }.readText()
+        val dialogSource = mainSource("PayDetailsDialog.kt")
+        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
         val finalPaymentIndex = dialogSource.indexOf("FinalPaymentRows(")
         val inlineInputsIndex = dialogSource.indexOf("MonthlyPaymentInputRows(", finalPaymentIndex)
 
@@ -153,10 +175,7 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `payment input save button uses adaptive minimum height`() {
-        val inputSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
-        ).first { it.exists() }.readText()
+        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
 
         assertTrue(inputSource.contains("Modifier.weight(0.3f).heightIn(min = 56.dp)"))
         assertTrue(!inputSource.contains("Modifier.weight(0.3f).height(56.dp)"))
@@ -164,10 +183,7 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `final payment rows hide empty deductions and show regress separately`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("PayDetailsDialog.kt")
 
         assertTrue(source.contains("if (finalPayment.deductionsNet > 0.0)"))
         assertTrue(source.contains("FINAL_PAYMENT_REMAINING_20_LABEL"))
@@ -177,10 +193,7 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `final payment deductions are listed under their payslip names`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("PayDetailsDialog.kt")
         val deductionsIndex = source.indexOf("FINAL_PAYMENT_DEDUCTIONS_LABEL")
         val rowsIndex = source.indexOf("finalPayment.deductions.forEach", deductionsIndex)
 
@@ -191,14 +204,8 @@ class PayDetailsDialogTextTest {
     }
     @Test
     fun `food spending input shows net allowance spent and basic data only shows entitlement`() {
-        val dialogSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
-        val inputSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
-        ).first { it.exists() }.readText()
+        val dialogSource = mainSource("PayDetailsDialog.kt")
+        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
 
         assertTrue(!dialogSource.contains("\"Hrana pravo\""))
         assertTrue(!dialogSource.contains("\"Hrana obračunato\""))
@@ -213,10 +220,7 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `standardni UI nema nikakav unos toplog obroka`() {
-        val inputSource = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsPaymentInputs.kt")
-        ).first { it.exists() }.readText()
+        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
 
         // Topli obrok se računa kao da je pojedeno koliko pripada; prekoračenje javlja „Lista“.
         assertTrue(!inputSource.contains("ACTUAL_FOOD_SPENT_INPUT_LABEL"))
@@ -254,20 +258,14 @@ class PayDetailsDialogTextTest {
 
     @Test
     fun `compact rows autosize labels to avoid unnecessary ellipsis`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("PayDetailsDialog.kt")
 
         assertTrue(source.contains("AutoSizeText(\n            text = label"))
     }
 
     @Test
     fun `pay details extracts visual card shells`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/PayDetailsDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/PayDetailsDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("PayDetailsDialog.kt")
 
         assertTrue(source.contains("PayDetailsHeroCard("))
         assertTrue(source.contains("PayDetailsSectionCard("))

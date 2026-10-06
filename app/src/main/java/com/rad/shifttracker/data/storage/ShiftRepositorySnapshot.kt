@@ -1,17 +1,17 @@
 package com.rad.shifttracker.data.storage
 
-import com.rad.shifttracker.AnnualLeaveCalculationInput
-import com.rad.shifttracker.BloodDonationLeaveState
-import com.rad.shifttracker.BrigadeType
-import com.rad.shifttracker.DayRecord
-import com.rad.shifttracker.MonthKey
-import com.rad.shifttracker.MonthlyGrossAdditions
-import com.rad.shifttracker.MonthlyNetAdjustments
-import com.rad.shifttracker.MonthlyPayBases
-import com.rad.shifttracker.PayBaseSelectionMode
-import com.rad.shifttracker.SeniorityIncreaseFactor
-import com.rad.shifttracker.SeniorityInputMode
-import com.rad.shifttracker.VacationYearBalance
+import com.rad.shifttracker.godisnji.AnnualLeaveCalculationInput
+import com.rad.shifttracker.krv.BloodDonationLeaveState
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.MonthlyGrossAdditions
+import com.rad.shifttracker.obracun.MonthlyNetAdjustments
+import com.rad.shifttracker.obracun.MonthlyPayBases
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
+import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
+import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.godisnji.VacationYearBalance
 import java.time.LocalDate
 
 internal data class ShiftRepositorySnapshot(

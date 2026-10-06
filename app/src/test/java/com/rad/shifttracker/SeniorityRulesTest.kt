@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
+import com.rad.shifttracker.obracun.calculateKnownStartSeniorityPreview
+import com.rad.shifttracker.obracun.estimateSeniorityFromPayslipPercent
 
 class SeniorityRulesTest {
 

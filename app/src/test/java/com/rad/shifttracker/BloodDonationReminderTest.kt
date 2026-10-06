@@ -7,6 +7,19 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.rad.shifttracker.krv.BLOOD_DONATION_HISTORY_EMPTY_TEXT
+import com.rad.shifttracker.krv.BloodDonationReminderAlarmPlan
+import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
+import com.rad.shifttracker.krv.bloodDonationCountText
+import com.rad.shifttracker.krv.bloodDonationDeleteConfirmationText
+import com.rad.shifttracker.krv.bloodDonationHistoryDateText
+import com.rad.shifttracker.krv.bloodDonationLastDateText
+import com.rad.shifttracker.krv.bloodDonationNextDateText
+import com.rad.shifttracker.krv.bloodDonationReminderStatusText
+import com.rad.shifttracker.krv.calculateNextBloodDonationDate
+import com.rad.shifttracker.krv.parseBloodDonationDateInSelectedMonth
+import com.rad.shifttracker.krv.planBloodDonationReminderAlarm
+import com.rad.shifttracker.krv.validateBloodDonationLeaveStartDate
 
 class BloodDonationReminderTest {
     @Test
@@ -96,10 +109,7 @@ class BloodDonationReminderTest {
 
     @Test
     fun `scheduler koristi obican alarm bez dozvole za tacne alarme`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/BloodDonationReminderScheduler.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/BloodDonationReminderScheduler.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("BloodDonationReminderScheduler.kt")
 
         assertTrue(source.contains("setAndAllowWhileIdle"))
         assertFalse(source.contains("setExact"))
@@ -151,10 +161,7 @@ class BloodDonationReminderTest {
 
     @Test
     fun `dijalog za davanje krvi ne prikazuje unos godine`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/BloodDonationDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/BloodDonationDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("BloodDonationDialog.kt")
 
         assertFalse(source.contains("hintText = \"Godina\""))
         assertFalse(source.contains("hintText = \"Mesec\""))
@@ -162,10 +169,7 @@ class BloodDonationReminderTest {
 
     @Test
     fun `dijalog za davanje krvi ne popunjava unos sacuvanim datumima`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/BloodDonationDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/BloodDonationDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("BloodDonationDialog.kt")
 
         assertFalse(source.contains("mutableStateOf(savedDate?.dayOfMonth"))
         assertFalse(source.contains("mutableStateOf(leaveStartDate?.dayOfMonth"))
@@ -173,10 +177,7 @@ class BloodDonationReminderTest {
 
     @Test
     fun `dijalog za davanje krvi nema dugme za ponistavanje krvnih dana`() {
-        val source = listOf(
-            java.io.File("src/main/java/com/rad/shifttracker/BloodDonationDialog.kt"),
-            java.io.File("app/src/main/java/com/rad/shifttracker/BloodDonationDialog.kt")
-        ).first { it.exists() }.readText()
+        val source = mainSource("BloodDonationDialog.kt")
 
         assertFalse(source.contains("PONIŠTI DANE"))
         assertFalse(source.contains("clearBloodDonationLeave()"))

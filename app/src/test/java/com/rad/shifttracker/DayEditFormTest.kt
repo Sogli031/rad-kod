@@ -6,6 +6,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.OvertimeType
+import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.ui.dialozi.DayEditFields
+import com.rad.shifttracker.ui.dialozi.DayEditForm
+import com.rad.shifttracker.ui.dialozi.dayEditForm
+import com.rad.shifttracker.ui.dialozi.dayEditHolidayText
+import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
 
 /** Prelazi u dijalogu za dan bez UI-ja: ista pravila koja dijalog primenjuje na klik. */
 class DayEditFormTest {
