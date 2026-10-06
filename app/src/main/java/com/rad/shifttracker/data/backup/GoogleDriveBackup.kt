@@ -1,15 +1,18 @@
 package com.rad.shifttracker.data.backup
 
+import android.accounts.Account
+import android.accounts.AccountManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import com.google.android.gms.tasks.Tasks
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import com.google.api.client.http.javanet.NetHttpTransport
@@ -29,7 +32,19 @@ private const val PREFS_NAME = "rad_backup_prefs"
 private const val KEY_FIRST_LAUNCH_DONE = "first_launch_done"
 private const val KEY_LAST_SYNC_TIME = "last_sync_time"
 private const val KEY_CLOUD_ADOPTED = "cloud_adopted"
+private const val KEY_ACCOUNT_EMAIL = "account_email"
+private const val KEY_LEGACY_SIGN_IN_CHECKED = "legacy_sign_in_checked"
 private const val NETWORK_TIMEOUT_MS = 30_000L
+private val DRIVE_SCOPE = Scope(DriveScopes.DRIVE_APPDATA)
+
+/** Ishod provere Drive dozvole za izabrani nalog. */
+sealed interface DriveAuthorizeResult {
+    data object Authorized : DriveAuthorizeResult
+
+    /** Korisnik treba da odobri pristup na Google ekranu ([intentSender]). */
+    data class NeedsConsent(val intentSender: IntentSender) : DriveAuthorizeResult
+    data object Failed : DriveAuthorizeResult
+}
 
 class GoogleDriveBackup(private val context: Context) {
 
@@ -49,14 +64,6 @@ class GoogleDriveBackup(private val context: Context) {
 
     private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
-    private val googleSignInClient: GoogleSignInClient by lazy {
-        val signInOptions = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
-            .build()
-        GoogleSignIn.getClient(context, signInOptions)
-    }
-
     init {
         // Load last sync time from prefs
         val savedTime = prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
@@ -64,25 +71,80 @@ class GoogleDriveBackup(private val context: Context) {
             _lastSyncTime.value = savedTime
         }
 
-        // Check if already signed in
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        if (account != null && GoogleSignIn.hasPermissions(account, Scope(DriveScopes.DRIVE_APPDATA))) {
-            _signInState.value = SignInState.SignedIn(account.email ?: "Nepoznat nalog")
-            initDriveService(account)
+        // Nalog pamti aplikacija (AuthorizationClient ga ne pamti); jednom se preuzme iz GoogleSignIn-a.
+        val resolution = resolveDriveAccount(
+            savedEmail = prefs.getString(KEY_ACCOUNT_EMAIL, null),
+            legacyChecked = prefs.getBoolean(KEY_LEGACY_SIGN_IN_CHECKED, false)
+        ) { legacySignedInAccount(context, DRIVE_SCOPE)?.name }
+        if (resolution.persist) {
+            prefs.edit()
+                .putString(KEY_ACCOUNT_EMAIL, resolution.email)
+                .putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true)
+                .apply()
+        }
+        resolution.email?.let { email ->
+            _signInState.value = SignInState.SignedIn(email)
+            initDriveService(googleAccount(email))
         }
     }
 
-    fun getSignInIntent(): Intent = googleSignInClient.signInIntent
+    private fun savedAccountEmail(): String? = prefs.getString(KEY_ACCOUNT_EMAIL, null)?.takeIf { it.isNotBlank() }
 
-    fun handleSignInResult(account: GoogleSignInAccount?) {
-        if (account != null) {
-            _signInState.value = SignInState.SignedIn(account.email ?: "Nepoznat nalog")
-            initDriveService(account)
-            Log.d(TAG, "Signed in successfully")
-        } else {
-            _signInState.value = SignInState.SignedOut
-            Log.e(TAG, "Sign in failed")
+    private fun googleAccount(email: String) = Account(email, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)
+
+    /** Sistemski birač Google naloga za backup (prvi korak prijave). */
+    fun accountChooserIntent(): Intent =
+        AccountManager.newChooseAccountIntent(
+            savedAccountEmail()?.let(::googleAccount), null, arrayOf(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE),
+            null, null, null, null
+        )
+
+    /**
+     * Proverava Drive dozvolu za nalog [email] preko AuthorizationClient-a. Ako je dozvola već data,
+     * ne prikazuje ništa. Radi mrežu i blokira — zvati van glavne niti.
+     */
+    fun authorize(email: String): DriveAuthorizeResult {
+        val request = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(DRIVE_SCOPE))
+            .setAccount(googleAccount(email))
+            .build()
+        return try {
+            val result = Tasks.await(Identity.getAuthorizationClient(context).authorize(request))
+            val intentSender = result.pendingIntent?.intentSender
+            when {
+                !result.hasResolution() -> DriveAuthorizeResult.Authorized
+                intentSender != null -> DriveAuthorizeResult.NeedsConsent(intentSender)
+                else -> DriveAuthorizeResult.Failed
+            }
+        } catch (e: java.util.concurrent.ExecutionException) {
+            Log.e(TAG, "Authorize failed: ${e.cause?.javaClass?.simpleName}", e)
+            DriveAuthorizeResult.Failed
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            DriveAuthorizeResult.Failed
         }
+    }
+
+    /** true ako je Google ekran za dozvolu vratio odobren pristup. */
+    fun isConsentGranted(data: Intent?): Boolean = runCatching {
+        !Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(data).hasResolution()
+    }.onFailure { Log.e(TAG, "Consent result failed: ${it.javaClass.simpleName}", it) }.getOrDefault(false)
+
+    /** Završava prijavu kad nalog [email] ima Drive dozvolu. */
+    fun completeSignIn(email: String) {
+        prefs.edit()
+            .putString(KEY_ACCOUNT_EMAIL, email)
+            .putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true)
+            .apply()
+        _signInState.value = SignInState.SignedIn(email)
+        initDriveService(googleAccount(email))
+        Log.d(TAG, "Signed in successfully")
+    }
+
+    private fun forgetAccount() {
+        prefs.edit().remove(KEY_ACCOUNT_EMAIL).putBoolean(KEY_LEGACY_SIGN_IN_CHECKED, true).apply()
+        _signInState.value = SignInState.SignedOut
+        driveService = null
     }
 
     /**
@@ -97,61 +159,57 @@ class GoogleDriveBackup(private val context: Context) {
     }
 
     /**
-     * Refresh the Google Account credential if needed.
-     * Returns the refreshed Drive service or null if refresh failed.
+     * Posle greške dozvole tiho ponovo proverava Drive dozvolu. Ako Google traži novo odobrenje,
+     * korisnik se odjavljuje (mora ponovo da se prijavi). Radi mrežu — samo van glavne niti.
+     * Vraća osvežen Drive servis ili null.
      */
     private fun refreshCredentialsIfNeeded(): Drive? {
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        if (account == null || !GoogleSignIn.hasPermissions(account, Scope(DriveScopes.DRIVE_APPDATA))) {
-            _signInState.value = SignInState.SignedOut
-            driveService = null
+        val email = savedAccountEmail() ?: run {
+            forgetAccount()
             return null
         }
-        // Re-initialize drive service with fresh credentials
-        initDriveService(account)
-        return driveService
+        return when (authorize(email)) {
+            DriveAuthorizeResult.Authorized -> {
+                initDriveService(googleAccount(email))
+                driveService
+            }
+            is DriveAuthorizeResult.NeedsConsent -> {
+                Log.w(TAG, "Drive dozvola više ne važi, potrebna ponovna prijava")
+                forgetAccount()
+                null
+            }
+            DriveAuthorizeResult.Failed -> null
+        }
     }
 
     /**
-     * Proveri da li je credential validan i reinicijalizuj ako je potrebno.
-     * Vraća validan Drive servis ili null ako korisnik nije prijavljen.
+     * Vraća Drive servis za sačuvan nalog ili null ako korisnik nije prijavljen. Bez mreže, pa
+     * sme i sa glavne niti; da li dozvola još važi pokaže prvi zahtev ([refreshCredentialsIfNeeded]).
      */
     private fun ensureValidDriveService(): Drive? {
-        val currentDrive = driveService ?: return refreshCredentialsIfNeeded()
-
-        // Proveri da li je nalog još uvek prijavljen sa odgovarajućim dozvolama
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        if (account == null || !GoogleSignIn.hasPermissions(account, Scope(DriveScopes.DRIVE_APPDATA))) {
+        driveService?.let { return it }
+        val email = savedAccountEmail() ?: run {
             _signInState.value = SignInState.SignedOut
-            driveService = null
             return null
         }
-
-        return currentDrive
+        initDriveService(googleAccount(email))
+        return driveService
     }
 
     suspend fun signOut() {
         // Wait for any ongoing sync operations to complete
         syncMutex.withLock {
-            withContext(Dispatchers.IO) {
-                try {
-                    googleSignInClient.signOut()
-                    _signInState.value = SignInState.SignedOut
-                    driveService = null
-                    Log.d(TAG, "Signed out")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Sign out failed", e)
-                }
-            }
+            forgetAccount()
+            Log.d(TAG, "Signed out")
         }
     }
 
-    private fun initDriveService(account: GoogleSignInAccount) {
+    private fun initDriveService(account: Account) {
         val credential = GoogleAccountCredential.usingOAuth2(
             context,
             listOf(DriveScopes.DRIVE_APPDATA)
         )
-        credential.selectedAccount = account.account
+        credential.selectedAccount = account
 
         driveService = Drive.Builder(
             NetHttpTransport(),

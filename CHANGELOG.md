@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [Neobjavljeno]
+- **Prijava za cloud backup preko novog Google API-ja:** zastareli GoogleSignIn zamenjen je sa AuthorizationClient (Google Identity Services). Prijava sada prvo otvara sistemski izbor naloga, pa Google dozvolu za Drive (isto kao povezivanje Gmail-a). Nalog pamti aplikacija (`rad_backup_prefs`: `account_email`). Ko je već prijavljen ostaje prijavljen: nalog se jednom preuzima iz stare prijave, a posle odjave više ne. Ako Google povuče dozvolu, korisnik se odjavljuje i treba ponovo da se prijavi.
+
 ## [6.4] - 2026-10-06
 - **Glavni ekran bez minulog rada:** ispod kalendara su tri stavke (Sati rada, Prekovremeno, Hrana), pa se prekovremeno vidi ceo naziv. Minuli rad se i dalje računa sa liste i vidi u „Sati rada“.
 - **„Sati rada“ jasniji:** iznos pored običnih sati je zelen; uklonjen red „Izostanci po fondu (lista)“ (bio je bez iznosa); umesto „Odbici“ piše šta je skinuto — „Odbitak – topli obrok“ i, ako postoje, „Obustave (sindikat, fond)“.
