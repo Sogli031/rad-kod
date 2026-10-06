@@ -230,6 +230,9 @@ kover {
             includes {
                 classes(
                     "com.rad.shifttracker.PayCalculator*",
+                    "com.rad.shifttracker.MutablePayDetails*",
+                    "com.rad.shifttracker.ClassifiedWorkSegment*",
+                    "com.rad.shifttracker.WorkBaseMinuteCategories*",
                     "com.rad.shifttracker.ShiftRepository*",
                     "com.rad.shifttracker.data.repository.RepositoryPayQueries*",
                     "com.rad.shifttracker.data.repository.RepositoryPayBaseResolver*",
