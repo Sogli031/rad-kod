@@ -37,7 +37,7 @@ internal object RadMotion {
     fun <T> fastEffects(): FiniteAnimationSpec<T> = spring(EFFECTS_DAMPING, FAST_EFFECTS_STIFFNESS)
 }
 
-private const val COUNT_DURATION_MS = 700
+private const val COUNT_DURATION_MS = 1400
 
 /**
  * Broj koji „odbroji“ od stare do nove vrednosti (promena meseca, izmena dana). Prvi prikaz je odmah
