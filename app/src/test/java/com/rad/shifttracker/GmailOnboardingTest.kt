@@ -311,7 +311,7 @@ class GmailOnboardingTest {
     @Test
     fun rangeQueryCoversAllMonthsPlusWaitingForSideRuns() {
         assertEquals(
-            "{subject:\"Obracun zarada\" from:platnilistic@vbs.co.rs} has:attachment filename:pdf " +
+            "from:vbs.co.rs {subject:\"Obracun zarada\" from:platnilistic@vbs.co.rs} has:attachment filename:pdf " +
                 "after:2026/3/1 before:2026/12/1",
             gmailPayslipRangeQuery(MonthKey(2026, 3), MonthKey(2026, 9))
         )

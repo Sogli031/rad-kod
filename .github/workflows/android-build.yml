@@ -28,18 +28,13 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      # gradle.properties pinuje Windows JDK putanju (lokalni dev je na Windows-u);
-      # na Linux ranneru je neutralizujemo da Gradle koristi JDK iz setup-java.
-      - name: Neutralize Windows java.home
-        run: sed -i '/org.gradle.java.home/d' gradle.properties
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install SDK packages
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
@@ -48,13 +43,6 @@ jobs:
       # pa assembleRelease daje instalabilan app-release.apk bez pravog keystore-a.
       - name: Unit tests + detekt + lint + assemble release
         run: ./gradlew testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease -PallowDebugSigning=true --no-daemon --stacktrace
-
-      # Snimci su snimljeni na Windows-u; Linux renderer može da se razlikuje u par piksela, pa korak
-      # ne obara build, a razlike (app/build/outputs/roborazzi) idu u build-reports. Lokalno ih
-      # release.ps1 proverava strogo.
-      - name: Snimci ekrana (Roborazzi)
-        continue-on-error: true
-        run: ./gradlew verifyRoborazziDebug -PallowDebugSigning=true --no-daemon
 
       - name: Upload release APK
         if: success()
@@ -73,4 +61,33 @@ jobs:
             app/build/reports/
             app/build/test-results/
             app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+
+  # Snimci su snimljeni na Windows-u, a Linux renderer se razlikuje u par piksela, pa se strogo
+  # proveravaju na Windows ranneru: razlika obara build.
+  screenshots:
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Snimci ekrana (Roborazzi)
+        shell: bash
+        run: ./gradlew verifyRoborazziDebug -PallowDebugSigning=true --no-daemon
+
+      - name: Upload razlike
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-diff
+          path: app/build/outputs/roborazzi/
           if-no-files-found: ignore

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.UI
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,7 +92,7 @@ internal fun BackupSignInPromptDialog(onSignIn: () -> Unit, onLater: () -> Unit)
                     text = BACKUP_SIGN_IN_PROMPT_LATER,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.colorScheme.surfaceContainer,
                     textColor = MaterialTheme.colorScheme.onSurface,
                     onClick = onLater
@@ -100,7 +101,7 @@ internal fun BackupSignInPromptDialog(onSignIn: () -> Unit, onLater: () -> Unit)
                     text = BACKUP_SIGN_IN_PROMPT_CONFIRM,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.colorScheme.primary,
                     textColor = MaterialTheme.colorScheme.onPrimary,
                     bold = true,

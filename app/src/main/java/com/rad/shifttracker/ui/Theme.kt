@@ -48,8 +48,8 @@ private val RadTypography = Typography(
 )
 
 /*
- * Naglašeni (emphasized) stilovi iz M3 Expressive tipografske skale. Ovaj material3 (1.3) ih još
- * nema, pa su ovde kao proširenja istog imena; posle nadogradnje na verziju koja ih ima, članovi
+ * Naglašeni (emphasized) stilovi iz M3 Expressive tipografske skale. U material3 1.4 su još
+ * `internal`, pa su ovde kao proširenja istog imena; posle nadogradnje na verziju koja ih ima, članovi
  * klase imaju prednost i ova proširenja otpadaju (proveriti snimke, zvanična težina je drugačija).
  * UI ne menja `fontWeight` ručno, nego bira stil.
  */

@@ -32,6 +32,7 @@ internal const val GMAIL_PAYSLIP_CHANGE_LABEL = "Promeni mejl"
 
 private const val GMAIL_PAYSLIP_SUBJECT = "Obracun zarada"
 private const val GMAIL_PAYSLIP_SENDER = "platnilistic@vbs.co.rs"
+private const val GMAIL_PAYSLIP_SENDER_DOMAIN = "vbs.co.rs"
 private const val GMAIL_USER = "me"
 /** Stiže 3–5 mejlova mesečno (akontacija, konačni, „p“, „-R“), a prozor je 3 meseca. */
 private const val MAX_GMAIL_MESSAGES = 30L
@@ -99,13 +100,12 @@ internal fun gmailPayslipAccessStatusText(email: String?): String =
 
 /**
  * Gmail pretraga za listiće i akontacije meseca [month]: stižu od početka tog meseca do 3 meseca
- * kasnije. `{…}` je u Gmail-u ILI — namerno naslov ILI pošiljalac, da listići stignu i ako se
- * promeni jedno od njih. Šta je u PDF-u proverava parser, pa drugi PDF-ovi samo otpadnu.
+ * kasnije. Vidi [gmailPayslipFilter].
  */
 internal fun gmailPayslipQuery(month: MonthKey): String {
     val from = YearMonth.of(month.year, month.month)
     val until = from.plusMonths(GMAIL_SEARCH_MONTHS)
-    return "{subject:\"$GMAIL_PAYSLIP_SUBJECT\" from:$GMAIL_PAYSLIP_SENDER} has:attachment filename:pdf " +
+    return "${gmailPayslipFilter()} has:attachment filename:pdf " +
         "after:${from.year}/${from.monthValue}/1 before:${until.year}/${until.monthValue}/1"
 }
 
@@ -146,10 +146,10 @@ internal fun findPayslipInGmail(context: Context, month: MonthKey): GmailPayslip
             .maxByOrNull { payslipRunNumber(it.result.payslip.runLabel) }
         if (hit != null) GmailPayslipResult.Found(hit) else GmailPayslipResult.NotFound
     } catch (e: GoogleAuthIOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.javaClass.simpleName}")
         GmailPayslipResult.NoAccess
     } catch (e: java.io.IOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}")
         GmailPayslipResult.Failed
     }
 }
@@ -162,10 +162,10 @@ internal fun findSideRunsInGmail(context: Context, month: MonthKey): GmailSideRu
         val runs = sideRuns(results.map { it.second }, month)
         if (runs.isNotEmpty()) GmailSideRunsResult.Found(runs) else GmailSideRunsResult.NotFound
     } catch (e: GoogleAuthIOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.javaClass.simpleName}")
         GmailSideRunsResult.NoAccess
     } catch (e: java.io.IOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}")
         GmailSideRunsResult.Failed
     }
 }
@@ -199,19 +199,27 @@ internal fun readGmailPayslipRange(
         ).toList()
         GmailRangeResult.Read(results)
     } catch (e: GoogleAuthIOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail dozvola: ${e.javaClass.simpleName}")
         GmailRangeResult.NoAccess
     } catch (e: java.io.IOException) {
-        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}: ${e.message}")
+        Log.w(SIDE_RUN_LOG_TAG, "Gmail greška ${e.javaClass.simpleName}")
         GmailRangeResult.Failed
     }
 }
+
+/**
+ * Mejl mora da stigne sa domena firme, pa PDF sa pravim naslovom od bilo koga drugog ne ulazi u
+ * obračun. `{…}` je u Gmail-u ILI — unutar domena namerno naslov ILI adresa, da listići stignu i
+ * ako firma promeni jedno od njih. Šta je u PDF-u proverava parser, pa drugi PDF-ovi samo otpadnu.
+ */
+private fun gmailPayslipFilter(): String =
+    "from:$GMAIL_PAYSLIP_SENDER_DOMAIN {subject:\"$GMAIL_PAYSLIP_SUBJECT\" from:$GMAIL_PAYSLIP_SENDER}"
 
 /** Pretraga za mesece rada [from]..[until]: obračun za M stiže do 3 meseca posle M. */
 internal fun gmailPayslipRangeQuery(from: MonthKey, until: MonthKey): String {
     val start = YearMonth.of(from.year, from.month)
     val end = YearMonth.of(until.year, until.month).plusMonths(GMAIL_SEARCH_MONTHS)
-    return "{subject:\"$GMAIL_PAYSLIP_SUBJECT\" from:$GMAIL_PAYSLIP_SENDER} has:attachment filename:pdf " +
+    return "${gmailPayslipFilter()} has:attachment filename:pdf " +
         "after:${start.year}/${start.monthValue}/1 before:${end.year}/${end.monthValue}/1"
 }
 
@@ -243,7 +251,7 @@ private fun <T> gmailRetrying(request: () -> T): T {
             if (e.statusCode != 429 && e.statusCode !in 500..599) throw e
             Log.w(SIDE_RUN_LOG_TAG, "Gmail ${e.statusCode}, pokušaj ${attempt + 1}")
         } catch (e: java.io.IOException) {
-            Log.w(SIDE_RUN_LOG_TAG, "Gmail ${e.javaClass.simpleName}: ${e.message}, pokušaj ${attempt + 1}")
+            Log.w(SIDE_RUN_LOG_TAG, "Gmail ${e.javaClass.simpleName}, pokušaj ${attempt + 1}")
         }
         Thread.sleep(delayMs)
         delayMs *= 2

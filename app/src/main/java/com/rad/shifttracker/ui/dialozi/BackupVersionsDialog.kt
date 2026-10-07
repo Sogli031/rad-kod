@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.UI
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -88,9 +89,9 @@ private fun LoadingCard() {
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.height(18.dp),
+                modifier = Modifier.height(UI.inlineProgressSize.dp),
                 color = MaterialTheme.extendedColors.info,
-                strokeWidth = 2.dp
+                strokeWidth = UI.inlineProgressStroke.dp
             )
             Text(
                 text = "Učitavanje verzija…",
@@ -172,9 +173,9 @@ private fun RestoreConfirmCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.height(18.dp),
+                    modifier = Modifier.height(UI.inlineProgressSize.dp),
                     color = MaterialTheme.extendedColors.info,
-                    strokeWidth = 2.dp
+                    strokeWidth = UI.inlineProgressStroke.dp
                 )
                 Text(
                     text = "Vraćanje u toku…",
@@ -191,7 +192,7 @@ private fun RestoreConfirmCard(
                     text = "Otkaži",
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.colorScheme.surfaceContainer,
                     textColor = MaterialTheme.colorScheme.onSurface,
                     onClick = onCancel
@@ -200,7 +201,7 @@ private fun RestoreConfirmCard(
                     text = "Vrati",
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.extendedColors.warning,
                     textColor = MaterialTheme.colorScheme.onPrimary,
                     bold = true,
@@ -239,9 +240,9 @@ fun RestoreLatestConfirmDialog(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.height(18.dp),
+                        modifier = Modifier.height(UI.inlineProgressSize.dp),
                         color = MaterialTheme.extendedColors.info,
-                        strokeWidth = 2.dp
+                        strokeWidth = UI.inlineProgressStroke.dp
                     )
                     Text(
                         text = "Vraćanje u toku…",
@@ -258,7 +259,7 @@ fun RestoreLatestConfirmDialog(
                         text = "Otkaži",
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(UI.dialogActionHeight.dp),
                         bgColor = MaterialTheme.colorScheme.surfaceContainer,
                         textColor = MaterialTheme.colorScheme.onSurface,
                         onClick = onDismiss
@@ -267,7 +268,7 @@ fun RestoreLatestConfirmDialog(
                         text = "Vrati",
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(UI.dialogActionHeight.dp),
                         bgColor = MaterialTheme.extendedColors.warning,
                         textColor = MaterialTheme.colorScheme.onPrimary,
                         bold = true,
@@ -315,9 +316,9 @@ fun CloudBackupFoundDialog(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.height(18.dp),
+                        modifier = Modifier.height(UI.inlineProgressSize.dp),
                         color = MaterialTheme.extendedColors.info,
-                        strokeWidth = 2.dp
+                        strokeWidth = UI.inlineProgressStroke.dp
                     )
                     Text(
                         text = "Vraćanje u toku…",
@@ -330,7 +331,7 @@ fun CloudBackupFoundDialog(
                     text = "Vrati sve iz oblaka",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.extendedColors.info,
                     textColor = MaterialTheme.colorScheme.onSurface,
                     bold = true,
@@ -344,7 +345,7 @@ fun CloudBackupFoundDialog(
                         text = "Kasnije",
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(UI.dialogActionHeight.dp),
                         bgColor = MaterialTheme.colorScheme.surfaceContainer,
                         textColor = MaterialTheme.colorScheme.onSurface,
                         onClick = onDismiss
@@ -353,7 +354,7 @@ fun CloudBackupFoundDialog(
                         text = "Zadrži ovaj uređaj",
                         modifier = Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(UI.dialogActionHeight.dp),
                         bgColor = MaterialTheme.extendedColors.warning,
                         textColor = MaterialTheme.colorScheme.onPrimary,
                         onClick = onKeepLocal

@@ -19,6 +19,13 @@ object UI {
     const val indicatorDotSize = 6
     const val indicatorBarHeight = 3
 
+    /** Dugmad u redu akcija dijaloga (backup, akontacija); dodirna površina M3 dugmeta je i dalje 48dp. */
+    const val dialogActionHeight = 44
+
+    /** Mali kružni indikator učitavanja uz tekst. */
+    const val inlineProgressSize = 18
+    const val inlineProgressStroke = 2
+
     /** Najveća širina sadržaja: na tabletu/preklopljenom telefonu se ne razvlači preko cele širine. */
     const val contentMaxWidth = 600
 

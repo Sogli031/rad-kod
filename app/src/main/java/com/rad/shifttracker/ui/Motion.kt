@@ -5,8 +5,8 @@ import androidx.compose.animation.core.spring
 
 /**
  * Spring pokret komponenti po M3 `MotionScheme.standard()` (vrednosti iz specifikacije: prostorni pokret
- * ima blag odskok, efekti (prozirnost, boja) ga nemaju). `MotionScheme` je javan tek u material3 1.5 (alfa),
- * pa se iste vrednosti drže ovde; posle prelaska na stabilnu 1.5 ovaj objekat se menja pozivima teme.
+ * ima blag odskok, efekti (prozirnost, boja) ga nemaju). `MotionScheme.standard()` je u material3 1.4 još `internal`
+ * (javan od 1.5), pa se iste vrednosti drže ovde; posle prelaska na stabilnu 1.5 ovaj objekat se menja pozivima teme.
  */
 internal object RadMotion {
     private const val SPATIAL_DAMPING = 0.9f

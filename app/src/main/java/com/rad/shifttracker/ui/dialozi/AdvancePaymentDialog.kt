@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.UI
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -100,7 +101,7 @@ fun AdvancePaymentDialog(
                     text = ADVANCE_PREDICTION_USE_MINIMUM_LABEL,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
+                        .height(UI.dialogActionHeight.dp),
                     bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     textColor = MaterialTheme.extendedColors.warning,
                     textStyle = MaterialTheme.typography.labelMedium,

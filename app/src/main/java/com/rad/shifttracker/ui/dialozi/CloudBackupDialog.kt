@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.UI
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -131,7 +132,7 @@ private fun CloudBackupStatusCard(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         color = MaterialTheme.extendedColors.info,
-                        strokeWidth = 2.dp
+                        strokeWidth = UI.inlineProgressStroke.dp
                     )
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text(
@@ -198,7 +199,7 @@ private fun CloudBackupActionsCard(
             text = "Backup",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .height(UI.dialogActionHeight.dp),
             bgColor = MaterialTheme.extendedColors.success,
             textColor = MaterialTheme.colorScheme.onPrimary,
             textStyle = MaterialTheme.typography.labelLarge,
@@ -210,7 +211,7 @@ private fun CloudBackupActionsCard(
             text = "Restore (najnovije)",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .height(UI.dialogActionHeight.dp),
             bgColor = MaterialTheme.extendedColors.info,
             textColor = MaterialTheme.colorScheme.onSurface,
             textStyle = MaterialTheme.typography.labelLarge,
@@ -222,7 +223,7 @@ private fun CloudBackupActionsCard(
             text = "Vrati raniju verziju…",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .height(UI.dialogActionHeight.dp),
             bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             textColor = MaterialTheme.extendedColors.info,
             borderColor = MaterialTheme.extendedColors.info,
@@ -235,7 +236,7 @@ private fun CloudBackupActionsCard(
             text = "Odjavi se",
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .height(UI.dialogActionHeight.dp),
             bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             textColor = MaterialTheme.colorScheme.error,
             borderColor = MaterialTheme.colorScheme.error,
