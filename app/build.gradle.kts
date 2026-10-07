@@ -244,7 +244,7 @@ kover {
                     "com.rad.shifttracker.obracun.PayBreakdown*",
                     "com.rad.shifttracker.listici.AdvanceFromPayslips*",
                     "com.rad.shifttracker.godisnji.VacationTracking*",
-                    "com.rad.shifttracker.RollingPayBaseMonthSimulator*",
+                    "com.rad.shifttracker.data.repository.RollingPayBaseMonthSimulator*",
                     "com.rad.shifttracker.data.repository.RepositoryCompBalanceCalculator*",
                     "com.rad.shifttracker.data.backup.VersionedBackupWriter*",
                     "com.rad.shifttracker.data.backup.BackupRetentionPolicy*",

@@ -14,4 +14,5 @@ internal fun mainSourceFile(fileName: String): File {
     return matches.singleOrNull() ?: error("Izvorni fajl $fileName: nađeno ${matches.size}")
 }
 
-internal fun mainSource(fileName: String): String = mainSourceFile(fileName).readText()
+/** Tekst izvornog fajla sa `\n` krajevima redova (git na Windows-u fajl može da izvuče sa CRLF). */
+internal fun mainSource(fileName: String): String = mainSourceFile(fileName).readText().replace("\r\n", "\n")
