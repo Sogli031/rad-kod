@@ -3,6 +3,13 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.1] - 2026-10-07
+Sređivanje posle audita, bez promene obračuna i izgleda (1167 testova i svi snimci ekrana isti).
+- **Listići iz Gmail-a samo sa domena firme:** mejl mora da stigne sa `vbs.co.rs` (naslov ILI adresa i dalje važe, da promena jednog ne prekine uvoz). PDF sa pravim naslovom od bilo koga drugog više ne ulazi u obračun.
+- **Logovi bez sadržaja grešaka:** Gmail upozorenja beleže samo vrstu greške, ne tekst odgovora Google-a.
+- **Slojevi koda bez ciklusa:** domen (`smene`, `obracun`, `godisnji`, `krv`, `listici`, `repo`) više ne zna za ekrane; `smene` zavisi samo od osnove, `obracun` samo od `smene`. Novi paketi `uvoz` (upis listića u podatke), `izvoz` (izveštaji) i `osnova` (konstante, formatiranje, crash log); `data.repository` je spojen u `repo`. Raspored je opisan u README-u.
+- **Build:** CI strogo proverava snimke ekrana (na Windows-u), instalira SDK 37; provera biblioteka (`verification-metadata.xml`) napravljena iznova, bez starih verzija (1300 → 708); novi Baseline Profile za nov raspored; ponovljene veličine dugmadi u dijalozima su konstante.
+
 ## [7.0] - 2026-10-07
 Unutrašnje sređivanje koda, bez promene obračuna i izgleda (svi testovi i snimci ekrana isti, pokrivenost testovima 95,8%). Uključuje i 6.9, koja nije objavljena posebno.
 - **Veliki fajlovi podeljeni:** obračun plate (`PayCalculator`), čuvanje podataka u JSON (`ShiftRepositoryJsonCodec`), prozor za dan, glavni ekran i uvoz listića iz Gmail-a su podeljeni na manje celine. Format backup-a je isti bajt po bajt.
