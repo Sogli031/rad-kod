@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,13 +38,14 @@ import com.rad.shifttracker.ui.Spacing
 @Composable
 internal fun OptionsDialog(
     repo: ShiftRepository,
+    actions: DataActions,
     onCloudClick: () -> Unit,
     onMonthlyExportClick: () -> Unit,
     onDebugExportClick: () -> Unit,
     onHolidaysClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val actions = optionsDialogActionLabels()
+    val actionLabels = optionsDialogActionLabels()
     val savedMainPaySalaryOnly = rememberRepoValue(repo) { mainPaySalaryOnly }
     var mainPaySalaryOnly by remember(savedMainPaySalaryOnly) {
         mutableStateOf(savedMainPaySalaryOnly)
@@ -56,12 +58,12 @@ internal fun OptionsDialog(
     ) {
         SectionLabel(text = "Podaci")
         PopupCard {
-            OptionActionButton(text = actions[0], primary = true, onClick = onCloudClick)
+            OptionActionButton(text = actionLabels[0], primary = true, onClick = onCloudClick)
             if (SHOW_TEST_EXPORT_ACTIONS) {
-                OptionActionButton(text = actions[1], onClick = onMonthlyExportClick)
-                OptionActionButton(text = actions[2], onClick = onDebugExportClick)
+                OptionActionButton(text = actionLabels[1], onClick = onMonthlyExportClick)
+                OptionActionButton(text = actionLabels[2], onClick = onDebugExportClick)
             }
-            OptionActionButton(text = actions[3], onClick = onHolidaysClick)
+            OptionActionButton(text = actionLabels[3], onClick = onHolidaysClick)
         }
 
         SectionLabel(text = "Prikaz i obaveštenja")
@@ -73,14 +75,14 @@ internal fun OptionsDialog(
                 contentPadding = OPTION_ROW_PADDING,
                 onCheckedChange = { checked ->
                     mainPaySalaryOnly = checked
-                    repo.mainPaySalaryOnly = checked
+                    actions.setMainPaySalaryOnly(checked)
                 }
             )
         }
 
         SectionLabel(text = GMAIL_PAYSLIP_SECTION_LABEL)
         PopupCard(spacing = 0.dp) {
-            GmailPayslipSettingsSection(repo = repo)
+            GmailPayslipSettingsSection(repo = repo, actions = actions)
         }
 
         SectionLabel(text = MANUAL_PAY_SETTINGS_SECTION_LABEL)

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
@@ -18,7 +19,6 @@ import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.krv.formatBloodDonationDate
 import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.clearBloodDonationLeaveForDate
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.godisnji.VacationRequestValidation
 import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
@@ -39,12 +39,13 @@ internal const val DAY_TYPE_CHOICE_HEIGHT = 52
 internal const val OVERTIME_TYPE_CHOICE_HEIGHT = 48
 
 @Composable
-fun DayEditDialog(
+internal fun DayEditDialog(
     year: Int,
     month: Int,
     day: Int,
     record: DayRecord?,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val dayDate = remember(year, month, day) { LocalDate.of(year, month, day) }
@@ -53,7 +54,7 @@ fun DayEditDialog(
             title = "$day. ${MONTH_NAMES[month]}",
             date = dayDate,
             record = record,
-            repo = repo,
+            actions = actions,
             onDismiss = onDismiss
         )
         return
@@ -82,7 +83,7 @@ fun DayEditDialog(
         title = "$day. ${MONTH_NAMES[month]}",
         onDismiss = onDismiss,
         scrollable = true,
-        footer = { DayEditSaveButton(saveState, vacationValidation, repo, onDismiss) }
+        footer = { DayEditSaveButton(saveState, vacationValidation, actions, onDismiss) }
     ) {
         DayEditStatusHeader(estimatedNetDailyPay = estimatedNetDailyPay, savedNetDailyPay = savedNetDailyPay)
         holidayText?.let { text -> DayEditHolidayWarningStrip(text = text) }
@@ -233,7 +234,7 @@ private fun BloodDonationLockedDayDialog(
     title: String,
     date: LocalDate,
     record: DayRecord?,
-    repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     PopupDialog(
@@ -260,7 +261,7 @@ private fun BloodDonationLockedDayDialog(
                 destructive = true,
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = {
-                    repo.clearBloodDonationLeaveForDate(date)
+                    actions.clearBloodDonationLeaveForDate(date)
                     onDismiss()
                 }
             )

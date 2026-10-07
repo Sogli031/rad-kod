@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,8 +25,6 @@ import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.uvoz.FillAllResult
 import com.rad.shifttracker.uvoz.MonthFillResult
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.uvoz.applyMonthFill
-import com.rad.shifttracker.uvoz.fillAllMonths
 import com.rad.shifttracker.uvoz.fillableMonths
 import com.rad.shifttracker.uvoz.planMonthFromPayslip
 import com.rad.shifttracker.listici.runPayslipSafely
@@ -56,6 +55,7 @@ internal fun payslipMonthReplaceQuestionText(month: MonthKey, dayCount: Int): St
 @Composable
 internal fun PayslipMonthFillButton(
     repo: ShiftRepository,
+    actions: DataActions,
     payslip: ParsedPayslip,
     replace: Boolean = false,
     onFilled: (MonthKey) -> Unit
@@ -76,7 +76,7 @@ internal fun PayslipMonthFillButton(
             isWorking = false
             when (outcome) {
                 is MonthFillResult.Success -> {
-                    applyMonthFill(repo, outcome)
+                    actions.applyMonthFill(outcome)
                     onFilled(outcome.month)
                 }
                 is MonthFillResult.Failure -> error = outcome.message
@@ -130,7 +130,7 @@ internal fun fillAllStatusText(result: FillAllResult): String {
  * Mesec koji ne može da se složi ostaje netaknut i navodi se u statusu. Dugme se vidi samo dok ima šta da se popuni.
  */
 @Composable
-internal fun PayslipFillAllButton(repo: ShiftRepository) {
+internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
     val scope = rememberCoroutineScope()
     var refresh by remember { mutableStateOf(0) }
     var months by remember { mutableStateOf<List<MonthKey>>(emptyList()) }
@@ -156,7 +156,7 @@ internal fun PayslipFillAllButton(repo: ShiftRepository) {
                     status = null
                     val pending = months
                     scope.launch {
-                        val result = withContext(Dispatchers.Default) { runPayslipSafely { fillAllMonths(repo, pending) } }
+                        val result = withContext(Dispatchers.Default) { runPayslipSafely { actions.fillAllMonths(pending) } }
                         isWorking = false
                         status = result ?: FillAllResult(emptyList(), pending.map { it to PAYSLIP_UNEXPECTED_ERROR_TEXT })
                         refresh++

@@ -25,7 +25,7 @@ class BloodDonationReminderReceiver : BroadcastReceiver() {
 
     private fun handle(context: Context, action: String?) {
         val app = context as? RadApplication
-        val repo = app?.shiftRepositoryOrNull ?: ShiftRepository().also { it.loadFromLocal(context) }
+        val repo = app?.containerOrNull?.shiftRepository ?: ShiftRepository().also { it.loadFromLocal(context) }
         if (repo.lastBloodDonationDate == null) {
             BloodDonationReminderScheduler.cancel(context)
             return

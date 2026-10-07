@@ -75,7 +75,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
     val showMessage = rememberShowMessage()
     val viewModel: MainViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { MainViewModel(repo, context.applicationContext, createSavedStateHandle()) }
+            initializer { MainViewModel(repo, context.applicationContext, createSavedStateHandle(), backup = backup) }
         }
     )
     val ui = viewModel.state.collectAsStateWithLifecycle().value
@@ -168,6 +168,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             vacationAsOfDate = vacationAsOfDate,
             scheduler = scheduler,
             repo = repo,
+            actions = viewModel,
             repoTick = repoTick.intValue,
             workHoursSummary = ui.summary,
             workHoursPayBreakdown = ui.payBreakdown,
@@ -211,13 +212,13 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         onDismiss = dismissDialog
     )
 
-    BackupRestoreDialogs(state = backupRestore, backup = backup, repo = repo, showMessage = showMessage)
+    BackupRestoreDialogs(state = backupRestore, backup = backup, actions = viewModel, showMessage = showMessage)
 
     CloudBackupFoundHost(
         found = cloudBackupFound,
         signedIn = signInState is SignInState.SignedIn,
         backup = backup,
-        repo = repo,
+        actions = viewModel,
         showMessage = showMessage
     )
 

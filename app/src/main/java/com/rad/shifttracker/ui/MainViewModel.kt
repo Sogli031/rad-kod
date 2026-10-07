@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.rad.shifttracker.data.backup.GoogleDriveBackup
 import com.rad.shifttracker.godisnji.VacationBalanceSummary
 import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
@@ -68,14 +69,15 @@ internal data class MainStateKey(val tick: Int, val month: MonthKey, val today: 
 /**
  * Stanje glavnog ekrana: izabrani mesec (preživljava ubijanje procesa), današnji dan i izvedeni
  * podaci meseca. Računanje ne blokira glavnu nit, ni prvo; do prvog rezultata nove vrednosti se
- * vidi prethodno stanje.
+ * vidi prethodno stanje. Svi upisi iz ekrana i dijaloga idu kroz njega ([DataActions]).
  */
 internal class MainViewModel(
     private val repo: ShiftRepository,
     private val appContext: Context,
     private val saved: SavedStateHandle,
-    initialToday: LocalDate = LocalDate.now()
-) : ViewModel() {
+    initialToday: LocalDate = LocalDate.now(),
+    backup: GoogleDriveBackup? = null
+) : ViewModel(), DataActions by RepoDataActions(repo, backup, appContext) {
     private val tick = MutableStateFlow(0)
     private val todayFlow = MutableStateFlow(initialToday)
     val today: StateFlow<LocalDate> = todayFlow.asStateFlow()

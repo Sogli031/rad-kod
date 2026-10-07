@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -282,6 +283,7 @@ internal fun takeGmailUpdateIntro(context: Context, firstLaunch: Boolean): Boole
 @Composable
 internal fun GmailOnboardingDialog(
     repo: ShiftRepository,
+    actions: DataActions,
     mode: GmailImportMode = GmailImportMode.ONBOARDING,
     onFinished: () -> Unit
 ) {
@@ -301,10 +303,10 @@ internal fun GmailOnboardingDialog(
         GmailImportRunner.reset()
         onFinished()
     }
-    val connector = rememberGmailPayslipConnector { GmailImportRunner.start(context, repo) }
+    val connector = rememberGmailPayslipConnector { actions.startGmailImport() }
     LaunchedEffect(Unit) {
         if (mode == GmailImportMode.RECHECK && hasGmailPayslipAccess(context) && importState == GmailImportState.Idle) {
-            GmailImportRunner.start(context, repo)
+            actions.startGmailImport()
         }
     }
 

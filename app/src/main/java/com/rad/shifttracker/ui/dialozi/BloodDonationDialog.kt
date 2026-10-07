@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -34,12 +35,9 @@ import com.rad.shifttracker.krv.bloodDonationReminderStatusText
 import com.rad.shifttracker.krv.parseBloodDonationDateInSelectedMonth
 import com.rad.shifttracker.krv.validateBloodDonationLeaveStartDate
 import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.applyBloodDonationLeave
 import com.rad.shifttracker.repo.bloodDonationHistory
 import com.rad.shifttracker.repo.bloodDonationLeaveStartDate
-import com.rad.shifttracker.repo.deleteBloodDonation
 import com.rad.shifttracker.repo.lastBloodDonationDate
-import com.rad.shifttracker.repo.recordBloodDonation
 import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.MIN_TOUCH_TARGET
@@ -57,6 +55,7 @@ import com.rad.shifttracker.repo.lastBloodDonationLeaveUsage
 @Composable
 internal fun BloodDonationDialog(
     repo: ShiftRepository,
+    actions: DataActions,
     selectedYear: Int,
     selectedMonth: Int,
     today: LocalDate,
@@ -75,6 +74,7 @@ internal fun BloodDonationDialog(
     ) {
         BloodDonationStatusSection(
             repo = repo,
+            actions = actions,
             selectedYear = selectedYear,
             selectedMonth = selectedMonth,
             today = today,
@@ -85,6 +85,7 @@ internal fun BloodDonationDialog(
         )
         BloodDonationLeaveSection(
             repo = repo,
+            actions = actions,
             selectedYear = selectedYear,
             selectedMonth = selectedMonth,
             leaveStartDate = leaveStartDate
@@ -95,6 +96,7 @@ internal fun BloodDonationDialog(
 @Composable
 private fun BloodDonationStatusSection(
     repo: ShiftRepository,
+    actions: DataActions,
     selectedYear: Int,
     selectedMonth: Int,
     today: LocalDate,
@@ -147,7 +149,7 @@ private fun BloodDonationStatusSection(
                     parsedDate == null -> errorMessage = "Unesi ispravan datum davanja krvi."
                     parsedDate.isAfter(today) -> errorMessage = "Datum ne može biti u budućnosti."
                     else -> {
-                        repo.recordBloodDonation(parsedDate)
+                        actions.recordBloodDonation(parsedDate)
                         dayInput = ""
                         errorMessage = null
                         onDateSaved()
@@ -178,7 +180,7 @@ private fun BloodDonationStatusSection(
             onDeleteClick = { pendingDeleteDate = it },
             onCancelDelete = { pendingDeleteDate = null },
             onConfirmDelete = { date ->
-                if (repo.deleteBloodDonation(date)) {
+                if (actions.deleteBloodDonation(date)) {
                     pendingDeleteDate = null
                     onHistoryChanged()
                 }
@@ -277,6 +279,7 @@ private fun BloodDonationHistoryRow(
 @Composable
 private fun BloodDonationLeaveSection(
     repo: ShiftRepository,
+    actions: DataActions,
     selectedYear: Int,
     selectedMonth: Int,
     leaveStartDate: LocalDate?
@@ -304,7 +307,7 @@ private fun BloodDonationLeaveSection(
         )
         leaveErrorMessage?.let { FormErrorText(message = it, style = MaterialTheme.typography.bodySmall) }
         BloodDonationLeaveActions(
-            repo = repo,
+            actions = actions,
             selectedYear = selectedYear,
             selectedMonth = selectedMonth,
             leaveStartDate = leaveStartDate,
@@ -320,7 +323,7 @@ private fun BloodDonationLeaveSection(
 
 @Composable
 private fun BloodDonationLeaveActions(
-    repo: ShiftRepository,
+    actions: DataActions,
     selectedYear: Int,
     selectedMonth: Int,
     leaveStartDate: LocalDate?,
@@ -350,7 +353,7 @@ private fun BloodDonationLeaveActions(
             if (validationError != null) {
                 onError(validationError)
             } else if (parsedDate != null) {
-                repo.applyBloodDonationLeave(parsedDate)
+                actions.applyBloodDonationLeave(parsedDate)
                 onClearInputs()
             }
         }

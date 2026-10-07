@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.time.LocalDate
 import com.rad.shifttracker.osnova.MONTH_NAMES
-import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.smene.ShiftFillSettings
@@ -32,13 +32,12 @@ import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.titleMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
-import com.rad.shifttracker.repo.populateMonthsAhead
 
 @Composable
-fun AutoFillDialog(
+internal fun AutoFillDialog(
     today: LocalDate,
     scheduler: ShiftScheduler,
-    repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     var fillMode by remember { mutableStateOf(ShiftFillMode.ONE_SHIFT) }
@@ -129,8 +128,8 @@ fun AutoFillDialog(
                     startShift = startShift,
                     fourBrigadeCycleDayIndex = { scheduler.getFourBrigadeCycleStartIndex(startShift, cycleBlockDayIndex) }
                 )
-                scheduler.populateMonthsAhead(
-                    repo,
+                actions.populateMonthsAhead(
+                    scheduler,
                     today,
                     settings,
                     monthsAhead

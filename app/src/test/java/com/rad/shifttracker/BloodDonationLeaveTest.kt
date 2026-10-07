@@ -259,6 +259,6 @@ class BloodDonationLeaveTest {
         assertTrue(isDayEditLockedByBloodDonation(bloodLeave))
         assertTrue(source.contains("BloodDonationLockedDayDialog"))
         assertTrue(source.contains("Poništi dane"))
-        assertTrue(source.contains("repo.clearBloodDonationLeaveForDate(date)"))
+        assertTrue(source.contains("actions.clearBloodDonationLeaveForDate(date)"))
     }
 }

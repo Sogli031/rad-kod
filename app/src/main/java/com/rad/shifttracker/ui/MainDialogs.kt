@@ -41,6 +41,7 @@ private fun GmailStartDialog(state: DialogState, data: MainDialogData, onDismiss
     val update = state == DialogState.GmailUpdate
     GmailOnboardingDialog(
         repo = data.repo,
+        actions = data.actions,
         mode = if (update) GmailImportMode.UPDATE else GmailImportMode.ONBOARDING,
         onFinished = {
             if (!update) data.onFirstLaunchDone()
@@ -56,7 +57,7 @@ private fun AutoFillStartDialog(state: DialogState, data: MainDialogData, onDism
     AutoFillDialog(
         today = data.today,
         scheduler = data.scheduler,
-        repo = data.repo,
+        actions = data.actions,
         onDismiss = { if (onboarding) data.onDialogChange(DialogState.GmailOnboarding) else onDismiss() }
     )
 }
@@ -79,6 +80,7 @@ internal fun MainDialogs(
                 day = state.day,
                 record = state.record,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -95,6 +97,7 @@ internal fun MainDialogs(
                 initialMonth = data.currentMonth,
                 scheduler = data.scheduler,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -102,6 +105,7 @@ internal fun MainDialogs(
         DialogState.BasePay -> {
             PayslipReaderDialog(
                 repo = data.repo,
+                actions = data.actions,
                 month = MonthKey(data.currentYear, data.currentMonth),
                 repoTick = data.repoTick,
                 onDismiss = onDismiss
@@ -117,6 +121,7 @@ internal fun MainDialogs(
                 year = data.currentYear,
                 month = data.currentMonth,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -133,6 +138,7 @@ internal fun MainDialogs(
                 year = data.currentYear,
                 month = data.currentMonth,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -150,6 +156,7 @@ internal fun MainDialogs(
                 year = data.currentYear,
                 month = data.currentMonth,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -171,6 +178,7 @@ internal fun MainDialogs(
         DialogState.InitialCompBalance -> {
             InitialCompBalanceDialog(
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -179,7 +187,7 @@ internal fun MainDialogs(
             DeleteMonthDialog(
                 year = data.currentYear,
                 month = data.currentMonth,
-                repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -189,6 +197,7 @@ internal fun MainDialogs(
                 year = data.currentYear,
                 today = data.vacationAsOfDate,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -197,6 +206,7 @@ internal fun MainDialogs(
             HolidayManagementDialog(
                 year = data.currentYear,
                 repo = data.repo,
+                actions = data.actions,
                 refreshKey = data.repoTick,
                 onDismiss = onDismiss
             )
@@ -217,6 +227,7 @@ private fun MainPayrollDialog(
                 monthlyFinalPaymentBreakdown = data.monthlyFinalPaymentBreakdown,
                 payDetails = data.payDetails,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -227,6 +238,7 @@ private fun MainPayrollDialog(
                 monthlyFinalPaymentBreakdown = data.salaryDetailsFinalPaymentBreakdown,
                 payDetails = data.workHoursPayDetails,
                 repo = data.repo,
+                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -254,6 +266,7 @@ private fun MainOptionsDialog(
 ) {
     OptionsDialog(
         repo = data.repo,
+        actions = data.actions,
         onCloudClick = { data.onDialogChange(DialogState.CloudBackup) },
         onMonthlyExportClick = {
             data.onMonthlyExportClick()
@@ -275,6 +288,7 @@ private fun MainBloodDonationDialog(
 ) {
     BloodDonationDialog(
         repo = data.repo,
+        actions = data.actions,
         selectedYear = data.currentYear,
         selectedMonth = data.currentMonth,
         today = data.today,
@@ -291,7 +305,9 @@ internal data class MainDialogData(
     val today: LocalDate,
     val vacationAsOfDate: LocalDate,
     val scheduler: ShiftScheduler,
+    /** Samo za čitanje; svaki upis ide kroz [actions]. */
     val repo: ShiftRepository,
+    val actions: DataActions,
     val repoTick: Int,
     val workHoursSummary: MonthSummary,
     val workHoursPayBreakdown: MonthlyNetPayBreakdown,

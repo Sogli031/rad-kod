@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,9 +48,10 @@ import com.rad.shifttracker.ui.bodyLargeEmphasized
 import com.rad.shifttracker.ui.extendedColors
 
 @Composable
-fun HolidayManagementDialog(
+internal fun HolidayManagementDialog(
     year: Int,
     repo: ShiftRepository,
+    actions: DataActions,
     refreshKey: Int,
     onDismiss: () -> Unit
 ) {
@@ -111,7 +113,7 @@ fun HolidayManagementDialog(
                         if (validDate == null) {
                             errorMessage = "Unesi ispravan datum za $year."
                         } else {
-                            repo.setHolidayActive(year, validDate.monthValue, validDate.dayOfMonth, isActive = true)
+                            actions.setHolidayActive(year, validDate.monthValue, validDate.dayOfMonth, isActive = true)
                             dayInput = ""
                             monthInput = ""
                             errorMessage = null
@@ -134,7 +136,7 @@ fun HolidayManagementDialog(
                     HolidayEntryRow(
                         entry = entry,
                         onActiveChange = { checked ->
-                            repo.setHolidayActive(entry.year, entry.month, entry.day, checked)
+                            actions.setHolidayActive(entry.year, entry.month, entry.day, checked)
                         }
                     )
                 }

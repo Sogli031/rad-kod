@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +20,6 @@ import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getFoodPerDayForMonth
 import com.rad.shifttracker.ui.rememberRepoValue
-import com.rad.shifttracker.repo.setFoodPerDayFromMonth
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.PopupCard
@@ -31,10 +31,11 @@ import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.smene.monthYearText
 
 @Composable
-fun FoodAllowanceDialog(
+internal fun FoodAllowanceDialog(
     year: Int,
     month: Int,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val selectedMonth = MonthKey(year, month)
@@ -85,7 +86,7 @@ fun FoodAllowanceDialog(
                     errorMessage = "Unesi ispravan iznos."
                     return@GlowButton
                 }
-                repo.setFoodPerDayFromMonth(year, month, newValue)
+                actions.setFoodPerDayFromMonth(year, month, newValue)
                 onDismiss()
             }
         )

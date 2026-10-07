@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import com.rad.shifttracker.osnova.UI
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +40,6 @@ import com.rad.shifttracker.obracun.ADVANCE_PREDICTION_PAID_PREVIOUS_LABEL
 import com.rad.shifttracker.obracun.ADVANCE_PREDICTION_SECTION_LABEL
 import com.rad.shifttracker.obracun.ADVANCE_PREDICTION_UNAVAILABLE_TEXT
 import com.rad.shifttracker.obracun.ADVANCE_PREDICTION_USE_MINIMUM_LABEL
-import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
@@ -48,10 +48,11 @@ import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.smene.monthYearText
 
 @Composable
-fun AdvancePaymentDialog(
+internal fun AdvancePaymentDialog(
     year: Int,
     month: Int,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val currentAdjustments = remember(year, month) { repo.getMonthlyNetAdjustments(year, month) }
@@ -148,7 +149,7 @@ fun AdvancePaymentDialog(
                         errorMessage = "Unesi ispravan neto iznos akontacije."
                         return@GlowButton
                     }
-                    repo.setMonthlyAdvancePaymentNet(year, month, value)
+                    actions.setMonthlyAdvancePaymentNet(year, month, value)
                     onDismiss()
                 }
             )

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -19,7 +20,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.MONTH_NAMES
-import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.Spacing
@@ -29,10 +29,10 @@ import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.SectionLabel
 
 @Composable
-fun DeleteMonthDialog(
+internal fun DeleteMonthDialog(
     year: Int,
     month: Int,
-    repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     var deleteAll by remember { mutableStateOf(false) }
@@ -120,9 +120,9 @@ fun DeleteMonthDialog(
                 textStyle = MaterialTheme.typography.labelLarge,
                 onClick = {
                     if (deleteAll) {
-                        repo.deleteAllData()
+                        actions.deleteAllData()
                     } else {
-                        repo.deleteMonth(year, month)
+                        actions.deleteMonth(year, month)
                     }
                     onDismiss()
                 }

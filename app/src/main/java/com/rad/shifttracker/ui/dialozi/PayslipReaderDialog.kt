@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -31,7 +32,6 @@ import java.time.LocalDate
 import com.rad.shifttracker.uvoz.MonthFillOffer
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.PayslipSnapshotStore
-import com.rad.shifttracker.uvoz.applyPayslipChanges
 import com.rad.shifttracker.uvoz.buildPayslipReconciliation
 import com.rad.shifttracker.listici.formatSerbianDecimal
 import com.rad.shifttracker.uvoz.monthFillOffer
@@ -41,7 +41,6 @@ import com.rad.shifttracker.listici.readPayslip
 import com.rad.shifttracker.listici.runPayslipSafely
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getSavedPayslip
-import com.rad.shifttracker.repo.savePayslip
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.Spacing
@@ -55,7 +54,6 @@ import com.rad.shifttracker.uvoz.PayslipReconciliation
 import com.rad.shifttracker.listici.findPayslipInGmail
 import com.rad.shifttracker.listici.hasGmailPayslipAccess
 import com.rad.shifttracker.listici.payslipImportErrorText
-import com.rad.shifttracker.repo.deletePayslip
 import com.rad.shifttracker.ui.ExtendedColors
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
@@ -76,7 +74,13 @@ import com.rad.shifttracker.uvoz.payslipPickOutcome
  * Listić za drugi mesec se odbija. Ono čega na listiću nema (otežani uslovi, prevoz) je u Opcijama.
  */
 @Composable
-internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTick: Int, onDismiss: () -> Unit) {
+internal fun PayslipReaderDialog(
+    repo: ShiftRepository,
+    actions: DataActions,
+    month: MonthKey,
+    repoTick: Int,
+    onDismiss: () -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var payslip by remember(month) { mutableStateOf(savedPayslipForMonth(repo, PayslipSnapshotStore(context), month)) }
@@ -95,7 +99,7 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
 
     // Listić skeniran ranije (samo „poslednji listić“): prebaci ga u trajno čuvanje po mesecu.
     LaunchedEffect(payslip) {
-        payslip?.let { current -> if (repo.getSavedPayslip(month.year, month.month) == null) repo.savePayslip(current) }
+        payslip?.let { current -> if (repo.getSavedPayslip(month.year, month.month) == null) actions.savePayslip(current) }
     }
 
     val folderScan = rememberFolderPayslipScan(month, missing = payslip == null)
@@ -107,8 +111,7 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
             is PayslipPickOutcome.Ready -> {
                 val changes = outcome.plan.changes
                 message = payslipSavedText(replaced = payslip != null, changeCount = changes.size) to false
-                applyPayslipChanges(repo, changes)
-                repo.savePayslip(outcome.payslip)
+                actions.savePayslipWithChanges(outcome.payslip, changes)
                 payslip = outcome.payslip
                 revision++
             }
@@ -156,6 +159,7 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
         if (current != null && monthFillOffer != MonthFillOffer.NONE) {
             PayslipMonthFillButton(
                 repo = repo,
+                actions = actions,
                 payslip = current,
                 replace = monthFillOffer == MonthFillOffer.REPLACE
             ) { filled ->
@@ -185,7 +189,7 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
         PayslipDeleteDialog(
             month = month,
             onConfirm = {
-                deletePayslipForMonth(repo, PayslipSnapshotStore(context), month)
+                actions.deletePayslip(month)
                 confirmDelete = false
                 payslip = null
                 revision++
@@ -207,15 +211,6 @@ internal fun safePayslipPickOutcome(repo: ShiftRepository, result: PayslipParseR
 /** Listić meseca iz podataka aplikacije; stariji „poslednji listić“ važi ako je za isti mesec. */
 internal fun savedPayslipForMonth(repo: ShiftRepository, store: PayslipSnapshotStore, month: MonthKey): ParsedPayslip? =
     repo.getSavedPayslip(month.year, month.month) ?: store.load()?.takeIf { it.month == month }
-
-/**
- * Briše listić meseca iz podataka aplikacije i stari „poslednji listić“ za isti mesec,
- * da ga [savedPayslipForMonth] ne bi vratio. Podešavanja upisana sa listića ostaju.
- */
-internal fun deletePayslipForMonth(repo: ShiftRepository, store: PayslipSnapshotStore, month: MonthKey) {
-    repo.deletePayslip(month)
-    if (store.load()?.month == month) store.clear()
-}
 
 /** Stanje pretrage Gmail-a za mesec bez listića. */
 internal data class FolderPayslipScan(

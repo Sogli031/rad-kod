@@ -23,11 +23,11 @@ class BackupWorker(
     override suspend fun doWork(): Result {
         val app = applicationContext as? RadApplication ?: return Result.success()
 
-        // U pozadinskom procesu repo možda nije inicijalizovan (MainActivity nije
-        // pokrenut); initializeServices je idempotentan i učita lokalno stanje.
-        app.initializeServices()
-        val repo = app.shiftRepositoryOrNull ?: return Result.success()
-        val backup = app.googleDriveBackup
+        // U pozadinskom procesu container možda još ne postoji (MainActivity nije
+        // pokrenut); container() ga napravi jednom i učita lokalno stanje.
+        val container = app.container()
+        val repo = container.shiftRepository
+        val backup = container.googleDriveBackup
 
         // Dok traje prvo pokretanje stanje je polu-prazno (podešavanja se tek unose);
         // backup tada bi u oblak upisao verziju sa praznim globalnim podacima.

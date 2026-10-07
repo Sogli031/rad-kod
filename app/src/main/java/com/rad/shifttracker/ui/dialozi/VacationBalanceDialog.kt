@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,7 +36,6 @@ import com.rad.shifttracker.repo.getVacationMonthsWithoutData
 import com.rad.shifttracker.repo.getVacationYearBalance
 import com.rad.shifttracker.repo.isVacationCarryoverAutomatic
 import com.rad.shifttracker.ui.rememberRepoValue
-import com.rad.shifttracker.repo.setVacationYearBalance
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.PopupCard
@@ -50,10 +50,11 @@ import com.rad.shifttracker.ui.labelMediumEmphasized
 import com.rad.shifttracker.osnova.formatVacationInput
 
 @Composable
-fun VacationBalanceDialog(
+internal fun VacationBalanceDialog(
     year: Int,
     today: LocalDate,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val summary = remember(year, today) { repo.getVacationBalanceSummary(year, today) }
@@ -92,7 +93,7 @@ fun VacationBalanceDialog(
             errorMessage = "Unesite ispravan broj dana."
             return false
         }
-        repo.setVacationYearBalance(
+        actions.setVacationYearBalance(
             VacationYearBalance(
                 year = year,
                 trackingStartDate = LocalDate.of(year, 1, 1),
@@ -121,7 +122,7 @@ fun VacationBalanceDialog(
         VacationPayslipScanCard()
 
         if (SHOW_ANNUAL_LEAVE_ENTITLEMENT_CARD) {
-            AnnualLeaveEntitlementCard(year = year, repo = repo, enteredTotal = currentYearTotalInput) {
+            AnnualLeaveEntitlementCard(year = year, repo = repo, actions = actions, enteredTotal = currentYearTotalInput) {
                 currentYearTotalInput = it
                 errorMessage = null
             }

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import android.accounts.AccountManager
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -105,13 +106,13 @@ internal fun rememberGmailPayslipConnector(onConnected: (String) -> Unit): Gmail
  * nezavisno od backup naloga; posle izbora se traži dozvola za čitanje mejla.
  */
 @Composable
-internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
+internal fun GmailPayslipSettingsSection(repo: ShiftRepository, actions: DataActions) {
     val context = LocalContext.current
     var accountEmail by remember { mutableStateOf(gmailPayslipAccount(context)?.name) }
     // Preživi okretanje telefona, da se provera koja još traje (ili njen rezultat) ponovo prikaže.
     var recheckOpen by rememberSaveable { mutableStateOf(false) }
     if (recheckOpen) {
-        GmailOnboardingDialog(repo = repo, mode = GmailImportMode.RECHECK) {
+        GmailOnboardingDialog(repo = repo, actions = actions, mode = GmailImportMode.RECHECK) {
             recheckOpen = false
             accountEmail = gmailPayslipAccount(context)?.name
         }
@@ -160,7 +161,7 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository) {
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = { recheckOpen = true }
         )
-        ManualPayslipImportButton(repo = repo)
-        PayslipFillAllButton(repo = repo)
+        ManualPayslipImportButton(actions = actions)
+        PayslipFillAllButton(repo = repo, actions = actions)
     }
 }

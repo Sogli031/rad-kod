@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,11 +57,12 @@ import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 @Composable
-fun PayDetailsDialog(
+internal fun PayDetailsDialog(
     monthlyReceipt: MonthlyReceipt,
     monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     payDetails: MonthlyPayDetails,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val receiptAvailable = monthlyReceipt.isSalaryAvailable
@@ -127,7 +129,8 @@ fun PayDetailsDialog(
                     FinalPaymentRows(
                         finalPayment = monthlyFinalPaymentBreakdown,
                         monthlyReceipt = monthlyReceipt,
-                        repo = repo
+                        repo = repo,
+                        actions = actions
                     )
                 }
 
@@ -200,7 +203,8 @@ private fun PayDetailsSectionCard(
 private fun FinalPaymentRows(
     finalPayment: MonthlyFinalPaymentBreakdown,
     monthlyReceipt: MonthlyReceipt,
-    repo: ShiftRepository
+    repo: ShiftRepository,
+    actions: DataActions
 ) {
     SectionLabel(text = FINAL_PAYMENT_REMAINING_LABEL)
     if (!finalPayment.isNetPayAvailable) {
@@ -246,7 +250,8 @@ private fun FinalPaymentRows(
     }
     MonthlyPaymentInputRows(
         monthlyReceipt = monthlyReceipt,
-        repo = repo
+        repo = repo,
+        actions = actions
     )
 }
 

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -86,8 +87,9 @@ internal fun formatInitialCompBalanceInput(minutes: Int): String {
 }
 
 @Composable
-fun InitialCompBalanceDialog(
+internal fun InitialCompBalanceDialog(
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     var balanceInput by remember { mutableStateOf(formatInitialCompBalanceInput(repo.initialCompBalanceMinutesValue)) }
@@ -143,7 +145,7 @@ fun InitialCompBalanceDialog(
                 textColor = MaterialTheme.colorScheme.onSurface,
                 textStyle = MaterialTheme.typography.labelMedium,
                 onClick = {
-                    repo.initialCompBalanceMinutesValue = 0
+                    actions.setInitialCompBalanceMinutes(0)
                     onDismiss()
                 }
             )
@@ -171,7 +173,7 @@ fun InitialCompBalanceDialog(
                     errorMessage = "Unesi sate kao broj, za minute koristi .25, .50 ili .75."
                     return@GlowButton
                 }
-                repo.initialCompBalanceMinutesValue = value
+                actions.setInitialCompBalanceMinutes(value)
                 onDismiss()
             }
         )

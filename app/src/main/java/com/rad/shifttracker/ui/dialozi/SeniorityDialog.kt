@@ -1,5 +1,7 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
+import com.rad.shifttracker.ui.SenioritySettings
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -64,10 +66,11 @@ import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.titleMediumEmphasized
 
 @Composable
-fun MinuliRadDialog(
+internal fun MinuliRadDialog(
     year: Int,
     month: Int,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val currYears = remember(year, month) { repo.getSummary(year, month).yearsOfService }
@@ -171,7 +174,7 @@ fun MinuliRadDialog(
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
                 val validationError = saveSenioritySettings(
-                    repo = repo,
+                    actions = actions,
                     selectedMode = selectedMode,
                     startYearInput = startYearInput,
                     selectedStartMonth = selectedStartMonth,
@@ -492,7 +495,7 @@ private fun PreviewText(text: String) {
 }
 
 private fun saveSenioritySettings(
-    repo: ShiftRepository,
+    actions: DataActions,
     selectedMode: SeniorityInputMode,
     startYearInput: String,
     selectedStartMonth: Int,
@@ -514,22 +517,18 @@ private fun saveSenioritySettings(
             return "Unesi ispravan procenat sa platne liste."
         }
     }
-    repo.seniorityInputModeValue = selectedMode
-    repo.minuliRadIncreaseFactorValue = selectedIncreaseFactor
-    when (selectedMode) {
-        SeniorityInputMode.KNOWN_START -> {
-            repo.minuliRadStartYearValue = startYear
-            repo.minuliRadStartMonthValue = selectedStartMonth
-            repo.minuliRadBenefitEnabledValue = benefitEnabled
-        }
-
-        SeniorityInputMode.PAYSLIP_PERCENT -> {
-            repo.minuliRadBenefitEnabledValue = false
-            repo.minuliRadLastPayslipYearValue = lastPayslipYear
-            repo.minuliRadLastPayslipMonthValue = selectedLastPayslipMonth
-            repo.minuliRadPayslipPercentValue = payslipPercent ?: 0.0
-        }
-    }
+    actions.saveSeniority(
+        SenioritySettings(
+            mode = selectedMode,
+            increaseFactor = selectedIncreaseFactor,
+            startYear = startYear,
+            startMonth = selectedStartMonth,
+            benefitEnabled = benefitEnabled,
+            lastPayslipYear = lastPayslipYear,
+            lastPayslipMonth = selectedLastPayslipMonth,
+            payslipPercent = payslipPercent ?: 0.0
+        )
+    )
     return null
 }
 

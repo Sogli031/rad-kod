@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,15 +50,14 @@ import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.repo.previewVacationRange
-import com.rad.shifttracker.repo.applySickRange
-import com.rad.shifttracker.repo.applyVacationRange
 
 @Composable
-fun SickVacationDialog(
+internal fun SickVacationDialog(
     initialYear: Int,
     initialMonth: Int,
     scheduler: ShiftScheduler,
     repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     // Mesec se menja strelicama u dijalogu, bez vraćanja na kalendar.
@@ -160,14 +160,14 @@ fun SickVacationDialog(
                 val end = range.last
 
                 if (absenceType == AbsenceType.SICK) {
-                    scheduler.applySickRange(repo, year, month, start, end, sickPayRate)
+                    actions.applySickRange(scheduler, year, month, start, end, sickPayRate)
                 } else {
                     val preview = vacationPreview
                     if (preview != null && !preview.requestValidation.isAllowed) {
                         errorMessage = preview.requestValidation.message
                         return@GlowButton
                     }
-                    scheduler.applyVacationRange(repo, year, month, start, end)
+                    actions.applyVacationRange(scheduler, year, month, start, end)
                 }
                 onDismiss()
             }

@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
@@ -45,7 +46,6 @@ import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.osnova.formatHoursAndMinutes
 import com.rad.shifttracker.osnova.formatShortageMinutes
 import com.rad.shifttracker.godisnji.VacationRequestValidation
-import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.CARD_BORDER_ALPHA
 import com.rad.shifttracker.ui.LabeledSwitchRow
 import com.rad.shifttracker.ui.MIN_TOUCH_TARGET
@@ -564,7 +564,7 @@ internal fun DayEditCompensationBlock(
 internal fun DayEditSaveButton(
     saveState: DayEditSaveState,
     vacationValidation: VacationRequestValidation,
-    repo: ShiftRepository,
+    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val isSaveEnabled = saveState.shift1 != Shift.VACATION || vacationValidation.isAllowed
@@ -582,25 +582,7 @@ internal fun DayEditSaveButton(
             if (saveState.shift1 == Shift.VACATION && !vacationValidation.isAllowed) {
                 return@GlowButton
             }
-            val saveRecord = saveState.toDayRecord()
-            repo.set(
-                year = saveRecord.year,
-                month = saveRecord.month,
-                day = saveRecord.day,
-                shift = saveRecord.shift,
-                hours = saveRecord.hours,
-                shift2 = saveRecord.shift2,
-                hours2 = saveRecord.hours2,
-                overtimeType = saveRecord.overtimeType,
-                weekendOvertimeType = saveRecord.weekendOvertimeType,
-                compHoursUsed = saveRecord.compHoursUsed,
-                holidayWorkOverride = saveRecord.holidayWorkOverride,
-                holidayOverride = saveRecord.holidayOverride,
-                sickPayRate = saveRecord.sickPayRate,
-                balanceExempt = saveRecord.balanceExempt,
-                regularShortageMinutes = saveRecord.regularShortageMinutes,
-                source = saveRecord.source
-            )
+            actions.saveDay(saveState.toDayRecord())
             onDismiss()
         }
     )

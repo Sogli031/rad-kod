@@ -67,9 +67,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             try {
                 val app = application as RadApplication
-                withContext(Dispatchers.IO) { app.initializeServices() }
-                repo = app.shiftRepository
-                backup = app.googleDriveBackup
+                val container = withContext(Dispatchers.IO) { app.container() }
+                repo = container.shiftRepository
+                backup = container.googleDriveBackup
                 setContent { RadApp(repo, backup) }
                 if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) onDataReady()
             } catch (e: CancellationException) {
@@ -87,8 +87,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        val app = application as? RadApplication
-        if (app?.consumePersistenceFailure() == true) {
+        val container = (application as? RadApplication)?.containerOrNull
+        if (container?.consumePersistenceFailure() == true) {
             Toast.makeText(
                 this,
                 "Poslednja izmena nije mogla da se sačuva. Proveri slobodan prostor i pokušaj ponovo.",
@@ -127,9 +127,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        if (::repo.isInitialized) {
-            (application as? RadApplication)?.flushPendingPersistence()
-        }
+        (application as? RadApplication)?.containerOrNull?.flushPendingPersistence()
         super.onStop()
     }
 }

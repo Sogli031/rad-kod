@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,6 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getAdvancePaymentPrediction
 import com.rad.shifttracker.repo.getMonthlyNetAdjustments
 import com.rad.shifttracker.ui.rememberRepoValue
-import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.osnova.formatMoney2
 import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_SAVE_LABEL
@@ -44,7 +44,8 @@ import com.rad.shifttracker.ui.extendedColors
 @Composable
 internal fun MonthlyPaymentInputRows(
     monthlyReceipt: MonthlyReceipt,
-    repo: ShiftRepository
+    repo: ShiftRepository,
+    actions: DataActions
 ) {
     val paymentMonth = monthlyReceipt.paymentMonth
     val paymentAdjustments = rememberRepoValue(repo, paymentMonth) { getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month) }
@@ -69,7 +70,7 @@ internal fun MonthlyPaymentInputRows(
                 advanceError = "Unesi ispravan neto iznos akontacije."
                 return@PaymentAdjustmentInputRow
             }
-            repo.setMonthlyAdvancePaymentNet(paymentMonth.year, paymentMonth.month, value ?: 0.0)
+            actions.setMonthlyAdvancePaymentNet(paymentMonth.year, paymentMonth.month, value ?: 0.0)
             advanceInput = formatPositiveMoneyInput(value ?: 0.0)
             advanceError = null
         },

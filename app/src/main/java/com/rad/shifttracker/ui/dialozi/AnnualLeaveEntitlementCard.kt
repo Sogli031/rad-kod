@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +20,6 @@ import com.rad.shifttracker.godisnji.AnnualLeaveCalculationInput
 import com.rad.shifttracker.godisnji.calculateAnnualLeaveDays
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getAnnualLeaveEntitlement
-import com.rad.shifttracker.repo.setAnnualLeaveCalculation
 import com.rad.shifttracker.ui.LabeledSwitchRow
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.SectionLabel
@@ -38,6 +38,7 @@ internal const val SHOW_ANNUAL_LEAVE_ENTITLEMENT_CARD = false
 internal fun AnnualLeaveEntitlementCard(
     year: Int,
     repo: ShiftRepository,
+    actions: DataActions,
     enteredTotal: String,
     onUseTotal: (String) -> Unit
 ) {
@@ -46,7 +47,7 @@ internal fun AnnualLeaveEntitlementCard(
 
     fun update(change: (AnnualLeaveCalculationInput) -> AnnualLeaveCalculationInput) {
         val input = change(entitlement.input)
-        repo.setAnnualLeaveCalculation(input, calculateAnnualLeaveDays(input).totalDays)
+        actions.setAnnualLeaveCalculation(input, calculateAnnualLeaveDays(input).totalDays)
         entitlement = repo.getAnnualLeaveEntitlement(year)
     }
 

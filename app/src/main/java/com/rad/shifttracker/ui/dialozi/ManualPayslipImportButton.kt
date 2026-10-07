@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
+import com.rad.shifttracker.ui.DataActions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,20 +22,18 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.uvoz.MANUAL_PAYSLIP_IMPORT_LABEL
 import com.rad.shifttracker.listici.PayslipParseResult
-import com.rad.shifttracker.uvoz.importManualPayslip
 import com.rad.shifttracker.listici.readPayslip
 import com.rad.shifttracker.uvoz.rememberTransportWorkMonth
 
 /** Opcije: dugme koje otvara sistemski birač PDF-a (bez dozvola za skladište) i poruka o ishodu. */
 @Composable
-internal fun ManualPayslipImportButton(repo: ShiftRepository) {
+internal fun ManualPayslipImportButton(actions: DataActions) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isReading by remember { mutableStateOf(false) }
@@ -46,7 +45,7 @@ internal fun ManualPayslipImportButton(repo: ShiftRepository) {
         message = null
         scope.launch {
             val result = withContext(Dispatchers.IO) { readPayslip(context, uri) }
-            message = withContext(Dispatchers.Default) { importManualPayslip(repo, result) }
+            message = withContext(Dispatchers.Default) { actions.importManualPayslip(result) }
             (result as? PayslipParseResult.SideRun)?.let { rememberTransportWorkMonth(context, listOf(it)) }
             isReading = false
         }

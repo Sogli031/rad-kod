@@ -28,6 +28,7 @@ import org.robolectric.shadows.ShadowEnvironment
 import java.time.LocalDate
 import java.time.YearMonth
 import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.ui.RepoDataActions
 import com.rad.shifttracker.repo.getMonthlyReceipt
 import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getVacationBalanceSummary
@@ -96,6 +97,7 @@ class DesignSnapshotTest {
     fun `options dialog 360dp font 1_0`() = dialog("options", fontScale = 1.0f) { repo ->
         OptionsDialog(
             repo = repo,
+            actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()),
             onCloudClick = {},
             onMonthlyExportClick = {},
             onDebugExportClick = {},
@@ -108,6 +110,7 @@ class DesignSnapshotTest {
     fun `options dialog 360dp font 1_5`() = dialog("options", fontScale = 1.5f) { repo ->
         OptionsDialog(
             repo = repo,
+            actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()),
             onCloudClick = {},
             onMonthlyExportClick = {},
             onDebugExportClick = {},
@@ -118,12 +121,12 @@ class DesignSnapshotTest {
 
     @Test
     fun `day edit dialog 360dp font 1_0`() = dialog("day_edit", fontScale = 1.0f) { repo ->
-        DayEditDialog(year = YEAR, month = MONTH, day = 13, record = repo.get(YEAR, MONTH, 13), repo = repo, onDismiss = {})
+        DayEditDialog(year = YEAR, month = MONTH, day = 13, record = repo.get(YEAR, MONTH, 13), repo = repo, actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()), onDismiss = {})
     }
 
     @Test
     fun `day edit dialog 360dp font 1_5`() = dialog("day_edit", fontScale = 1.5f) { repo ->
-        DayEditDialog(year = YEAR, month = MONTH, day = 13, record = repo.get(YEAR, MONTH, 13), repo = repo, onDismiss = {})
+        DayEditDialog(year = YEAR, month = MONTH, day = 13, record = repo.get(YEAR, MONTH, 13), repo = repo, actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()), onDismiss = {})
     }
 
     private fun mainScreen(widthDp: Int, heightDp: Int, fontScale: Float) {

@@ -72,8 +72,13 @@ Paketi u `com.rad.shifttracker`, odozdo nagore; paket zavisi samo od paketa ispo
 | `ui`, `ui.dialozi`, `ui.components` | Compose ekrani i dijalozi |
 
 U korenu su samo klase koje telefon pamti po punom imenu (`MainActivity`, `RadApplication`,
-`BloodDonationReminderReceiver`, `SideRunWorker`) i `LegacyCleanup`; ne premeštati ih.
+`BloodDonationReminderReceiver`, `SideRunWorker`), `LegacyCleanup` i `AppContainer`; ne premeštati ih.
 Domenski paketi ne uvoze `ui` ni Compose.
+
+`AppContainer` (pravi ga `RadApplication.container()`, jednom po procesu) drži repozitorijum, Drive
+backup i pozadinsko snimanje; aktivnost, worker-i i receiver dele isti. Ekrani i dijalozi repozitorijum
+samo čitaju: svaki upis ide kroz `MainViewModel` (`DataActions` u `ui`), što proverava
+`UiWritesThroughViewModelTest`.
 
 ## Obračun plate (srpski radni zakon)
 

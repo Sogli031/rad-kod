@@ -25,7 +25,6 @@ import com.rad.shifttracker.ui.dialozi.CloudBackupFoundDialog
 import com.rad.shifttracker.ui.dialozi.RestoreLatestConfirmDialog
 import com.rad.shifttracker.BuildConfig
 import com.rad.shifttracker.repo.buildCloudBackup
-import com.rad.shifttracker.repo.importFromJson
 
 /** Dijalozi za vraćanje backup-a (ranije verzije i najnovija) i da li je neki od njih otvoren. */
 @Stable
@@ -53,13 +52,13 @@ internal fun rememberBackupRestoreState(): BackupRestoreState {
 
 /**
  * Ranije verzije i vraćanje najnovije. Jedan tap ne sme nepovratno da pregazi lokalne izmene —
- * prvo potvrda, pa sigurnosna kopija, pa restore (vidi [restoreWithSafetyCopy]).
+ * prvo potvrda, pa sigurnosna kopija, pa restore (vidi [DataActions.restoreBackup]).
  */
 @Composable
 internal fun BackupRestoreDialogs(
     state: BackupRestoreState,
     backup: GoogleDriveBackup,
-    repo: ShiftRepository,
+    actions: DataActions,
     showMessage: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -78,9 +77,7 @@ internal fun BackupRestoreDialogs(
             onRestoreVersion = { version ->
                 scope.launch {
                     state.restoringVersion = true
-                    val message = restoreWithSafetyCopy(
-                        backup = backup,
-                        repo = repo,
+                    val message = actions.restoreBackup(
                         fetch = { backup.restoreVersion(version.fileId) },
                         messages = RestoreMessages.VERSION
                     )
@@ -101,9 +98,7 @@ internal fun BackupRestoreDialogs(
             onConfirm = {
                 scope.launch {
                     state.restoringLatest = true
-                    val message = restoreWithSafetyCopy(
-                        backup = backup,
-                        repo = repo,
+                    val message = actions.restoreBackup(
                         fetch = { backup.restoreLatest() },
                         messages = RestoreMessages.LATEST
                     )
@@ -142,7 +137,7 @@ internal fun CloudBackupFoundHost(
     found: androidx.compose.runtime.MutableState<BackupVersion?>,
     signedIn: Boolean,
     backup: GoogleDriveBackup,
-    repo: ShiftRepository,
+    actions: DataActions,
     showMessage: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -160,9 +155,7 @@ internal fun CloudBackupFoundHost(
         onRestore = {
             scope.launch {
                 restoring = true
-                val message = restoreWithSafetyCopy(
-                    backup = backup,
-                    repo = repo,
+                val message = actions.restoreBackup(
                     fetch = { backup.restoreVersion(version.fileId) },
                     messages = RestoreMessages.LATEST
                 )
@@ -214,31 +207,6 @@ internal suspend fun findUnadoptedCloudBackup(backup: GoogleDriveBackup): Backup
     val latest = VersionedBackupPlanner.latest(versions)
     if (latest == null) backup.markCloudAdopted()
     return latest
-}
-
-/**
- * Restore uz sigurnosnu kopiju. Cilj se skida PRE pravljenja kopije: inače bi
- * „najnovija verzija" bila upravo ta kopija (sveže stanje spojeno sa arhivom), pa
- * bi se na novoj instalaciji vratilo pola podataka. Ako kopija ne uspe, vraćanje
- * se prekida (UI obećava da je poništivo, pa ne sme da nastavi bez kopije).
- */
-internal suspend fun restoreWithSafetyCopy(
-    backup: GoogleDriveBackup,
-    repo: ShiftRepository,
-    fetch: suspend () -> String?,
-    messages: RestoreMessages
-): String {
-    val json = fetch() ?: return messages.missing
-    val safetyOutcome = backup.backupVersioned(appVersion = BuildConfig.VERSION_NAME, safety = true) { existing ->
-        repo.buildCloudBackup(existing)
-    }
-    if (safetyOutcome is BackupOutcome.Failure) {
-        return "Vraćanje otkazano — sigurnosna kopija nije uspela: ${safetyOutcome.message}"
-    }
-    if (!repo.importFromJson(json)) return messages.failure
-    // Uspešan uvoz = stanje je sada nastavak oblaka, pa auto-backup sme da krene.
-    backup.markCloudAdopted()
-    return messages.success
 }
 
 internal data class RestoreMessages(val missing: String, val success: String, val failure: String) {

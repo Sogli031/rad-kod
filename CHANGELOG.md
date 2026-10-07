@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.2] - 2026-10-07
+Sređivanje arhitekture iz audita, bez promene obračuna i izgleda (svi testovi i snimci ekrana isti).
+- **Upisi kroz ViewModel:** dijalozi (dan, odsustvo, popuna smena, davanje krvi, akontacija, topli obrok, praznici, minuli rad, godišnji, listići, brisanje, Opcije, vraćanje backup-a) više ne pišu direktno u repozitorijum, već kroz `MainViewModel` (`DataActions`: dani, podešavanja, listići). Novi test pada ako neki ekran ponovo upiše mimo njega.
+- **`AppContainer`:** repozitorijum, Drive backup i pozadinsko snimanje su na jednom mestu (`RadApplication.container()`), umesto polja `RadApplication.shiftRepository`; aktivnost, provere u pozadini, backup i podsetnik za krv dele isti container.
+
 ## [7.1] - 2026-10-07
 Sređivanje posle audita, bez promene obračuna i izgleda (1167 testova i svi snimci ekrana isti).
 - **Listići iz Gmail-a samo sa domena firme:** mejl mora da stigne sa `vbs.co.rs` (naslov ILI adresa i dalje važe, da promena jednog ne prekine uvoz). PDF sa pravim naslovom od bilo koga drugog više ne ulazi u obračun.

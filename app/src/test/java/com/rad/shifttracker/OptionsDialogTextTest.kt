@@ -47,7 +47,7 @@ class OptionsDialogTextTest {
 
         val optionsSource = mainSource("OptionsDialog.kt")
         assertTrue(optionsSource.contains("title = MAIN_PAY_SALARY_ONLY_LABEL"))
-        assertTrue(optionsSource.contains("repo.mainPaySalaryOnly = checked"))
+        assertTrue(optionsSource.contains("actions.setMainPaySalaryOnly(checked)"))
 
         val screenSource = mainSource("ShiftTrackerContent.kt")
         assertEquals(2, screenSource.split("salaryOnly = mainPaySalaryOnly").size - 1)

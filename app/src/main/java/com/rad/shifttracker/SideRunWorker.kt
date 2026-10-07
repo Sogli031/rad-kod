@@ -27,10 +27,10 @@ class SideRunWorker(
 
     override suspend fun doWork(): Result {
         val app = applicationContext as? RadApplication ?: return Result.success()
-        app.initializeServices()
-        val repo = app.shiftRepositoryOrNull ?: return Result.success()
+        val container = app.container()
+        val repo = container.shiftRepository
         // Dok traje prvo pokretanje (uvoz iz Gmail-a) stanje je polu-prazno.
-        if (app.googleDriveBackup.isFirstLaunch() || GmailImportRunner.isRunning) return Result.success()
+        if (container.googleDriveBackup.isFirstLaunch() || GmailImportRunner.isRunning) return Result.success()
         // Ako je aplikacija otvorena i već proverava, ne udvostručava se.
         if (!MainActivity.advanceCheckRunning.compareAndSet(false, true)) return Result.success()
         try {
