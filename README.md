@@ -56,6 +56,25 @@ Izveštaj o stabilnosti Compose-a: `./gradlew :app:compileReleaseKotlin --rerun 
 - `docs/` — dokumentacija
 - `project-map.md` — mapa projekta
 
+Paketi u `com.rad.shifttracker`, odozdo nagore; paket zavisi samo od paketa ispod sebe:
+
+| Paket | Sadržaj |
+|---|---|
+| `osnova` | konstante, `CONFIG`, formatiranje, crash log |
+| `smene` | dan, smena, mesec, praznici, raspored smena (bez upisa) |
+| `obracun` | obračun plate, osnovice, staž, obustave, granice vrednosti |
+| `godisnji`, `krv` | pravo na godišnji; dani i podsetnik za davanje krvi |
+| `listici` | čitanje PDF listića i Gmail-a, model popune meseca |
+| `data.storage` | fajlovi, JSON, sadržaj backup-a |
+| `repo` | `ShiftRepository` i njegovi delovi, JSON kodek, upis rasporeda |
+| `uvoz`, `izvoz` | uvoz listića u podatke; izveštaji i izvoz |
+| `data.backup` | Google Drive backup |
+| `ui`, `ui.dialozi`, `ui.components` | Compose ekrani i dijalozi |
+
+U korenu su samo klase koje telefon pamti po punom imenu (`MainActivity`, `RadApplication`,
+`BloodDonationReminderReceiver`, `SideRunWorker`) i `LegacyCleanup`; ne premeštati ih.
+Domenski paketi ne uvoze `ui` ni Compose.
+
 ## Obračun plate (srpski radni zakon)
 
 - Noćna smena: premija 1.41×

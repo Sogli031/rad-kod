@@ -24,8 +24,8 @@ import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.RadTheme
 import com.rad.shifttracker.ui.SalaryCard
 import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
-import com.rad.shifttracker.ui.dialozi.monthYearText
 import com.rad.shifttracker.ui.salaryCardLabel
+import com.rad.shifttracker.smene.monthYearText
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali

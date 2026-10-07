@@ -16,14 +16,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import com.rad.shifttracker.ui.components.AutoSizeText
 import kotlin.math.roundToInt
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatHoursAndMinutes
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatHoursAndMinutes
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
-import com.rad.shifttracker.obracun.PayAccuracyWarningsCard
+import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
@@ -31,6 +31,7 @@ import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.emphasized
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.obracun.fundAbsenceMinutes
+import com.rad.shifttracker.smene.monthYearText
 
 internal const val WORK_HOURS_DIALOG_TITLE = "Sati rada"
 

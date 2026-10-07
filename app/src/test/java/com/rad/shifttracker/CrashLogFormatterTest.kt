@@ -4,6 +4,8 @@ import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.osnova.CrashLogFormatter
+import com.rad.shifttracker.osnova.CrashLogStorage
 
 class CrashLogFormatterTest {
     @Test

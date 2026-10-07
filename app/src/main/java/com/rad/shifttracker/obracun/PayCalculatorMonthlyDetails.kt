@@ -2,10 +2,9 @@ package com.rad.shifttracker.obracun
 
 import kotlin.math.max
 import kotlin.math.roundToInt
-import com.rad.shifttracker.PayConfig
+import com.rad.shifttracker.osnova.PayConfig
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayRecord
-import com.rad.shifttracker.smene.MonthSummary
 import com.rad.shifttracker.smene.Shift
 
 private const val MINUTES_PER_HOUR = 60

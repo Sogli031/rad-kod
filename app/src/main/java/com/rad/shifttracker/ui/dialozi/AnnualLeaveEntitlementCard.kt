@@ -14,7 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.godisnji.AnnualLeaveCalculationInput
 import com.rad.shifttracker.godisnji.calculateAnnualLeaveDays
 import com.rad.shifttracker.repo.ShiftRepository

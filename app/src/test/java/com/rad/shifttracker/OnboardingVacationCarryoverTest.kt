@@ -8,7 +8,7 @@ import com.rad.shifttracker.godisnji.VacationYearBalance
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.listici.PayslipItem
 import com.rad.shifttracker.listici.PayslipParseResult
-import com.rad.shifttracker.listici.applyOnboardingVacation
+import com.rad.shifttracker.uvoz.applyOnboardingVacation
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getVacationBalanceSummary

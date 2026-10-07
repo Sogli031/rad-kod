@@ -5,15 +5,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.rad.shifttracker.listici.FinalPaymentDeduction
-import com.rad.shifttracker.listici.PAYSLIP_PARSER_VERSION
+import com.rad.shifttracker.obracun.FinalPaymentDeduction
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.listici.PayslipDeduction
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.finalPaymentDeductions
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
-import com.rad.shifttracker.listici.payslipRefreshMonths
+import com.rad.shifttracker.uvoz.payslipRefreshMonths
 import com.rad.shifttracker.listici.payslipToJson
 import com.rad.shifttracker.obracun.REGRESS_MONTHS
 import com.rad.shifttracker.repo.foodPerDayValue
@@ -24,6 +23,7 @@ import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.repo.getRegressNetForMonth
 import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
+import com.rad.shifttracker.listici.PAYSLIP_PARSER_VERSION
 
 private const val DEDUCTIONS_TABLE_HEADER = "Oznaka i naziv obustava Procenat/Ostatak duga Ostalo rata Iznos obustave"
 

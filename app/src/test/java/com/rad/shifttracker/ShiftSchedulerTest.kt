@@ -24,6 +24,9 @@ import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.smene.Weekday
+import com.rad.shifttracker.repo.populateMonthsAhead
+import com.rad.shifttracker.repo.previewVacationRange
+import com.rad.shifttracker.repo.applyVacationRange
 
 class ShiftSchedulerTest {
 

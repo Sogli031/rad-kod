@@ -14,6 +14,8 @@ import com.rad.shifttracker.ui.dialozi.DayEditForm
 import com.rad.shifttracker.ui.dialozi.dayEditForm
 import com.rad.shifttracker.ui.dialozi.dayEditHolidayText
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.MANUAL_HOLIDAY_LABEL
 
 /** Prelazi u dijalogu za dan bez UI-ja: ista pravila koja dijalog primenjuje na klik. */
 class DayEditFormTest {

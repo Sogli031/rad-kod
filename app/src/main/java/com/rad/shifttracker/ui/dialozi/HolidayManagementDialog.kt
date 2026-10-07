@@ -29,11 +29,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.DateTimeException
 import java.time.LocalDate
-import com.rad.shifttracker.WEEKDAY_NAMES
+import com.rad.shifttracker.osnova.WEEKDAY_NAMES
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.labelMediumEmphasized
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.smene.HolidayEntry
 import com.rad.shifttracker.smene.HolidayEntrySource
 import com.rad.shifttracker.ui.FormErrorText

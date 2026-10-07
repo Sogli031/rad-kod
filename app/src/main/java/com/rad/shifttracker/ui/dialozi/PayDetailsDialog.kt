@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatCurrency
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatCurrency
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
@@ -49,10 +49,10 @@ import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.headlineMediumEmphasized
-import com.rad.shifttracker.obracun.PayAccuracyWarningsCard
+import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
-import com.rad.shifttracker.repo.rememberRepoValue
+import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 @Composable

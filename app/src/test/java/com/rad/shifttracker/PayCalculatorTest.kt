@@ -14,6 +14,9 @@ import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.Weekday
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.PayConfig
+import com.rad.shifttracker.osnova.formatHoursAndMinutes
 
 @Suppress("LargeClass")
 class PayCalculatorTest {

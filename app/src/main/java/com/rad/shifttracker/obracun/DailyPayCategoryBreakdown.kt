@@ -1,7 +1,7 @@
 package com.rad.shifttracker.obracun
 
 import java.time.LocalDate
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord

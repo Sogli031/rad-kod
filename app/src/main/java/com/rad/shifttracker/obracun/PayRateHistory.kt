@@ -1,10 +1,9 @@
 package com.rad.shifttracker.obracun
 
 import com.rad.shifttracker.smene.MonthKey
-
-const val DEFAULT_PAY_COEFFICIENT = 2.82
-const val HOURLY_VALUE_BEFORE_JANUARY_2026 = 214.5
-const val HOURLY_VALUE_FROM_JANUARY_2026 = 226.0
+import com.rad.shifttracker.osnova.DEFAULT_PAY_COEFFICIENT
+import com.rad.shifttracker.osnova.HOURLY_VALUE_FROM_JANUARY_2026
+import com.rad.shifttracker.osnova.HOURLY_VALUE_BEFORE_JANUARY_2026
 
 private val JANUARY_2026 = MonthKey(2026, 1)
 private const val CLEAN_MAPPING_TOLERANCE = 0.01

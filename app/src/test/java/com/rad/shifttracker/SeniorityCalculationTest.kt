@@ -10,6 +10,7 @@ import com.rad.shifttracker.obracun.grossHourlyRateForMonth
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.osnova.PayConfig
 
 class SeniorityCalculationTest {
     private val standardHourlyGross = grossHourlyRateForMonth(2.82, 2026, 1, emptyMap())

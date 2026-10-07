@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
@@ -43,10 +42,10 @@ import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.ui.components.DayIndicatorGroup
 import com.rad.shifttracker.ui.components.DayIndicators
 import java.time.LocalDate
-import com.rad.shifttracker.MONTH_NAMES
-import com.rad.shifttracker.UI
-import com.rad.shifttracker.WEEKDAY_NAMES
-import com.rad.shifttracker.formatHours
+import com.rad.shifttracker.osnova.MONTH_NAMES
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.WEEKDAY_NAMES
+import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.brigadeTypeValue
 import com.rad.shifttracker.smene.BrigadeType

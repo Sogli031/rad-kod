@@ -1,5 +1,7 @@
 package com.rad.shifttracker.data.backup
 
+import com.rad.shifttracker.data.storage.BackupStats
+
 /**
  * Procena da li novi backup izgleda kao slučajno masovno brisanje u odnosu na
  * poslednju poznatu dobru verziju. NE blokira upis — sa verzionisanjem dobra

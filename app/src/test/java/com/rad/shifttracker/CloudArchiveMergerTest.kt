@@ -1,7 +1,7 @@
 package com.rad.shifttracker
 
-import com.rad.shifttracker.data.storage.CloudArchiveMerger
-import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
+import com.rad.shifttracker.repo.CloudArchiveMerger
+import com.rad.shifttracker.repo.ShiftRepositoryJsonCodec
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
 import java.time.LocalDate
 import kotlin.random.Random
@@ -25,6 +25,7 @@ import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.repo.buildCloudBackup
 import com.rad.shifttracker.repo.importFromJson
+import com.rad.shifttracker.osnova.CONFIG
 
 /**
  * Spajanje arhive iz oblaka sa lokalno orezanim stanjem: oblak čuva punu istoriju, ali nikad ne sme

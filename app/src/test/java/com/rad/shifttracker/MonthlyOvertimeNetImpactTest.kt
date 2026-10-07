@@ -17,6 +17,7 @@ import com.rad.shifttracker.repo.taxReliefValue
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.osnova.CONFIG
 
 class MonthlyOvertimeNetImpactTest {
     @Test

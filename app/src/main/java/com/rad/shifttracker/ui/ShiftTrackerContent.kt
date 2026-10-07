@@ -39,7 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import java.time.LocalDate
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.brigadeTypeValue
 import com.rad.shifttracker.repo.mainPaySalaryOnly

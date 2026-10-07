@@ -1,25 +1,13 @@
 package com.rad.shifttracker.repo
 
-import com.rad.shifttracker.data.repository.ChangeNotificationManager
-import com.rad.shifttracker.data.repository.RepositoryAbsenceSimulator
-import com.rad.shifttracker.data.repository.RepositoryBulkOperations
-import com.rad.shifttracker.data.repository.RepositoryCompBalanceCalculator
-import com.rad.shifttracker.data.repository.RepositoryHolidayRecords
-import com.rad.shifttracker.data.repository.RepositoryMonthlyAdjustments
-import com.rad.shifttracker.data.repository.RepositoryPayQueries
-import com.rad.shifttracker.data.repository.RepositoryPaySettingsUpdater
-import com.rad.shifttracker.data.repository.RepositoryPayState
-import com.rad.shifttracker.data.repository.RepositoryVacationTracker
-import com.rad.shifttracker.data.repository.ShiftRecordStore
 import com.rad.shifttracker.data.storage.LocalDataStore
 import com.rad.shifttracker.data.storage.LocalShiftStorage
-import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
 import java.time.Clock
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
-import com.rad.shifttracker.AppConfig
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.AppConfig
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.godisnji.VacationRequestValidation
 import com.rad.shifttracker.godisnji.validateVacationRequestAvailability
 import com.rad.shifttracker.krv.BloodDonationLeaveState

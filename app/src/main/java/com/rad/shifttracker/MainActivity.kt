@@ -23,14 +23,15 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
-import com.rad.shifttracker.listici.GmailImportRunner
+import com.rad.shifttracker.uvoz.GmailImportRunner
 import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
-import com.rad.shifttracker.listici.runFinalPayslipCheckOnEntry
-import com.rad.shifttracker.listici.runSideRunCheckOnEntry
+import com.rad.shifttracker.uvoz.runFinalPayslipCheckOnEntry
+import com.rad.shifttracker.uvoz.runSideRunCheckOnEntry
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.CrashLogScreen
 import com.rad.shifttracker.ui.RadApp
 import com.rad.shifttracker.ui.RadTheme
+import com.rad.shifttracker.repo.reschedule
 
 class MainActivity : ComponentActivity() {
     private lateinit var repo: ShiftRepository

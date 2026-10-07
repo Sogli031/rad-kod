@@ -28,13 +28,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import com.rad.shifttracker.listici.MonthFillOffer
+import com.rad.shifttracker.uvoz.MonthFillOffer
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.PayslipSnapshotStore
-import com.rad.shifttracker.listici.applyPayslipChanges
-import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.uvoz.applyPayslipChanges
+import com.rad.shifttracker.uvoz.buildPayslipReconciliation
 import com.rad.shifttracker.listici.formatSerbianDecimal
-import com.rad.shifttracker.listici.monthFillOffer
+import com.rad.shifttracker.uvoz.monthFillOffer
 import com.rad.shifttracker.listici.payslipFormulaText
 import com.rad.shifttracker.listici.payslipSourceText
 import com.rad.shifttracker.listici.readPayslip
@@ -45,21 +45,17 @@ import com.rad.shifttracker.repo.savePayslip
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.Spacing
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.listici.FoundPayslip
 import com.rad.shifttracker.listici.GmailPayslipResult
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.listici.PayslipImportPlan
 import com.rad.shifttracker.listici.PayslipPayBaseResult
-import com.rad.shifttracker.listici.PayslipReconciliation
-import com.rad.shifttracker.listici.PayslipSideRunKind
-import com.rad.shifttracker.listici.buildPayslipImportPlan
+import com.rad.shifttracker.uvoz.PayslipReconciliation
 import com.rad.shifttracker.listici.findPayslipInGmail
 import com.rad.shifttracker.listici.hasGmailPayslipAccess
 import com.rad.shifttracker.listici.payslipImportErrorText
 import com.rad.shifttracker.repo.deletePayslip
-import com.rad.shifttracker.repo.getLatestSavedPayslipMonth
 import com.rad.shifttracker.ui.ExtendedColors
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
@@ -67,6 +63,12 @@ import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.uvoz.PAYSLIP_ARRIVAL_DAY
+import com.rad.shifttracker.uvoz.PAYSLIP_UNEXPECTED_ERROR_TEXT
+import com.rad.shifttracker.uvoz.PayslipPickOutcome
+import com.rad.shifttracker.osnova.formatPayBaseRateText
+import com.rad.shifttracker.smene.monthYearText
+import com.rad.shifttracker.uvoz.payslipPickOutcome
 
 /**
  * „Lista“: listić meseca otvorenog u kalendaru i poređenje sa danima upisanim u tom mesecu.
@@ -197,40 +199,10 @@ internal fun PayslipReaderDialog(repo: ShiftRepository, month: MonthKey, repoTic
 internal fun payslipSavedText(replaced: Boolean, changeCount: Int): String =
     "Lista je ${if (replaced) "zamenjena" else "sačuvana"} ($changeCount izmena podešavanja)."
 
-internal const val PAYSLIP_UNEXPECTED_ERROR_TEXT =
-    "Lista nije mogla da se obradi (neočekivana greška). Ništa nije promenjeno — pokušaj ponovo."
-
-internal sealed interface PayslipPickOutcome {
-    data class Rejected(val text: String) : PayslipPickOutcome
-    data class Ready(val payslip: ParsedPayslip, val plan: PayslipImportPlan) : PayslipPickOutcome
-}
-
 /** [payslipPickOutcome] koji umesto pada daje poruku o neočekivanoj grešci. */
 internal fun safePayslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey?): PayslipPickOutcome =
     runPayslipSafely { payslipPickOutcome(repo, result, month) }
         ?: PayslipPickOutcome.Rejected(PAYSLIP_UNEXPECTED_ERROR_TEXT)
-
-/**
- * Izabrani PDF: nečitljiv ili za drugi mesec se odbija; inače plan izmena za potvrdu.
- * [month] `null` (Opcije → ručno učitavanje) prima listu za mesec koji piše na njoj.
- * Stariji listić od najnovijeg sačuvanog ne predlaže globalna podešavanja (koeficijent, porez, staž).
- */
-internal fun payslipPickOutcome(repo: ShiftRepository, result: PayslipParseResult, month: MonthKey?): PayslipPickOutcome {
-    val scanned = when (result) {
-        is PayslipParseResult.Failure -> return PayslipPickOutcome.Rejected(payslipImportErrorText(result.reason).orEmpty())
-        is PayslipParseResult.Success -> result.payslip
-        is PayslipParseResult.SideRun -> return PayslipPickOutcome.Rejected(payslipSideRunPickText(result))
-    }
-    if (month != null) payslipWrongMonthError(scanned.month, month)?.let { return PayslipPickOutcome.Rejected(it) }
-    val latest = repo.getLatestSavedPayslipMonth()
-    val plan = buildPayslipImportPlan(
-        repo = repo,
-        parsed = listOf(scanned),
-        failures = emptyList(),
-        includeGlobalSettings = latest == null || scanned.month >= latest
-    )
-    return PayslipPickOutcome.Ready(scanned, plan)
-}
 
 /** Listić meseca iz podataka aplikacije; stariji „poslednji listić“ važi ako je za isti mesec. */
 internal fun savedPayslipForMonth(repo: ShiftRepository, store: PayslipSnapshotStore, month: MonthKey): ParsedPayslip? =
@@ -442,12 +414,6 @@ internal fun payslipNotArrivedText(month: MonthKey): String =
     "Lista za ${monthYearText(month)} još nije stigla."
 
 /**
- * Od ovog dana u sledećem mesecu lista za prethodni mesec može da postoji (lista za septembar: od 15. oktobra).
- * Isti dan uključuje „Listu“ i pokreće automatsku proveru konačne liste iz Gmail-a.
- */
-internal const val PAYSLIP_ARRIVAL_DAY = 15
-
-/**
  * Lista za mesec stiže [PAYSLIP_ARRIVAL_DAY]. sledećeg meseca; do tada (i za tekući i budući mesec)
  * ne postoji, pa je „Lista“ isključena.
  */
@@ -455,21 +421,6 @@ internal fun isPayslipMonthUnfinished(month: MonthKey, today: LocalDate = LocalD
     val arrival = LocalDate.of(month.year, month.month, 1).plusMonths(1).withDayOfMonth(PAYSLIP_ARRIVAL_DAY)
     return today.isBefore(arrival)
 }
-
-/** Listić mora biti za mesec otvoren u kalendaru; inače greška i ništa se ne učitava. */
-internal fun payslipSideRunPickText(run: PayslipParseResult.SideRun): String {
-    val what = if (run.kind == PayslipSideRunKind.OTHER) "poseban obračun" else "obračun ${run.kind.label}"
-    val advanceNote = if (run.kind == PayslipSideRunKind.ADVANCE) " Akontacija se upisuje sama pri pokretanju." else ""
-    return "Ovo je $what za ${monthYearText(run.month)}, ne lista (nema „konačna“).$advanceNote Lista stiže oko 20."
-}
-
-internal fun payslipWrongMonthError(scanned: MonthKey, selected: MonthKey): String? =
-    if (scanned == selected) {
-        null
-    } else {
-        "Pogrešna lista: izabrani PDF je za ${monthYearText(scanned)}, a otvoren je ${monthYearText(selected)}. " +
-            "Lista nije učitana — otvori ${monthYearText(scanned)} u kalendaru pa je učitaj tamo."
-    }
 
 /** Broje se samo stvarne stavke; bruto, neto i za isplatu su zbirovi i ne ulaze u neslaganje. */
 internal fun payslipCompareVerdict(check: PayslipReconciliation, colors: ExtendedColors): Pair<String, Color> {

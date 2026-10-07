@@ -8,11 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
-import com.rad.shifttracker.listici.PayslipReconciliation
+import com.rad.shifttracker.uvoz.PayslipReconciliation
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.labelLargeEmphasized
 import com.rad.shifttracker.listici.PayslipRowTone
+import com.rad.shifttracker.smene.monthYearText
 
 /** Neutralna napomena ispod tabele: odakle razlika u zbirovima (stimulacije, KIRU...), nije neslaganje. */
 internal const val PAYSLIP_TOTALS_NOTE_TITLE =

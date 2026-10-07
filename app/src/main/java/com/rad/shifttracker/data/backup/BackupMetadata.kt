@@ -2,6 +2,7 @@ package com.rad.shifttracker.data.backup
 
 import com.rad.shifttracker.smene.MonthKey
 import java.util.Locale
+import com.rad.shifttracker.data.storage.BackupStats
 
 /**
  * Imenovanje i metapodaci verzionisanih backup fajlova. Svaka verzija je zaseban

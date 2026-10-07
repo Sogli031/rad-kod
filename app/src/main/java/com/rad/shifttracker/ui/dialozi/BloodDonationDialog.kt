@@ -21,7 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.krv.BLOOD_DONATION_HISTORY_EMPTY_TEXT
 import com.rad.shifttracker.krv.BLOOD_DONATION_OPTION_LABEL
 import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
@@ -40,7 +40,7 @@ import com.rad.shifttracker.repo.bloodDonationLeaveStartDate
 import com.rad.shifttracker.repo.deleteBloodDonation
 import com.rad.shifttracker.repo.lastBloodDonationDate
 import com.rad.shifttracker.repo.recordBloodDonation
-import com.rad.shifttracker.repo.rememberRepoValue
+import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.MIN_TOUCH_TARGET
 import com.rad.shifttracker.ui.ModernTextField

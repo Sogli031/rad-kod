@@ -18,7 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.time.LocalDate
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
@@ -32,6 +32,7 @@ import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.titleMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.repo.populateMonthsAhead
 
 @Composable
 fun AutoFillDialog(

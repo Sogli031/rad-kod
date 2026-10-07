@@ -1,12 +1,13 @@
 package com.rad.shifttracker.ui.dialozi
 
 import java.time.LocalDate
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.godisnji.AnnualLeaveEntitlement
 import com.rad.shifttracker.godisnji.VacationBalanceSummary
 import com.rad.shifttracker.godisnji.VacationMonthUsage
 import com.rad.shifttracker.godisnji.VacationYearBalance
 import com.rad.shifttracker.godisnji.carryoverExpiresOn
+import com.rad.shifttracker.osnova.formatVacationInput
 
 // Tekstovi dijaloga „Godišnji odmor“: početno stanje, obračun po ugovoru, iskorišćeno po mesecima.
 

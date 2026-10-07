@@ -6,15 +6,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.rad.shifttracker.godisnji.vacationScanStartYear
-import com.rad.shifttracker.godisnji.vacationUsageScan
+import com.rad.shifttracker.listici.vacationScanStartYear
+import com.rad.shifttracker.listici.vacationUsageScan
 import com.rad.shifttracker.listici.PayslipItem
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.ui.dialozi.formatVacationInput
-import com.rad.shifttracker.godisnji.vacationUsageScanText
+import com.rad.shifttracker.listici.vacationUsageScanText
 import com.rad.shifttracker.listici.PayslipSideRunKind
+import com.rad.shifttracker.osnova.formatVacationInput
 
 class VacationPayslipScanTest {
     private fun slip(month: MonthKey, vacationHours: String, run: String = "rb.3/konačna"): PayslipParseResult.Success {

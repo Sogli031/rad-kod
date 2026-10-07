@@ -26,6 +26,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import com.rad.shifttracker.data.storage.CloudBackupContent
 
 private const val TAG = "GoogleDriveBackup"
 private const val PREFS_NAME = "rad_backup_prefs"
@@ -448,9 +449,6 @@ enum class AutoBackupGate {
     /** Stanje oblaka nije moglo da se proveri (mreža/sesija) — probaj kasnije. */
     UNKNOWN
 }
-
-/** Sadržaj jedne verzije backup-a + njen otisak (za metapodatke i anomalije). */
-data class CloudBackupContent(val json: String, val stats: BackupStats)
 
 /** Ishod verzionisanog backup-a. */
 sealed class BackupOutcome {

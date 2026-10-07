@@ -1,12 +1,12 @@
 package com.rad.shifttracker.repo
 
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.listici.ensureKnownPayBaseMode
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
 import com.rad.shifttracker.listici.payslipPayBaseAnchor
 import com.rad.shifttracker.listici.payslipToJson
 import com.rad.shifttracker.listici.payslipVacationDays
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.PayBaseSelectionMode
 
 // Sačuvani listići po radnom mesecu: čitanje, upis (uz osnovicu) i brisanje sa oznakom da se ne vraća.
 
@@ -78,4 +78,13 @@ internal fun ShiftRepository.deletePayslip(month: MonthKey) {
         }
     }
     if (removed) notifyChange()
+}
+
+/** Osnovica se uvek uzima sa listića; bez unetih osnovica ostaje dosadašnji proračun. */
+internal fun ensureKnownPayBaseMode(repo: ShiftRepository) {
+    if (repo.getKnownPayBaseAnchors().isNotEmpty() &&
+        repo.defaultPayBaseSelectionModeValue != PayBaseSelectionMode.KNOWN_BASE
+    ) {
+        repo.setDefaultPayBaseSelection(PayBaseSelectionMode.KNOWN_BASE)
+    }
 }

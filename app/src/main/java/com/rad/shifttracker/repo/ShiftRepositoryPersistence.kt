@@ -10,9 +10,8 @@ import com.rad.shifttracker.repo.ShiftRepository.Companion.MAX_TRANSPORT_PER_DAY
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MINUTES_PER_HOUR
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MIN_COMP_BALANCE
 import com.rad.shifttracker.repo.ShiftRepository.Companion.TAG
-import com.rad.shifttracker.data.backup.BackupStats
-import com.rad.shifttracker.data.backup.CloudBackupContent
-import com.rad.shifttracker.data.storage.CloudArchiveMerger
+import com.rad.shifttracker.data.storage.BackupStats
+import com.rad.shifttracker.data.storage.CloudBackupContent
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
 import com.rad.shifttracker.data.storage.SnapshotDecodeResult
 import com.rad.shifttracker.data.storage.SnapshotRejection
@@ -24,6 +23,7 @@ import com.rad.shifttracker.obracun.previousTwelveMonthKeys
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
 import com.rad.shifttracker.listici.payslipPayBaseAnchor
+import com.rad.shifttracker.obracun.MAX_BASE_PAY
 
 internal fun ShiftRepository.buildSnapshotUnsafe(): ShiftRepositorySnapshot {
     return ShiftRepositorySnapshot(

@@ -2,11 +2,11 @@ package com.rad.shifttracker.smene
 
 import java.time.LocalDate
 import org.json.JSONObject
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.MANUAL_HOLIDAY_LABEL
-import com.rad.shifttracker.MAX_DAY_HOURS
-import com.rad.shifttracker.normalizeDayHours
-import com.rad.shifttracker.normalizeRegularShortageMinutesForWorkHours
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.MANUAL_HOLIDAY_LABEL
+import com.rad.shifttracker.osnova.MAX_DAY_HOURS
+import com.rad.shifttracker.osnova.normalizeDayHours
+import com.rad.shifttracker.osnova.normalizeRegularShortageMinutesForWorkHours
 
 data class DayKey(val year: Int, val month: Int, val day: Int)
 

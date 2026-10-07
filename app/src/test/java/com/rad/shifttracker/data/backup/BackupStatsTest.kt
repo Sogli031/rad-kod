@@ -6,6 +6,7 @@ import com.rad.shifttracker.smene.Shift
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.data.storage.BackupStats
 
 class BackupStatsTest {
 

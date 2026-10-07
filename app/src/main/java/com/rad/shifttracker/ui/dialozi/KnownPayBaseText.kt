@@ -4,6 +4,8 @@ import com.rad.shifttracker.obracun.KnownPayBaseAnchor
 import com.rad.shifttracker.obracun.PayBaseMonthSource
 import com.rad.shifttracker.obracun.RollingPayBaseCalculation
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.osnova.formatPayBaseRateText
+import com.rad.shifttracker.smene.monthYearText
 
 internal fun knownPayBaseAnchorSummaryText(anchor: KnownPayBaseAnchor): String {
     return "${monthYearText(anchor.month)}: ${formatPayBaseRateText(anchor.grossHourlyBase)}"

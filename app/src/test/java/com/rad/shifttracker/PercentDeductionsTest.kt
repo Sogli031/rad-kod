@@ -8,7 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.listici.PercentDeduction
+import com.rad.shifttracker.obracun.PercentDeduction
 import com.rad.shifttracker.listici.finalPaymentDeductions
 import com.rad.shifttracker.listici.percentDeductionsForMonth
 import com.rad.shifttracker.obracun.roundMoneyHalfUp
@@ -20,7 +20,7 @@ import com.rad.shifttracker.repo.importFromJson
 import com.rad.shifttracker.repo.savePayslip
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.Shift
-import com.rad.shifttracker.listici.FinalPaymentDeduction
+import com.rad.shifttracker.obracun.FinalPaymentDeduction
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.repo.getMonthlyReceipt
 

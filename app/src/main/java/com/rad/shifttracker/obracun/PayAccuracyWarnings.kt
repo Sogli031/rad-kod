@@ -1,13 +1,7 @@
 package com.rad.shifttracker.obracun
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import com.rad.shifttracker.formatHoursAndMinutes
-import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.SectionLabel
-import com.rad.shifttracker.ui.dialozi.formatPayBaseRateText
-import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.osnova.formatHoursAndMinutes
+import com.rad.shifttracker.osnova.formatPayBaseRateText
 
 internal const val PAY_ACCURACY_WARNINGS_TITLE = "Proveri podešavanja"
 
@@ -55,18 +49,3 @@ internal fun unreliablePayBaseWarningText(payBase: ResolvedPayBase, compensation
 
 private val MonthlyPayDetails.compensationMinutes: Int
     get() = vacationMinutes + paidLeaveMinutes + paidHolidayMinutes + sickMinutes
-
-@Composable
-internal fun PayAccuracyWarningsCard(warnings: List<String>) {
-    if (warnings.isEmpty()) return
-    PopupCard {
-        SectionLabel(text = PAY_ACCURACY_WARNINGS_TITLE)
-        warnings.forEach { warning ->
-            Text(
-                text = warning,
-                color = MaterialTheme.extendedColors.warning,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}

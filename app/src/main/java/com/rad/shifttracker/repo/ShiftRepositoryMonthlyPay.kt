@@ -11,6 +11,7 @@ import com.rad.shifttracker.obracun.ResolvedPayBases
 import com.rad.shifttracker.obracun.RollingPayBaseCalculation
 import com.rad.shifttracker.obracun.toMealMoney
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.sanitizePayBaseOrNull
 
 // Mesečni iznosi: osnovice za naknade, bruto dodaci, akontacija, regres, topli obrok i izračunate osnovice.
 

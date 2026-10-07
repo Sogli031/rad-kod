@@ -7,6 +7,7 @@ import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.lastBloodDonationDate
 import com.rad.shifttracker.repo.loadFromLocal
+import com.rad.shifttracker.repo.reschedule
 
 class BloodDonationReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

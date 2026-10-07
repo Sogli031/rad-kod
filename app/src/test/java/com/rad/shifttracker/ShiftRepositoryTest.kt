@@ -88,7 +88,7 @@ import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
@@ -131,6 +131,10 @@ import com.rad.shifttracker.repo.seniorityInputModeValue
 import com.rad.shifttracker.repo.setVacationYearBalance
 import com.rad.shifttracker.smene.HolidayEntrySource
 import com.rad.shifttracker.ui.calendarDayDetailText
+import com.rad.shifttracker.repo.populateMonthsAhead
+import com.rad.shifttracker.repo.applySickRange
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.MANUAL_HOLIDAY_LABEL
 
 @Suppress("LargeClass")
 class ShiftRepositoryTest {

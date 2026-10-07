@@ -4,14 +4,12 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.max
 import kotlin.math.min
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.PayConfig
-import com.rad.shifttracker.repo.calculateDailyPay
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.PayConfig
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.Weekday
 import com.rad.shifttracker.smene.isSerbianHoliday

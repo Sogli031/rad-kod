@@ -125,8 +125,7 @@ android {
         abortOnError = true
         warningsAsErrors = false
         checkDependencies = true
-        // NullSafeMutableLiveData: lint-provera iz lifecycle biblioteke puca (IncompatibleClassChangeError) na AGP 8.7; LiveData se ne koristi.
-        disable += setOf("ObsoleteLintCustomCheck", "NullSafeMutableLiveData")
+        disable += setOf("ObsoleteLintCustomCheck")
     }
 
     testOptions {
@@ -233,19 +232,19 @@ kover {
                     "com.rad.shifttracker.obracun.MutablePayDetails*",
                     "com.rad.shifttracker.obracun.ClassifiedWorkSegment*",
                     "com.rad.shifttracker.obracun.WorkBaseMinuteCategories*",
-                    "com.rad.shifttracker.repo.ShiftRepository*",
-                    "com.rad.shifttracker.data.repository.RepositoryPayQueries*",
-                    "com.rad.shifttracker.data.repository.RepositoryPayBaseResolver*",
-                    "com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec*",
-                    "com.rad.shifttracker.data.storage.CloudArchiveMerger*",
+                    "com.rad.shifttracker.repo.ShiftRepository*",  // i ShiftRepositoryJsonCodec*
+                    "com.rad.shifttracker.repo.RepositoryPayQueries*",
+                    "com.rad.shifttracker.repo.RepositoryPayBaseResolver*",
+                    "com.rad.shifttracker.obracun.PayValueLimits*",
+                    "com.rad.shifttracker.repo.CloudArchiveMerger*",
                     "com.rad.shifttracker.listici.PayslipParserKt*",
                     "com.rad.shifttracker.listici.PayslipMonthFillSolver*",
                     "com.rad.shifttracker.obracun.MonthlyNetPayBreakdownCalculator*",
                     "com.rad.shifttracker.obracun.PayBreakdown*",
-                    "com.rad.shifttracker.listici.AdvanceFromPayslips*",
+                    "com.rad.shifttracker.uvoz.AdvanceFromPayslips*",
                     "com.rad.shifttracker.godisnji.VacationTracking*",
-                    "com.rad.shifttracker.data.repository.RollingPayBaseMonthSimulator*",
-                    "com.rad.shifttracker.data.repository.RepositoryCompBalanceCalculator*",
+                    "com.rad.shifttracker.repo.RollingPayBaseMonthSimulator*",
+                    "com.rad.shifttracker.repo.RepositoryCompBalanceCalculator*",
                     "com.rad.shifttracker.data.backup.VersionedBackupWriter*",
                     "com.rad.shifttracker.data.backup.BackupRetentionPolicy*",
                     "com.rad.shifttracker.data.backup.BackupAnomalyGuard*",

@@ -18,7 +18,7 @@ import com.google.api.services.gmail.GmailScopes
 import com.google.api.services.gmail.model.MessagePart
 import java.time.YearMonth
 import java.util.Base64
-import com.rad.shifttracker.ui.dialozi.monthYearText
+import com.rad.shifttracker.smene.monthYearText
 import com.rad.shifttracker.smene.MonthKey
 
 /**
@@ -364,3 +364,5 @@ private fun pdfParts(part: MessagePart?): List<MessagePart> {
     )
     return self + part.parts.orEmpty().flatMap(::pdfParts)
 }
+
+internal const val SIDE_RUN_LOG_TAG = "RadObracuni"

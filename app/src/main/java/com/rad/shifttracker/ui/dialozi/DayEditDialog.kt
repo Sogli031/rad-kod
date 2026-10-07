@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
-import com.rad.shifttracker.MONTH_NAMES
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.MONTH_NAMES
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.krv.formatBloodDonationDate
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.clearBloodDonationLeaveForDate

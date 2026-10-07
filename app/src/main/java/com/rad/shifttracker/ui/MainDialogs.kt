@@ -12,9 +12,8 @@ import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
-import com.rad.shifttracker.repo.rememberRepoValue
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.AdvancePaymentDialog
 import com.rad.shifttracker.ui.dialozi.AutoFillDialog

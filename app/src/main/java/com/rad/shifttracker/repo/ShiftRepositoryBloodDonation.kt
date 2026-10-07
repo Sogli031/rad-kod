@@ -1,7 +1,10 @@
 package com.rad.shifttracker.repo
 
+import android.content.Context
 import java.time.LocalDate
 import com.rad.shifttracker.krv.BloodDonationLeaveBackup
+import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
+import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.krv.BloodDonationLeaveState
 import com.rad.shifttracker.krv.BloodDonationLeaveUsage
 import com.rad.shifttracker.krv.bloodDonationLeaveDates
@@ -186,3 +189,10 @@ internal fun ShiftRepository.bloodDonationLeaveRecord(date: LocalDate): DayRecor
         source = DayRecordSource.BLOOD_DONATION_LEAVE
     )
 }
+
+/** Zakazuje podsetnik za davanje krvi po podacima iz repo-a. */
+internal fun BloodDonationReminderScheduler.reschedule(context: Context, repo: ShiftRepository): BloodDonationReminderScheduleStatus =
+    reschedule(context, repo.lastBloodDonationDate, repo.bloodDonationCount)
+
+internal fun BloodDonationReminderScheduler.currentStatus(context: Context, repo: ShiftRepository): BloodDonationReminderScheduleStatus =
+    currentStatus(context, repo.lastBloodDonationDate, repo.bloodDonationCount)

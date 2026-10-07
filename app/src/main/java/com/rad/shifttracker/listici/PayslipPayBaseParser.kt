@@ -4,9 +4,10 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.ui.dialozi.monthYearText
+import com.rad.shifttracker.smene.monthYearText
+import com.rad.shifttracker.obracun.KnownPayBaseAnchor
 
 /**
  * Stavke listića iz kojih se čita osnovica naknada, po prioritetu.
@@ -199,4 +200,10 @@ internal fun formatSerbianDecimal(value: BigDecimal, minFraction: Int = 0, maxFr
         roundingMode = RoundingMode.HALF_UP
     }
     return format.format(value)
+}
+
+/** Osnovica naknada sa listića kao sidro za njegov mesec, ili null ako je listić nema. */
+internal fun payslipPayBaseAnchor(payslip: ParsedPayslip): KnownPayBaseAnchor? {
+    val base = (payslip.payBase as? PayslipPayBaseResult.Success)?.chosen?.hourlyBase?.toDouble() ?: return null
+    return KnownPayBaseAnchor(payslip.month, base).takeIf { base.isFinite() && base > 0.0 }
 }

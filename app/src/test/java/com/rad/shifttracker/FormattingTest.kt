@@ -2,6 +2,8 @@ package com.rad.shifttracker
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatMoney2
 
 class FormattingTest {
 

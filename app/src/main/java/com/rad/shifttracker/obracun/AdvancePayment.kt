@@ -2,7 +2,6 @@ package com.rad.shifttracker.obracun
 
 import kotlin.math.max
 import kotlin.math.round
-import com.rad.shifttracker.listici.FinalPaymentDeduction
 import com.rad.shifttracker.smene.MonthKey
 
 private const val MAX_MONTHLY_NET_ADJUSTMENT = 10_000_000.0

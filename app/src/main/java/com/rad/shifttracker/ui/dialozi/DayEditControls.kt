@@ -31,9 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.UI
-import com.rad.shifttracker.formatNumber
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.formatNumber
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.GlowButton
@@ -41,9 +41,9 @@ import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.extendedColors
-import com.rad.shifttracker.formatHours
-import com.rad.shifttracker.formatHoursAndMinutes
-import com.rad.shifttracker.formatShortageMinutes
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatHoursAndMinutes
+import com.rad.shifttracker.osnova.formatShortageMinutes
 import com.rad.shifttracker.godisnji.VacationRequestValidation
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.CARD_BORDER_ALPHA

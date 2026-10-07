@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.ui.RoundedButton
+import com.rad.shifttracker.ui.color
+import com.rad.shifttracker.ui.textColor
 
 private const val AUTO_FILL_MODE_CHOICE_HEIGHT = 65
 private const val AUTO_FILL_SHIFT_CHOICE_HEIGHT = 50

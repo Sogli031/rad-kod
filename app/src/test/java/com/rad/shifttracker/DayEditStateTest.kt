@@ -7,6 +7,7 @@ import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.dialozi.DayEditSaveState
+import com.rad.shifttracker.osnova.CONFIG
 
 class DayEditStateTest {
     @Test

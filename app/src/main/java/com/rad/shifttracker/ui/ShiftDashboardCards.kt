@@ -20,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AppIcons
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatCurrency
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatCurrency
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.monthLocativeText
-import com.rad.shifttracker.UI
-import com.rad.shifttracker.formatHours
-import com.rad.shifttracker.formatNumber
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatNumber
 import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
 import com.rad.shifttracker.obracun.MonthlyReceipt
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 
 // Kad je kartica „Primanja u …“ sakrivena, kartica plate ostaje sama i zaobljena.
 internal const val SHOW_TOTAL_CARD = true

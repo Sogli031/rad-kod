@@ -7,6 +7,7 @@ import com.rad.shifttracker.ui.CALENDAR_CELL_MAX_FONT_SCALE
 import com.rad.shifttracker.ui.CALENDAR_MIN_CELL_HEIGHT
 import com.rad.shifttracker.ui.calendarCellFontScale
 import com.rad.shifttracker.ui.calendarDayHeight
+import com.rad.shifttracker.osnova.UI
 
 class CalendarSizingTest {
     @Test

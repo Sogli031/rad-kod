@@ -37,9 +37,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.rad.shifttracker.CrashContext
+import com.rad.shifttracker.osnova.CrashContext
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
-import com.rad.shifttracker.listici.SideRunMessages
+import com.rad.shifttracker.uvoz.SideRunMessages
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.ShiftScheduler
@@ -47,6 +47,7 @@ import com.rad.shifttracker.ui.dialozi.BackupSignInPromptHost
 import com.rad.shifttracker.ui.dialozi.SideRunMessagesDialog
 import com.rad.shifttracker.ui.dialozi.rememberDriveBackupSignIn
 import com.rad.shifttracker.ui.dialozi.takeGmailUpdateIntro
+import com.rad.shifttracker.repo.reschedule
 
 internal fun vacationCardAsOfDate(year: Int, month: Int, today: LocalDate): LocalDate {
     val displayedMonth = YearMonth.of(year, month)

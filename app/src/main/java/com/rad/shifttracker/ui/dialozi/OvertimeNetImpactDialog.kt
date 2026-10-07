@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.formatHours
+import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.obracun.MonthlyOvertimeNetImpact
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog

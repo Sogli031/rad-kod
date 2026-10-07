@@ -9,10 +9,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import java.time.LocalDate
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.MANUAL_HOLIDAY_LABEL
-import com.rad.shifttracker.normalizeDayHours
-import com.rad.shifttracker.regularShortageMinutesAllowed
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.MANUAL_HOLIDAY_LABEL
+import com.rad.shifttracker.osnova.normalizeDayHours
+import com.rad.shifttracker.osnova.regularShortageMinutesAllowed
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType

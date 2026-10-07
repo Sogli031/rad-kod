@@ -7,8 +7,8 @@ import org.junit.Test
 import com.rad.shifttracker.listici.FillDayKind
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.listici.PayslipParseResult
-import com.rad.shifttracker.listici.buildPayslipReconciliation
-import com.rad.shifttracker.listici.fillTargetsFrom
+import com.rad.shifttracker.uvoz.buildPayslipReconciliation
+import com.rad.shifttracker.uvoz.fillTargetsFrom
 import com.rad.shifttracker.listici.isSickLeave
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.unknownHourItems

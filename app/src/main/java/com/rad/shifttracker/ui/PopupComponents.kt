@@ -77,12 +77,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.R
-import com.rad.shifttracker.UI
-import com.rad.shifttracker.formatHours
-import com.rad.shifttracker.formatShortageMinutes
-import com.rad.shifttracker.regularShortageMinuteOptions
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatShortageMinutes
+import com.rad.shifttracker.osnova.regularShortageMinuteOptions
 
 /** Scrim: M3 koristi crnu boju; na tamnoj pozadini je 60% da bi se list jasno odvojio. */
 private const val SCRIM_ALPHA = 0.6f

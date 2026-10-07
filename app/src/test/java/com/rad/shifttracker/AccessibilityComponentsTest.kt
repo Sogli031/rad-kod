@@ -59,6 +59,7 @@ import com.rad.shifttracker.ui.RadTheme
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.calendarDayDescription
 import com.rad.shifttracker.ui.dialozi.DayEditChoiceButton
+import com.rad.shifttracker.osnova.formatHours
 
 /**
  * Pristupačnost zajedničkih komponenti: semantika (uloga, ime, stanje, liveRegion) i dodirne površine

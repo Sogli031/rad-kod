@@ -1,6 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth

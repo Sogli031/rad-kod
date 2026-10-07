@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.Shift

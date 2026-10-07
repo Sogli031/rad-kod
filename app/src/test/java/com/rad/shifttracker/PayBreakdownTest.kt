@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
-import com.rad.shifttracker.listici.FinalPaymentDeduction
+import com.rad.shifttracker.obracun.FinalPaymentDeduction
 import com.rad.shifttracker.obracun.AnnualNetPayMonth
 import com.rad.shifttracker.obracun.KnownPayBaseAnchor
 import com.rad.shifttracker.obracun.MealGrossSource
@@ -44,7 +44,7 @@ import com.rad.shifttracker.obracun.resolvePayBasesForMonth
 import com.rad.shifttracker.obracun.toDebugTrace
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.smene.Shift
 
 @Suppress("LargeClass")

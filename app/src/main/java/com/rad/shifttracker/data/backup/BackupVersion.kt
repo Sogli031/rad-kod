@@ -1,5 +1,7 @@
 package com.rad.shifttracker.data.backup
 
+import com.rad.shifttracker.data.storage.BackupStats
+
 /**
  * Opis jedne verzije backup-a u oblaku (jedan Drive fajl `rad_backup_<ts>.json`).
  * Metapodaci ([stats], [flagged], verzije šeme/app-a) se čuvaju u Drive

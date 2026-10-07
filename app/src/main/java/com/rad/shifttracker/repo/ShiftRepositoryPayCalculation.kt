@@ -4,7 +4,7 @@ import com.rad.shifttracker.repo.ShiftRepository.Companion.MINUTES_PER_HOUR
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 
 fun ShiftRepository.getCompBalanceAtMonthStart(year: Int, month: Int): Int = synchronized(lock) {
     compBalanceCalculator.hoursAtMonthStart(year, month)

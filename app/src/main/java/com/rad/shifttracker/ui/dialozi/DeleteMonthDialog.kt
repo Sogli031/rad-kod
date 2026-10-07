@@ -18,12 +18,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.Spacing
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.SectionLabel

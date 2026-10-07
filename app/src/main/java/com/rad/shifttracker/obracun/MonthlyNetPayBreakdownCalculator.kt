@@ -7,15 +7,11 @@ import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.max
-import com.rad.shifttracker.listici.PercentDeductions
-import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.recordRegressFromPayslip
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
 import com.rad.shifttracker.smene.Weekday
 
 private const val DEFAULT_DAILY_FUND_HOURS = 8
-/** Neto regres dok obračun regresa ne pokaže drugi iznos ([ShiftRepository.recordRegressFromPayslip]). */
+/** Neto regres dok obračun regresa ne pokaže drugi iznos (`ShiftRepository.recordRegressFromPayslip`). */
 internal const val DEFAULT_REGRESS_NET = 20_000.0
 internal val REGRESS_MONTHS = setOf(2, 5, 8, 11)
 private val PAYROLL_MATH_CONTEXT = MathContext.DECIMAL128

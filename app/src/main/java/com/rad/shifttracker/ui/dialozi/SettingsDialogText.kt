@@ -8,11 +8,11 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.abs
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatCurrency
-import com.rad.shifttracker.formatHours
-import com.rad.shifttracker.formatMoney2
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatCurrency
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatMoney2
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.godisnji.VacationRangePreview
 import com.rad.shifttracker.obracun.HourlyValueChange
 import com.rad.shifttracker.obracun.PayBaseMonthSource
@@ -23,6 +23,7 @@ import com.rad.shifttracker.obracun.RollingPayBaseCalculation
 import com.rad.shifttracker.repo.AbsenceRangeNetImpact
 import com.rad.shifttracker.smene.ReferenceWorkWeek
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.osnova.formatPayBaseRateText
 
 internal fun formatAutoFillReferenceDate(date: LocalDate): String {
     val weekday = when (date.dayOfWeek) {
@@ -213,10 +214,6 @@ internal fun calculatedPayBaseForMonthText(year: Int, month: Int, hourlyBase: Do
     }
 }
 
-internal fun formatPayBaseRateText(value: Double): String {
-    return "${formatMoney2(value).replace('.', ',')} ${CONFIG.pay.currency}/h"
-}
-
 private fun knownPayBaseSummaryText(calculation: RollingPayBaseCalculation?): String? {
     val months = calculation?.months ?: return null
     val anchor = months.firstOrNull { it.source == PayBaseMonthSource.KNOWN_BASE } ?: return null
@@ -319,9 +316,4 @@ internal fun vacationRangePreviewText(preview: VacationRangePreview): String {
     } else {
         "Računa se ${preview.countedDays} dana. Preskočeno: ${skipped.joinToString(", ")}."
     }
-}
-
-internal fun formatVacationInput(value: Double): String {
-    val formatted = String.format(Locale.US, "%.1f", value)
-    return formatted.trimEnd('0').trimEnd('.')
 }

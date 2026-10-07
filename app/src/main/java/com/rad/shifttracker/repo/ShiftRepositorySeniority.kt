@@ -5,7 +5,6 @@ import com.rad.shifttracker.repo.ShiftRepository.Companion.MAX_COMP_BALANCE_MINU
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MAX_PERCENT
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MINUTES_PER_HOUR
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MIN_COMP_BALANCE
-import com.rad.shifttracker.data.repository.RollingPayBaseMonthSimulator
 import java.time.LocalDate
 import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
 import com.rad.shifttracker.obracun.SeniorityInputMode

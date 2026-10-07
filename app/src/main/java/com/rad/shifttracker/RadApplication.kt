@@ -12,6 +12,8 @@ import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.loadFromLocal
 import com.rad.shifttracker.repo.saveToLocal
+import com.rad.shifttracker.repo.reschedule
+import com.rad.shifttracker.osnova.CrashLogStorage
 
 class RadApplication : Application() {
     @Volatile

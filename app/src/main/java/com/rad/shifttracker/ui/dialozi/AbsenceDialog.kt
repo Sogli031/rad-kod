@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.ResponsiveInfoRow
 import java.time.YearMonth
 import kotlin.math.abs
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.MONTH_NAMES
-import com.rad.shifttracker.formatCurrency
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.MONTH_NAMES
+import com.rad.shifttracker.osnova.formatCurrency
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.previewAbsenceRangeNetImpact
 import com.rad.shifttracker.smene.Shift
@@ -48,6 +48,9 @@ import com.rad.shifttracker.repo.AbsenceRangeNetImpact
 import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.bodyMediumEmphasized
+import com.rad.shifttracker.repo.previewVacationRange
+import com.rad.shifttracker.repo.applySickRange
+import com.rad.shifttracker.repo.applyVacationRange
 
 @Composable
 fun SickVacationDialog(

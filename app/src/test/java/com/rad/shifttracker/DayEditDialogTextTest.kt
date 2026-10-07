@@ -39,6 +39,10 @@ import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeShiftAfter
 import com.rad.shifttracker.ui.dialozi.overtimeShiftsAfter
 import com.rad.shifttracker.ui.dialozi.previousWorkedShiftInSameWeek
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.formatShortageMinutes
+import com.rad.shifttracker.osnova.regularShortageMinuteOptions
 
 class DayEditDialogTextTest {
     @Test

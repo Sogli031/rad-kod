@@ -12,13 +12,13 @@ import java.time.LocalDate
 import java.time.YearMonth
 import com.rad.shifttracker.obracun.DailyPayCategoryBreakdownCalculator
 import com.rad.shifttracker.obracun.MANUAL_SPENDING_SAFE_DEFAULT_MODE
-import com.rad.shifttracker.obracun.MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE
+import com.rad.shifttracker.izvoz.MONTHLY_WORK_AND_PAY_EXPORT_OUTPUT_MODE
 import com.rad.shifttracker.obracun.MonthlyGrossAdditions
 import com.rad.shifttracker.obracun.PayBaseSelectionMode
 import com.rad.shifttracker.obracun.PayBaseSource
 import com.rad.shifttracker.obracun.PayCalculator
-import com.rad.shifttracker.obracun.exportSelectedMonthWorkAndPayJson
-import com.rad.shifttracker.obracun.monthlyWorkAndPayExportFileName
+import com.rad.shifttracker.izvoz.exportSelectedMonthWorkAndPayJson
+import com.rad.shifttracker.izvoz.monthlyWorkAndPayExportFileName
 import com.rad.shifttracker.obracun.nightWorkMinutes
 import com.rad.shifttracker.obracun.sundayWorkMinutes
 import com.rad.shifttracker.repo.ShiftRepository
@@ -37,6 +37,7 @@ import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.osnova.CONFIG
 
 class MonthlyWorkAndPayExportTest {
     @Test

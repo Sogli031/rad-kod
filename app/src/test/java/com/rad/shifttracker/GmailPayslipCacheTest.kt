@@ -8,7 +8,7 @@ import com.rad.shifttracker.listici.GmailPayslipCache
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.PayslipPayBaseResult
 import com.rad.shifttracker.listici.PayslipSideRunKind
-import com.rad.shifttracker.listici.listCountText
+import com.rad.shifttracker.uvoz.listCountText
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.payslipToJson
 import com.rad.shifttracker.listici.resultFromJson

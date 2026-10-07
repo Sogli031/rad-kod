@@ -3,7 +3,7 @@ package com.rad.shifttracker.obracun
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 
 enum class SeniorityInputMode(val jsonValue: String) {
     KNOWN_START("known_start"),

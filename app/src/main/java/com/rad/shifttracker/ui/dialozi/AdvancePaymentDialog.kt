@@ -1,6 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
-import com.rad.shifttracker.UI
+import com.rad.shifttracker.osnova.UI
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -20,8 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatCurrency
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatCurrency
 import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_DIALOG_TITLE
 import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_NET_LABEL
 import com.rad.shifttracker.repo.ShiftRepository
@@ -45,6 +45,7 @@ import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.smene.monthYearText
 
 @Composable
 fun AdvancePaymentDialog(

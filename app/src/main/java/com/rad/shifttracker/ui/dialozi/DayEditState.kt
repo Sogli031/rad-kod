@@ -3,10 +3,10 @@ package com.rad.shifttracker.ui.dialozi
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatHours
-import com.rad.shifttracker.formatNumber
-import com.rad.shifttracker.normalizeRegularShortageMinutesForWorkHours
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatHours
+import com.rad.shifttracker.osnova.formatNumber
+import com.rad.shifttracker.osnova.normalizeRegularShortageMinutesForWorkHours
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.DayRecordSource

@@ -2,7 +2,7 @@ package com.rad.shifttracker.obracun
 
 import java.math.BigDecimal
 import java.math.MathContext
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 
 private const val MINUTES_PER_HOUR = 60
 

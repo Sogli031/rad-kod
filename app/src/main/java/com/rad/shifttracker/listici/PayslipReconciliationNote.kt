@@ -3,7 +3,7 @@ package com.rad.shifttracker.listici
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.abs
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 
 internal const val PAYSLIP_GROSS_ROW = "Bruto ukupno"
 internal const val PAYSLIP_NET_ROW = "Neto ukupno"
@@ -92,3 +92,24 @@ internal fun payslipMealOverspend(payslip: ParsedPayslip): Double? {
 private fun money(value: Double): String =
     "${formatSerbianDecimal(value.toDisplayDecimal().setScale(2, RoundingMode.HALF_UP), minFraction = 2)} " +
         CONFIG.pay.currency
+
+internal data class PayslipCheckRow(
+    val label: String,
+    val appText: String,
+    val payslipText: String,
+    val matches: Boolean,
+    /** Red sa časovima (ne zavisi od podešavanja plate); koristi se za proveru popunjenog meseca. */
+    val isHours: Boolean = false,
+    /** Za novčane redove: listić − aplikacija (u dinarima), da se razlika u bruto može razložiti. */
+    val difference: Double? = null,
+    val tone: PayslipRowTone = PayslipRowTone.DEFAULT
+) {
+    /** Bruto, neto, za isplatu: samo za pregled, ne računa se kao neslaganje (bez ✓/✗). */
+    val isTotal: Boolean get() = label in PAYSLIP_TOTAL_ROWS
+}
+
+/** Broj iz obračuna za prikaz: NaN ili beskonačno (ne bi smelo da se desi) daje 0 umesto pada `toBigDecimal`. */
+internal fun Double.toDisplayDecimal(): BigDecimal = if (isFinite()) toBigDecimal() else BigDecimal.ZERO
+
+/** GOOD = razlika je u tvoju korist ili bez posledica (prikazuje se sivo kao slaganje), ALERT = nešto je skinuto (crveno). */
+internal enum class PayslipRowTone { DEFAULT, GOOD, ALERT }

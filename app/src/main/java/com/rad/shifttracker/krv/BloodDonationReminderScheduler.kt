@@ -13,14 +13,12 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import com.rad.shifttracker.BloodDonationReminderReceiver
 import com.rad.shifttracker.MainActivity
 import com.rad.shifttracker.R
-import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.bloodDonationCount
-import com.rad.shifttracker.repo.lastBloodDonationDate
 
 internal object BloodDonationReminderScheduler {
     const val ACTION_SHOW_BLOOD_DONATION_REMINDER =
@@ -32,32 +30,31 @@ internal object BloodDonationReminderScheduler {
     private const val ALARM_REQUEST_CODE = 240601
     private const val OPEN_REQUEST_CODE = 240602
 
-    fun reschedule(context: Context, repo: ShiftRepository): BloodDonationReminderScheduleStatus {
+    /** Podsetnik po poslednjem davanju (verzija sa repo-om je u paketu `repo`). */
+    fun reschedule(context: Context, lastDonationDate: LocalDate?, donationCount: Int): BloodDonationReminderScheduleStatus {
         cancelAlarm(context)
         val plan = planBloodDonationReminderAlarm(
-            lastDonationDate = repo.lastBloodDonationDate,
+            lastDonationDate = lastDonationDate,
             now = LocalDateTime.now()
         )
-        if (plan !is BloodDonationReminderAlarmPlan.Schedule) {
-            return currentStatus(context, repo)
+        if (plan is BloodDonationReminderAlarmPlan.Schedule) {
+            scheduleAlarm(context, plan.reminderTime.toEpochMillis())
         }
-        scheduleAlarm(context, plan.reminderTime.toEpochMillis())
-        return currentStatus(context, repo)
+        return currentStatus(context, lastDonationDate, donationCount)
     }
 
     fun cancel(context: Context) {
         cancelAlarm(context)
     }
 
-    fun currentStatus(context: Context, repo: ShiftRepository): BloodDonationReminderScheduleStatus {
-        val lastDonationDate = repo.lastBloodDonationDate
+    fun currentStatus(context: Context, lastDonationDate: LocalDate?, donationCount: Int): BloodDonationReminderScheduleStatus {
         val plan = planBloodDonationReminderAlarm(
             lastDonationDate = lastDonationDate,
             now = LocalDateTime.now()
         )
         return BloodDonationReminderScheduleStatus(
             lastDonationDate = lastDonationDate,
-            donationCount = repo.bloodDonationCount,
+            donationCount = donationCount,
             nextDonationDate = lastDonationDate?.let(::calculateNextBloodDonationDate),
             nextReminderTime = (plan as? BloodDonationReminderAlarmPlan.Schedule)?.reminderTime,
             notificationPermissionGranted = hasBloodDonationNotificationPermission(context)

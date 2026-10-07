@@ -1,12 +1,6 @@
 package com.rad.shifttracker.smene
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.ui.graphics.Color
 import java.time.LocalDate
-import com.rad.shifttracker.ui.ExtendedColors
-import com.rad.shifttracker.ui.extendedColors
 
 enum class Shift(val value: Int) {
     OFF(0),
@@ -34,30 +28,6 @@ enum class Shift(val value: Int) {
             THIRD -> "Tre\u0107a smena"
             SICK -> "Bolovanje"
             VACATION -> "Godi\u0161nji odmor"
-        }
-
-    /** Boja smene u zadatoj temi (za proračune van kompozicije, npr. ton ćelije kalendara). */
-    fun colorIn(colors: ExtendedColors): Color = when (this) {
-        OFF -> colors.off
-        FIRST -> colors.shift1
-        SECOND -> colors.shift2
-        THIRD -> colors.shift3
-        SICK -> colors.sick
-        VACATION -> colors.vacation
-    }
-
-    val color: Color
-        @Composable
-        @ReadOnlyComposable
-        get() = colorIn(MaterialTheme.extendedColors)
-
-    /** Tekst na punoj boji smene: tamni na svetlim smenama, svetli na ostalim. */
-    val textColor: Color
-        @Composable
-        @ReadOnlyComposable
-        get() = when (this) {
-            FIRST, SECOND, VACATION -> MaterialTheme.extendedColors.onShiftBright
-            else -> MaterialTheme.extendedColors.onShiftDeep
         }
 
     val icon: String

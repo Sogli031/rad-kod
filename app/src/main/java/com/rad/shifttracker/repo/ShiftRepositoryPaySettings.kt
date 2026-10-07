@@ -15,6 +15,7 @@ import com.rad.shifttracker.obracun.KnownPayBaseAnchor
 import com.rad.shifttracker.obracun.MealPricePeriod
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.MAX_BASE_PAY
 
 var ShiftRepository.payCoefficientValue: Double
     get() = synchronized(lock) { payState.payCoefficient }

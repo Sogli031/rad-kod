@@ -10,10 +10,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
-import com.rad.shifttracker.listici.GmailImportRunner
+import com.rad.shifttracker.uvoz.GmailImportRunner
 import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
-import com.rad.shifttracker.listici.runFinalPayslipCheckOnEntry
-import com.rad.shifttracker.listici.runSideRunCheckOnEntry
+import com.rad.shifttracker.uvoz.runFinalPayslipCheckOnEntry
+import com.rad.shifttracker.uvoz.runSideRunCheckOnEntry
 
 /**
  * Provera posebnih obračuna (akontacija, prevoz, regres) i konačne liste u pozadini, bez ulaska u

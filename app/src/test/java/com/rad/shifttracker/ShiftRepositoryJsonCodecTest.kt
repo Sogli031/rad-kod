@@ -2,7 +2,7 @@ package com.rad.shifttracker
 
 import com.rad.shifttracker.data.storage.SCHEMA_VERSION_KEY
 import com.rad.shifttracker.data.storage.SchemaMigrations
-import com.rad.shifttracker.data.storage.ShiftRepositoryJsonCodec
+import com.rad.shifttracker.repo.ShiftRepositoryJsonCodec
 import com.rad.shifttracker.data.storage.ShiftRepositorySnapshot
 import com.rad.shifttracker.data.storage.SnapshotDecodeResult
 import com.rad.shifttracker.data.storage.SnapshotRejectedException
@@ -23,13 +23,14 @@ import com.rad.shifttracker.repo.tryImportFromJson
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.repo.MAX_BASE_PAY
+import com.rad.shifttracker.obracun.MAX_BASE_PAY
 import com.rad.shifttracker.repo.exportCloudBackupJson
 import com.rad.shifttracker.repo.exportJson
 import com.rad.shifttracker.repo.getHourlyValueForMonth
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.payCoefficientValue
 import com.rad.shifttracker.repo.taxReliefValue
+import com.rad.shifttracker.osnova.CONFIG
 
 /** Dekoder je poslednja linija odbrane od oštećenog backup-a: ne sme da pukne ni da izmisli podatke. */
 class ShiftRepositoryJsonCodecTest {

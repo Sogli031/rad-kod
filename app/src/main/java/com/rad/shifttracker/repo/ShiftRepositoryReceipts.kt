@@ -3,7 +3,7 @@ package com.rad.shifttracker.repo
 import com.rad.shifttracker.repo.ShiftRepository.Companion.MINUTES_PER_HOUR
 import java.time.DayOfWeek
 import java.time.LocalDate
-import com.rad.shifttracker.listici.FinalPaymentDeduction
+import com.rad.shifttracker.obracun.FinalPaymentDeduction
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.listici.finalPaymentDeductions
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
@@ -26,7 +26,7 @@ import com.rad.shifttracker.obracun.previousMonthKey
 import com.rad.shifttracker.obracun.unavailableAdvancePaymentPrediction
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.smene.Shift
 
 fun ShiftRepository.getNetPayBreakdown(year: Int, month: Int): MonthlyNetPayBreakdown = synchronized(lock) {

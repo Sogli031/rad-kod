@@ -5,6 +5,7 @@ import com.google.api.client.http.ByteArrayContent
 import com.google.api.services.drive.Drive
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
+import com.rad.shifttracker.data.storage.CloudBackupContent
 
 private const val TAG = "GoogleDriveBackup"
 private const val APP_DATA_FOLDER = "appDataFolder"

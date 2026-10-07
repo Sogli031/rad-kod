@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.util.Locale
 import kotlin.math.roundToInt
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
 import com.rad.shifttracker.obracun.SeniorityInputMode
 import com.rad.shifttracker.obracun.calculateKnownStartSeniorityPreview
@@ -53,7 +53,7 @@ import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.obracun.PayslipSeniorityEstimate
 import com.rad.shifttracker.obracun.SeniorityPreview
 import com.rad.shifttracker.ui.LabeledSwitchRow

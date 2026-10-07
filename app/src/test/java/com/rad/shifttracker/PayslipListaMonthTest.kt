@@ -9,13 +9,13 @@ import com.rad.shifttracker.listici.ABSENCE_ROUNDING_EXTRA_LABEL
 import com.rad.shifttracker.listici.PAYSLIP_GROSS_ROW
 import com.rad.shifttracker.listici.PAYSLIP_MEAL_ROW
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.listici.PayslipChangeKind
+import com.rad.shifttracker.uvoz.PayslipChangeKind
 import com.rad.shifttracker.listici.PayslipCheckRow
 import com.rad.shifttracker.listici.PayslipDifference
 import com.rad.shifttracker.listici.PayslipExtraItem
 import com.rad.shifttracker.listici.PayslipParseResult
-import com.rad.shifttracker.listici.buildPayslipImportPlan
-import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.uvoz.buildPayslipImportPlan
+import com.rad.shifttracker.uvoz.buildPayslipReconciliation
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.payslipDifferences
 import com.rad.shifttracker.repo.buildCloudBackup
@@ -33,22 +33,21 @@ import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.DarkExtendedColors
 import com.rad.shifttracker.ui.calendarDayDetailText
 import com.rad.shifttracker.ui.dialozi.isPayslipMonthUnfinished
-import com.rad.shifttracker.ui.dialozi.monthYearText
 import com.rad.shifttracker.ui.dialozi.payslipCompareVerdict
 import com.rad.shifttracker.ui.dialozi.payslipMismatchCountText
 import com.rad.shifttracker.ui.dialozi.payslipNotArrivedText
-import com.rad.shifttracker.ui.dialozi.payslipWrongMonthError
+import com.rad.shifttracker.uvoz.payslipWrongMonthError
 import com.rad.shifttracker.listici.PAYSLIP_NET_ROW
 import com.rad.shifttracker.listici.PAYSLIP_PAYOUT_ROW
 import com.rad.shifttracker.listici.PAYSLIP_TOTAL_ROWS
-import com.rad.shifttracker.listici.PayslipReconciliation
+import com.rad.shifttracker.uvoz.PayslipReconciliation
 import com.rad.shifttracker.listici.PayslipRowTone
-import com.rad.shifttracker.listici.importManualPayslip
-import com.rad.shifttracker.listici.payslipExtrasBeyondApp
+import com.rad.shifttracker.uvoz.importManualPayslip
+import com.rad.shifttracker.uvoz.payslipExtrasBeyondApp
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
 import com.rad.shifttracker.listici.payslipMealEntitlementNet
 import com.rad.shifttracker.listici.payslipMealOverspend
-import com.rad.shifttracker.listici.payslipMealRow
+import com.rad.shifttracker.uvoz.payslipMealRow
 import com.rad.shifttracker.listici.payslipToJson
 import com.rad.shifttracker.repo.getMonthlyNetAdjustments
 import com.rad.shifttracker.repo.payslipAdvanceNet
@@ -56,8 +55,9 @@ import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.DayRecordSource
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.bottomBarButtonLabels
-import com.rad.shifttracker.ui.dialozi.PayslipPickOutcome
-import com.rad.shifttracker.ui.dialozi.payslipPickOutcome
+import com.rad.shifttracker.uvoz.PayslipPickOutcome
+import com.rad.shifttracker.uvoz.payslipPickOutcome
+import com.rad.shifttracker.smene.monthYearText
 
 class PayslipListaMonthTest {
 

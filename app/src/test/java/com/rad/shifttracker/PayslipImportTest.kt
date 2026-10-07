@@ -7,12 +7,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.rad.shifttracker.listici.ParsedPayslip
-import com.rad.shifttracker.listici.PayslipChangeKind
+import com.rad.shifttracker.uvoz.PayslipChangeKind
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.PayslipPayBaseResult
-import com.rad.shifttracker.listici.applyPayslipChanges
-import com.rad.shifttracker.listici.buildPayslipImportPlan
-import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.uvoz.applyPayslipChanges
+import com.rad.shifttracker.uvoz.buildPayslipImportPlan
+import com.rad.shifttracker.uvoz.buildPayslipReconciliation
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.shouldReplaceLastPayslip
 import com.rad.shifttracker.obracun.PayBaseSelectionMode

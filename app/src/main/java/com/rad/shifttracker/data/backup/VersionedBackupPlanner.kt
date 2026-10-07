@@ -1,5 +1,7 @@
 package com.rad.shifttracker.data.backup
 
+import com.rad.shifttracker.data.storage.BackupStats
+
 /**
  * Sitne, čiste odluke nad listom postojećih verzija koje [GoogleDriveBackup]
  * koristi pri verzionisanom backup-u: koja verzija nosi najsvežiju arhivu za

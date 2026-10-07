@@ -50,6 +50,7 @@ import com.rad.shifttracker.ui.VacationCard
 import com.rad.shifttracker.ui.WeekdayHeader
 import com.rad.shifttracker.ui.dialozi.DayEditDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
+import com.rad.shifttracker.osnova.UI
 
 /**
  * Referentni snimci ekrana bez telefona (Roborazzi + Robolectric native graphics).

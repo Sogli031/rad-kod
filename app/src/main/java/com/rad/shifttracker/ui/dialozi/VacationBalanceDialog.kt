@@ -23,9 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.godisnji.VacationBalanceSummary
-import com.rad.shifttracker.godisnji.VacationPayslipScanCard
 import com.rad.shifttracker.godisnji.VacationYearBalance
 import com.rad.shifttracker.godisnji.currentYearVacationAvailableFrom
 import com.rad.shifttracker.godisnji.formatVacationDate
@@ -35,7 +34,7 @@ import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.repo.getVacationMonthsWithoutData
 import com.rad.shifttracker.repo.getVacationYearBalance
 import com.rad.shifttracker.repo.isVacationCarryoverAutomatic
-import com.rad.shifttracker.repo.rememberRepoValue
+import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.setVacationYearBalance
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
@@ -48,6 +47,7 @@ import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.labelMediumEmphasized
+import com.rad.shifttracker.osnova.formatVacationInput
 
 @Composable
 fun VacationBalanceDialog(

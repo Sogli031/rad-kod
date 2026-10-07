@@ -15,10 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.rad.shifttracker.CONFIG
+import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getFoodPerDayForMonth
-import com.rad.shifttracker.repo.rememberRepoValue
+import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.setFoodPerDayFromMonth
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.GlowButton
@@ -28,6 +28,7 @@ import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.smene.monthYearText
 
 @Composable
 fun FoodAllowanceDialog(

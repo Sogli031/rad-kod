@@ -39,7 +39,6 @@ import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,12 +59,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.util.Locale
-import com.rad.shifttracker.UI
-import com.rad.shifttracker.formatHoursAndMinutes
+import com.rad.shifttracker.osnova.UI
+import com.rad.shifttracker.osnova.formatHoursAndMinutes
 import com.rad.shifttracker.godisnji.VacationBalanceSummary
 import com.rad.shifttracker.godisnji.VacationWarnings
 import com.rad.shifttracker.godisnji.formatVacationDate
-import com.rad.shifttracker.smene.MonthSummary
+import com.rad.shifttracker.obracun.MonthSummary
 
 /** Najmanja dodirna površina kontrole (Material i WCAG 2.5.8): 48dp. */
 internal val MIN_TOUCH_TARGET: Dp = 48.dp

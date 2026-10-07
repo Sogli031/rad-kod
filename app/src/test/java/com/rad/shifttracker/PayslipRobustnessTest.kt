@@ -15,7 +15,7 @@ import org.junit.Test
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
-import com.rad.shifttracker.listici.payslipMealRow
+import com.rad.shifttracker.uvoz.payslipMealRow
 import com.rad.shifttracker.listici.readAtMost
 import com.rad.shifttracker.listici.runPayslipSafely
 import com.rad.shifttracker.listici.toDisplayDecimal
@@ -24,10 +24,10 @@ import com.rad.shifttracker.repo.getSavedPayslip
 import com.rad.shifttracker.repo.importFromJson
 import com.rad.shifttracker.repo.savePayslip
 import com.rad.shifttracker.listici.PayslipPayBaseResult
-import com.rad.shifttracker.listici.buildPayslipImportPlan
-import com.rad.shifttracker.listici.fillTargetsFrom
+import com.rad.shifttracker.uvoz.buildPayslipImportPlan
+import com.rad.shifttracker.uvoz.fillTargetsFrom
 import com.rad.shifttracker.listici.parsePayslipPayBase
-import com.rad.shifttracker.listici.payslipImportSummaryText
+import com.rad.shifttracker.uvoz.payslipImportSummaryText
 import com.rad.shifttracker.listici.payslipToJson
 
 /** Linija parsera ne sme da pukne ni na oštećenom PDF tekstu, ni na oštećenom backup-u. */

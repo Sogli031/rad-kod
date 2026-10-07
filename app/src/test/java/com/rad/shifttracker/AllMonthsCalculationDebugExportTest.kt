@@ -5,8 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.rad.shifttracker.obracun.ALL_MONTHS_CALCULATION_DEBUG_EXPORT_FILE_NAME
-import com.rad.shifttracker.obracun.exportAllSavedMonthsCalculationDebugJson
+import com.rad.shifttracker.izvoz.ALL_MONTHS_CALCULATION_DEBUG_EXPORT_FILE_NAME
+import com.rad.shifttracker.izvoz.exportAllSavedMonthsCalculationDebugJson
 import com.rad.shifttracker.smene.Shift
 
 class AllMonthsCalculationDebugExportTest {

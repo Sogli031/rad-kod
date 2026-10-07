@@ -7,7 +7,7 @@ import java.util.Locale
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.listici.PayslipCheckRow
 import com.rad.shifttracker.listici.PayslipParseResult
-import com.rad.shifttracker.listici.buildPayslipReconciliation
+import com.rad.shifttracker.uvoz.buildPayslipReconciliation
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.obracun.fundAbsenceMinutes
 import com.rad.shifttracker.obracun.holidayPremiumMinutes

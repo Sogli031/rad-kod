@@ -1,14 +1,15 @@
 package com.rad.shifttracker.ui.dialozi
 
 import java.util.Locale
-import com.rad.shifttracker.CONFIG
-import com.rad.shifttracker.formatMoney2
-import com.rad.shifttracker.obracun.HOURLY_VALUE_BEFORE_JANUARY_2026
-import com.rad.shifttracker.obracun.HOURLY_VALUE_FROM_JANUARY_2026
-import com.rad.shifttracker.MONTH_NAMES
+import com.rad.shifttracker.osnova.CONFIG
+import com.rad.shifttracker.osnova.formatMoney2
+import com.rad.shifttracker.osnova.HOURLY_VALUE_BEFORE_JANUARY_2026
+import com.rad.shifttracker.osnova.HOURLY_VALUE_FROM_JANUARY_2026
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.obracun.fundAbsenceMinutes
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.monthYearText
 
 internal const val PAY_DETAILS_WORK_HOURS_LABEL = "Rad u režiji"
 internal const val PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP = 72
@@ -37,11 +38,6 @@ internal fun estimateAbsenceRoundingGross(
 }
 
 private const val MINUTES_PER_HOUR_FOR_TEXT = 60
-
-internal fun monthYearText(key: MonthKey): String {
-    val monthName = MONTH_NAMES.getOrElse(key.month) { "Mesec" }
-    return "$monthName ${key.year}"
-}
 
 private fun monthNameText(key: MonthKey): String {
     return MONTH_NAMES.getOrElse(key.month) { "Mesec" }
