@@ -74,9 +74,10 @@ fun AutoSizeText(
     minFontSize: TextUnit = 12.sp,
     maxLines: Int = 1,
     style: TextStyle = LocalTextStyle.current,
-    color: Color = Color.Unspecified
+    color: Color = Color.Unspecified,
+    measureKey: Any? = text
 ) {
-    AutoSizeText(AnnotatedString(text), modifier, maxFontSize, minFontSize, maxLines, style, color)
+    AutoSizeText(AnnotatedString(text), modifier, maxFontSize, minFontSize, maxLines, style, color, measureKey)
 }
 
 /** Isto kao [AutoSizeText], ali delovi teksta mogu imati svoju boju (npr. sati beli, iznos zelen). */
@@ -88,13 +89,16 @@ fun AutoSizeText(
     minFontSize: TextUnit = 12.sp,
     maxLines: Int = 1,
     style: TextStyle = LocalTextStyle.current,
-    color: Color = Color.Unspecified
+    color: Color = Color.Unspecified,
+    // Veličina fonta se računa iznova kad se ključ promeni; brojač koji odbrojava daje ciljni tekst,
+    // pa se font ne meri (i ne skriva) u svakom kadru animacije.
+    measureKey: Any? = text
 ) {
     val configuration = LocalConfiguration.current
     // Kalendar ima svoju gustinu fonta (zavisi od visine ćelije), pa i ona poništava smanjenje.
     val density = LocalDensity.current
     var fontSize by remember(
-        text,
+        measureKey,
         maxFontSize,
         minFontSize,
         maxLines,
@@ -103,7 +107,7 @@ fun AutoSizeText(
         density
     ) { mutableStateOf(maxFontSize) }
     var readyToDraw by remember(
-        text,
+        measureKey,
         maxFontSize,
         minFontSize,
         maxLines,

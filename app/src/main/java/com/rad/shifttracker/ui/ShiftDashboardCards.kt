@@ -86,24 +86,31 @@ internal fun StatsSection(
     onOvertimeClick: () -> Unit,
     onFoodClick: () -> Unit
 ) {
+    // Vrednosti odbroje do novog meseca; font se meri po ciljnoj vrednosti.
+    val workHours = rememberCountingValue(summary.workHours)
+    val overtimeHours = rememberCountingValue(summary.overtimeHours)
+    val foodAllowance = rememberCountingValue(summary.foodAllowance)
     val stats = listOf(
         StatItem(
             WORK_HOURS_CARD_LABEL,
-            formatHours(summary.workHours),
+            formatHours(workHours),
             MaterialTheme.colorScheme.onSurface,
-            onClick = onWorkHoursClick
+            onClick = onWorkHoursClick,
+            measureKey = formatHours(summary.workHours)
         ),
         StatItem(
             "Prekovremeno",
-            formatHours(summary.overtimeHours),
+            formatHours(overtimeHours),
             if (summary.overtimeHours > 0) MaterialTheme.extendedColors.weekendOt else MaterialTheme.colorScheme.onSurfaceVariant,
-            onClick = onOvertimeClick
+            onClick = onOvertimeClick,
+            measureKey = formatHours(summary.overtimeHours)
         ),
         StatItem(
             "Hrana",
-            formatNumber(summary.foodAllowance),
+            formatNumber(foodAllowance),
             if (summary.foodAllowance > 0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-            onClick = onFoodClick
+            onClick = onFoodClick,
+            measureKey = formatNumber(summary.foodAllowance)
         )
     )
 
@@ -130,6 +137,7 @@ internal fun StatsSection(
                             label = stat.label,
                             value = stat.value,
                             color = stat.color,
+                            measureKey = stat.measureKey,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
@@ -200,7 +208,11 @@ private fun PayAmountCard(
     showTopDivider: Boolean,
     onClick: (() -> Unit)? = null
 ) {
+    val shownAmount = rememberCountingValue(amount)
     val totalText = if (isAvailable) {
+        "${formatCurrency(shownAmount)} ${CONFIG.pay.currency}"
+    } else TOTAL_CARD_UNAVAILABLE_TEXT
+    val targetText = if (isAvailable) {
         "${formatCurrency(amount)} ${CONFIG.pay.currency}"
     } else TOTAL_CARD_UNAVAILABLE_TEXT
     val totalColor = if (isAvailable) amountColor else MaterialTheme.extendedColors.warning
@@ -251,11 +263,13 @@ private fun PayAmountCard(
                 text = totalText,
                 color = totalColor,
                 style = MaterialTheme.typography.titleLargeEmphasized.copy(
-                    textAlign = TextAlign.End
+                    textAlign = TextAlign.End,
+                    fontFeatureSettings = TABULAR_FIGURES
                 ),
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,
                 maxLines = 1,
+                measureKey = targetText,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -427,7 +441,8 @@ private data class StatItem(
     val label: String,
     val value: String,
     val color: Color,
-    val onClick: (() -> Unit)? = null
+    val onClick: (() -> Unit)? = null,
+    val measureKey: String = value
 )
 
 private data class BottomBarItem(

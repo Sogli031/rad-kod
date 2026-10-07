@@ -363,7 +363,8 @@ fun StatColumn(
     label: String,
     value: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    measureKey: String = value
 ) {
     Column(
         modifier = modifier
@@ -375,10 +376,11 @@ fun StatColumn(
         AutoSizeText(
             text = value,
             color = color,
-            style = MaterialTheme.typography.titleMediumEmphasized,
+            style = MaterialTheme.typography.titleMediumEmphasized.copy(fontFeatureSettings = TABULAR_FIGURES),
             maxFontSize = MaterialTheme.typography.titleMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodyMedium.fontSize,
-            maxLines = 1
+            maxLines = 1,
+            measureKey = measureKey
         )
         AutoSizeText(
             text = label.uppercase(),
