@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.3] - 2026-10-09
+- **Praznik u prozoru dana:** prekidač „Praznik“ uključuje ili isključuje praznik za taj dan (državni praznik se može isključiti, a bilo koji dan označiti kao praznik).
+- **Bez „Praznici“ u Opcijama:** lista praznika je uklonjena; državni praznici i dalje važe sami.
+- **Prekovremeno:** „Dodatna neto zarada“ je zelena, kao ostali iznosi koji se dodaju.
+
 ## [9.2] - 2026-10-09
 - **Glađe otvaranje prozora odozdo:** list kreće da klizi tek kad je njegov sadržaj spreman (prvi frejmovi više ne kasne), bez sistemske animacije prozora i naglog sistemskog zatamnjenja koji su se mešali sa klizanjem. Zatamnjenje je iste jačine kao pre, samo se postepeno pojavljuje.
 

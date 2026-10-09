@@ -48,7 +48,8 @@ fun OvertimeNetImpactDialog(
             SectionLabel(text = "Dodatna neto zarada")
             AutoSizeText(
                 text = signedMoneyText(impact.paidOvertimeNetDifference),
-                color = MaterialTheme.extendedColors.weekendOt,
+                // Zarada je zelena kao i ostali iznosi koji se dodaju (isplata, dodaci).
+                color = MaterialTheme.extendedColors.success,
                 style = MaterialTheme.typography.headlineMediumEmphasized,
                 maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
                 minFontSize = MaterialTheme.typography.titleMedium.fontSize,

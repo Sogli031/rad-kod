@@ -14,13 +14,12 @@ import com.rad.shifttracker.ui.mainPayCardAmount
 
 class OptionsDialogTextTest {
     @Test
-    fun `options dialog exposes cloud export and holidays`() {
+    fun `options dialog exposes cloud and export, without holidays`() {
         assertEquals(
             listOf(
                 "Google cloud",
                 "Export rada i obračuna za izabrani mesec",
-                "Debug export za ChatGPT – svi meseci",
-                "Praznici"
+                "Debug export za ChatGPT – svi meseci"
             ),
             optionsDialogActionLabels()
         )

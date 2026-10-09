@@ -103,7 +103,6 @@ class DesignSnapshotTest {
             onCloudClick = {},
             onMonthlyExportClick = {},
             onDebugExportClick = {},
-            onHolidaysClick = {},
             onDismiss = {}
         )
     }
@@ -116,7 +115,6 @@ class DesignSnapshotTest {
             onCloudClick = {},
             onMonthlyExportClick = {},
             onDebugExportClick = {},
-            onHolidaysClick = {},
             onDismiss = {}
         )
     }

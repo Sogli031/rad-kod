@@ -28,8 +28,8 @@ import com.rad.shifttracker.smene.isSerbianHoliday
 internal class DayEditForm(
     private val date: DayKey,
     private val isWeekend: Boolean,
-    private val isHolidayEffective: Boolean,
-    private val holidayOverride: Boolean?,
+    /** Državni praznik po kalendaru; [holidayOverride] ga ručno uključuje ili isključuje za ovaj dan. */
+    private val officialHoliday: Boolean,
     private val holidayWorkOverride: Boolean?,
     private val recordBalanceExempt: Boolean,
     private val fields: DayEditFields
@@ -45,6 +45,15 @@ internal class DayEditForm(
     var regularShortageMinutes by fields.regularShortageMinutes
     var sickPayRate by fields.sickPayRate
     var paidLeave by fields.paidLeave
+    var holidayOverride by fields.holidayOverride
+
+    val isHolidayEffective: Boolean
+        get() = holidayOverride ?: officialHoliday
+
+    /** Prekidač „Praznik“: kad se vrati na isto kao kalendar, ručna oznaka se briše. */
+    fun setHoliday(on: Boolean) {
+        holidayOverride = if (on == officialHoliday) null else on
+    }
 
     val firstShiftAllowsDouble: Boolean
         get() = shift1 in Shift.workShifts()
@@ -173,7 +182,8 @@ internal class DayEditFields(
     val compHoursUsed: MutableState<Int>,
     val regularShortageMinutes: MutableState<Int>,
     val sickPayRate: MutableState<Double>,
-    val paidLeave: MutableState<Boolean>
+    val paidLeave: MutableState<Boolean>,
+    val holidayOverride: MutableState<Boolean?>
 ) {
     companion object {
         /** Početne vrednosti iz zapisa (bez zapisa: slobodan dan). */
@@ -192,7 +202,8 @@ internal class DayEditFields(
                 compHoursUsed = mutableStateOf(record?.compHoursUsed ?: 0),
                 regularShortageMinutes = mutableStateOf(record?.regularShortageMinutes ?: 0),
                 sickPayRate = mutableStateOf(initialSickPayRate(record)),
-                paidLeave = mutableStateOf(record?.isPaidLeave == true)
+                paidLeave = mutableStateOf(record?.isPaidLeave == true),
+                holidayOverride = mutableStateOf(record?.holidayOverride)
             )
         }
 
@@ -204,12 +215,10 @@ internal class DayEditFields(
 }
 
 internal fun dayEditForm(date: LocalDate, record: DayRecord?, fields: DayEditFields): DayEditForm {
-    val holidayOverride = record?.holidayOverride
     return DayEditForm(
         date = DayKey(date.year, date.monthValue, date.dayOfMonth),
         isWeekend = date.dayOfWeek.value >= 6,
-        isHolidayEffective = holidayOverride ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth),
-        holidayOverride = holidayOverride,
+        officialHoliday = isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth),
         holidayWorkOverride = record?.holidayWorkOverride,
         recordBalanceExempt = record?.balanceExempt == true,
         fields = fields
@@ -241,7 +250,8 @@ internal fun rememberDayEditForm(date: LocalDate, record: DayRecord?): DayEditFo
             initial.regularShortageMinutes
         },
         sickPayRate = rememberSaveable(year, month, day, recordContentKey) { initial.sickPayRate },
-        paidLeave = rememberSaveable(year, month, day, recordContentKey) { initial.paidLeave }
+        paidLeave = rememberSaveable(year, month, day, recordContentKey) { initial.paidLeave },
+        holidayOverride = rememberSaveable(year, month, day, recordContentKey) { initial.holidayOverride }
     )
     return dayEditForm(date, record, fields)
 }

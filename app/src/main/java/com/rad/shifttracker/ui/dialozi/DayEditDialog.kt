@@ -30,6 +30,7 @@ import com.rad.shifttracker.ui.CompUsedDialog
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.HoursPickerDialog
 import com.rad.shifttracker.ui.PopupCard
+import com.rad.shifttracker.ui.LabeledSwitchRow
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.ShortageMinutesDialog
@@ -37,6 +38,9 @@ import com.rad.shifttracker.ui.extendedColors
 
 internal const val DAY_TYPE_CHOICE_HEIGHT = 52
 internal const val OVERTIME_TYPE_CHOICE_HEIGHT = 48
+
+internal const val DAY_EDIT_HOLIDAY_SWITCH_LABEL = "Praznik"
+internal const val DAY_EDIT_HOLIDAY_SWITCH_HINT = "Uključi ili isključi praznik za ovaj dan"
 
 @Composable
 internal fun DayEditDialog(
@@ -73,7 +77,7 @@ internal fun DayEditDialog(
             VacationRequestValidation(blockedDates = emptyList(), message = null)
         }
     }
-    val holidayText = dayEditHolidayText(dayDate, form.shift1, record?.holidayOverride)
+    val holidayText = dayEditHolidayText(dayDate, form.shift1, form.holidayOverride)
 
     var hoursPicker by remember { mutableStateOf<HoursPickerState?>(null) }
     var showShortageDialog by remember { mutableStateOf(false) }
@@ -97,6 +101,13 @@ internal fun DayEditDialog(
                 onPaidLeaveSelected = form::selectPaidLeave,
                 onVacationSelected = form::selectVacation,
                 onOffSelected = form::selectOff
+            )
+            // Praznik se uključuje/isključuje ovde, za ovaj dan (umesto liste praznika u Opcijama).
+            LabeledSwitchRow(
+                title = DAY_EDIT_HOLIDAY_SWITCH_LABEL,
+                hint = DAY_EDIT_HOLIDAY_SWITCH_HINT,
+                checked = form.isHolidayEffective,
+                onCheckedChange = form::setHoliday
             )
         }
 

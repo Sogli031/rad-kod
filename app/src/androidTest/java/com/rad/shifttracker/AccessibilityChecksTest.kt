@@ -71,7 +71,6 @@ class AccessibilityChecksTest {
                 onCloudClick = {},
                 onMonthlyExportClick = {},
                 onDebugExportClick = {},
-                onHolidaysClick = {},
                 onDismiss = {}
             )
         }

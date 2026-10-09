@@ -21,7 +21,6 @@ import com.rad.shifttracker.ui.dialozi.DeleteMonthDialog
 import com.rad.shifttracker.ui.dialozi.FoodAllowanceDialog
 import com.rad.shifttracker.ui.dialozi.GmailImportMode
 import com.rad.shifttracker.ui.dialozi.GmailOnboardingDialog
-import com.rad.shifttracker.ui.dialozi.HolidayManagementDialog
 import com.rad.shifttracker.ui.dialozi.InitialCompBalanceDialog
 import com.rad.shifttracker.ui.dialozi.MinuliRadDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
@@ -196,16 +195,6 @@ internal fun MainDialogs(
                 onDismiss = onDismiss
             )
         }
-
-        DialogState.Holidays -> {
-            HolidayManagementDialog(
-                year = data.currentYear,
-                repo = data.repo,
-                actions = data.actions,
-                refreshKey = data.repoTick,
-                onDismiss = onDismiss
-            )
-        }
     }
 }
 
@@ -257,7 +246,6 @@ private fun MainOptionsDialog(
             data.onDebugExportClick()
             data.onDialogChange(DialogState.None)
         },
-        onHolidaysClick = { data.onDialogChange(DialogState.Holidays) },
         onDismiss = onDismiss
     )
 }

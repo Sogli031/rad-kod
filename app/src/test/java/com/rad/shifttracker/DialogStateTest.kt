@@ -30,7 +30,6 @@ class DialogStateTest {
         DialogState.InitialCompBalance to "InitialCompBalance",
         DialogState.DeleteMonth to "DeleteMonth",
         DialogState.VacationSettings to "VacationSettings",
-        DialogState.Holidays to "Holidays",
         DialogState.BloodDonation to "BloodDonation"
     )
 

@@ -35,7 +35,6 @@ internal fun OptionsDialog(
     onCloudClick: () -> Unit,
     onMonthlyExportClick: () -> Unit,
     onDebugExportClick: () -> Unit,
-    onHolidaysClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val actionLabels = optionsDialogActionLabels()
@@ -52,7 +51,6 @@ internal fun OptionsDialog(
                 OptionActionButton(text = actionLabels[1], onClick = onMonthlyExportClick)
                 OptionActionButton(text = actionLabels[2], onClick = onDebugExportClick)
             }
-            OptionActionButton(text = actionLabels[3], onClick = onHolidaysClick)
             UpdateCheckButton()
         }
 
@@ -127,6 +125,5 @@ internal const val SHOW_TEST_EXPORT_ACTIONS = false
 internal fun optionsDialogActionLabels(): List<String> = listOf(
     "Google cloud",
     "Export rada i obračuna za izabrani mesec",
-    "Debug export za ChatGPT – svi meseci",
-    "Praznici"
+    "Debug export za ChatGPT – svi meseci"
 )
