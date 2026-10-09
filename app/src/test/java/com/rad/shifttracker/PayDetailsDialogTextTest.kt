@@ -3,6 +3,7 @@ package com.rad.shifttracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_DIALOG_TITLE
 import com.rad.shifttracker.obracun.ADVANCE_PAYMENT_NET_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
@@ -160,28 +161,29 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `akontacija je red sa uplacenim iznosom i minimumom po KU ispod, bez unosa`() {
-        val dialogSource = mainSource("PayDetailsDialog.kt")
-        val advanceRowIndex = dialogSource.indexOf("FINAL_PAYMENT_ADVANCE_LABEL,")
-        val minimumIndex = dialogSource.indexOf("AdvanceMinimumText(", advanceRowIndex)
-
-        assertTrue(advanceRowIndex >= 0)
-        assertTrue(minimumIndex > advanceRowIndex)
-        assertTrue(dialogSource.contains("moneyText(finalPayment.advancePaymentNet)"))
-        assertTrue(dialogSource.contains("MaterialTheme.extendedColors.success else"))
-        assertTrue(!dialogSource.contains("MonthlyPaymentInputRows("))
-        assertTrue(!dialogSource.contains("AdvancePaymentButton("))
-        assertTrue(mainSource("PayDetailsPaymentInputs.kt").contains("Minimalno po KU: "))
-    }
-
-    @Test
-    fun `final payment rows hide empty deductions and show regress separately`() {
+    fun `isplata je jedan spisak - plata, akontacija, regres, prevoz, obustave, ukupno, pa preostalo 20`() {
         val source = mainSource("PayDetailsDialog.kt")
+        val body = source.substring(source.indexOf("private fun PaymentRows("))
+        val order = listOf(
+            "payDetailsNetSalaryLabel(monthlyReceipt)",
+            "AdvancePaymentRow(",
+            "payDetailsRegressLabel(monthlyReceipt)",
+            "payDetailsTransportLabel(monthlyReceipt)",
+            "FINAL_PAYMENT_DEDUCTIONS_LABEL",
+            "payDetailsTotalLabel(monthlyReceipt)",
+            "FINAL_PAYMENT_REMAINING_20_LABEL"
+        ).map { body.indexOf(it) }
 
-        assertTrue(source.contains("if (finalPayment.deductionsNet > 0.0)"))
-        assertTrue(source.contains("FINAL_PAYMENT_REMAINING_20_LABEL"))
-        assertTrue(source.contains("FINAL_PAYMENT_REMAINING_REGRESS_LABEL"))
-        assertTrue(source.contains("if (finalPayment.remainingRegressNetPay > 0.0)"))
+        assertTrue(order.all { it >= 0 })
+        assertEquals(order.sorted(), order)
+        assertTrue(body.contains("if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0)"))
+        assertTrue(source.contains("totalReceivedThisMonth - finalPayment.deductionsNet"))
+        assertTrue(source.contains("ADVANCE_NOT_PAID_TEXT"))
+        assertTrue(source.contains("AdvanceMinimumText("))
+        assertTrue(!source.contains("FINAL_PAYMENT_REMAINING_LABEL"))
+        assertTrue(!source.contains("MonthlyPaymentInputRows("))
+        assertEquals("nije još uplaćena", ADVANCE_NOT_PAID_TEXT)
+        assertTrue(mainSource("PayDetailsPaymentInputs.kt").contains("Minimalno po KU: "))
     }
 
     @Test

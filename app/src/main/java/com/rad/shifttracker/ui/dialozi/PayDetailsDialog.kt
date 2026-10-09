@@ -31,14 +31,12 @@ import androidx.compose.ui.window.DialogProperties
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatCurrency
+import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
+import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_NET_PAY_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_20_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_REGRESS_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_UNAVAILABLE_TEXT
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
@@ -65,7 +63,7 @@ internal fun PayDetailsDialog(
 ) {
     val receiptAvailable = monthlyReceipt.isSalaryAvailable
     val receiptText = if (receiptAvailable) {
-        "${formatCurrency(monthlyReceipt.totalReceivedThisMonth)} ${CONFIG.pay.currency}"
+        "${formatCurrency(payDetailsTotalAfterDeductions(monthlyReceipt, monthlyFinalPaymentBreakdown))} ${CONFIG.pay.currency}"
     } else {
         TOTAL_CARD_UNAVAILABLE_TEXT
     }
@@ -107,26 +105,9 @@ internal fun PayDetailsDialog(
                 )
 
                 PayDetailsSectionCard(title = "Isplata") {
-                    CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
-                    CompactMoneyRowIf(
-                        monthlyReceipt.regressNetPay > 0.0,
-                        payDetailsRegressLabel(monthlyReceipt),
-                        monthlyReceipt.regressNetPay,
-                        MaterialTheme.extendedColors.success
-                    )
-                    CompactInfoRow(
-                        payDetailsTransportLabel(monthlyReceipt),
-                        payDetailsTransportAmountText(monthlyReceipt),
-                        if (monthlyReceipt.transportAmount > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    CompactMoneyRow(
-                        payDetailsTotalLabel(monthlyReceipt),
-                        monthlyReceipt.totalReceivedThisMonth,
-                        MaterialTheme.colorScheme.primary
-                    )
-                    FinalPaymentRows(
-                        finalPayment = monthlyFinalPaymentBreakdown,
+                    PaymentRows(
                         monthlyReceipt = monthlyReceipt,
+                        finalPayment = monthlyFinalPaymentBreakdown,
                         repo = repo
                     )
                 }
@@ -197,45 +178,67 @@ private fun PayDetailsSectionCard(
 }
 
 @Composable
-private fun FinalPaymentRows(
-    finalPayment: MonthlyFinalPaymentBreakdown,
+private fun AdvancePaymentRow(
+    advancePaymentNet: Double,
     monthlyReceipt: MonthlyReceipt,
     repo: ShiftRepository
 ) {
-    SectionLabel(text = FINAL_PAYMENT_REMAINING_LABEL)
-    if (!finalPayment.isNetPayAvailable) {
-        CompactTextBlock(FINAL_PAYMENT_REMAINING_LABEL, FINAL_PAYMENT_UNAVAILABLE_TEXT, MaterialTheme.extendedColors.warning)
+    if (advancePaymentNet > 0.0) {
+        CompactMoneyRow(FINAL_PAYMENT_ADVANCE_LABEL, advancePaymentNet, MaterialTheme.extendedColors.success)
     } else {
-        CompactMoneyRow(FINAL_PAYMENT_NET_PAY_LABEL, finalPayment.netPayBeforeAdvance, MaterialTheme.colorScheme.primary)
-        // Akontacija dolazi sa listića; prikazuje se uplaćen iznos, ne unosi se ovde.
+        CompactInfoRow(FINAL_PAYMENT_ADVANCE_LABEL, ADVANCE_NOT_PAID_TEXT, MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    AdvanceMinimumText(monthlyReceipt = monthlyReceipt, repo = repo)
+}
+
+/**
+ * Jedan spisak isplate: neto plata, akontacija (deo plate, ne sabira se), regres, prevoz, obustave
+ * i ukupno posle obustava. „Preostalo 20.“ se vidi tek kad je akontacija uplaćena.
+ */
+@Composable
+private fun PaymentRows(
+    monthlyReceipt: MonthlyReceipt,
+    finalPayment: MonthlyFinalPaymentBreakdown,
+    repo: ShiftRepository
+) {
+    CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
+    AdvancePaymentRow(
+        advancePaymentNet = finalPayment.advancePaymentNet,
+        monthlyReceipt = monthlyReceipt,
+        repo = repo
+    )
+    CompactMoneyRowIf(
+        monthlyReceipt.regressNetPay > 0.0,
+        payDetailsRegressLabel(monthlyReceipt),
+        monthlyReceipt.regressNetPay,
+        MaterialTheme.extendedColors.success
+    )
+    CompactInfoRow(
+        payDetailsTransportLabel(monthlyReceipt),
+        payDetailsTransportAmountText(monthlyReceipt),
+        if (monthlyReceipt.transportAmount > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
-            FINAL_PAYMENT_ADVANCE_LABEL,
-            moneyText(finalPayment.advancePaymentNet),
-            if (finalPayment.advancePaymentNet > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
+            FINAL_PAYMENT_DEDUCTIONS_LABEL,
+            deductionMoneyText(finalPayment.deductionsNet),
+            MaterialTheme.colorScheme.error
         )
-        AdvanceMinimumText(monthlyReceipt = monthlyReceipt, repo = repo)
-        if (finalPayment.deductionsNet > 0.0) {
-            CompactInfoRow(
-                FINAL_PAYMENT_DEDUCTIONS_LABEL,
-                deductionMoneyText(finalPayment.deductionsNet),
-                MaterialTheme.colorScheme.error
-            )
-            finalPayment.deductions.forEach { deduction ->
-                CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
-            }
+        finalPayment.deductions.forEach { deduction ->
+            CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
         }
+    }
+    CompactMoneyRow(
+        payDetailsTotalLabel(monthlyReceipt),
+        payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment),
+        MaterialTheme.colorScheme.primary
+    )
+    if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
         CompactMoneyRow(
             FINAL_PAYMENT_REMAINING_20_LABEL,
             finalPayment.finalRemainingNetPay,
             MaterialTheme.colorScheme.primary
         )
-        if (finalPayment.remainingRegressNetPay > 0.0) {
-            CompactMoneyRow(
-                FINAL_PAYMENT_REMAINING_REGRESS_LABEL,
-                finalPayment.remainingRegressNetPay,
-                MaterialTheme.extendedColors.success
-            )
-        }
         if (finalPayment.advanceExceedsCalculatedNetPay) {
             Text(
                 text = FINAL_PAYMENT_ADVANCE_WARNING_TEXT,
@@ -247,6 +250,12 @@ private fun FinalPaymentRows(
         }
     }
 }
+
+/** Ukupno u ovom prozoru: sve isplate meseca minus obustave sa listića (glavni ekran ih ne oduzima). */
+internal fun payDetailsTotalAfterDeductions(
+    monthlyReceipt: MonthlyReceipt,
+    finalPayment: MonthlyFinalPaymentBreakdown
+): Double = (monthlyReceipt.totalReceivedThisMonth - finalPayment.deductionsNet).coerceAtLeast(0.0)
 
 @Composable
 private fun CompactMoneyRow(
@@ -315,28 +324,4 @@ private fun CompactDeductionDetailRow(
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(start = Spacing.sm)
     )
-}
-
-@Composable
-private fun CompactTextBlock(
-    label: String,
-    value: String,
-    color: Color = MaterialTheme.colorScheme.onSurface
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(
-            text = label,
-            color = MaterialTheme.extendedColors.textSecondary,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = value,
-            color = color,
-            style = MaterialTheme.typography.bodyMediumEmphasized,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
 }

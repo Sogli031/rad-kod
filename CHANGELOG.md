@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.8] - 2026-10-09
+- **Isplata kao jedan spisak:** neto plata, akontacija, regres (kad ga ima), prevoz, obustave i na kraju „Ukupno za isplatu u [mesec]“. Ukupno u ovom prozoru (i velika cifra na vrhu) oduzima obustave; glavni ekran je isti kao pre.
+- **Akontacija se ne unosi ručno:** dolazi sa listića i prikazuje se zeleno; dok ne stigne piše „nije još uplaćena“. Ispod nje „Minimalno po KU“.
+- **„Preostalo 20.“** se vidi ispod ukupnog tek kad je akontacija uplaćena. Odeljak „Preostalo za konačnu isplatu“ je uklonjen.
+
 ## [7.7] - 2026-10-09
 - **„Davanje krvi“ u istoj temi kao „Bolovanje / Godišnji“:** „Sačuvaj“ i „Upiši dane“ su plava glavna dugmad kao „Upiši“, „Istorija“ i „X“ u istoriji imaju neutralan okvir umesto crvenog. Crvena ostaje samo na potvrdi brisanja.
 
