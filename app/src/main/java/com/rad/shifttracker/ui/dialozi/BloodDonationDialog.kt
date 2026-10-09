@@ -44,6 +44,7 @@ import com.rad.shifttracker.ui.MIN_TOUCH_TARGET
 import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
+import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
@@ -130,15 +131,12 @@ private fun BloodDonationStatusSection(
             modifier = Modifier.fillMaxWidth()
         )
         errorMessage?.let { FormErrorText(message = it, style = MaterialTheme.typography.bodySmall) }
-        RoundedButton(
-            text = "SAČUVAJ",
+        GlowButton(
+            text = "Sačuvaj",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.saveButtonHeight.dp),
-            bgColor = MaterialTheme.colorScheme.error,
-            textColor = MaterialTheme.colorScheme.onSurface,
             textStyle = MaterialTheme.typography.labelLarge,
-            bold = true,
             onClick = {
                 val parsedDate = parseBloodDonationDateInSelectedMonth(
                     dayInput = dayInput,
@@ -164,7 +162,7 @@ private fun BloodDonationStatusSection(
                 .height(UI.saveButtonHeight.dp),
             bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             textColor = MaterialTheme.colorScheme.onSurface,
-            borderColor = MaterialTheme.colorScheme.error,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = {
@@ -268,7 +266,7 @@ private fun BloodDonationHistoryRow(
             modifier = Modifier.size(MIN_TOUCH_TARGET),
             bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             textColor = MaterialTheme.colorScheme.onSurface,
-            borderColor = MaterialTheme.colorScheme.error,
+            borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             bold = true,
             onClick = onDeleteClick
@@ -331,15 +329,12 @@ private fun BloodDonationLeaveActions(
     onError: (String?) -> Unit,
     onClearInputs: () -> Unit
 ) {
-    RoundedButton(
-        text = "UPIŠI DANE",
+    GlowButton(
+        text = "Upiši dane",
         modifier = Modifier
             .fillMaxWidth()
             .height(UI.saveButtonHeight.dp),
-        bgColor = MaterialTheme.colorScheme.error,
-        textColor = MaterialTheme.colorScheme.onSurface,
         textStyle = MaterialTheme.typography.labelLarge,
-        bold = true,
         onClick = {
             val parsedDate = parseBloodDonationDateInSelectedMonth(
                 dayInput = dayInput,

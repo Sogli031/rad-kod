@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.7] - 2026-10-09
+- **„Davanje krvi“ u istoj temi kao „Bolovanje / Godišnji“:** „Sačuvaj“ i „Upiši dane“ su plava glavna dugmad kao „Upiši“, „Istorija“ i „X“ u istoriji imaju neutralan okvir umesto crvenog. Crvena ostaje samo na potvrdi brisanja.
+
 ## [7.6] - 2026-10-09
 - **„Sati rada“ bez reda „Odbitak – topli obrok“:** red je uklonjen iz odeljka „Ostalo u obračunu“; obračun plate je isti.
 
