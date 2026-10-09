@@ -82,7 +82,8 @@ class DashboardBehaviorTest {
         val title = monthYearText(MonthKey(YEAR, MONTH))
         rule.waitUntil(timeoutMillis = 5_000) { rule.onAllNodesWithText(title, ignoreCase = true).fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText(title, ignoreCase = true).assertExists()
-        for (section in listOf("Pregled", "Dodaci", "Izostanci i naknade", "Ostalo u obračunu")) {
+        // „Ostalo u obračunu“ se ne prikazuje kad nema minulog rada, regresa, bonusa ni obustava.
+        for (section in listOf("Pregled", "Dodaci", "Izostanci i naknade")) {
             assertTrue("nedostaje sekcija $section", rule.onAllNodesWithText(section, ignoreCase = true).fetchSemanticsNodes().isNotEmpty())
         }
         // Tabele dodataka i izostanaka imaju kolone Tip / Sati / Iznos, bez procenata premija.
