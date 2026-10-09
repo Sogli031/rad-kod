@@ -250,12 +250,14 @@ private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (Dia
             month = month.month,
             nextMonthReceipt = ui.nextMonthReceipt,
             salaryOnly = mainPaySalaryOnly,
+            deductionsNet = ui.nextMonthFinalPaymentBreakdown.deductionsNet,
             onClick = { onOpenDialog(DialogState.SalaryDetails) }
         )
         if (SHOW_TOTAL_CARD) {
             TotalCard(
                 receipt = ui.monthlyReceipt,
                 salaryOnly = mainPaySalaryOnly,
+                deductionsNet = ui.monthlyFinalPaymentBreakdown.deductionsNet,
                 onClick = { onOpenDialog(DialogState.PayDetails) }
             )
         }

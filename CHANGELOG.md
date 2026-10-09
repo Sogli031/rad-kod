@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.9] - 2026-10-09
+- **Glavni ekran oduzima obustave:** kartice „[Mesec] plata“ i „Primanja u …“ prikazuju iznos posle obustava sa listića (kredit, članarina…), isto kao „Ukupno“ u detaljima isplate.
+
 ## [7.8] - 2026-10-09
 - **Isplata kao jedan spisak:** neto plata, akontacija, regres (kad ga ima), prevoz, obustave i na kraju „Ukupno za isplatu u [mesec]“. Ukupno u ovom prozoru (i velika cifra na vrhu) oduzima obustave; glavni ekran je isti kao pre.
 - **Akontacija se ne unosi ručno:** dolazi sa listića i prikazuje se zeleno; dok ne stigne piše „nije još uplaćena“. Ispod nje „Minimalno po KU“.

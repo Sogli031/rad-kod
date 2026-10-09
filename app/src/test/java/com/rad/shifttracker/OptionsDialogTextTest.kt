@@ -69,6 +69,10 @@ class OptionsDialogTextTest {
         assertEquals(122_400.0, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
         assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
         assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false), salaryOnly = true), 0.001)
+        // Obustave sa listića se oduzimaju kao u detaljima isplate, nikad ispod nule.
+        assertEquals(60_000.0, mainPayCardAmount(receipt, salaryOnly = true, deductionsNet = 40_000.0), 0.001)
+        assertEquals(82_400.0, mainPayCardAmount(receipt, salaryOnly = false, deductionsNet = 40_000.0), 0.001)
+        assertEquals(0.0, mainPayCardAmount(receipt, salaryOnly = true, deductionsNet = 150_000.0), 0.001)
     }
 
     @Test

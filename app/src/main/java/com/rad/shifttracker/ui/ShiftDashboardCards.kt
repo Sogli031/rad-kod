@@ -157,11 +157,12 @@ internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f
 internal fun TotalCard(
     receipt: MonthlyReceipt,
     salaryOnly: Boolean = true,
+    deductionsNet: Double = 0.0,
     onClick: () -> Unit
 ) {
     PayAmountCard(
         label = totalCardLabel(receipt.year, receipt.month),
-        amount = mainPayCardAmount(receipt, salaryOnly),
+        amount = mainPayCardAmount(receipt, salaryOnly, deductionsNet),
         isAvailable = receipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
@@ -175,11 +176,12 @@ internal fun SalaryCard(
     month: Int,
     nextMonthReceipt: MonthlyReceipt,
     salaryOnly: Boolean = true,
+    deductionsNet: Double = 0.0,
     onClick: () -> Unit
 ) {
     PayAmountCard(
         label = salaryCardLabel(month),
-        amount = mainPayCardAmount(nextMonthReceipt, salaryOnly),
+        amount = mainPayCardAmount(nextMonthReceipt, salaryOnly, deductionsNet),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.primary,
         shape = if (SHOW_TOTAL_CARD) {
@@ -192,9 +194,13 @@ internal fun SalaryCard(
     )
 }
 
-/** Iznos na kartici ispod kalendara: samo plata za rad (podrazumevano) ili plata, regres i prevoz. */
-internal fun mainPayCardAmount(receipt: MonthlyReceipt, salaryOnly: Boolean): Double {
-    return if (salaryOnly) receipt.workSalaryPay else receipt.totalReceivedThisMonth
+/**
+ * Iznos na kartici ispod kalendara: samo plata za rad (podrazumevano) ili plata, regres i prevoz,
+ * u oba slučaja posle obustava sa listića, kao „Ukupno“ u detaljima isplate.
+ */
+internal fun mainPayCardAmount(receipt: MonthlyReceipt, salaryOnly: Boolean, deductionsNet: Double = 0.0): Double {
+    val amount = if (salaryOnly) receipt.workSalaryPay else receipt.totalReceivedThisMonth
+    return (amount - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
 }
 
 /** Jedan red grupe plate: etiketa levo, iznos desno. */
