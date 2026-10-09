@@ -19,6 +19,7 @@ import com.rad.shifttracker.obracun.PayBaseSelectionMode
 import com.rad.shifttracker.obracun.SeniorityInputMode
 import com.rad.shifttracker.repo.defaultPayBaseSelectionModeValue
 import com.rad.shifttracker.repo.employeeContributionsPercentValue
+import com.rad.shifttracker.repo.getFoodPerDayForMonth
 import com.rad.shifttracker.repo.getKnownPayBaseAnchors
 import com.rad.shifttracker.repo.getMonthlyNetAdjustments
 import com.rad.shifttracker.repo.minuliRadLastPayslipMonthValue
@@ -29,6 +30,7 @@ import com.rad.shifttracker.repo.seniorityInputModeValue
 import com.rad.shifttracker.repo.taxPercentValue
 import com.rad.shifttracker.repo.taxReliefValue
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
 import com.rad.shifttracker.listici.payslipToJson
 import com.rad.shifttracker.listici.unknownHourItems
@@ -136,6 +138,38 @@ class PayslipImportTest {
         // Drugi uvoz istog listića: sve se već poklapa.
         val second = buildPayslipImportPlan(repo, listOf(august()), emptyList())
         assertTrue(second.changes.map { it.kind }.toString(), second.changes.isEmpty())
+    }
+
+    @Test
+    fun mealPriceComesFromTo2DividedByRecognizedMeals() {
+        val repo = testRepository()
+        // TO2 6.191,16 bruto = 4.340,00 neto; 14 obroka → 310,00 po obroku (aplikacija ima 280,00 od jula).
+        (3..16).forEach { day -> repo.set(2026, 8, day, Shift.FIRST, 8, holidayOverride = false) }
+
+        val change = buildPayslipImportPlan(repo, listOf(august()), emptyList())
+            .changes.single { it.kind == PayslipChangeKind.MEAL_PRICE }
+        assertEquals(MonthKey(2026, 8), change.month)
+        assertEquals(0, BigDecimal("310").compareTo(change.value))
+
+        applyPayslipChanges(repo, listOf(change))
+        assertEquals(310.0, repo.getFoodPerDayForMonth(2026, 8), 0.0)
+        assertEquals("jul ostaje na staroj ceni", 280.0, repo.getFoodPerDayForMonth(2026, 7), 0.0)
+        assertTrue(
+            buildPayslipImportPlan(repo, listOf(august()), emptyList())
+                .changes.none { it.kind == PayslipChangeKind.MEAL_PRICE }
+        )
+    }
+
+    @Test
+    fun mealPriceIsNotProposedWhenShiftsDoNotDivideTo2() {
+        val repo = testRepository()
+        // 4.340,00 / 15 nije ceo dinar: smene u aplikaciji ne odgovaraju obračunu.
+        (3..17).forEach { day -> repo.set(2026, 8, day, Shift.FIRST, 8, holidayOverride = false) }
+        val withShifts = buildPayslipImportPlan(repo, listOf(august()), emptyList())
+        assertTrue(withShifts.changes.none { it.kind == PayslipChangeKind.MEAL_PRICE })
+
+        val empty = buildPayslipImportPlan(testRepository(), listOf(august()), emptyList())
+        assertTrue("bez smena nema broja obroka", empty.changes.none { it.kind == PayslipChangeKind.MEAL_PRICE })
     }
 
     @Test

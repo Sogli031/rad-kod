@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.6] - 2026-10-09
+- **Cena toplog obroka sa platne liste:** pri uvozu konačne liste (Gmail „Proveri po listićima“ i ručno u „Listi“) aplikacija deli neto TO2 sa brojem obroka iz upisanih smena i, ako se deli na ceo dinar, upisuje dnevni iznos hrane od tog meseca. Ručno podešavanje u „Hrana“ više nije potrebno kad su smene meseca upisane.
+
 ## [9.5] - 2026-10-09
 - **Prekidač „Praznik“ odmah ispod žute trake** u prozoru dana (ostaje i kad je praznik isključen, da se može vratiti).
 - **Žuta traka piše samo naziv praznika**, bez „(neradni, 100%)“, „(rad +X%)“ i „(vikend)“.

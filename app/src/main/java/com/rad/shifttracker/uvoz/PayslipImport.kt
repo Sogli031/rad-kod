@@ -15,6 +15,7 @@ import com.rad.shifttracker.obracun.paidWorkMinuteSegments
 import com.rad.shifttracker.repo.difficultWorkConditionsPercentValue
 import com.rad.shifttracker.repo.employeeContributionsPercentValue
 import com.rad.shifttracker.repo.getHourlyValueForMonth
+import com.rad.shifttracker.repo.getFoodPerDayForMonth
 import com.rad.shifttracker.repo.getKnownPayBaseAnchors
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.getNetPayBreakdown
@@ -23,6 +24,7 @@ import com.rad.shifttracker.repo.minuliRadLastPayslipYearValue
 import com.rad.shifttracker.repo.minuliRadPayslipPercentValue
 import com.rad.shifttracker.repo.payCoefficientValue
 import com.rad.shifttracker.repo.seniorityInputModeValue
+import com.rad.shifttracker.repo.setFoodPerDayFromMonth
 import com.rad.shifttracker.repo.setHourlyValueChange
 import com.rad.shifttracker.repo.setKnownPayBaseAnchor
 import com.rad.shifttracker.repo.taxPercentValue
@@ -44,6 +46,7 @@ import com.rad.shifttracker.listici.isSickLeave
 import com.rad.shifttracker.listici.payslipDifferences
 import com.rad.shifttracker.listici.payslipFormulaText
 import com.rad.shifttracker.listici.payslipImportErrorText
+import com.rad.shifttracker.listici.payslipMealEntitlementNet
 import com.rad.shifttracker.listici.payslipMealOverspend
 import com.rad.shifttracker.listici.payslipRunNumber
 import com.rad.shifttracker.listici.payslipSourceText
@@ -69,7 +72,8 @@ internal enum class PayslipChangeKind {
     TAX,
     DIFFICULT_CONDITIONS,
     SENIORITY,
-    PAY_BASE
+    PAY_BASE,
+    MEAL_PRICE
 }
 
 internal data class PayslipChange(
@@ -101,6 +105,10 @@ internal data class PayslipImportPlan(
 private const val VALUE_TOLERANCE = 0.005
 private const val MONEY_MATCH_TOLERANCE = 1.0
 private val SIXTY = BigDecimal(60)
+/** Neto TO2 se na listiću zaokružuje na pare, pa broj obroka × cena sme da odstupi do dinara. */
+private const val MEAL_PRICE_MATCH_TOLERANCE = 1.0
+private const val MIN_PLAUSIBLE_MEAL_PRICE = 50
+private const val MAX_PLAUSIBLE_MEAL_PRICE = 2_000
 
 internal fun buildPayslipImportPlan(
     repo: ShiftRepository,
@@ -221,7 +229,39 @@ private fun monthlyChanges(repo: ShiftRepository, payslip: ParsedPayslip): List<
             )
         }
     }
+
+    payslipMealPrice(repo, payslip)?.let { price ->
+        val current = repo.getFoodPerDayForMonth(month.year, month.month)
+        if (abs(current - price.toDouble()) >= VALUE_TOLERANCE) {
+            changes += PayslipChange(
+                kind = PayslipChangeKind.MEAL_PRICE,
+                month = month,
+                label = "Topli obrok po danu od $monthText",
+                currentText = formatSerbianDecimal(current.toDisplayDecimal(), minFraction = 2),
+                payslipText = formatSerbianDecimal(price, minFraction = 2),
+                value = price
+            )
+        }
+    }
     return changes
+}
+
+/**
+ * Cena obroka sa listića: neto TO2 je pun iznos koji pripada (broj obroka × cena), bez obzira
+ * na to koliko je pojedeno; višak pojedenog se skida kao obustava. Broj obroka daju upisane
+ * smene meseca. Cena je ceo dinar, pa se predlaže samo kad se TO2 deli bez ostatka — inače
+ * smene u aplikaciji ne odgovaraju obračunu i cena se ne dira.
+ */
+internal fun payslipMealPrice(repo: ShiftRepository, payslip: ParsedPayslip): BigDecimal? {
+    val entitledNet = payslipMealEntitlementNet(payslip)?.takeIf { it > 0.0 } ?: return null
+    val month = payslip.month
+    val mealCount = repo.getNetPayBreakdown(month.year, month.month)
+        .mealEntitlementCalculation.recognizedMealCount
+    if (mealCount <= 0) return null
+    val price = (entitledNet / mealCount).roundToInt()
+    if (price !in MIN_PLAUSIBLE_MEAL_PRICE..MAX_PLAUSIBLE_MEAL_PRICE) return null
+    if (abs(price.toDouble() * mealCount - entitledNet) > MEAL_PRICE_MATCH_TOLERANCE) return null
+    return BigDecimal(price).setScale(2)
 }
 
 internal fun applyPayslipChanges(repo: ShiftRepository, changes: List<PayslipChange>) {
@@ -242,6 +282,7 @@ internal fun applyPayslipChanges(repo: ShiftRepository, changes: List<PayslipCha
                 repo.seniorityInputModeValue = SeniorityInputMode.PAYSLIP_PERCENT
             }
             PayslipChangeKind.PAY_BASE -> repo.setKnownPayBaseAnchor(year, month, value)
+            PayslipChangeKind.MEAL_PRICE -> repo.setFoodPerDayFromMonth(year, month, value)
         }
     }
     ensureKnownPayBaseMode(repo)
