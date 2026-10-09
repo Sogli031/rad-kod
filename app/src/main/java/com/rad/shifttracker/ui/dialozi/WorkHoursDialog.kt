@@ -351,7 +351,6 @@ private fun otherPayrollRows(
                 )
             )
         }
-        addDeductionRowIf(payBreakdown.mealNetDeduction > 0.0, "Odbitak – topli obrok", payBreakdown.mealNetDeduction)
         addDeductionRowIf(payBreakdown.unionDuesNet > 0.0, "Obustave (sindikat, fond)", payBreakdown.unionDuesNet)
     }
 }

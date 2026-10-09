@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.6] - 2026-10-09
+- **„Sati rada“ bez reda „Odbitak – topli obrok“:** red je uklonjen iz odeljka „Ostalo u obračunu“; obračun plate je isti.
+
 ## [7.5] - 2026-10-09
 - **Bolovanje u „Sati rada“ kao razlika od plate:** red „Bolovanje“ više ne prikazuje celu naknadu, već koliko je neto plata manja (crveno) ili veća (zeleno) nego da su ti dani odrađeni po rasporedu smena. Isti iznos kao pregled pri unosu bolovanja.
 
