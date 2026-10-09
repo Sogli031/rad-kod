@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +32,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatCurrency
-import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
@@ -52,11 +52,9 @@ import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
 import com.rad.shifttracker.ui.mainPayCardAmount
 import com.rad.shifttracker.ui.rememberRepoValue
-import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getNetPayBreakdown
 import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
-import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 @Composable
@@ -118,7 +116,9 @@ internal fun PayDetailsDialog(
                     )
                 }
 
-                PayrollMonthWorkHours(payrollMonth = monthlyReceipt.payrollMonth, payDetails = payDetails, repo = repo)
+                if (monthlyReceipt.isSalaryAvailable) {
+                    PayrollMonthTable(monthlyReceipt = monthlyReceipt, payDetails = payDetails, repo = repo)
+                }
 
                 Spacer(
                     modifier = Modifier.height(bottomScrollPadding)
@@ -185,22 +185,23 @@ private fun PayDetailsSectionCard(
     }
 }
 
-/** Sati rada, dodaci i izostanci meseca obračuna, ispod isplate. */
+/** Obračun plate meseca isplate kao tabela koja se sabira u neto platu, ispod isplate. */
 @Composable
-private fun PayrollMonthWorkHours(payrollMonth: MonthKey, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
+private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
+    val payrollMonth = monthlyReceipt.payrollMonth
     val year = payrollMonth.year
     val month = payrollMonth.month
-    val summary = rememberRepoValue(repo, payrollMonth) { getSummary(year, month) }
     val payBreakdown = rememberRepoValue(repo, payrollMonth) { getNetPayBreakdown(year, month) }
     val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
     val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
-    WorkHoursSections(
-        summary = summary,
-        payBreakdown = payBreakdown,
+    val table = payrollTable(
         payDetails = payDetails,
-        deficitNetLoss = deficitNetLoss,
-        sickLeaveNetDifference = sickLeaveNetDifference
+        payBreakdown = payBreakdown,
+        netSalary = monthlyReceipt.salaryNetPay,
+        sickLeaveNetDifference = sickLeaveNetDifference,
+        uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, deficitNetLoss)
     )
+    PayrollTableCards(title = "Obračun plate za ${payrollMonthNameText(monthlyReceipt)}", table = table)
 }
 
 @Composable
@@ -242,17 +243,19 @@ private fun PaymentRows(
     if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
             FINAL_PAYMENT_DEDUCTIONS_LABEL,
-            deductionMoneyText(finalPayment.deductionsNet),
+            signedSrMoney(-finalPayment.deductionsNet),
             MaterialTheme.colorScheme.error
         )
         finalPayment.deductions.forEach { deduction ->
             CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
         }
     }
-    CompactMoneyRow(
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    CompactInfoRow(
         payDetailsTotalLabel(monthlyReceipt),
-        payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment),
-        MaterialTheme.colorScheme.primary
+        srMoney(payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment)),
+        MaterialTheme.colorScheme.primary,
+        bold = true
     )
     if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
         CompactMoneyRow(
@@ -284,7 +287,7 @@ private fun CompactMoneyRow(
     value: Double,
     color: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    CompactInfoRow(label, moneyText(value), color)
+    CompactInfoRow(label, srMoney(value), color)
 }
 
 @Composable
@@ -304,7 +307,8 @@ private fun CompactInfoRow(
     label: String,
     value: String,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bold: Boolean = false
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -313,8 +317,8 @@ private fun CompactInfoRow(
     ) {
         AutoSizeText(
             text = label,
-            color = MaterialTheme.extendedColors.textSecondary,
-            style = MaterialTheme.typography.bodyMedium,
+            color = if (bold) MaterialTheme.colorScheme.onSurface else MaterialTheme.extendedColors.textSecondary,
+            style = if (bold) MaterialTheme.typography.bodyMediumEmphasized else MaterialTheme.typography.bodyMedium,
             maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
             minFontSize = MaterialTheme.typography.bodySmall.fontSize,
             maxLines = 1,
@@ -341,7 +345,7 @@ private fun CompactDeductionDetailRow(
 ) {
     CompactInfoRow(
         label = label,
-        value = deductionMoneyText(value),
+        value = signedSrMoney(-value),
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(start = Spacing.sm)
     )

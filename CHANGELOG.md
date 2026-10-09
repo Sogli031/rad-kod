@@ -3,6 +3,12 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.3] - 2026-10-09
+- **Obračun plate kao tabela koja se sabira:** ispod isplate je „Obračun plate za [mesec]“ — Rad (obični sati, smene, prekovremeno, nedelja, praznik, minuli rad), Naknade (bolovanje, godišnji, praznik, davanje krvi) i Ostalo (topli obrok, bonus, „Izostanci 1“, sindikat) — i zbir „= Neto plata“ je tačno neto plata iz isplate. Ako ostane razlika od poreza, piše kao „Zaokruženje poreza“.
+- **Bolovanje** pokazuje stvarnu naknadu, a ispod sitno koliko je manje (ili više) nego da si radio.
+- **Izostanci** su posebno, „Nije plaćeno“, samo kao informacija (već su izostavljeni iz plate).
+- **Iznosi u isplati** u formatu 51.996,94; „Ukupno za isplatu“ podebljano ispod linije.
+
 ## [8.2] - 2026-10-09
 - **Naslov isplate u padežu:** „Isplata u Novembru 2026“, „Isplata u Januaru 2027“ umesto „Isplata u Novembar 2026“.
 - **Izostanci:** red „Manjak po danima (saldo)“ se zove samo „Izostanci“.

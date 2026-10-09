@@ -58,7 +58,7 @@ class DashboardBehaviorTest {
     }
 
     @Test
-    fun `isplata ispod pokazuje sate rada, dodatke i izostanke meseca obracuna`() {
+    fun `isplata ispod pokazuje tabelu obracuna plate meseca obracuna`() {
         val repo = repoWithMonth()
 
         rule.setContent {
@@ -74,11 +74,11 @@ class DashboardBehaviorTest {
         }
 
         rule.waitUntil(timeoutMillis = 5_000) { rule.onAllNodesWithText("Isplata", ignoreCase = true).fetchSemanticsNodes().isNotEmpty() }
-        for (section in listOf("Isplata", "Sati rada", "Dodaci", "Izostanci i naknade")) {
+        for (section in listOf("Isplata", "Obračun plate za Oktobar", "Rad", "= Neto plata")) {
             assertTrue("nedostaje sekcija $section", rule.onAllNodesWithText(section, ignoreCase = true).fetchSemanticsNodes().isNotEmpty())
         }
-        // Tabele dodataka i izostanaka imaju kolone Tip / Sati / Iznos, bez procenata premija.
-        for (header in listOf("Tip", "Sati", "Iznos")) {
+        // Tabela obračuna ima kolone Sati / Iznos.
+        for (header in listOf("Sati", "Iznos")) {
             assertTrue("nedostaje kolona $header", rule.onAllNodesWithText(header, ignoreCase = true).fetchSemanticsNodes().isNotEmpty())
         }
         assertTrue(rule.onAllNodesWithText("Ostalo u obračunu", ignoreCase = true).fetchSemanticsNodes().isEmpty())
