@@ -7,9 +7,6 @@ import org.junit.Test
 import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SALARY_ONLY_HINT
-import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SALARY_ONLY_LABEL
-import com.rad.shifttracker.ui.dialozi.MAIN_PAY_SECTION_LABEL
 import com.rad.shifttracker.ui.dialozi.SHOW_TEST_EXPORT_ACTIONS
 import com.rad.shifttracker.ui.dialozi.difficultWorkConditionsStatusText
 import com.rad.shifttracker.ui.dialozi.optionsDialogActionLabels
@@ -40,21 +37,14 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `options dialog exposes salary only toggle for pay cards below calendar`() {
-        assertEquals("Prikaz ispod kalendara", MAIN_PAY_SECTION_LABEL)
-        assertEquals("Samo plata za rad", MAIN_PAY_SALARY_ONLY_LABEL)
-        assertEquals("Bez regresa i prevoza", MAIN_PAY_SALARY_ONLY_HINT)
-
+    fun `opcije nemaju prekidac samo plata za rad`() {
         val optionsSource = mainSource("OptionsDialog.kt")
-        assertTrue(optionsSource.contains("title = MAIN_PAY_SALARY_ONLY_LABEL"))
-        assertTrue(optionsSource.contains("actions.setMainPaySalaryOnly(checked)"))
-
-        val screenSource = mainSource("ShiftTrackerContent.kt")
-        assertEquals(2, screenSource.split("salaryOnly = mainPaySalaryOnly").size - 1)
+        assertTrue(!optionsSource.contains("mainPaySalaryOnly"))
+        assertTrue(!mainSource("ShiftTrackerContent.kt").contains("salaryOnly"))
     }
 
     @Test
-    fun `pay cards below calendar show only work salary when toggle is on`() {
+    fun `kartice ispod kalendara su plata i regres posle obustava, bez prevoza`() {
         val receipt = MonthlyReceipt(
             year = 2026,
             month = 8,
@@ -65,14 +55,11 @@ class OptionsDialogTextTest {
             transportDailyAmount = 240.0
         )
 
-        assertEquals(100_000.0, mainPayCardAmount(receipt, salaryOnly = true), 0.001)
-        assertEquals(122_400.0, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
-        assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, salaryOnly = false), 0.001)
-        assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false), salaryOnly = true), 0.001)
+        assertEquals(120_000.0, mainPayCardAmount(receipt), 0.001)
+        assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false)), 0.001)
         // Obustave sa listića se oduzimaju kao u detaljima isplate, nikad ispod nule.
-        assertEquals(60_000.0, mainPayCardAmount(receipt, salaryOnly = true, deductionsNet = 40_000.0), 0.001)
-        assertEquals(82_400.0, mainPayCardAmount(receipt, salaryOnly = false, deductionsNet = 40_000.0), 0.001)
-        assertEquals(0.0, mainPayCardAmount(receipt, salaryOnly = true, deductionsNet = 150_000.0), 0.001)
+        assertEquals(80_000.0, mainPayCardAmount(receipt, deductionsNet = 40_000.0), 0.001)
+        assertEquals(0.0, mainPayCardAmount(receipt, deductionsNet = 150_000.0), 0.001)
     }
 
     @Test

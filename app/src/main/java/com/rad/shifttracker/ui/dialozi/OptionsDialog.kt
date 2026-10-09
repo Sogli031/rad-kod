@@ -1,17 +1,12 @@
 package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,10 +16,8 @@ import com.rad.shifttracker.listici.GMAIL_PAYSLIP_SECTION_LABEL
 import com.rad.shifttracker.obracun.CURRENCY_LABEL
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.difficultWorkConditionsPercentValue
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.transportDailyAmountValue
-import com.rad.shifttracker.ui.LabeledSwitchRow
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.RoundedButton
@@ -46,10 +39,6 @@ internal fun OptionsDialog(
     onDismiss: () -> Unit
 ) {
     val actionLabels = optionsDialogActionLabels()
-    val savedMainPaySalaryOnly = rememberRepoValue(repo) { mainPaySalaryOnly }
-    var mainPaySalaryOnly by remember(savedMainPaySalaryOnly) {
-        mutableStateOf(savedMainPaySalaryOnly)
-    }
 
     PopupDialog(
         title = "Opcije",
@@ -64,20 +53,6 @@ internal fun OptionsDialog(
                 OptionActionButton(text = actionLabels[2], onClick = onDebugExportClick)
             }
             OptionActionButton(text = actionLabels[3], onClick = onHolidaysClick)
-        }
-
-        SectionLabel(text = "Prikaz i obaveštenja")
-        PopupCard(spacing = 0.dp) {
-            LabeledSwitchRow(
-                title = MAIN_PAY_SALARY_ONLY_LABEL,
-                hint = MAIN_PAY_SALARY_ONLY_HINT,
-                checked = mainPaySalaryOnly,
-                contentPadding = OPTION_ROW_PADDING,
-                onCheckedChange = { checked ->
-                    mainPaySalaryOnly = checked
-                    actions.setMainPaySalaryOnly(checked)
-                }
-            )
         }
 
         SectionLabel(text = GMAIL_PAYSLIP_SECTION_LABEL)
@@ -113,7 +88,6 @@ private fun OptionActionButton(
     )
 }
 
-private val OPTION_ROW_PADDING = PaddingValues(vertical = Spacing.md)
 
 /**
  * Otežani uslovi rada i prevoz po danu se samo prikazuju: otežane uslove upisuje lista (šifra 21,

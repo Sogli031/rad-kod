@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.0] - 2026-10-09
+- **Isplata bez prevoza:** red „Prevoz“ je uklonjen iz detalja isplate; ukupno je neto plata + regres − obustave.
+- **Jedan način prikaza na glavnom ekranu:** prekidač „Samo plata za rad“ je uklonjen iz Opcija. Kartice uvek prikazuju platu i regres posle obustava, bez prevoza — isti broj kao „Ukupno“ u isplati. (Podešavanje ostaje u backup-u radi starih verzija, ali se više ne koristi.)
+
 ## [7.9] - 2026-10-09
 - **Glavni ekran oduzima obustave:** kartice „[Mesec] plata“ i „Primanja u …“ prikazuju iznos posle obustava sa listića (kredit, članarina…), isto kao „Ukupno“ u detaljima isplate.
 

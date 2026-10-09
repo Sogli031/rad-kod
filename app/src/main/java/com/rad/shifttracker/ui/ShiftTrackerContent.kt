@@ -42,7 +42,6 @@ import java.time.LocalDate
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.brigadeTypeValue
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.isPayslipMonthUnfinished
@@ -238,7 +237,6 @@ private fun ShiftCalendarPane(
 /** Statistika meseca (sati, prekovremeno, topli obrok) i kartice sa platom. */
 @Composable
 private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (DialogState) -> Unit) {
-    val mainPaySalaryOnly = ui.mainPaySalaryOnly
     StatsSection(
         summary = ui.summary,
         onWorkHoursClick = { onOpenDialog(DialogState.WorkHours) },
@@ -249,15 +247,13 @@ private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (Dia
         SalaryCard(
             month = month.month,
             nextMonthReceipt = ui.nextMonthReceipt,
-            salaryOnly = mainPaySalaryOnly,
             deductionsNet = ui.nextMonthFinalPaymentBreakdown.deductionsNet,
             onClick = { onOpenDialog(DialogState.SalaryDetails) }
         )
         if (SHOW_TOTAL_CARD) {
             TotalCard(
                 receipt = ui.monthlyReceipt,
-                salaryOnly = mainPaySalaryOnly,
-                deductionsNet = ui.monthlyFinalPaymentBreakdown.deductionsNet,
+                    deductionsNet = ui.monthlyFinalPaymentBreakdown.deductionsNet,
                 onClick = { onOpenDialog(DialogState.PayDetails) }
             )
         }

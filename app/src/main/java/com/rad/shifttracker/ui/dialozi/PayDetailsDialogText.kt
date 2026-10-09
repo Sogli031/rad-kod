@@ -81,16 +81,8 @@ internal fun payDetailsRegressLabel(receipt: MonthlyReceipt): String {
     return "Regres za ${monthNameText(receipt.paymentMonth)}"
 }
 
-internal fun payDetailsTransportLabel(receipt: MonthlyReceipt): String {
-    return "Prevoz za ${monthNameText(receipt.payrollMonth)}"
-}
-
 internal fun payDetailsTotalLabel(receipt: MonthlyReceipt): String {
     return "Ukupno za isplatu u ${monthLocativeText(receipt.paymentMonth)}"
-}
-
-internal fun payDetailsTransportAmountText(receipt: MonthlyReceipt): String {
-    return moneyText(receipt.transportAmount)
 }
 
 internal fun defaultHourlyHistoryInfoText(): String {

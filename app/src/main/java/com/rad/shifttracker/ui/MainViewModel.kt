@@ -35,7 +35,6 @@ import com.rad.shifttracker.repo.getNetPayBreakdown
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
 import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getVacationBalanceSummary
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.repo.currentStatus
@@ -54,7 +53,6 @@ internal data class MainMonthState(
     val payBreakdown: MonthlyNetPayBreakdown,
     val monthlyReceipt: MonthlyReceipt,
     val nextMonthReceipt: MonthlyReceipt,
-    val mainPaySalaryOnly: Boolean,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val nextMonthFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
@@ -141,7 +139,6 @@ internal class MainViewModel(
             payBreakdown = repo.getNetPayBreakdown(year, month),
             monthlyReceipt = monthlyReceipt,
             nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue),
-            mainPaySalaryOnly = repo.mainPaySalaryOnly,
             monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(year, month),
             nextMonthFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
             overtimeNetImpact = repo.getMonthlyOvertimeNetImpact(year, month),

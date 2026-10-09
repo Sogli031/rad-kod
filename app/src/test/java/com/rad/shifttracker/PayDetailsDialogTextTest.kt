@@ -31,8 +31,6 @@ import com.rad.shifttracker.ui.dialozi.payDetailsNetSalaryLabel
 import com.rad.shifttracker.ui.dialozi.payDetailsReceiptDescriptionText
 import com.rad.shifttracker.ui.dialozi.payDetailsRegressLabel
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalLabel
-import com.rad.shifttracker.ui.dialozi.payDetailsTransportAmountText
-import com.rad.shifttracker.ui.dialozi.payDetailsTransportLabel
 import com.rad.shifttracker.ui.dialozi.paymentMonthTitleText
 import com.rad.shifttracker.ui.dialozi.payrollMonthTitleText
 
@@ -64,10 +62,6 @@ class PayDetailsDialogTextTest {
         assertEquals("Isplata u Jul 2026", paymentMonthTitleText(receipt))
         assertEquals("Obračun za Jun 2026", payrollMonthTitleText(receipt))
         assertEquals(null, payDetailsReceiptDescriptionText(receipt))
-        assertEquals(
-            "4560.00 RSD",
-            payDetailsTransportAmountText(receipt)
-        )
     }
 
     @Test
@@ -84,7 +78,6 @@ class PayDetailsDialogTextTest {
 
         assertEquals("Neto plata za April", payDetailsNetSalaryLabel(receipt))
         assertEquals("Regres za Maj", payDetailsRegressLabel(receipt))
-        assertEquals("Prevoz za April", payDetailsTransportLabel(receipt))
         assertEquals("Ukupno za isplatu u Maju", payDetailsTotalLabel(receipt))
     }
 
@@ -161,14 +154,13 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `isplata je jedan spisak - plata, akontacija, regres, prevoz, obustave, ukupno, pa preostalo 20`() {
+    fun `isplata je jedan spisak - plata, akontacija, regres, obustave, ukupno, pa preostalo 20`() {
         val source = mainSource("PayDetailsDialog.kt")
         val body = source.substring(source.indexOf("private fun PaymentRows("))
         val order = listOf(
             "payDetailsNetSalaryLabel(monthlyReceipt)",
             "AdvancePaymentRow(",
             "payDetailsRegressLabel(monthlyReceipt)",
-            "payDetailsTransportLabel(monthlyReceipt)",
             "FINAL_PAYMENT_DEDUCTIONS_LABEL",
             "payDetailsTotalLabel(monthlyReceipt)",
             "FINAL_PAYMENT_REMAINING_20_LABEL"
@@ -177,7 +169,8 @@ class PayDetailsDialogTextTest {
         assertTrue(order.all { it >= 0 })
         assertEquals(order.sorted(), order)
         assertTrue(body.contains("if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0)"))
-        assertTrue(source.contains("totalReceivedThisMonth - finalPayment.deductionsNet"))
+        assertTrue(source.contains("mainPayCardAmount(monthlyReceipt, finalPayment.deductionsNet)"))
+        assertTrue(!body.contains("Transport"))
         assertTrue(source.contains("ADVANCE_NOT_PAID_TEXT"))
         assertTrue(source.contains("AdvanceMinimumText("))
         assertTrue(!source.contains("FINAL_PAYMENT_REMAINING_LABEL"))

@@ -32,7 +32,6 @@ import com.rad.shifttracker.ui.RepoDataActions
 import com.rad.shifttracker.repo.getMonthlyReceipt
 import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getVacationBalanceSummary
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.BackgroundLayer
 import com.rad.shifttracker.ui.BottomBar
@@ -238,9 +237,9 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 onFoodClick = {}
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-                SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, salaryOnly = repo.mainPaySalaryOnly, onClick = {})
+                SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, onClick = {})
                 if (SHOW_TOTAL_CARD) {
-                    TotalCard(receipt = monthlyReceipt, salaryOnly = repo.mainPaySalaryOnly, onClick = {})
+                    TotalCard(receipt = monthlyReceipt, onClick = {})
                 }
             }
         }

@@ -21,7 +21,6 @@ import com.rad.shifttracker.repo.deleteBloodDonation
 import com.rad.shifttracker.repo.deletePayslip
 import com.rad.shifttracker.repo.importFromJson
 import com.rad.shifttracker.repo.initialCompBalanceMinutesValue
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.repo.minuliRadBenefitEnabledValue
 import com.rad.shifttracker.repo.minuliRadIncreaseFactorValue
 import com.rad.shifttracker.repo.minuliRadLastPayslipMonthValue
@@ -77,7 +76,6 @@ internal interface SettingsActions {
     fun setFoodPerDayFromMonth(year: Int, month: Int, value: Double)
     fun setHolidayActive(year: Int, month: Int, day: Int, isActive: Boolean)
     fun setInitialCompBalanceMinutes(minutes: Int)
-    fun setMainPaySalaryOnly(enabled: Boolean)
     fun saveSeniority(settings: SenioritySettings)
     fun setVacationYearBalance(balance: VacationYearBalance)
     fun setAnnualLeaveCalculation(input: AnnualLeaveCalculationInput, lastCalculatedDays: Int)
@@ -183,10 +181,6 @@ internal class RepoDataActions(
 
     override fun setInitialCompBalanceMinutes(minutes: Int) {
         repo.initialCompBalanceMinutesValue = minutes
-    }
-
-    override fun setMainPaySalaryOnly(enabled: Boolean) {
-        repo.mainPaySalaryOnly = enabled
     }
 
     override fun saveSeniority(settings: SenioritySettings) {

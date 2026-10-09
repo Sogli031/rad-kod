@@ -50,6 +50,7 @@ import com.rad.shifttracker.ui.headlineMediumEmphasized
 import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
+import com.rad.shifttracker.ui.mainPayCardAmount
 import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
@@ -192,7 +193,7 @@ private fun AdvancePaymentRow(
 }
 
 /**
- * Jedan spisak isplate: neto plata, akontacija (deo plate, ne sabira se), regres, prevoz, obustave
+ * Jedan spisak isplate: neto plata, akontacija (deo plate, ne sabira se), regres, obustave
  * i ukupno posle obustava. „Preostalo 20.“ se vidi tek kad je akontacija uplaćena.
  */
 @Composable
@@ -212,11 +213,6 @@ private fun PaymentRows(
         payDetailsRegressLabel(monthlyReceipt),
         monthlyReceipt.regressNetPay,
         MaterialTheme.extendedColors.success
-    )
-    CompactInfoRow(
-        payDetailsTransportLabel(monthlyReceipt),
-        payDetailsTransportAmountText(monthlyReceipt),
-        if (monthlyReceipt.transportAmount > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
     )
     if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
@@ -251,11 +247,11 @@ private fun PaymentRows(
     }
 }
 
-/** Ukupno u ovom prozoru: sve isplate meseca minus obustave sa listića (glavni ekran ih ne oduzima). */
+/** Ukupno u ovom prozoru: neto plata i regres minus obustave sa listića, isto kao na glavnom ekranu. */
 internal fun payDetailsTotalAfterDeductions(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown
-): Double = (monthlyReceipt.totalReceivedThisMonth - finalPayment.deductionsNet).coerceAtLeast(0.0)
+): Double = mainPayCardAmount(monthlyReceipt, finalPayment.deductionsNet)
 
 @Composable
 private fun CompactMoneyRow(
