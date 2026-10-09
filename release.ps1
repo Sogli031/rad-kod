@@ -57,4 +57,9 @@ if ($SkipPublish) { return }
 if ($LASTEXITCODE -ne 0) { throw "Tag v$version nije napravljen (možda već postoji)" }
 $notesFile = Join-Path $env:TEMP "rad-notes-$version.md"
 Set-Content -Path $notesFile -Value "$Notes`n`nSHA-256 APK-a: ``$sha256```nSHA-1 sertifikata: ``$sha1``" -Encoding UTF8
-& $Gh release create "v$version" $out --repo $Repo --title "Verzija $version" --notes-file $notesFile
+# Na GitHub ide pod stalnim imenom rad.apk (jedini APK u release-u, da Obtainium ne pita koji):
+# https://github.com/Sogli031/rad/releases/latest/download/rad.apk uvek vodi na najnoviju verziju,
+# a provera ažuriranja u aplikaciji traži baš taj fajl.
+$publishedApk = Join-Path 'release-out' 'rad.apk'
+Copy-Item $out $publishedApk -Force
+& $Gh release create "v$version" $publishedApk --repo $Repo --title "Verzija $version" --notes-file $notesFile
