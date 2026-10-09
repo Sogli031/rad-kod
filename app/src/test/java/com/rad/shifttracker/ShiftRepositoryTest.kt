@@ -112,6 +112,7 @@ import com.rad.shifttracker.repo.exportCloudBackupJson
 import com.rad.shifttracker.repo.getPreviewNetPayBreakdown
 import com.rad.shifttracker.repo.getResolvedPayBasesForWorkMonth
 import com.rad.shifttracker.repo.getScheduledShiftForDate
+import com.rad.shifttracker.repo.getPaidLeaveNetDifference
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
 import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.repo.getVacationBalanceSummary
@@ -2943,6 +2944,28 @@ class ShiftRepositoryTest {
         // Osnovica 1.200 > satnica 1.000: godišnji donosi više nego rad.
         assertTrue(preview.netDifference > 0.0)
         assertEquals(preview.netDifference, repo.getVacationNetDifference(2026, 5), 0.01)
+    }
+
+    @Test
+    fun `davanje krvi ima svoju razliku prema radu i ne mesa se sa bolovanjem`() {
+        repo.grossHourlyRateValue = 1_000.0
+        repo.foodPerDayValue = 0.0
+        repo.employeeContributionsPercentValue = 20.0
+        repo.taxReliefValue = 0.0
+        repo.taxPercentValue = 10.0
+        repo.setMonthlyPayBases(2026, 4, MonthlyPayBases.fromUnifiedPayBase(2026, 4, 1_200.0))
+        for (day in 4..8) repo.set(2026, 5, day, Shift.FIRST, 8, holidayOverride = false)
+        // Samo davanje krvi (4. i 5.): bolovanja nema, pa njegova razlika mora biti 0.
+        repo.applyBloodDonationLeave(LocalDate.of(2026, 5, 4))
+
+        val paidLeave = repo.getPaidLeaveNetDifference(2026, 5)
+        assertTrue("osnovica 1.200 > satnica 1.000: više nego rad", paidLeave > 0.0)
+        assertEquals(0.0, repo.getSickLeaveNetDifference(2026, 5), 0.01)
+
+        // Bolovanje 7.: ima svoju (negativnu) razliku, a razlika za krv ostaje ista.
+        ShiftScheduler(defaultHours = 8).applySickRange(repo, 2026, 5, 7, 7, 0.65)
+        assertTrue(repo.getSickLeaveNetDifference(2026, 5) < 0.0)
+        assertEquals(paidLeave, repo.getPaidLeaveNetDifference(2026, 5), 50.0)
     }
 
     @Test

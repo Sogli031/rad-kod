@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.0] - 2026-10-09
+- **Davanje krvi u obračunu:** ispod reda „Davanje krvi“ piše koliko je više (zeleno) ili manje (crveno) nego da su ti dani odrađeni, kao kod godišnjeg i bolovanja.
+- **Ispravka:** dani davanja krvi više ne ulaze u razliku za bolovanje (u danima su upisani kao bolovanje sa oznakom plaćenog odsustva).
+
 ## [8.9] - 2026-10-09
 - Probno izdanje bez izmena u aplikaciji, za proveru ažuriranja iz aplikacije na telefonu.
 

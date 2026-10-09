@@ -277,12 +277,21 @@ fun ShiftRepository.previewAbsenceRangeNetImpact(
     )
 }
 
+// Davanje krvi je u danima upisano kao bolovanje sa oznakom plaćenog odsustva, pa se razdvaja po isPaidLeave.
 fun ShiftRepository.getSickLeaveNetDifference(year: Int, month: Int): Double = synchronized(lock) {
-    absenceSimulator.absenceNetDifference(year, month, Shift.SICK) { date -> getScheduledShiftForDate(date) }
+    absenceSimulator.absenceNetDifference(year, month, { it.shift == Shift.SICK && !it.isPaidLeave }) { date ->
+        getScheduledShiftForDate(date)
+    }
+}
+
+fun ShiftRepository.getPaidLeaveNetDifference(year: Int, month: Int): Double = synchronized(lock) {
+    absenceSimulator.absenceNetDifference(year, month, { it.isPaidLeave }) { date -> getScheduledShiftForDate(date) }
 }
 
 fun ShiftRepository.getVacationNetDifference(year: Int, month: Int): Double = synchronized(lock) {
-    absenceSimulator.absenceNetDifference(year, month, Shift.VACATION) { date -> getScheduledShiftForDate(date) }
+    absenceSimulator.absenceNetDifference(year, month, { it.shift == Shift.VACATION }) { date ->
+        getScheduledShiftForDate(date)
+    }
 }
 
 fun ShiftRepository.getPreviewNetPayBreakdown(

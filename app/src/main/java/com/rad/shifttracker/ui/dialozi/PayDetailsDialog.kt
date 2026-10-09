@@ -55,6 +55,7 @@ import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.getNetPayBreakdown
 import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
+import com.rad.shifttracker.repo.getPaidLeaveNetDifference
 import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
@@ -198,6 +199,7 @@ private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Monthl
     val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
     val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
     val vacationNetDifference = rememberRepoValue(repo, payrollMonth) { getVacationNetDifference(year, month) }
+    val paidLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getPaidLeaveNetDifference(year, month) }
     // Procenat bolovanja po danima (davanje krvi je plaćeno odsustvo, nije bolovanje).
     val sickPayRates = rememberRepoValue(repo, payrollMonth) {
         getMonthRecords(year, month)
@@ -210,6 +212,7 @@ private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Monthl
         netSalary = monthlyReceipt.salaryNetPay,
         sickLeaveNetDifference = sickLeaveNetDifference,
         vacationNetDifference = vacationNetDifference,
+        paidLeaveNetDifference = paidLeaveNetDifference,
         sickPayRates = sickPayRates,
         uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, deficitNetLoss)
     )

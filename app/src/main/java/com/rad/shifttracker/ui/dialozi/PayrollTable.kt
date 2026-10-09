@@ -56,6 +56,7 @@ internal fun payrollTable(
     sickLeaveNetDifference: Double,
     uncoveredDeficitNetLoss: Double,
     vacationNetDifference: Double = 0.0,
+    paidLeaveNetDifference: Double = 0.0,
     sickPayRates: List<Double> = emptyList()
 ): PayrollTable {
     // Topli obrok ima svoj tačan neto (pripada), pa se izdvaja; ostale bruto stavke dele ostatak neto
@@ -96,7 +97,18 @@ internal fun payrollTable(
                 )
             )
         }
-        addRow("Davanje krvi", payDetails.paidLeaveMinutes, net(payDetails.grossPaidLeave), PayrollTone.Plain)
+        if (payDetails.grossPaidLeave > 0.0) {
+            add(
+                PayrollRow(
+                    label = "Davanje krvi",
+                    minutes = payDetails.paidLeaveMinutes,
+                    amount = net(payDetails.grossPaidLeave),
+                    tone = PayrollTone.Plain,
+                    note = workComparisonNote(paidLeaveNetDifference),
+                    noteTone = workComparisonTone(paidLeaveNetDifference)
+                )
+            )
+        }
         if (payDetails.grossVacationPay > 0.0) {
             add(
                 PayrollRow(
