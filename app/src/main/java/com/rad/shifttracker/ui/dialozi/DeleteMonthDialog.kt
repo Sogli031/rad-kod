@@ -3,6 +3,7 @@ package com.rad.shifttracker.ui.dialozi
 import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.MONTH_NAMES
-import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.PopupDialog
+import com.rad.shifttracker.ui.CenteredDialog
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.ui.GlowButton
@@ -37,13 +37,14 @@ internal fun DeleteMonthDialog(
 ) {
     var deleteAll by remember { mutableStateOf(false) }
 
-    PopupDialog(
+    CenteredDialog(
         title = "Potvrda brisanja",
         onDismiss = onDismiss,
-        scrollable = true
+        showClose = false
     ) {
-        PopupCard(
-            spacing = Spacing.sm
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             AutoSizeText(
                 text = "!",
@@ -68,7 +69,10 @@ internal fun DeleteMonthDialog(
             )
         }
 
-        PopupCard {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
             SectionLabel(text = "Šta obrisati?")
             Row(
                 modifier = Modifier
@@ -79,7 +83,7 @@ internal fun DeleteMonthDialog(
                 RoundedButton(
                     text = "Ovaj mesec",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = if (!deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    bgColor = if (!deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainer,
                     textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
@@ -88,7 +92,7 @@ internal fun DeleteMonthDialog(
                 RoundedButton(
                     text = "Svi meseci",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    bgColor = if (deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    bgColor = if (deleteAll) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainer,
                     textColor = MaterialTheme.colorScheme.onSurface,
                     textStyle = MaterialTheme.typography.labelLarge,
                     bold = true,
@@ -106,7 +110,7 @@ internal fun DeleteMonthDialog(
             RoundedButton(
                 text = "Otkaži",
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                bgColor = MaterialTheme.colorScheme.surfaceContainer,
                 textColor = MaterialTheme.colorScheme.onSurface,
                 borderColor = MaterialTheme.colorScheme.outlineVariant,
                 textStyle = MaterialTheme.typography.labelLarge,

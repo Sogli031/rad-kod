@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.3] - 2026-10-09
+- **„Briši“ na sredini ekrana:** potvrda brisanja se otvara kao prozor na sredini (kao „Hrana“ i „Prekovremeno“), sa istim izborom „Ovaj mesec“ / „Svi meseci“ i dugmadima „Otkaži“ / „Obriši“.
+
 ## [10.2] - 2026-10-09
 - **„Prekovremeno“ na sredini ekrana:** otvara se kao mali prozor na sredini (kao „Hrana“), sa dugmetom „Zatvori“, umesto lista odozdo.
 
