@@ -30,15 +30,16 @@ class DayEditFormTest {
         DayRecord(date.year, date.monthValue, date.dayOfMonth, shift, hours)
 
     @Test
-    fun `prekidac praznik ukljucuje i iskljucuje praznik za dan`() {
-        // Običan ponedeljak: uključen praznik se pamti kao ručni, a isključen briše oznaku.
-        val monday = form(monday)
-        assertFalse(monday.isHolidayEffective)
-        monday.setHoliday(true)
-        assertTrue(monday.isHolidayEffective)
-        assertEquals(true, monday.saveState.holidayOverride)
-        monday.setHoliday(false)
-        assertNull(monday.saveState.holidayOverride)
+    fun `prekidac praznik postoji samo na vec poznatim praznicima`() {
+        // Običan dan nema prekidač; državni i ranije ručno dodat praznik ga imaju.
+        assertFalse(form(monday).showHolidaySwitch)
+        assertTrue(form(newYear).showHolidaySwitch)
+        val manual = DayRecord(monday.year, monday.monthValue, monday.dayOfMonth, Shift.OFF, 0, holidayOverride = true)
+        val manualForm = form(monday, manual)
+        assertTrue(manualForm.showHolidaySwitch)
+        manualForm.setHoliday(false)
+        assertNull(manualForm.saveState.holidayOverride)
+        assertTrue("prekidač ostaje dok je prozor otvoren", manualForm.showHolidaySwitch)
 
         // Nova godina: isključen državni praznik je ručno „nije praznik“, a vraćen briše oznaku.
         val newYearForm = form(newYear)

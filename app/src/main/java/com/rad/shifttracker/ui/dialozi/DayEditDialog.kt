@@ -40,7 +40,7 @@ internal const val DAY_TYPE_CHOICE_HEIGHT = 52
 internal const val OVERTIME_TYPE_CHOICE_HEIGHT = 48
 
 internal const val DAY_EDIT_HOLIDAY_SWITCH_LABEL = "Praznik"
-internal const val DAY_EDIT_HOLIDAY_SWITCH_HINT = "Uključi ili isključi praznik za ovaj dan"
+internal const val DAY_EDIT_HOLIDAY_SWITCH_HINT = "Isključi ako se ovaj praznik ne računa"
 
 @Composable
 internal fun DayEditDialog(
@@ -102,13 +102,15 @@ internal fun DayEditDialog(
                 onVacationSelected = form::selectVacation,
                 onOffSelected = form::selectOff
             )
-            // Praznik se uključuje/isključuje ovde, za ovaj dan (umesto liste praznika u Opcijama).
-            LabeledSwitchRow(
-                title = DAY_EDIT_HOLIDAY_SWITCH_LABEL,
-                hint = DAY_EDIT_HOLIDAY_SWITCH_HINT,
-                checked = form.isHolidayEffective,
-                onCheckedChange = form::setHoliday
-            )
+            // Već poznat praznik se ovde isključuje/uključuje za ovaj dan (umesto liste u Opcijama).
+            if (form.showHolidaySwitch) {
+                LabeledSwitchRow(
+                    title = DAY_EDIT_HOLIDAY_SWITCH_LABEL,
+                    hint = DAY_EDIT_HOLIDAY_SWITCH_HINT,
+                    checked = form.isHolidayEffective,
+                    onCheckedChange = form::setHoliday
+                )
+            }
         }
 
         DayEditShiftControls(

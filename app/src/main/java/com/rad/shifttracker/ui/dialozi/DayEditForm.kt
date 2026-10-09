@@ -30,6 +30,8 @@ internal class DayEditForm(
     private val isWeekend: Boolean,
     /** Državni praznik po kalendaru; [holidayOverride] ga ručno uključuje ili isključuje za ovaj dan. */
     private val officialHoliday: Boolean,
+    /** Dan je već bio ručno označen kao praznik (npr. dodat ranije), pa i on dobija prekidač. */
+    private val savedManualHoliday: Boolean,
     private val holidayWorkOverride: Boolean?,
     private val recordBalanceExempt: Boolean,
     private val fields: DayEditFields
@@ -49,6 +51,10 @@ internal class DayEditForm(
 
     val isHolidayEffective: Boolean
         get() = holidayOverride ?: officialHoliday
+
+    /** Prekidač „Praznik“ postoji samo na danima koji su već praznik (državni ili ranije ručno dodat). */
+    val showHolidaySwitch: Boolean
+        get() = officialHoliday || savedManualHoliday
 
     /** Prekidač „Praznik“: kad se vrati na isto kao kalendar, ručna oznaka se briše. */
     fun setHoliday(on: Boolean) {
@@ -219,6 +225,7 @@ internal fun dayEditForm(date: LocalDate, record: DayRecord?, fields: DayEditFie
         date = DayKey(date.year, date.monthValue, date.dayOfMonth),
         isWeekend = date.dayOfWeek.value >= 6,
         officialHoliday = isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth),
+        savedManualHoliday = record?.holidayOverride == true,
         holidayWorkOverride = record?.holidayWorkOverride,
         recordBalanceExempt = record?.balanceExempt == true,
         fields = fields
