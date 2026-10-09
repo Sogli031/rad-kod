@@ -53,7 +53,8 @@ internal fun payrollTable(
     payBreakdown: MonthlyNetPayBreakdown,
     netSalary: Double,
     sickLeaveNetDifference: Double,
-    uncoveredDeficitNetLoss: Double
+    uncoveredDeficitNetLoss: Double,
+    vacationNetDifference: Double = 0.0
 ): PayrollTable {
     val ratio = payDetails.netRatioBeforeSeniority
     fun net(gross: Double) = gross * ratio
@@ -80,13 +81,24 @@ internal fun payrollTable(
                     minutes = payDetails.sickMinutes,
                     amount = net(payDetails.grossSickPay),
                     tone = PayrollTone.Plain,
-                    note = sickLeaveNote(sickLeaveNetDifference),
-                    noteTone = if (sickLeaveNetDifference < 0.0) PayrollTone.Negative else PayrollTone.Positive
+                    note = workComparisonNote(sickLeaveNetDifference),
+                    noteTone = workComparisonTone(sickLeaveNetDifference)
                 )
             )
         }
         addRow("Davanje krvi", payDetails.paidLeaveMinutes, net(payDetails.grossPaidLeave), PayrollTone.Plain)
-        addRow("Godišnji odmor", payDetails.vacationMinutes, net(payDetails.grossVacationPay), PayrollTone.Plain)
+        if (payDetails.grossVacationPay > 0.0) {
+            add(
+                PayrollRow(
+                    label = "Godišnji odmor",
+                    minutes = payDetails.vacationMinutes,
+                    amount = net(payDetails.grossVacationPay),
+                    tone = PayrollTone.Plain,
+                    note = workComparisonNote(vacationNetDifference),
+                    noteTone = workComparisonTone(vacationNetDifference)
+                )
+            )
+        }
         addRow("Plaćen praznik", payDetails.paidHolidayMinutes, net(payDetails.grossPaidHoliday), PayrollTone.Plain)
         addRow("Pokriven manjak sati", payDetails.coveredDeficitMinutes, net(payDetails.grossCoveredDeficitPay), PayrollTone.Plain)
     }
@@ -128,7 +140,11 @@ internal fun uncoveredDeficitNetLoss(payDetails: MonthlyPayDetails, deficitNetLo
     }
 }
 
-private fun sickLeaveNote(difference: Double): String? {
+/** Manje (crveno) ili više (zeleno) nego da su ti dani odrađeni. */
+private fun workComparisonTone(difference: Double): PayrollTone =
+    if (difference < 0.0) PayrollTone.Negative else PayrollTone.Positive
+
+private fun workComparisonNote(difference: Double): String? {
     if (abs(difference) < ROUNDING_VISIBLE_FROM) return null
     val word = if (difference < 0.0) "manje" else "više"
     return "${srMoney(abs(difference))} $word nego da si radio"

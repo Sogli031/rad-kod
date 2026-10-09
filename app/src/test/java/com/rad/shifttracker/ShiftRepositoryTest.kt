@@ -113,6 +113,7 @@ import com.rad.shifttracker.repo.getPreviewNetPayBreakdown
 import com.rad.shifttracker.repo.getResolvedPayBasesForWorkMonth
 import com.rad.shifttracker.repo.getScheduledShiftForDate
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
+import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.repo.getVacationDaysRemaining
 import com.rad.shifttracker.repo.getVacationDaysUsed
@@ -134,6 +135,7 @@ import com.rad.shifttracker.smene.HolidayEntrySource
 import com.rad.shifttracker.ui.calendarDayDetailText
 import com.rad.shifttracker.repo.populateMonthsAhead
 import com.rad.shifttracker.repo.applySickRange
+import com.rad.shifttracker.repo.applyVacationRange
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.MANUAL_HOLIDAY_LABEL
 
@@ -2916,6 +2918,31 @@ class ShiftRepositoryTest {
 
         assertTrue(preview.netDifference < 0.0)
         assertEquals(preview.netDifference, repo.getSickLeaveNetDifference(2026, 5), 0.01)
+    }
+
+    @Test
+    fun `razlika godisnjeg posle upisa jednaka je preview-u pri unosu`() {
+        repo.grossHourlyRateValue = 1_000.0
+        repo.foodPerDayValue = 0.0
+        repo.employeeContributionsPercentValue = 20.0
+        repo.taxReliefValue = 0.0
+        repo.taxPercentValue = 10.0
+        repo.setMonthlyPayBases(2026, 4, MonthlyPayBases.fromUnifiedPayBase(2026, 4, 1_200.0))
+        for (day in 4..8) repo.set(2026, 5, day, Shift.FIRST, 8, holidayOverride = false)
+
+        val preview = repo.previewAbsenceRangeNetImpact(
+            year = 2026,
+            month = 5,
+            startDay = 6,
+            endDay = 6,
+            absenceShift = Shift.VACATION,
+            sickPayRate = null
+        )
+        ShiftScheduler(defaultHours = 8).applyVacationRange(repo, 2026, 5, 6, 6)
+
+        // Osnovica 1.200 > satnica 1.000: godišnji donosi više nego rad.
+        assertTrue(preview.netDifference > 0.0)
+        assertEquals(preview.netDifference, repo.getVacationNetDifference(2026, 5), 0.01)
     }
 
     @Test

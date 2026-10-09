@@ -89,19 +89,20 @@ internal class RepositoryAbsenceSimulator(
     }
 
     /**
-     * Neto razlika koju bolovanje u mesecu pravi u odnosu na platu da su ti radni dani odrađeni:
-     * mesec kakav jeste − isti mesec sa danima bolovanja vraćenim na smenu iz rasporeda.
-     * Isto poređenje kao pregled pri unosu bolovanja, samo unazad; negativno znači gubitak.
+     * Neto razlika koju odsustvo [absenceShift] (bolovanje ili godišnji) u mesecu pravi u odnosu na
+     * platu da su ti radni dani odrađeni: mesec kakav jeste − isti mesec sa tim danima vraćenim na
+     * smenu iz rasporeda. Isto poređenje kao pregled pri unosu odsustva, samo unazad; negativno je gubitak.
      */
-    fun sickLeaveNetDifference(
+    fun absenceNetDifference(
         year: Int,
         month: Int,
+        absenceShift: Shift,
         scheduledShift: (LocalDate) -> Shift?
     ): Double {
         val currentRecords = recordStore.getMonthRecords(MonthKey(year, month))
         var replaced = false
         val workedRecords = currentRecords.map { record ->
-            if (record.shift != Shift.SICK || record.workHours <= 0 || !record.weekday.isWorkday) {
+            if (record.shift != absenceShift || record.workHours <= 0 || !record.weekday.isWorkday) {
                 return@map record
             }
             replaced = true

@@ -120,7 +120,7 @@ class PayDetailsDialogTextTest {
         assertEquals("Akontacija", FINAL_PAYMENT_ADVANCE_LABEL)
         assertEquals("Obustave", FINAL_PAYMENT_DEDUCTIONS_LABEL)
         assertEquals("Preostalo za konačnu isplatu", FINAL_PAYMENT_REMAINING_LABEL)
-        assertEquals("Preostalo 20.", FINAL_PAYMENT_REMAINING_20_LABEL)
+        assertEquals("Ukupno za isplatu 20.", FINAL_PAYMENT_REMAINING_20_LABEL)
         assertEquals("Preostalo regres", FINAL_PAYMENT_REMAINING_REGRESS_LABEL)
         assertEquals("ručno uneto", MANUAL_ENTRY_BADGE_TEXT)
         assertEquals("Hrana nije prekoračena", FOOD_NOT_OVERAGE_TEXT)

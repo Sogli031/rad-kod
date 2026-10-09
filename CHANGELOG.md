@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.4] - 2026-10-09
+- **Godišnji kao i bolovanje:** ispod „Godišnji odmor“ u obračunu piše koliko je manje (crveno) ili više (zeleno) nego da su ti dani odrađeni.
+- **„Ukupno za isplatu 20.“** umesto „Preostalo 20.“: kad je akontacija uplaćena, ispod ukupnog piše ukupno za isplatu minus akontacija.
+
 ## [8.3] - 2026-10-09
 - **Obračun plate kao tabela koja se sabira:** ispod isplate je „Obračun plate za [mesec]“ — Rad (obični sati, smene, prekovremeno, nedelja, praznik, minuli rad), Naknade (bolovanje, godišnji, praznik, davanje krvi) i Ostalo (topli obrok, bonus, „Izostanci 1“, sindikat) — i zbir „= Neto plata“ je tačno neto plata iz isplate. Ako ostane razlika od poreza, piše kao „Zaokruženje poreza“.
 - **Bolovanje** pokazuje stvarnu naknadu, a ispod sitno koliko je manje (ili više) nego da si radio.

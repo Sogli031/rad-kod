@@ -55,6 +55,7 @@ import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.getNetPayBreakdown
 import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
 import com.rad.shifttracker.repo.getSickLeaveNetDifference
+import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 @Composable
@@ -194,11 +195,13 @@ private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Monthl
     val payBreakdown = rememberRepoValue(repo, payrollMonth) { getNetPayBreakdown(year, month) }
     val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
     val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
+    val vacationNetDifference = rememberRepoValue(repo, payrollMonth) { getVacationNetDifference(year, month) }
     val table = payrollTable(
         payDetails = payDetails,
         payBreakdown = payBreakdown,
         netSalary = monthlyReceipt.salaryNetPay,
         sickLeaveNetDifference = sickLeaveNetDifference,
+        vacationNetDifference = vacationNetDifference,
         uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, deficitNetLoss)
     )
     PayrollTableCards(title = "Obračun plate za ${payrollMonthNameText(monthlyReceipt)}", table = table)
@@ -258,10 +261,12 @@ private fun PaymentRows(
         bold = true
     )
     if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
-        CompactMoneyRow(
+        // Akontacija je već stigla, pa 20. leže ostatak: ukupno za isplatu − akontacija.
+        CompactInfoRow(
             FINAL_PAYMENT_REMAINING_20_LABEL,
-            finalPayment.finalRemainingNetPay,
-            MaterialTheme.colorScheme.primary
+            srMoney(payDetailsTotalOn20(monthlyReceipt, finalPayment)),
+            MaterialTheme.colorScheme.primary,
+            bold = true
         )
         if (finalPayment.advanceExceedsCalculatedNetPay) {
             Text(
@@ -280,6 +285,12 @@ internal fun payDetailsTotalAfterDeductions(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown
 ): Double = mainPayCardAmount(monthlyReceipt, finalPayment.deductionsNet)
+
+/** „Ukupno za isplatu 20.“: ukupno za isplatu u mesecu minus već uplaćena akontacija. */
+internal fun payDetailsTotalOn20(
+    monthlyReceipt: MonthlyReceipt,
+    finalPayment: MonthlyFinalPaymentBreakdown
+): Double = (payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment) - finalPayment.advancePaymentNet).coerceAtLeast(0.0)
 
 @Composable
 private fun CompactMoneyRow(
