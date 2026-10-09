@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.7] - 2026-10-09
+- **Ispravka cene toplog obroka sa liste:** cena se uzima samo iz meseci u kojima je pojedeno više nego što pripada (obustava „Topli obrok“ veća od neto TO2) — samo tada je TO2 pun iznos (broj obroka × cena). Kad je pojedeno manje ili tačno koliko pripada, TO2 je samo pojedeno i cena se ne menja. Verzija 9.6 je mogla da upiše pogrešnu cenu (npr. 310 za avgust 2026); proveri iznos u „Hrana“.
+
 ## [9.6] - 2026-10-09
 - **Cena toplog obroka sa platne liste:** pri uvozu konačne liste (Gmail „Proveri po listićima“ i ručno u „Listi“) aplikacija deli neto TO2 sa brojem obroka iz upisanih smena i, ako se deli na ceo dinar, upisuje dnevni iznos hrane od tog meseca. Ručno podešavanje u „Hrana“ više nije potrebno kad su smene meseca upisane.
 

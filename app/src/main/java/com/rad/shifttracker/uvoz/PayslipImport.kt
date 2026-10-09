@@ -247,12 +247,14 @@ private fun monthlyChanges(repo: ShiftRepository, payslip: ParsedPayslip): List<
 }
 
 /**
- * Cena obroka sa listića: neto TO2 je pun iznos koji pripada (broj obroka × cena), bez obzira
- * na to koliko je pojedeno; višak pojedenog se skida kao obustava. Broj obroka daju upisane
- * smene meseca. Cena je ceo dinar, pa se predlaže samo kad se TO2 deli bez ostatka — inače
- * smene u aplikaciji ne odgovaraju obračunu i cena se ne dira.
+ * Cena obroka sa listića. TO2 je pojedeno, ograničeno onim što pripada; samo kad je pojedeno
+ * više (obustava „Topli obrok“ veća od neto TO2), neto TO2 je pun iznos koji pripada
+ * (broj obroka × cena). U ostalim mesecima TO2 = pojedeno i ne govori ništa o ceni.
+ * Broj obroka daju upisane smene meseca. Cena je ceo dinar, pa se predlaže samo kad se TO2
+ * deli bez ostatka — inače smene u aplikaciji ne odgovaraju obračunu i cena se ne dira.
  */
 internal fun payslipMealPrice(repo: ShiftRepository, payslip: ParsedPayslip): BigDecimal? {
+    payslipMealOverspend(payslip) ?: return null
     val entitledNet = payslipMealEntitlementNet(payslip)?.takeIf { it > 0.0 } ?: return null
     val month = payslip.month
     val mealCount = repo.getNetPayBreakdown(month.year, month.month)
