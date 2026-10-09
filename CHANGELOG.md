@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.5] - 2026-10-09
+- **„Ukupno za isplatu 20.11.“** — tačan datum konačne isplate umesto „20.“ (za januar „20.01.“).
+- **Isplata počinje od vrha ekrana:** prozor je preko celog ekrana kao ostali, pa razmak ispod statusne trake više nije dupli.
+
 ## [8.4] - 2026-10-09
 - **Godišnji kao i bolovanje:** ispod „Godišnji odmor“ u obračunu piše koliko je manje (crveno) ili više (zeleno) nego da su ti dani odrađeni.
 - **„Ukupno za isplatu 20.“** umesto „Preostalo 20.“: kad je akontacija uplaćena, ispod ukupnog piše ukupno za isplatu minus akontacija.

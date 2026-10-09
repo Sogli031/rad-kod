@@ -36,7 +36,6 @@ import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_20_LABEL
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
@@ -82,7 +81,9 @@ internal fun PayDetailsDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        // Preko celog ekrana kao ostali prozori; inače prozor već počinje ispod statusne trake,
+        // pa bi safeDrawing razmak odozgo (i odozdo) bio dodat dvaput.
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Box(
             modifier = Modifier
@@ -263,7 +264,7 @@ private fun PaymentRows(
     if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
         // Akontacija je već stigla, pa 20. leže ostatak: ukupno za isplatu − akontacija.
         CompactInfoRow(
-            FINAL_PAYMENT_REMAINING_20_LABEL,
+            payDetailsTotalOn20Label(monthlyReceipt),
             srMoney(payDetailsTotalOn20(monthlyReceipt, finalPayment)),
             MaterialTheme.colorScheme.primary,
             bold = true

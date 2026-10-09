@@ -15,6 +15,7 @@ import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.PayrollTable
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalAfterDeductions
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20
+import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20Label
 import com.rad.shifttracker.ui.dialozi.payrollTable
 import com.rad.shifttracker.ui.dialozi.signedSrMoney
 import com.rad.shifttracker.ui.dialozi.srMoney
@@ -80,5 +81,7 @@ class PayrollTableTest {
 
         assertEquals(58_487.70, payDetailsTotalAfterDeductions(receipt, finalPayment), 0.001)
         assertEquals(33_487.70, payDetailsTotalOn20(receipt, finalPayment), 0.001)
+        assertEquals("Ukupno za isplatu 20.11.", payDetailsTotalOn20Label(receipt))
+        assertEquals("Ukupno za isplatu 20.01.", payDetailsTotalOn20Label(receipt.copy(year = 2027, month = 1)))
     }
 }

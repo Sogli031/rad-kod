@@ -10,7 +10,6 @@ import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_NET_PAY_LABEL
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_20_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_REMAINING_REGRESS_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_UNAVAILABLE_TEXT
@@ -120,7 +119,6 @@ class PayDetailsDialogTextTest {
         assertEquals("Akontacija", FINAL_PAYMENT_ADVANCE_LABEL)
         assertEquals("Obustave", FINAL_PAYMENT_DEDUCTIONS_LABEL)
         assertEquals("Preostalo za konačnu isplatu", FINAL_PAYMENT_REMAINING_LABEL)
-        assertEquals("Ukupno za isplatu 20.", FINAL_PAYMENT_REMAINING_20_LABEL)
         assertEquals("Preostalo regres", FINAL_PAYMENT_REMAINING_REGRESS_LABEL)
         assertEquals("ručno uneto", MANUAL_ENTRY_BADGE_TEXT)
         assertEquals("Hrana nije prekoračena", FOOD_NOT_OVERAGE_TEXT)
@@ -152,6 +150,8 @@ class PayDetailsDialogTextTest {
         assertTrue(source.contains("maxOf("))
         assertTrue(source.contains("PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP.dp"))
         assertTrue(!source.contains("WindowInsets.systemBars"))
+        // Bez ovoga je razmak ispod statusne trake dupli.
+        assertTrue(source.contains("decorFitsSystemWindows = false"))
     }
 
     @Test
@@ -164,7 +164,7 @@ class PayDetailsDialogTextTest {
             "payDetailsRegressLabel(monthlyReceipt)",
             "FINAL_PAYMENT_DEDUCTIONS_LABEL",
             "payDetailsTotalLabel(monthlyReceipt)",
-            "FINAL_PAYMENT_REMAINING_20_LABEL"
+            "payDetailsTotalOn20Label(monthlyReceipt)"
         ).map { body.indexOf(it) }
 
         assertTrue(order.all { it >= 0 })

@@ -72,6 +72,11 @@ internal fun signedSrMoney(value: Double): String {
     return prefix + srMoney(kotlin.math.abs(value))
 }
 
+/** „Ukupno za isplatu 20.11.“: dan konačne isplate u mesecu isplate. */
+internal fun payDetailsTotalOn20Label(receipt: MonthlyReceipt): String {
+    return "Ukupno za isplatu 20.%02d.".format(receipt.paymentMonth.month)
+}
+
 internal fun payDetailsTotalLabel(receipt: MonthlyReceipt): String {
     return "Ukupno za isplatu u ${monthLocativeText(receipt.paymentMonth)}"
 }
