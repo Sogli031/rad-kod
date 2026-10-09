@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.9] - 2026-10-09
+- **„Hrana“ jednostavnije:** prozor prikazuje samo iznos po obroku i „Izračunato iz N listi“ (ili „Nije pronađeno na listama“ sa dugmetom za skeniranje), bez objašnjenja i spiska meseci.
+
 ## [9.8] - 2026-10-09
 - **Topli obrok bez ručnog unosa:** „Hrana“ otvara prozor na sredini ekrana sa cenom po obroku i objašnjenjem sa koje liste je pročitana (npr. „02/2026: 19 × 280, višak 210“). Polje za kucanje iznosa je uklonjeno.
 - **Cena samo sa lista, bez smena:** u mesecima u kojima je pojedeno više nego što pripada, topli obrok na listi je broj obroka × cena; cena je njihov najveći zajednički delilac (npr. 280 od 09/2025, 240 u 2024), proveren brojem dana rada sa liste. Upisuje se za ceo period pri proveri po listama iz Gmail-a ili uvozu u „Listi“.
