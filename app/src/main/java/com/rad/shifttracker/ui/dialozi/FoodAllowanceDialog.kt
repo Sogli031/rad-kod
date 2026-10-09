@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -29,6 +32,8 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getFoodPerDayForMonth
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.DataActions
+import com.rad.shifttracker.ui.FormErrorText
+import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.Spacing
@@ -38,8 +43,9 @@ import com.rad.shifttracker.uvoz.mealPriceFindings
 import com.rad.shifttracker.uvoz.mealPriceSourceFor
 
 /**
- * Topli obrok: cena po obroku izračunata sa platnih lista ([mealPriceFindings]), bez ručnog unosa.
- * Bez cene sa lista nudi se čitanje svih lista iz Gmail-a, posle kog se prozor osveži.
+ * Topli obrok: pouzdana cena sa platnih lista ([mealPriceFindings]) se samo prikazuje. Kad je
+ * cena nepouzdana ili je nema, unosi se ručno (nepouzdana je predlog u polju); bez ijedne liste
+ * sa cenom nudi se i čitanje svih lista iz Gmail-a, posle kog se prozor osveži.
  */
 @Composable
 internal fun FoodAllowanceDialog(
@@ -57,8 +63,13 @@ internal fun FoodAllowanceDialog(
     val selectedMonth = MonthKey(year, month)
     val price = rememberRepoValue(repo, year, month) { getFoodPerDayForMonth(year, month) }
     val findings = rememberRepoValue(repo) { mealPriceFindings(this) }
-    val source = mealPriceSourceFor(findings, selectedMonth)
-        ?.takeIf { it.price.toDouble() == price }
+    val found = mealPriceSourceFor(findings, selectedMonth)
+    val reliable = found?.takeIf { it.reliable && it.price.toDouble() == price }
+    // Nepouzdana cena sa lista se samo predlaže u polju; upisuje je korisnik.
+    var input by remember(selectedMonth, found?.price, price) {
+        mutableStateOf(formatRateInput(found?.price?.toDouble() ?: price))
+    }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -77,23 +88,62 @@ internal fun FoodAllowanceDialog(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge
             )
+            if (reliable != null) {
+                Text(
+                    text = "${money(price)} ${CONFIG.pay.currency}",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            } else {
+                ModernTextField(
+                    value = input,
+                    onValueChange = {
+                        input = filterDecimalInput(it)
+                        errorMessage = null
+                    },
+                    hintText = "Iznos po obroku...",
+                    label = "Iznos po obroku (${CONFIG.pay.currency})",
+                    isError = errorMessage != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                errorMessage?.let { FormErrorText(message = it) }
+            }
             Text(
-                text = "${money(price)} ${CONFIG.pay.currency}",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = source?.let { "Izračunato iz ${listsText(it.months.size)}" } ?: "Nije pronađeno na listama",
+                text = when {
+                    reliable != null -> "Izračunato iz ${listsText(reliable.months.size)}"
+                    found != null -> "Moguće iz ${listsText(found.months.size)}, nije sigurno — proveri i sačuvaj"
+                    else -> "Nije pronađeno na listama"
+                },
                 color = MaterialTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
-            if (source == null) {
+            if (reliable == null) {
                 GlowButton(
-                    text = "Skeniraj liste iz Gmail-a",
+                    text = "Sačuvaj",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
+                    onClick = {
+                        val value = input.toDoubleOrNull()
+                        if (value == null || value < 0) {
+                            errorMessage = "Unesi ispravan iznos."
+                            return@GlowButton
+                        }
+                        actions.setFoodPerDayFromMonth(year, month, value)
+                        onDismiss()
+                    }
+                )
+            }
+            if (found == null) {
+                RoundedButton(
+                    text = "Skeniraj liste iz Gmail-a",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    bgColor = MaterialTheme.colorScheme.surfaceContainer,
+                    textColor = MaterialTheme.colorScheme.onSurface,
                     onClick = { scanning = true }
                 )
             }

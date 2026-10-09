@@ -233,11 +233,12 @@ private fun monthlyChanges(repo: ShiftRepository, payslip: ParsedPayslip): List<
 
 /**
  * Cena obroka sa lista (sačuvane + nove, nova lista istog meseca važi): predlaže se za svaki
- * period u kom bar jedan mesec ima drugu cenu u aplikaciji.
+ * pouzdan period u kom bar jedan mesec ima drugu cenu u aplikaciji. Nepouzdanu cenu korisnik
+ * potvrđuje ručno u „Hrana“.
  */
 private fun mealPriceChanges(repo: ShiftRepository, payslips: List<ParsedPayslip>): List<PayslipChange> {
     val all = (savedPayslips(repo).associateBy { it.month } + payslips.associateBy { it.month }).values
-    return mealPricesFromPayslips(all).mapNotNull { period ->
+    return mealPricesFromPayslips(all).filter { it.reliable }.mapNotNull { period ->
         val differs = period.coveredMonths().any { month ->
             abs(repo.getFoodPerDayForMonth(month.year, month.month) - period.price) >= VALUE_TOLERANCE
         }

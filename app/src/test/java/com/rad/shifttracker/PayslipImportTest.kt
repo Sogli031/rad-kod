@@ -180,10 +180,13 @@ class PayslipImportTest {
         assertEquals(listOf(19, 12, 22, 5), newest.months.map(newest::mealCount))
         assertEquals(MonthKey(2024, 10), periods[1].from)
         assertEquals(MonthKey(2024, 12), periods[1].until)
+        assertTrue("4 i 3 liste, jedan delilac", periods.all { it.reliable })
 
         assertTrue("bez prekoračenja nema cene", mealPricesFromPayslips(listOf(realMealSlips().last())).isEmpty())
-        // 5.320 sam: delioci 152, 190, 266, 280, 380, 532 — 280 daje 19 obroka uz ~17 dana rada.
-        assertEquals(280, mealPricesFromPayslips(listOf(mealSlip(MonthKey(2026, 2), 5_320, 5_530, 139))).single().price)
+        // 5.320 sam: delioci 152, 190, 266, 280, 380, 532 — 280 daje 19 obroka uz ~17 dana rada, ali nije sigurno.
+        val single = mealPricesFromPayslips(listOf(mealSlip(MonthKey(2026, 2), 5_320, 5_530, 139))).single()
+        assertEquals(280, single.price)
+        assertFalse(single.reliable)
     }
 
     @Test
@@ -201,6 +204,20 @@ class PayslipImportTest {
         assertEquals(280.0, repo.getFoodPerDayForMonth(2026, 2), 0.0)
         assertTrue(
             buildPayslipImportPlan(repo, realMealSlips(), emptyList())
+                .changes.none { it.kind == PayslipChangeKind.MEAL_PRICE }
+        )
+    }
+
+    @Test
+    fun unreliableMealPriceIsNotWrittenByImport() {
+        val repo = testRepository()
+        val twoSlips = listOf(
+            mealSlip(MonthKey(2026, 2), 5_320, 5_530, 139),
+            mealSlip(MonthKey(2025, 12), 3_920, 4_035, 99)
+        )
+        assertFalse(mealPricesFromPayslips(twoSlips).single().reliable)
+        assertTrue(
+            buildPayslipImportPlan(repo, twoSlips, emptyList())
                 .changes.none { it.kind == PayslipChangeKind.MEAL_PRICE }
         )
     }

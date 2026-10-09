@@ -20,6 +20,8 @@ private const val HOURS_PER_MEAL = 8.0
 /** Broj obroka sme da odstupi od dana rada sa listića (dodatni obroci, plaćeno odsustvo). */
 private const val MIN_MEAL_COUNT_SLACK = 3.0
 private const val MEAL_COUNT_SLACK_SHARE = 0.35
+/** Toliko lista sa prekoračenjem u periodu da se cena upisuje sama (uz jedini mogući delilac). */
+private const val RELIABLE_MIN_PAYSLIPS = 3
 
 /** Lista na kojoj je pojedeno više nego što pripada: neto TO2 je tada pun iznos (obroci × cena). */
 internal data class MealOverspendMonth(
@@ -37,7 +39,12 @@ internal data class MealPriceFromPayslips(
     val from: MonthKey,
     val until: MonthKey,
     /** Najnovija prvo. */
-    val months: List<MealOverspendMonth>
+    val months: List<MealOverspendMonth>,
+    /**
+     * Bar [RELIABLE_MIN_PAYSLIPS] liste i samo jedna moguća cena: upisuje se sama. Inače je cena
+     * izabrana po danima rada (npr. 5.320 = 19 × 280 = 20 × 266) i korisnik je potvrđuje ručno.
+     */
+    val reliable: Boolean = false
 ) {
     fun mealCount(month: MealOverspendMonth): Int = month.allowanceNet / price
 }
@@ -99,7 +106,13 @@ private fun priceForGroup(months: List<MealOverspendMonth>): MealPriceFromPaysli
         abs(month.allowanceNet.toDouble() / price - days) <= max(MIN_MEAL_COUNT_SLACK, days * MEAL_COUNT_SLACK_SHARE)
     }
     if (!plausible) return null
-    return MealPriceFromPayslips(price, from = months.last().month, until = months.first().month, months = months)
+    return MealPriceFromPayslips(
+        price = price,
+        from = months.last().month,
+        until = months.first().month,
+        months = months,
+        reliable = months.size >= RELIABLE_MIN_PAYSLIPS && candidates.size == 1
+    )
 }
 
 private tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)

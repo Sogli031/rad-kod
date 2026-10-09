@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.0] - 2026-10-09
+- **Ručni unos hrane kad cena sa lista nije pouzdana:** cena se upisuje sama i samo prikazuje kad je izračunata iz bar 3 liste i moguć je samo jedan iznos. Inače „Hrana“ ima polje za iznos po obroku: nepouzdana cena sa lista je predlog u polju („Moguće iz N listi, nije sigurno“), a bez ijedne liste sa cenom tu je i dugme za skeniranje Gmail-a.
+
 ## [9.9] - 2026-10-09
 - **„Hrana“ jednostavnije:** prozor prikazuje samo iznos po obroku i „Izračunato iz N listi“ (ili „Nije pronađeno na listama“ sa dugmetom za skeniranje), bez objašnjenja i spiska meseci.
 
