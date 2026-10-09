@@ -162,7 +162,7 @@ internal fun UpdateCheckButton() {
 
     update?.let { UpdatePromptDialog(update = it, onDismiss = { update = null }) }
     RoundedButton(
-        text = if (checking) "Proveravam..." else "$UPDATE_CHECK_LABEL (sada ${BuildConfig.VERSION_NAME})",
+        text = if (checking) "Proveravam..." else UPDATE_CHECK_LABEL,
         modifier = Modifier.fillMaxWidth().height(UI.buttonHeight.dp),
         bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         textColor = MaterialTheme.colorScheme.onSurface,
@@ -175,7 +175,11 @@ internal fun UpdateCheckButton() {
             scope.launch {
                 val found = withContext(Dispatchers.IO) { fetchAvailableUpdate(BuildConfig.VERSION_NAME) }
                 checking = false
-                if (found != null) update = found else status = "Imaš najnoviju verziju (ili nema interneta)."
+                if (found != null) {
+                    update = found
+                } else {
+                    status = "Imaš najnoviju verziju (${BuildConfig.VERSION_NAME}), ili nema interneta."
+                }
             }
         }
     )
