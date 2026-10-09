@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.5] - 2026-10-09
+- **Auto-popuna:** izabrani režim smena i „Prvi dan“ / „Drugi dan“ su plavi kao ostala dugmad u temi (bili su žuti).
+
 ## [10.4] - 2026-10-09
 - **„Briši“ ponovo odozdo**, kao i ostala dugmad u donjem meniju (vraćeno sa 10.3).
 
