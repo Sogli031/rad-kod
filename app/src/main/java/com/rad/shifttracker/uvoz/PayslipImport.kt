@@ -46,7 +46,6 @@ import com.rad.shifttracker.listici.isSickLeave
 import com.rad.shifttracker.listici.payslipDifferences
 import com.rad.shifttracker.listici.payslipFormulaText
 import com.rad.shifttracker.listici.payslipImportErrorText
-import com.rad.shifttracker.listici.payslipMealEntitlementNet
 import com.rad.shifttracker.listici.payslipMealOverspend
 import com.rad.shifttracker.listici.payslipRunNumber
 import com.rad.shifttracker.listici.payslipSourceText
@@ -82,7 +81,9 @@ internal data class PayslipChange(
     val label: String,
     val currentText: String,
     val payslipText: String,
-    val value: BigDecimal
+    val value: BigDecimal,
+    /** Cena obroka: važi od [month] do ovog meseca (svi meseci između dobijaju istu cenu). */
+    val until: MonthKey? = null
 )
 
 internal data class PayslipReconciliation(
@@ -105,10 +106,6 @@ internal data class PayslipImportPlan(
 private const val VALUE_TOLERANCE = 0.005
 private const val MONEY_MATCH_TOLERANCE = 1.0
 private val SIXTY = BigDecimal(60)
-/** Neto TO2 se na listiću zaokružuje na pare, pa broj obroka × cena sme da odstupi do dinara. */
-private const val MEAL_PRICE_MATCH_TOLERANCE = 1.0
-private const val MIN_PLAUSIBLE_MEAL_PRICE = 50
-private const val MAX_PLAUSIBLE_MEAL_PRICE = 2_000
 
 internal fun buildPayslipImportPlan(
     repo: ShiftRepository,
@@ -130,6 +127,7 @@ internal fun buildPayslipImportPlan(
     for (payslip in payslips) {
         changes += monthlyChanges(repo, payslip)
     }
+    changes += mealPriceChanges(repo, payslips)
     return PayslipImportPlan(
         payslips = payslips,
         failures = failures,
@@ -230,40 +228,31 @@ private fun monthlyChanges(repo: ShiftRepository, payslip: ParsedPayslip): List<
         }
     }
 
-    payslipMealPrice(repo, payslip)?.let { price ->
-        val current = repo.getFoodPerDayForMonth(month.year, month.month)
-        if (abs(current - price.toDouble()) >= VALUE_TOLERANCE) {
-            changes += PayslipChange(
-                kind = PayslipChangeKind.MEAL_PRICE,
-                month = month,
-                label = "Topli obrok po danu od $monthText",
-                currentText = formatSerbianDecimal(current.toDisplayDecimal(), minFraction = 2),
-                payslipText = formatSerbianDecimal(price, minFraction = 2),
-                value = price
-            )
-        }
-    }
     return changes
 }
 
 /**
- * Cena obroka sa listića. TO2 je pojedeno, ograničeno onim što pripada; samo kad je pojedeno
- * više (obustava „Topli obrok“ veća od neto TO2), neto TO2 je pun iznos koji pripada
- * (broj obroka × cena). U ostalim mesecima TO2 = pojedeno i ne govori ništa o ceni.
- * Broj obroka daju upisane smene meseca. Cena je ceo dinar, pa se predlaže samo kad se TO2
- * deli bez ostatka — inače smene u aplikaciji ne odgovaraju obračunu i cena se ne dira.
+ * Cena obroka sa lista (sačuvane + nove, nova lista istog meseca važi): predlaže se za svaki
+ * period u kom bar jedan mesec ima drugu cenu u aplikaciji.
  */
-internal fun payslipMealPrice(repo: ShiftRepository, payslip: ParsedPayslip): BigDecimal? {
-    payslipMealOverspend(payslip) ?: return null
-    val entitledNet = payslipMealEntitlementNet(payslip)?.takeIf { it > 0.0 } ?: return null
-    val month = payslip.month
-    val mealCount = repo.getNetPayBreakdown(month.year, month.month)
-        .mealEntitlementCalculation.recognizedMealCount
-    if (mealCount <= 0) return null
-    val price = (entitledNet / mealCount).roundToInt()
-    if (price !in MIN_PLAUSIBLE_MEAL_PRICE..MAX_PLAUSIBLE_MEAL_PRICE) return null
-    if (abs(price.toDouble() * mealCount - entitledNet) > MEAL_PRICE_MATCH_TOLERANCE) return null
-    return BigDecimal(price).setScale(2)
+private fun mealPriceChanges(repo: ShiftRepository, payslips: List<ParsedPayslip>): List<PayslipChange> {
+    val all = (savedPayslips(repo).associateBy { it.month } + payslips.associateBy { it.month }).values
+    return mealPricesFromPayslips(all).mapNotNull { period ->
+        val differs = period.coveredMonths().any { month ->
+            abs(repo.getFoodPerDayForMonth(month.year, month.month) - period.price) >= VALUE_TOLERANCE
+        }
+        if (!differs) return@mapNotNull null
+        val current = repo.getFoodPerDayForMonth(period.from.year, period.from.month)
+        PayslipChange(
+            kind = PayslipChangeKind.MEAL_PRICE,
+            month = period.from,
+            label = "Topli obrok po obroku od ${monthYearText(period.from)}",
+            currentText = formatSerbianDecimal(current.toDisplayDecimal(), minFraction = 2),
+            payslipText = formatSerbianDecimal(period.priceDecimal(), minFraction = 2),
+            value = period.priceDecimal(),
+            until = period.until
+        )
+    }
 }
 
 internal fun applyPayslipChanges(repo: ShiftRepository, changes: List<PayslipChange>) {
@@ -284,7 +273,7 @@ internal fun applyPayslipChanges(repo: ShiftRepository, changes: List<PayslipCha
                 repo.seniorityInputModeValue = SeniorityInputMode.PAYSLIP_PERCENT
             }
             PayslipChangeKind.PAY_BASE -> repo.setKnownPayBaseAnchor(year, month, value)
-            PayslipChangeKind.MEAL_PRICE -> repo.setFoodPerDayFromMonth(year, month, value)
+            PayslipChangeKind.MEAL_PRICE -> applyMealPrice(repo, change)
         }
     }
     ensureKnownPayBaseMode(repo)
@@ -450,5 +439,15 @@ internal fun payslipImportSummaryText(payslip: ParsedPayslip): String {
         is PayslipPayBaseResult.Success -> "$header — osnovica ${payslipSourceText(base.chosen)}: " +
             formatSerbianDecimal(base.chosen.hourlyBase, minFraction = 2) + " ${CONFIG.pay.currency}/h"
         else -> "$header — ${payslipImportErrorText(base)}"
+    }
+}
+
+private fun applyMealPrice(repo: ShiftRepository, change: PayslipChange) {
+    val price = change.value.toDouble()
+    val period = MealPriceFromPayslips(change.value.toInt(), change.month, change.until ?: change.month, emptyList())
+    for (month in period.coveredMonths()) {
+        if (abs(repo.getFoodPerDayForMonth(month.year, month.month) - price) >= VALUE_TOLERANCE) {
+            repo.setFoodPerDayFromMonth(month.year, month.month, price)
+        }
     }
 }
