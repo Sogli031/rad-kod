@@ -116,6 +116,30 @@ class PayslipDeductionsTest {
     }
 
     @Test
+    fun sixMonthLoanStopsAfterTheLastInstallment() {
+        // Pozajmica 60.000 na 6 rata od 10.000, prva rata na listi 03/2026: „Ostalo rata“ 5 posle nje.
+        // Bez novih listića rate idu 03–08, a od 09 je više nema.
+        val march = payslipWithDeductions(3, "000777 POZAJMICA FIRMA 50,000.00 5 10,000.00")
+        fun amount(month: Int) = finalPaymentDeductions(MonthKey(2026, month), listOf(march)).sumOf { it.amountNet }
+
+        assertEquals(listOf(10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0, 10_000.0), (3..8).map(::amount))
+        assertEquals(0.0, amount(9), 0.001)
+        assertEquals(0.0, amount(12), 0.001)
+        assertEquals(0.0, amount(2), 0.001)
+
+        // Kad stigne nova lista (05/2026, ostale 3 rate), računa se od nje i kraj je opet 08.
+        val may = payslipWithDeductions(5, "000777 POZAJMICA FIRMA 30,000.00 3 10,000.00")
+        fun amountWithMay(month: Int) = finalPaymentDeductions(MonthKey(2026, month), listOf(march, may)).sumOf { it.amountNet }
+        assertEquals(10_000.0, amountWithMay(8), 0.001)
+        assertEquals(0.0, amountWithMay(9), 0.001)
+
+        // Poslednja rata na listi (ostatak duga 0, ostalo 0 rata): sledećeg meseca nema obustave.
+        val august = payslipWithDeductions(8, "000777 POZAJMICA FIRMA 0.00 0 10,000.00")
+        assertEquals(10_000.0, finalPaymentDeductions(MonthKey(2026, 8), listOf(march, may, august)).sumOf { it.amountNet }, 0.001)
+        assertEquals(emptyList<FinalPaymentDeduction>(), finalPaymentDeductions(MonthKey(2026, 9), listOf(march, may, august)))
+    }
+
+    @Test
     fun loanFromTheLastPayslipIsCarriedToNextMonths() {
         val august = payslipWithDeductions(
             8,
