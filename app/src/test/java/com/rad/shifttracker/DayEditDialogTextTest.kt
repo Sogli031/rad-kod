@@ -158,7 +158,8 @@ class DayEditDialogTextTest {
         // Detalj dana se prvo smanjuje (AutoSizeText), a ne seče odmah.
         assertEquals(true, source.contains("AutoSizeText("))
         assertEquals(true, source.contains("text = detailLines[0]"))
-        assertEquals(true, source.contains("minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp"))
+        assertEquals(true, source.contains("minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp"))
+        assertEquals(true, source.contains("CALENDAR_DETAIL_MIN_FONT_SIZE = 9f"))
     }
 
     @Test
