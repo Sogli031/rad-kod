@@ -122,7 +122,7 @@ class PayDetailsDialogTextTest {
         assertEquals("Akontacija", ADVANCE_PAYMENT_DIALOG_TITLE)
         assertEquals("Akontacija neto", ADVANCE_PAYMENT_NET_LABEL)
         assertEquals("Neto plata", FINAL_PAYMENT_NET_PAY_LABEL)
-        assertEquals("Isplaćena akontacija", FINAL_PAYMENT_ADVANCE_LABEL)
+        assertEquals("Akontacija", FINAL_PAYMENT_ADVANCE_LABEL)
         assertEquals("Obustave", FINAL_PAYMENT_DEDUCTIONS_LABEL)
         assertEquals("Preostalo za konačnu isplatu", FINAL_PAYMENT_REMAINING_LABEL)
         assertEquals("Preostalo 20.", FINAL_PAYMENT_REMAINING_20_LABEL)
@@ -160,25 +160,18 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `advance payment action is inside pay details`() {
+    fun `akontacija je red sa uplacenim iznosom i minimumom po KU ispod, bez unosa`() {
         val dialogSource = mainSource("PayDetailsDialog.kt")
-        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
-        val finalPaymentIndex = dialogSource.indexOf("FinalPaymentRows(")
-        val inlineInputsIndex = dialogSource.indexOf("MonthlyPaymentInputRows(", finalPaymentIndex)
+        val advanceRowIndex = dialogSource.indexOf("FINAL_PAYMENT_ADVANCE_LABEL,")
+        val minimumIndex = dialogSource.indexOf("AdvanceMinimumText(", advanceRowIndex)
 
-        assertTrue(finalPaymentIndex >= 0)
-        assertTrue(inlineInputsIndex > finalPaymentIndex)
-        assertTrue(inputSource.contains("Modifier.weight(0.7f)"))
-        assertTrue(inputSource.contains("Modifier.weight(0.3f)"))
+        assertTrue(advanceRowIndex >= 0)
+        assertTrue(minimumIndex > advanceRowIndex)
+        assertTrue(dialogSource.contains("moneyText(finalPayment.advancePaymentNet)"))
+        assertTrue(dialogSource.contains("MaterialTheme.extendedColors.success else"))
+        assertTrue(!dialogSource.contains("MonthlyPaymentInputRows("))
         assertTrue(!dialogSource.contains("AdvancePaymentButton("))
-    }
-
-    @Test
-    fun `payment input save button uses adaptive minimum height`() {
-        val inputSource = mainSource("PayDetailsPaymentInputs.kt")
-
-        assertTrue(inputSource.contains("Modifier.weight(0.3f).heightIn(min = 56.dp)"))
-        assertTrue(!inputSource.contains("Modifier.weight(0.3f).height(56.dp)"))
+        assertTrue(mainSource("PayDetailsPaymentInputs.kt").contains("Minimalno po KU: "))
     }
 
     @Test

@@ -227,7 +227,6 @@ private fun MainPayrollDialog(
                 monthlyFinalPaymentBreakdown = data.monthlyFinalPaymentBreakdown,
                 payDetails = data.payDetails,
                 repo = data.repo,
-                actions = data.actions,
                 onDismiss = onDismiss
             )
         }
@@ -238,7 +237,6 @@ private fun MainPayrollDialog(
                 monthlyFinalPaymentBreakdown = data.salaryDetailsFinalPaymentBreakdown,
                 payDetails = data.workHoursPayDetails,
                 repo = data.repo,
-                actions = data.actions,
                 onDismiss = onDismiss
             )
         }

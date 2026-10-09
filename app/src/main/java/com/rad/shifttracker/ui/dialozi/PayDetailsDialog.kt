@@ -1,6 +1,5 @@
 package com.rad.shifttracker.ui.dialozi
 
-import com.rad.shifttracker.ui.DataActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,7 +61,6 @@ internal fun PayDetailsDialog(
     monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     payDetails: MonthlyPayDetails,
     repo: ShiftRepository,
-    actions: DataActions,
     onDismiss: () -> Unit
 ) {
     val receiptAvailable = monthlyReceipt.isSalaryAvailable
@@ -129,8 +127,7 @@ internal fun PayDetailsDialog(
                     FinalPaymentRows(
                         finalPayment = monthlyFinalPaymentBreakdown,
                         monthlyReceipt = monthlyReceipt,
-                        repo = repo,
-                        actions = actions
+                        repo = repo
                     )
                 }
 
@@ -203,19 +200,20 @@ private fun PayDetailsSectionCard(
 private fun FinalPaymentRows(
     finalPayment: MonthlyFinalPaymentBreakdown,
     monthlyReceipt: MonthlyReceipt,
-    repo: ShiftRepository,
-    actions: DataActions
+    repo: ShiftRepository
 ) {
     SectionLabel(text = FINAL_PAYMENT_REMAINING_LABEL)
     if (!finalPayment.isNetPayAvailable) {
         CompactTextBlock(FINAL_PAYMENT_REMAINING_LABEL, FINAL_PAYMENT_UNAVAILABLE_TEXT, MaterialTheme.extendedColors.warning)
     } else {
         CompactMoneyRow(FINAL_PAYMENT_NET_PAY_LABEL, finalPayment.netPayBeforeAdvance, MaterialTheme.colorScheme.primary)
+        // Akontacija dolazi sa listića; prikazuje se uplaćen iznos, ne unosi se ovde.
         CompactInfoRow(
             FINAL_PAYMENT_ADVANCE_LABEL,
-            deductionMoneyText(finalPayment.advancePaymentNet),
-            if (finalPayment.advancePaymentNet > 0.0) MaterialTheme.extendedColors.warning else MaterialTheme.colorScheme.onSurfaceVariant
+            moneyText(finalPayment.advancePaymentNet),
+            if (finalPayment.advancePaymentNet > 0.0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant
         )
+        AdvanceMinimumText(monthlyReceipt = monthlyReceipt, repo = repo)
         if (finalPayment.deductionsNet > 0.0) {
             CompactInfoRow(
                 FINAL_PAYMENT_DEDUCTIONS_LABEL,
@@ -248,11 +246,6 @@ private fun FinalPaymentRows(
             )
         }
     }
-    MonthlyPaymentInputRows(
-        monthlyReceipt = monthlyReceipt,
-        repo = repo,
-        actions = actions
-    )
 }
 
 @Composable
