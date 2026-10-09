@@ -40,6 +40,7 @@ import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
@@ -197,12 +198,19 @@ private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Monthl
     val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
     val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
     val vacationNetDifference = rememberRepoValue(repo, payrollMonth) { getVacationNetDifference(year, month) }
+    // Procenat bolovanja po danima (davanje krvi je plaćeno odsustvo, nije bolovanje).
+    val sickPayRates = rememberRepoValue(repo, payrollMonth) {
+        getMonthRecords(year, month)
+            .filter { it.shift == Shift.SICK && !it.isPaidLeave && it.workHours > 0 }
+            .map { it.sickPayRate ?: CONFIG.pay.sickPayRate }
+    }
     val table = payrollTable(
         payDetails = payDetails,
         payBreakdown = payBreakdown,
         netSalary = monthlyReceipt.salaryNetPay,
         sickLeaveNetDifference = sickLeaveNetDifference,
         vacationNetDifference = vacationNetDifference,
+        sickPayRates = sickPayRates,
         uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, deficitNetLoss)
     )
     PayrollTableCards(title = "Obračun plate za ${payrollMonthNameText(monthlyReceipt)}", table = table)

@@ -17,6 +17,7 @@ import com.rad.shifttracker.ui.dialozi.payDetailsTotalAfterDeductions
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20Label
 import com.rad.shifttracker.ui.dialozi.payrollTable
+import com.rad.shifttracker.ui.dialozi.sickLeaveLabel
 import com.rad.shifttracker.ui.dialozi.signedSrMoney
 import com.rad.shifttracker.ui.dialozi.srMoney
 
@@ -42,12 +43,21 @@ class PayrollTableTest {
         assertEquals(table.netSalary, rows.sumOf { it.amount } + table.rounding, 0.001)
         assertTrue("zaokruženje ${table.rounding}", kotlin.math.abs(table.rounding) < table.netSalary * 0.01)
         assertEquals("Obični sati", table.work.first().label)
+        // Topli obrok koji je sav pojeden je 0 (pripada = odbijeno), pa nema reda ni viška.
+        assertTrue(table.other.none { it.label == "Topli obrok" })
         // Bolovanje je stvarna naknada (pozitivno), a razlika prema radu je samo napomena.
-        val sick = table.compensation.single { it.label == "Bolovanje" }
+        val sick = table.compensation.single { it.label.startsWith("Bolovanje") }
         assertTrue(sick.amount > 0.0)
         assertTrue(sick.note.orEmpty().endsWith("nego da si radio"))
         val vacation = table.compensation.single { it.label == "Godišnji odmor" }
         assertTrue(vacation.note.orEmpty().endsWith("nego da si radio"))
+    }
+
+    @Test
+    fun `bolovanje pise procenat isplate`() {
+        assertEquals("Bolovanje 65%", sickLeaveLabel(listOf(0.65, 0.65)))
+        assertEquals("Bolovanje 65% i 100%", sickLeaveLabel(listOf(1.0, 0.65)))
+        assertEquals("Bolovanje", sickLeaveLabel(emptyList()))
     }
 
     @Test

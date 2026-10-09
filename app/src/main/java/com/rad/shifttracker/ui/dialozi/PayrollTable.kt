@@ -8,6 +8,7 @@ import com.rad.shifttracker.obracun.MonthlyPayDetails
 
 private const val MINUTES_PER_HOUR = 60
 private const val ROUNDING_VISIBLE_FROM = 0.01
+private const val PERCENT = 100
 
 /** Boja reda u tabeli obračuna. */
 internal enum class PayrollTone { Plain, Positive, Negative, Muted }
@@ -44,7 +45,7 @@ internal data class PayrollTable(
 
 /**
  * Svaka bruto stavka meseca ide u neto istim odnosom neto/bruto kao ceo mesec, minuli rad je već neto,
- * a topli obrok, „Izostanci 1“ i obustave u % idu kao na listiću. Ostatak do [netSalary] (porez i
+ * a „Izostanci 1“ i obustave u % idu kao na listiću (topli obrok je pripada = pojedeno, pa se ne vidi). Ostatak do [netSalary] (porez i
  * doprinosi se računaju na ceo mesec, ne po stavci) je red „Zaokruženje poreza“, pa zbir uvek
  * odgovara neto plati iz isplate.
  */
@@ -54,9 +55,18 @@ internal fun payrollTable(
     netSalary: Double,
     sickLeaveNetDifference: Double,
     uncoveredDeficitNetLoss: Double,
-    vacationNetDifference: Double = 0.0
+    vacationNetDifference: Double = 0.0,
+    sickPayRates: List<Double> = emptyList()
 ): PayrollTable {
-    val ratio = payDetails.netRatioBeforeSeniority
+    // Topli obrok ima svoj tačan neto (pripada), pa se izdvaja; ostale bruto stavke dele ostatak neto
+    // plate istim odnosom. Inače bi prosečni odnos (sa neoporezivim iznosom) obroku dao ~150 din viška.
+    val mealNetEntitlement = payBreakdown.mealAllowanceNet.coerceAtLeast(0.0)
+    val grossWithoutMeal = payDetails.grossTotalBeforeSeniority - payDetails.grossMealAddition
+    val ratio = if (payDetails.grossMealAddition > 0.0 && grossWithoutMeal > 0.0) {
+        (payDetails.netTotalBeforeSeniority - mealNetEntitlement) / grossWithoutMeal
+    } else {
+        payDetails.netRatioBeforeSeniority
+    }
     fun net(gross: Double) = gross * ratio
 
     val work = buildList {
@@ -77,7 +87,7 @@ internal fun payrollTable(
         if (payDetails.grossSickPay > 0.0) {
             add(
                 PayrollRow(
-                    label = "Bolovanje",
+                    label = sickLeaveLabel(sickPayRates),
                     minutes = payDetails.sickMinutes,
                     amount = net(payDetails.grossSickPay),
                     tone = PayrollTone.Plain,
@@ -103,11 +113,7 @@ internal fun payrollTable(
         addRow("Pokriven manjak sati", payDetails.coveredDeficitMinutes, net(payDetails.grossCoveredDeficitPay), PayrollTone.Plain)
     }
     val other = buildList {
-        // Topli obrok: dodatak u bruto, pa odbitak pojedenog u neto; ovde jedan red sa razlikom.
-        val mealNet = net(payDetails.grossMealAddition) - payBreakdown.mealNetDeduction
-        if (payDetails.grossMealAddition > 0.0 || payBreakdown.mealNetDeduction > 0.0) {
-            addSigned("Topli obrok", mealNet)
-        }
+        // Topli obrok se ne prikazuje: pripada = pojedeno, pa za isplatu nije bitan (uvek 0).
         addRow("Bonus", null, net(payDetails.grossBonusAddition), PayrollTone.Positive)
         val absencePenalty = net(payDetails.absencePenaltyGross.toDouble())
         if (absencePenalty > 0.0) add(PayrollRow("Izostanci 1 (ostatak minuta)", null, -absencePenalty, PayrollTone.Negative))
@@ -140,6 +146,13 @@ internal fun uncoveredDeficitNetLoss(payDetails: MonthlyPayDetails, deficitNetLo
     }
 }
 
+/** „Bolovanje 65%“, a kad mesec ima oba procenta „Bolovanje 65% i 100%“. */
+internal fun sickLeaveLabel(rates: List<Double>): String {
+    val percents = rates.map { (it * PERCENT).roundToInt() }.distinct().sorted()
+    if (percents.isEmpty()) return "Bolovanje"
+    return "Bolovanje " + percents.joinToString(" i ") { "$it%" }
+}
+
 /** Manje (crveno) ili više (zeleno) nego da su ti dani odrađeni. */
 private fun workComparisonTone(difference: Double): PayrollTone =
     if (difference < 0.0) PayrollTone.Negative else PayrollTone.Positive
@@ -158,15 +171,6 @@ private fun MutableList<PayrollRow>.addRow(
     always: Boolean = false
 ) {
     if (always || amount > 0.0) add(PayrollRow(label, minutes, amount, tone))
-}
-
-private fun MutableList<PayrollRow>.addSigned(label: String, amount: Double) {
-    val tone = when {
-        amount < 0.0 -> PayrollTone.Negative
-        amount > 0.0 -> PayrollTone.Positive
-        else -> PayrollTone.Muted
-    }
-    add(PayrollRow(label, null, amount, tone))
 }
 
 private fun holidayWorkMinutes(payBreakdown: MonthlyNetPayBreakdown, payDetails: MonthlyPayDetails): Int {

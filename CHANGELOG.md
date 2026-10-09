@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.6] - 2026-10-09
+- **Bolovanje sa procentom:** „Bolovanje 65%“ (ili „65% i 100%“ kad mesec ima oba).
+- **Bez reda „Topli obrok“ u obračunu:** pripada = pojedeno, pa za isplatu nije bitan. Onih ~164 din nije bio topli obrok nego deo neoporezivog iznosa koji je pogrešno pripao obroku; sada je raspoređen na rad i naknade, a zbir je i dalje tačno neto plata.
+
 ## [8.5] - 2026-10-09
 - **„Ukupno za isplatu 20.11.“** — tačan datum konačne isplate umesto „20.“ (za januar „20.01.“).
 - **Isplata počinje od vrha ekrana:** prozor je preko celog ekrana kao ostali, pa razmak ispod statusne trake više nije dupli.
