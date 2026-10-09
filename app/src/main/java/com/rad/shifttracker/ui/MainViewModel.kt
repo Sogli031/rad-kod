@@ -32,7 +32,6 @@ import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.getMonthlyReceipt
 import com.rad.shifttracker.repo.getNetPayBreakdown
-import com.rad.shifttracker.repo.getSickLeaveNetDifference
 import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.smene.MonthKey
@@ -56,8 +55,6 @@ internal data class MainMonthState(
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val nextMonthFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
-    /** Bolovanje izabranog meseca − plata da su ti dani odrađeni (neto). */
-    val sickLeaveNetDifference: Double,
     val payDetails: MonthlyPayDetails,
     val selectedMonthPayDetails: MonthlyPayDetails,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
@@ -142,7 +139,6 @@ internal class MainViewModel(
             monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(year, month),
             nextMonthFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
             overtimeNetImpact = repo.getMonthlyOvertimeNetImpact(year, month),
-            sickLeaveNetDifference = repo.getSickLeaveNetDifference(year, month),
             payDetails = repo.getMonthlyPayDetails(payroll.year, payroll.month),
             selectedMonthPayDetails = repo.getMonthlyPayDetails(year, month),
             bloodDonationReminderStatus = BloodDonationReminderScheduler.currentStatus(appContext, repo),

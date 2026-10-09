@@ -17,15 +17,12 @@ import org.robolectric.annotation.GraphicsMode
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.getMonthlyReceipt
-import com.rad.shifttracker.repo.getNetPayBreakdown
-import com.rad.shifttracker.repo.getSummary
-import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.RadTheme
 import com.rad.shifttracker.ui.SalaryCard
-import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
+import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
+import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.ui.salaryCardLabel
-import com.rad.shifttracker.smene.monthYearText
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali
@@ -61,35 +58,30 @@ class DashboardBehaviorTest {
     }
 
     @Test
-    fun `dijalog sati pokazuje pregled, dodatke i izostanke po izabranom mesecu`() {
+    fun `isplata ispod pokazuje sate rada, dodatke i izostanke meseca obracuna`() {
         val repo = repoWithMonth()
 
         rule.setContent {
             RadTheme {
-                WorkHoursDialog(
-                    summary = repo.getSummary(YEAR, MONTH),
-                    payBreakdown = repo.getNetPayBreakdown(YEAR, MONTH),
-                    month = MonthKey(YEAR, MONTH),
+                PayDetailsDialog(
+                    monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
+                    monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
                     payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
-                    deficitNetLoss = 0.0,
-                    sickLeaveNetDifference = 0.0,
-                    seniorityConfigured = true,
+                    repo = repo,
                     onDismiss = {}
                 )
             }
         }
 
-        val title = monthYearText(MonthKey(YEAR, MONTH))
-        rule.waitUntil(timeoutMillis = 5_000) { rule.onAllNodesWithText(title, ignoreCase = true).fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithText(title, ignoreCase = true).assertExists()
-        // „Ostalo u obračunu“ se ne prikazuje kad nema minulog rada, regresa, bonusa ni obustava.
-        for (section in listOf("Pregled", "Dodaci", "Izostanci i naknade")) {
+        rule.waitUntil(timeoutMillis = 5_000) { rule.onAllNodesWithText("Isplata", ignoreCase = true).fetchSemanticsNodes().isNotEmpty() }
+        for (section in listOf("Isplata", "Sati rada", "Dodaci", "Izostanci i naknade")) {
             assertTrue("nedostaje sekcija $section", rule.onAllNodesWithText(section, ignoreCase = true).fetchSemanticsNodes().isNotEmpty())
         }
         // Tabele dodataka i izostanaka imaju kolone Tip / Sati / Iznos, bez procenata premija.
         for (header in listOf("Tip", "Sati", "Iznos")) {
             assertTrue("nedostaje kolona $header", rule.onAllNodesWithText(header, ignoreCase = true).fetchSemanticsNodes().isNotEmpty())
         }
+        assertTrue(rule.onAllNodesWithText("Ostalo u obračunu", ignoreCase = true).fetchSemanticsNodes().isEmpty())
     }
 
     private companion object {

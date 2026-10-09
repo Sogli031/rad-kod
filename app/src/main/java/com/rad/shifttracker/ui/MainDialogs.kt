@@ -6,14 +6,11 @@ import com.rad.shifttracker.data.backup.SyncState
 import java.time.LocalDate
 import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
-import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.obracun.MonthlyOvertimeNetImpact
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.isSeniorityConfiguredValue
 import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.AdvancePaymentDialog
 import com.rad.shifttracker.ui.dialozi.AutoFillDialog
@@ -33,7 +30,6 @@ import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
 import com.rad.shifttracker.ui.dialozi.SickVacationDialog
 import com.rad.shifttracker.ui.dialozi.VacationBalanceDialog
-import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
 
 /** Gmail pri ulasku: na prvom pokretanju posle „Popuni smene“ (tada se uvod beleži kao završen), posle ažuriranja samo provera. */
 @Composable
@@ -113,8 +109,7 @@ internal fun MainDialogs(
         }
 
         DialogState.PayDetails,
-        DialogState.SalaryDetails,
-        DialogState.WorkHours -> MainPayrollDialog(state, data, onDismiss)
+        DialogState.SalaryDetails -> MainPayrollDialog(state, data, onDismiss)
 
         DialogState.Food -> {
             FoodAllowanceDialog(
@@ -241,19 +236,6 @@ private fun MainPayrollDialog(
             )
         }
 
-        DialogState.WorkHours -> {
-            WorkHoursDialog(
-                summary = data.workHoursSummary,
-                payBreakdown = data.workHoursPayBreakdown,
-                month = data.workHoursMonth,
-                payDetails = data.workHoursPayDetails,
-                deficitNetLoss = data.workHoursOvertimeNetImpact.deficitNetLoss,
-                sickLeaveNetDifference = data.workHoursSickLeaveNetDifference,
-                seniorityConfigured = rememberRepoValue(data.repo) { isSeniorityConfiguredValue },
-                onDismiss = onDismiss
-            )
-        }
-
         else -> Unit
     }
 }
@@ -308,12 +290,7 @@ internal data class MainDialogData(
     val repo: ShiftRepository,
     val actions: DataActions,
     val repoTick: Int,
-    val workHoursSummary: MonthSummary,
-    val workHoursPayBreakdown: MonthlyNetPayBreakdown,
-    val workHoursMonth: MonthKey,
     val workHoursPayDetails: MonthlyPayDetails,
-    val workHoursOvertimeNetImpact: MonthlyOvertimeNetImpact,
-    val workHoursSickLeaveNetDifference: Double,
     val salaryDetailsReceipt: MonthlyReceipt,
     val salaryDetailsFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val monthlyReceipt: MonthlyReceipt,

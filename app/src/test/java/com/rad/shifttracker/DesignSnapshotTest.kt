@@ -50,6 +50,9 @@ import com.rad.shifttracker.ui.VacationCard
 import com.rad.shifttracker.ui.WeekdayHeader
 import com.rad.shifttracker.ui.dialozi.DayEditDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
+import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
+import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
+import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.osnova.UI
 
 /**
@@ -114,6 +117,17 @@ class DesignSnapshotTest {
             onMonthlyExportClick = {},
             onDebugExportClick = {},
             onHolidaysClick = {},
+            onDismiss = {}
+        )
+    }
+
+    @Test
+    fun `pay details dialog 360dp font 1_0`() = dialog("pay_details", fontScale = 1.0f) { repo ->
+        PayDetailsDialog(
+            monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
+            monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
+            payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
+            repo = repo,
             onDismiss = {}
         )
     }
@@ -232,7 +246,6 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
             )
             StatsSection(
                 summary = summary,
-                onWorkHoursClick = {},
                 onOvertimeClick = {},
                 onFoodClick = {}
             )

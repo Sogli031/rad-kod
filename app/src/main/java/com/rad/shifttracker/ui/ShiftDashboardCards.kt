@@ -45,8 +45,8 @@ import com.rad.shifttracker.obracun.MonthSummary
 
 // Kad je kartica „Primanja u …“ sakrivena, kartica plate ostaje sama i zaobljena.
 internal const val SHOW_TOTAL_CARD = true
-internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
+internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 // Svaki red je zaseban dodir (plata, primanja): najmanje 48dp (M3 / ATF TouchTargetSizeCheck).
 internal const val COMPACT_PAY_CARD_HEIGHT = 48
 // Dve kartice plate su vizuelno jedna grupa: bez razmaka, gornja/donja zaobljena.
@@ -82,7 +82,6 @@ internal fun totalCardLabel(year: Int, month: Int): String {
 @Composable
 internal fun StatsSection(
     summary: MonthSummary,
-    onWorkHoursClick: () -> Unit,
     onOvertimeClick: () -> Unit,
     onFoodClick: () -> Unit
 ) {
@@ -91,11 +90,11 @@ internal fun StatsSection(
     val overtimeHours = rememberCountingValue(summary.overtimeHours)
     val foodAllowance = rememberCountingValue(summary.foodAllowance)
     val stats = listOf(
+        // Samo prikaz: detalji sati su u isplati (dodir na platu).
         StatItem(
             WORK_HOURS_CARD_LABEL,
             formatHours(workHours),
             MaterialTheme.colorScheme.onSurface,
-            onClick = onWorkHoursClick,
             measureKey = formatHours(summary.workHours)
         ),
         StatItem(

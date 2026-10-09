@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.1] - 2026-10-09
+- **Sati rada u isplati:** dodir na platu prikazuje gore isplatu (plata, akontacija, regres, obustave, ukupno), a ispod toga sate rada i koliko su plaćeni, dodatke (sa minulim radom) i izostanke i naknade za mesec obračuna. Odeljak „Ostalo u obračunu“ je uklonjen.
+- **„Sati rada“ na glavnom ekranu je samo prikaz:** dodir više ne otvara poseban prozor.
+
 ## [8.0] - 2026-10-09
 - **Isplata bez prevoza:** red „Prevoz“ je uklonjen iz detalja isplate; ukupno je neto plata + regres − obustave.
 - **Jedan način prikaza na glavnom ekranu:** prekidač „Samo plata za rad“ je uklonjen iz Opcija. Kartice uvek prikazuju platu i regres posle obustava, bez prevoza — isti broj kao „Ukupno“ u isplati. (Podešavanje ostaje u backup-u radi starih verzija, ali se više ne koristi.)

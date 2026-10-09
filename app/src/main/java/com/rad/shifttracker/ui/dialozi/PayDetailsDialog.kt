@@ -52,6 +52,11 @@ import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
 import com.rad.shifttracker.ui.mainPayCardAmount
 import com.rad.shifttracker.ui.rememberRepoValue
+import com.rad.shifttracker.repo.getSummary
+import com.rad.shifttracker.repo.getNetPayBreakdown
+import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
+import com.rad.shifttracker.repo.getSickLeaveNetDifference
+import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 @Composable
@@ -112,6 +117,8 @@ internal fun PayDetailsDialog(
                         repo = repo
                     )
                 }
+
+                PayrollMonthWorkHours(payrollMonth = monthlyReceipt.payrollMonth, payDetails = payDetails, repo = repo)
 
                 Spacer(
                     modifier = Modifier.height(bottomScrollPadding)
@@ -176,6 +183,24 @@ private fun PayDetailsSectionCard(
         SectionLabel(text = title)
         content()
     }
+}
+
+/** Sati rada, dodaci i izostanci meseca obračuna, ispod isplate. */
+@Composable
+private fun PayrollMonthWorkHours(payrollMonth: MonthKey, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
+    val year = payrollMonth.year
+    val month = payrollMonth.month
+    val summary = rememberRepoValue(repo, payrollMonth) { getSummary(year, month) }
+    val payBreakdown = rememberRepoValue(repo, payrollMonth) { getNetPayBreakdown(year, month) }
+    val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
+    val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
+    WorkHoursSections(
+        summary = summary,
+        payBreakdown = payBreakdown,
+        payDetails = payDetails,
+        deficitNetLoss = deficitNetLoss,
+        sickLeaveNetDifference = sickLeaveNetDifference
+    )
 }
 
 @Composable

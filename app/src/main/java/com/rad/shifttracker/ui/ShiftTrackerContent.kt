@@ -239,7 +239,6 @@ private fun ShiftCalendarPane(
 private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (DialogState) -> Unit) {
     StatsSection(
         summary = ui.summary,
-        onWorkHoursClick = { onOpenDialog(DialogState.WorkHours) },
         onOvertimeClick = { onOpenDialog(DialogState.OvertimeNetImpact) },
         onFoodClick = { onOpenDialog(DialogState.Food) }
     )

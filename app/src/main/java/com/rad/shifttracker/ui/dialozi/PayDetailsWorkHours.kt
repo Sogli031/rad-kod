@@ -20,53 +20,34 @@ import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatHoursAndMinutes
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
-import com.rad.shifttracker.ui.PayAccuracyWarningsCard
-import com.rad.shifttracker.obracun.payAccuracyWarningTexts
-import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.emphasized
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.obracun.fundAbsenceMinutes
-import com.rad.shifttracker.smene.monthYearText
-
-internal const val WORK_HOURS_DIALOG_TITLE = "Sati rada"
 
 private const val WORK_HOURS_MINUTES_PER_HOUR = 60
 private const val WORK_HOURS_TABLE_LABEL_WEIGHT = 1.15f
 private const val WORK_HOURS_TABLE_HOURS_WEIGHT = 0.55f
 private const val WORK_HOURS_TABLE_AMOUNT_WEIGHT = 1.3f
 
+/**
+ * Pregled rada ispod isplate: sati rada i koliko su plaćeni, dodaci (sa minulim radom) i izostanci.
+ * Sve za mesec obračuna te isplate.
+ */
 @Composable
-fun WorkHoursDialog(
+internal fun WorkHoursSections(
     summary: MonthSummary,
     payBreakdown: MonthlyNetPayBreakdown,
-    month: MonthKey,
     payDetails: MonthlyPayDetails,
     deficitNetLoss: Double,
-    sickLeaveNetDifference: Double,
-    seniorityConfigured: Boolean,
-    onDismiss: () -> Unit
+    sickLeaveNetDifference: Double
 ) {
-    PopupDialog(
-        title = WORK_HOURS_DIALOG_TITLE,
-        onDismiss = onDismiss,
-        scrollable = true
-    ) {
-        PopupCard {
-            SectionLabel(text = monthYearText(month))
-        }
-
-        PayAccuracyWarningsCard(payAccuracyWarningTexts(payDetails, seniorityConfigured))
-
-        WorkHoursSection("Pregled", overviewRows(summary, payBreakdown, payDetails))
-        WorkHoursTableSection("Dodaci", addOnRows(payBreakdown, payDetails))
-        WorkHoursTableSection("Izostanci i naknade", absenceAndLeaveRows(payBreakdown, payDetails, deficitNetLoss, sickLeaveNetDifference))
-        WorkHoursSection("Ostalo u obračunu", otherPayrollRows(payBreakdown, payDetails))
-    }
+    WorkHoursSection("Sati rada", overviewRows(summary, payBreakdown, payDetails))
+    WorkHoursTableSection("Dodaci", addOnRows(payBreakdown, payDetails))
+    WorkHoursTableSection("Izostanci i naknade", absenceAndLeaveRows(payBreakdown, payDetails, deficitNetLoss, sickLeaveNetDifference))
 }
 
 @Composable
@@ -265,6 +246,9 @@ private fun addOnRows(
             gross = payDetails.grossDifficultWorkConditions,
             payDetails = payDetails
         )
+        if (payDetails.netSeniorityBonus > 0.0) {
+            add(WorkHoursTableLine("Minuli rad", "", moneyText(payDetails.netSeniorityBonus), WorkHoursTone.Positive))
+        }
     }
 }
 
@@ -334,27 +318,6 @@ private fun absenceAndLeaveRows(
     }
 }
 
-private fun otherPayrollRows(
-    payBreakdown: MonthlyNetPayBreakdown,
-    payDetails: MonthlyPayDetails
-): List<WorkHoursBreakdownLine> {
-    return buildList {
-        addMoneyRowIf(payDetails.netSeniorityBonus > 0.0, "Minuli rad", payDetails.netSeniorityBonus)
-        addMoneyRowIf(payBreakdown.netRegressAddition > 0.0, "Regres", payBreakdown.netRegressAddition)
-        addMoneyRowIf(payBreakdown.netBonusAddition > 0.0, "Bonus", payBreakdown.netBonusAddition)
-        if (payBreakdown.absencePenaltyGross.signum() > 0) {
-            add(
-                WorkHoursBreakdownLine(
-                    "Izostanci 1",
-                    deductionMoneyText(payBreakdown.absencePenaltyGross.toDouble()),
-                    WorkHoursTone.Danger
-                )
-            )
-        }
-        addDeductionRowIf(payBreakdown.unionDuesNet > 0.0, "Obustave (sindikat, fond)", payBreakdown.unionDuesNet)
-    }
-}
-
 private fun MutableList<WorkHoursTableLine>.addGrossRow(
     label: String,
     minutes: Int,
@@ -379,27 +342,6 @@ private fun MutableList<WorkHoursBreakdownLine>.addIf(
     tone: WorkHoursTone = WorkHoursTone.Primary
 ) {
     if (visible) add(WorkHoursBreakdownLine(label, value, tone))
-}
-
-private fun MutableList<WorkHoursBreakdownLine>.addDeductionRowIf(
-    visible: Boolean,
-    label: String,
-    value: Double
-) {
-    if (visible) {
-        add(WorkHoursBreakdownLine(label, deductionMoneyText(value), WorkHoursTone.Danger))
-    }
-}
-
-private fun MutableList<WorkHoursBreakdownLine>.addMoneyRowIf(
-    visible: Boolean,
-    label: String,
-    value: Double,
-    tone: WorkHoursTone = WorkHoursTone.Positive
-) {
-    if (visible) {
-        add(WorkHoursBreakdownLine(label, moneyText(value), tone))
-    }
 }
 
 private fun formatPayDetailMinutes(minutes: Int): String {

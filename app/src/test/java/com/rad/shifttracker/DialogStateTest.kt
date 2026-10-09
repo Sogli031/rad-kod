@@ -21,7 +21,6 @@ class DialogStateTest {
         DialogState.BasePay to "BasePay",
         DialogState.PayDetails to "PayDetails",
         DialogState.SalaryDetails to "SalaryDetails",
-        DialogState.WorkHours to "WorkHours",
         DialogState.OvertimeNetImpact to "OvertimeNetImpact",
         DialogState.Food to "Food",
         DialogState.Minuli to "Minuli",

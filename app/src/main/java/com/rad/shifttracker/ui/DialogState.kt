@@ -16,7 +16,6 @@ internal sealed class DialogState {
     data object BasePay : DialogState()
     data object PayDetails : DialogState()
     data object SalaryDetails : DialogState()
-    data object WorkHours : DialogState()
     data object OvertimeNetImpact : DialogState()
     data object Food : DialogState()
     data object Minuli : DialogState()
@@ -57,7 +56,6 @@ private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.BasePay,
     DialogState.PayDetails,
     DialogState.SalaryDetails,
-    DialogState.WorkHours,
     DialogState.OvertimeNetImpact,
     DialogState.Food,
     DialogState.Minuli,
