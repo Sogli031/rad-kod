@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.9] - 2026-10-09
+- Probno izdanje bez izmena u aplikaciji, za proveru ažuriranja iz aplikacije na telefonu.
+
 ## [8.8] - 2026-10-09
 - **Ažuriranje iz aplikacije, bez Obtainium-a:** pri pokretanju Rad proveri GitHub; kad ima nova verzija, pokaže „Stigla je verzija X“ sa izmenama, a „Ažuriraj“ skine i instalira novu verziju uz traku napretka. Prvi put telefon traži dozvolu „Instaliraj nepoznate aplikacije“ za Rad; posle povratka preuzimanje kreće samo. Podaci ostaju.
 - **Opcije → „Proveri ažuriranje“** za ručnu proveru (piše i trenutnu verziju).
