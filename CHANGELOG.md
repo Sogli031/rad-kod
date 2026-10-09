@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.8] - 2026-10-09
+- **Ažuriranje iz aplikacije, bez Obtainium-a:** pri pokretanju Rad proveri GitHub; kad ima nova verzija, pokaže „Stigla je verzija X“ sa izmenama, a „Ažuriraj“ skine i instalira novu verziju uz traku napretka. Prvi put telefon traži dozvolu „Instaliraj nepoznate aplikacije“ za Rad; posle povratka preuzimanje kreće samo. Podaci ostaju.
+- **Opcije → „Proveri ažuriranje“** za ručnu proveru (piše i trenutnu verziju).
+- **Stalan link do najnovije verzije:** https://github.com/Sogli031/rad/releases/latest/download/rad.apk (APK se na GitHub-u sada zove rad.apk).
+
 ## [8.7] - 2026-10-09
 - **„Učitaj liste iz fajlova (PDF)“:** u Opcijama se sada bira više lista odjednom; birač se otvara u Downloads-u. Fajlovi koji nisu liste se preskaču, a liste se upisuju od najstarijeg meseca (na kraju važe podešavanja sa najnovije). Za kolege koje još nemaju prosleđivanje na Gmail: skinu poslednjih 5–10 lista sa webmail-a i učitaju ih odjednom. (Ceo folder Downloads Android od verzije 11 ne dozvoljava da se izabere kao folder, zato se biraju fajlovi.)
 

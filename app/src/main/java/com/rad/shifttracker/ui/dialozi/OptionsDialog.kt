@@ -53,6 +53,7 @@ internal fun OptionsDialog(
                 OptionActionButton(text = actionLabels[2], onClick = onDebugExportClick)
             }
             OptionActionButton(text = actionLabels[3], onClick = onHolidaysClick)
+            UpdateCheckButton()
         }
 
         SectionLabel(text = GMAIL_PAYSLIP_SECTION_LABEL)

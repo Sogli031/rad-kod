@@ -44,6 +44,7 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.BackupSignInPromptHost
+import com.rad.shifttracker.ui.dialozi.UpdatePromptHost
 import com.rad.shifttracker.ui.dialozi.SideRunMessagesDialog
 import com.rad.shifttracker.ui.dialozi.rememberDriveBackupSignIn
 import com.rad.shifttracker.ui.dialozi.takeGmailUpdateIntro
@@ -228,6 +229,13 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         otherDialogOpen = dialogState != DialogState.None || sideRunMessages.isNotEmpty() ||
             backupRestore.anyDialogOpen || cloudBackupFound.value != null,
         onSignIn = startSignIn
+    )
+
+    // Nova verzija na GitHub-u: ponudi ažuriranje iz aplikacije (bez Obtainium-a).
+    UpdatePromptHost(
+        firstLaunch = firstLaunchAtStart,
+        otherDialogOpen = dialogState != DialogState.None || sideRunMessages.isNotEmpty() ||
+            backupRestore.anyDialogOpen || cloudBackupFound.value != null
     )
 }
 
