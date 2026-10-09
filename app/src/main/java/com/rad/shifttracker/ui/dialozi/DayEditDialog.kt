@@ -31,6 +31,8 @@ import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.HoursPickerDialog
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.LabeledSwitchRow
+import com.rad.shifttracker.ui.Spacing
+import androidx.compose.foundation.layout.PaddingValues
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.ShortageMinutesDialog
@@ -40,7 +42,7 @@ internal const val DAY_TYPE_CHOICE_HEIGHT = 52
 internal const val OVERTIME_TYPE_CHOICE_HEIGHT = 48
 
 internal const val DAY_EDIT_HOLIDAY_SWITCH_LABEL = "Praznik"
-internal const val DAY_EDIT_HOLIDAY_SWITCH_HINT = "Isključi ako se ovaj praznik ne računa"
+internal const val DAY_EDIT_HOLIDAY_SWITCH_HINT = "Isključi ako Valjaonica ne računa ovaj praznik"
 
 @Composable
 internal fun DayEditDialog(
@@ -77,7 +79,7 @@ internal fun DayEditDialog(
             VacationRequestValidation(blockedDates = emptyList(), message = null)
         }
     }
-    val holidayText = dayEditHolidayText(dayDate, form.shift1, form.holidayOverride)
+    val holidayText = dayEditHolidayText(dayDate, form.holidayOverride)
 
     var hoursPicker by remember { mutableStateOf<HoursPickerState?>(null) }
     var showShortageDialog by remember { mutableStateOf(false) }
@@ -91,6 +93,17 @@ internal fun DayEditDialog(
     ) {
         DayEditStatusHeader(estimatedNetDailyPay = estimatedNetDailyPay, savedNetDailyPay = savedNetDailyPay)
         holidayText?.let { text -> DayEditHolidayWarningStrip(text = text) }
+        // Odmah ispod žute trake: praznik se isključuje za ovaj dan ako ga Valjaonica ne računa.
+        // Ostaje vidljiv i kad je isključen (traka tada nestane), da se praznik može vratiti.
+        if (form.showHolidaySwitch) {
+            LabeledSwitchRow(
+                title = DAY_EDIT_HOLIDAY_SWITCH_LABEL,
+                hint = DAY_EDIT_HOLIDAY_SWITCH_HINT,
+                checked = form.isHolidayEffective,
+                onCheckedChange = form::setHoliday,
+                contentPadding = PaddingValues(horizontal = Spacing.md)
+            )
+        }
 
         DayEditSectionCard(title = "Tip dana") {
             DayEditDayTypeSelector(
@@ -102,15 +115,6 @@ internal fun DayEditDialog(
                 onVacationSelected = form::selectVacation,
                 onOffSelected = form::selectOff
             )
-            // Već poznat praznik se ovde isključuje/uključuje za ovaj dan (umesto liste u Opcijama).
-            if (form.showHolidaySwitch) {
-                LabeledSwitchRow(
-                    title = DAY_EDIT_HOLIDAY_SWITCH_LABEL,
-                    hint = DAY_EDIT_HOLIDAY_SWITCH_HINT,
-                    checked = form.isHolidayEffective,
-                    onCheckedChange = form::setHoliday
-                )
-            }
         }
 
         DayEditShiftControls(

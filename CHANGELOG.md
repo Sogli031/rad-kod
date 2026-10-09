@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.5] - 2026-10-09
+- **Prekidač „Praznik“ odmah ispod žute trake** u prozoru dana (ostaje i kad je praznik isključen, da se može vratiti).
+- **Žuta traka piše samo naziv praznika**, bez „(neradni, 100%)“, „(rad +X%)“ i „(vikend)“.
+
 ## [9.4] - 2026-10-09
 - **Prekidač „Praznik“ samo na praznicima:** prikazuje se samo na danima koji su već praznik (državni ili ranije ručno dodat), da bi se praznik za taj dan isključio ili vratio. Običan dan ga nema.
 

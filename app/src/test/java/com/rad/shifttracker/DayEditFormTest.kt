@@ -47,7 +47,7 @@ class DayEditFormTest {
         newYearForm.setHoliday(false)
         assertFalse(newYearForm.isHolidayEffective)
         assertEquals(false, newYearForm.saveState.holidayOverride)
-        assertNull(dayEditHolidayText(newYear, newYearForm.shift1, newYearForm.holidayOverride))
+        assertNull(dayEditHolidayText(newYear, newYearForm.holidayOverride))
         newYearForm.setHoliday(true)
         assertNull(newYearForm.saveState.holidayOverride)
     }
@@ -175,11 +175,10 @@ class DayEditFormTest {
     }
 
     @Test
-    fun `natpis praznika zavisi od rada i dana u nedelji`() {
-        assertEquals("Praznik: Nova godina (neradni, 100%)", dayEditHolidayText(newYear, Shift.OFF, null))
-        assertTrue(dayEditHolidayText(newYear, Shift.FIRST, null)!!.startsWith("Praznik: Nova godina (rad +"))
-        assertNull(dayEditHolidayText(newYear, Shift.OFF, holidayOverride = false))
-        assertNull(dayEditHolidayText(monday, Shift.FIRST, null))
-        assertEquals("Praznik: $MANUAL_HOLIDAY_LABEL (neradni, 100%)", dayEditHolidayText(monday, Shift.OFF, true))
+    fun `natpis praznika je samo naziv`() {
+        assertEquals("Praznik: Nova godina", dayEditHolidayText(newYear, null))
+        assertNull(dayEditHolidayText(newYear, holidayOverride = false))
+        assertNull(dayEditHolidayText(monday, null))
+        assertEquals("Praznik: $MANUAL_HOLIDAY_LABEL", dayEditHolidayText(monday, true))
     }
 }

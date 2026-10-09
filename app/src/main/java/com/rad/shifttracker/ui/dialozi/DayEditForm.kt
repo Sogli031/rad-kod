@@ -264,17 +264,13 @@ internal fun rememberDayEditForm(date: LocalDate, record: DayRecord?): DayEditFo
 }
 
 /** Natpis praznika iznad izbora tipa dana; null kad dan nije praznik ili je praznik ručno skinut. */
-internal fun dayEditHolidayText(date: LocalDate, shift1: Shift, holidayOverride: Boolean?): String? {
+internal fun dayEditHolidayText(date: LocalDate, holidayOverride: Boolean?): String? {
     val isHolidayEffective = holidayOverride ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
     if (!isHolidayEffective) return null
     val baseName = getHolidayName(date.year, date.monthValue, date.dayOfMonth)
     // Ručno skinut praznik (holidayOverride == false) je već vratio null iznad.
     val name = (if (holidayOverride == true && baseName == null) MANUAL_HOLIDAY_LABEL else baseName)
         ?: return null
-    val isWorkday = date.dayOfWeek.value <= 5
-    return when {
-        shift1 in Shift.workShifts() -> "Praznik: $name (rad +${(CONFIG.pay.holidayBonus * 100).toInt()}%)"
-        isWorkday -> "Praznik: $name (neradni, 100%)"
-        else -> "Praznik: $name (vikend)"
-    }
+    // Samo naziv; način obračuna (rad +%, neradni 100%) se vidi u obračunu plate.
+    return "Praznik: $name"
 }
