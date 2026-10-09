@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.2] - 2026-10-09
+- **Glađe otvaranje prozora odozdo:** list kreće da klizi tek kad je njegov sadržaj spreman (prvi frejmovi više ne kasne), bez sistemske animacije prozora i naglog sistemskog zatamnjenja koji su se mešali sa klizanjem. Zatamnjenje je iste jačine kao pre, samo se postepeno pojavljuje.
+
 ## [9.1] - 2026-10-09
 - **Kalendar:** naziv odsustva u danu („Plaćeno odsustvo“, „Godišnji odmor“) se smanjuje do veličine 9 pre nego što se skrati tačkicama, kao ranije.
 

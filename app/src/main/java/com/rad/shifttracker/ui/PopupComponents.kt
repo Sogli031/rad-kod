@@ -65,6 +65,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,7 +88,8 @@ import com.rad.shifttracker.osnova.formatShortageMinutes
 import com.rad.shifttracker.osnova.regularShortageMinuteOptions
 
 /** Scrim: M3 koristi crnu boju; na tamnoj pozadini je 60% da bi se list jasno odvojio. */
-private const val SCRIM_ALPHA = 0.6f
+// Isto zatamnjenje kao ranije sistemsko (0,6) + scrim (0,6) jedno preko drugog, sad samo animirano.
+private const val SCRIM_ALPHA = 0.84f
 
 /** List se zatvara kad se povuče dalje od ovoga (ili brzim potezom nadole). */
 private const val DISMISS_DRAG_DP = 96
@@ -128,15 +132,9 @@ fun PopupDialog(
         bottomEnd = ZeroCornerSize
     )
     val scope = rememberCoroutineScope()
-    val currentOnDismiss by rememberUpdatedState(onDismiss)
-    val visibleState = remember { MutableTransitionState(false).apply { targetState = true } }
+    val (visibleState, requestDismiss) = rememberSheetVisibility(onDismiss)
     val dragOffset = remember { Animatable(0f) }
     val dismissDragPx = with(LocalDensity.current) { DISMISS_DRAG_DP.dp.toPx() }
-    val requestDismiss: () -> Unit = { visibleState.targetState = false }
-    // Pozivalac se obaveštava tek kad je izlazna animacija gotova (ili odmah ako je list uklonjen).
-    LaunchedEffect(visibleState.currentState, visibleState.targetState) {
-        if (!visibleState.currentState && !visibleState.targetState) currentOnDismiss()
-    }
     val scrimAlpha by animateFloatAsState(
         targetValue = if (visibleState.targetState) SCRIM_ALPHA else 0f,
         animationSpec = if (reducedMotion) {
@@ -269,6 +267,31 @@ fun PopupDialog(
     }
 }
 
+/**
+ * Vidljivost lista i zahtev za zatvaranje. Klizanje kreće tek kad je prvi frejm lista sastavljen
+ * i iscrtan: inače trošak sastavljanja sadržaja pada na prve frejmove animacije, pa list na
+ * početku „poskoči“. [onDismiss] se zove kad je izlazna animacija gotova (ili odmah, ako se
+ * zatvara pre nego što se list uopšte otvorio).
+ */
+@Composable
+private fun rememberSheetVisibility(onDismiss: () -> Unit): Pair<MutableTransitionState<Boolean>, () -> Unit> {
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val visibleState = remember { MutableTransitionState(false) }
+    var opened by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        opened = true
+        visibleState.targetState = true
+    }
+    LaunchedEffect(opened, visibleState.currentState, visibleState.targetState) {
+        if (opened && !visibleState.currentState && !visibleState.targetState) currentOnDismiss()
+    }
+    val requestDismiss: () -> Unit = {
+        if (opened) visibleState.targetState = false else currentOnDismiss()
+    }
+    return visibleState to requestDismiss
+}
+
 /** Zaglavlje lista: ručica i naslov; cela površina se može povući nadole da se list zatvori. */
 @Composable
 private fun SheetHeader(
@@ -360,6 +383,10 @@ private fun DialogEdgeToEdgeWindow() {
             }
         }
         window.attributes = attrs
+        // Ulaz/izlaz i zatamnjenje rade animacije lista i scrim-a; sistemsko pojavljivanje prozora i
+        // trenutno zatamnjenje iza njega bi se mešali sa njima (list bi „seckao“ na početku).
+        window.setWindowAnimations(0)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
     }
 }
 
