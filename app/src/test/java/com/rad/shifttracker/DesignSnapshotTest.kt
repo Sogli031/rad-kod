@@ -135,6 +135,8 @@ class DesignSnapshotTest {
         rule.setContent {
             RadTheme { MainScreenSnapshot(repo, today) }
         }
+        // Iznosi odbrojavaju do vrednosti meseca; snimak tek kad se smire.
+        rule.mainClock.advanceTimeBy(MAIN_SETTLE_MS)
         rule.waitForIdle()
         captureScreenRoboImage(snapshotPath("main", widthDp, fontScale))
     }
@@ -168,6 +170,7 @@ class DesignSnapshotTest {
         const val YEAR = 2026
         const val MONTH = 10
         const val DIALOG_SETTLE_MS = 1_000L
+        const val MAIN_SETTLE_MS = 2_000L
     }
 }
 

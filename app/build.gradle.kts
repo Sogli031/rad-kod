@@ -132,6 +132,8 @@ android {
         unitTests.isReturnDefaultValues = true
         // Robolectric + Compose UI testovi na računaru traže resurse (tema, manifest) u unit testovima.
         unitTests.isIncludeAndroidResources = true
+        // Snimci ekrana u punom pokretanju probijaju podrazumevanih 512 MB.
+        unitTests.all { it.maxHeapSize = "2g" }
     }
 }
 
