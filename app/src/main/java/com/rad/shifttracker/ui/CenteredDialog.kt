@@ -20,14 +20,12 @@ import androidx.compose.ui.window.Dialog
 
 /**
  * Mali prozor na sredini ekrana (za kratke preglede kao „Hrana“ i „Prekovremeno“): naslov,
- * sadržaj i „Zatvori“ (bez njega kad sadržaj ima svoja dugmad, npr. „Otkaži“ / „Obriši“).
- * Zatvara se i dodirom van prozora i nazad-gestom.
+ * sadržaj i „Zatvori“. Zatvara se i dodirom van prozora i nazad-gestom.
  */
 @Composable
 internal fun CenteredDialog(
     title: String,
     onDismiss: () -> Unit,
-    showClose: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -48,7 +46,7 @@ internal fun CenteredDialog(
                 style = MaterialTheme.typography.titleLarge
             )
             content()
-            if (showClose) RoundedButton(
+            RoundedButton(
                 text = "Zatvori",
                 modifier = Modifier
                     .fillMaxWidth()
