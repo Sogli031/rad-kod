@@ -288,7 +288,7 @@ private fun absenceAndLeaveRows(
         if (uncoveredLoss > 0.0 || payDetails.grossUncoveredDeficitLoss > 0.0) {
             add(
                 WorkHoursTableLine(
-                    "Manjak po danima (saldo)",
+                    "Izostanci",
                     formatHoursAndMinutes(-uncoveredDeficitMinutes(payBreakdown, payDetails)),
                     deductionMoneyText(uncoveredLoss),
                     WorkHoursTone.Danger

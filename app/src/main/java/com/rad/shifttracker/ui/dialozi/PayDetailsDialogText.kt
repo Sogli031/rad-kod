@@ -62,7 +62,7 @@ internal fun monthLocativeText(key: MonthKey): String {
 }
 
 internal fun paymentMonthTitleText(receipt: MonthlyReceipt): String {
-    return "Isplata u ${monthYearText(receipt.paymentMonth)}"
+    return "Isplata u ${monthLocativeText(receipt.paymentMonth)} ${receipt.paymentMonth.year}"
 }
 
 internal fun payrollMonthTitleText(receipt: MonthlyReceipt): String {

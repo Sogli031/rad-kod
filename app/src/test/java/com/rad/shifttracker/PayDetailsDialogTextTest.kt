@@ -59,7 +59,8 @@ class PayDetailsDialogTextTest {
             transportDailyAmount = 240.0
         )
 
-        assertEquals("Isplata u Jul 2026", paymentMonthTitleText(receipt))
+        assertEquals("Isplata u Julu 2026", paymentMonthTitleText(receipt))
+        assertEquals("Isplata u Januaru 2027", paymentMonthTitleText(receipt.copy(year = 2027, month = 1)))
         assertEquals("Obračun za Jun 2026", payrollMonthTitleText(receipt))
         assertEquals(null, payDetailsReceiptDescriptionText(receipt))
     }

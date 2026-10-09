@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.2] - 2026-10-09
+- **Naslov isplate u padežu:** „Isplata u Novembru 2026“, „Isplata u Januaru 2027“ umesto „Isplata u Novembar 2026“.
+- **Izostanci:** red „Manjak po danima (saldo)“ se zove samo „Izostanci“.
+
 ## [8.1] - 2026-10-09
 - **Sati rada u isplati:** dodir na platu prikazuje gore isplatu (plata, akontacija, regres, obustave, ukupno), a ispod toga sate rada i koliko su plaćeni, dodatke (sa minulim radom) i izostanke i naknade za mesec obračuna. Odeljak „Ostalo u obračunu“ je uklonjen.
 - **„Sati rada“ na glavnom ekranu je samo prikaz:** dodir više ne otvara poseban prozor.
