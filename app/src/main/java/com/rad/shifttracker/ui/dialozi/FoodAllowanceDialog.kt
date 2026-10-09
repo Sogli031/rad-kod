@@ -2,14 +2,8 @@ package com.rad.shifttracker.ui.dialozi
 
 import java.math.BigDecimal
 import java.math.RoundingMode
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,25 +12,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import com.rad.shifttracker.listici.formatSerbianDecimal
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getFoodPerDayForMonth
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.DataActions
+import com.rad.shifttracker.ui.CenteredDialog
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.ModernTextField
 import com.rad.shifttracker.ui.GlowButton
 import com.rad.shifttracker.ui.RoundedButton
-import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.uvoz.mealPriceFindings
@@ -73,99 +64,73 @@ internal fun FoodAllowanceDialog(
     }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 640.dp)
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .border(1.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.extraLarge)
-                .padding(Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
-        ) {
+    CenteredDialog(title = "Topli obrok", onDismiss = onDismiss) {
+        if (reliable != null) {
             Text(
-                text = "Topli obrok",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleLarge
+                text = "${money(price)} ${CONFIG.pay.currency}",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.headlineMedium
             )
-            if (reliable != null) {
-                Text(
-                    text = "${money(price)} ${CONFIG.pay.currency}",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.headlineMedium
-                )
-            } else {
-                ModernTextField(
-                    value = input,
-                    onValueChange = {
-                        input = filterDecimalInput(it)
-                        errorMessage = null
-                    },
-                    hintText = "Iznos po obroku...",
-                    label = "Iznos po obroku (${CONFIG.pay.currency})",
-                    isError = errorMessage != null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                errorMessage?.let { FormErrorText(message = it) }
-            }
-            Text(
-                text = when {
-                    reliable != null -> "Izračunato iz ${listsText(reliable.months.size)}"
-                    found != null -> "Moguće iz ${listsText(found.months.size)}, nije sigurno — proveri i sačuvaj"
-                    else -> "Nije pronađeno na listama"
+        } else {
+            ModernTextField(
+                value = input,
+                onValueChange = {
+                    input = filterDecimalInput(it)
+                    errorMessage = null
                 },
-                color = MaterialTheme.extendedColors.textSecondary,
+                hintText = "Iznos po obroku...",
+                label = "Iznos po obroku (${CONFIG.pay.currency})",
+                isError = errorMessage != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth()
+            )
+            errorMessage?.let { FormErrorText(message = it) }
+        }
+        Text(
+            text = when {
+                reliable != null -> "Izračunato iz ${listsText(reliable.months.size)}"
+                found != null -> "Moguće iz ${listsText(found.months.size)}, nije sigurno — proveri i sačuvaj"
+                else -> "Nije pronađeno na listama"
+            },
+            color = MaterialTheme.extendedColors.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
+        if (reliable == null && lastReliable != null) {
+            Text(
+                text = "Poslednja pouzdana cena: ${lastReliable.price} ${CONFIG.pay.currency} " +
+                    "(${monthText(lastReliable.from)} – ${monthText(lastReliable.until)})",
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
-            if (reliable == null && lastReliable != null) {
-                Text(
-                    text = "Poslednja pouzdana cena: ${lastReliable.price} ${CONFIG.pay.currency} " +
-                        "(${monthText(lastReliable.from)} – ${monthText(lastReliable.until)})",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
-            if (reliable == null) {
-                GlowButton(
-                    text = "Sačuvaj",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    onClick = {
-                        val value = input.toDoubleOrNull()
-                        if (value == null || value < 0) {
-                            errorMessage = "Unesi ispravan iznos."
-                            return@GlowButton
-                        }
-                        actions.setFoodPerDayFromMonth(year, month, value)
-                        onDismiss()
+        }
+        if (reliable == null) {
+            GlowButton(
+                text = "Sačuvaj",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                onClick = {
+                    val value = input.toDoubleOrNull()
+                    if (value == null || value < 0) {
+                        errorMessage = "Unesi ispravan iznos."
+                        return@GlowButton
                     }
-                )
-            }
-            if (found == null) {
-                RoundedButton(
-                    text = "Skeniraj liste iz Gmail-a",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    bgColor = MaterialTheme.colorScheme.surfaceContainer,
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    onClick = { scanning = true }
-                )
-            }
+                    actions.setFoodPerDayFromMonth(year, month, value)
+                    onDismiss()
+                }
+            )
+        }
+        if (found == null) {
             RoundedButton(
-                text = "Zatvori",
+                text = "Skeniraj liste iz Gmail-a",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
                 bgColor = MaterialTheme.colorScheme.surfaceContainer,
                 textColor = MaterialTheme.colorScheme.onSurface,
-                onClick = onDismiss
+                onClick = { scanning = true }
             )
         }
     }

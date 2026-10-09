@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.2] - 2026-10-09
+- **„Prekovremeno“ na sredini ekrana:** otvara se kao mali prozor na sredini (kao „Hrana“), sa dugmetom „Zatvori“, umesto lista odozdo.
+
 ## [10.1] - 2026-10-09
 - **„Hrana“ pri ručnom unosu prikazuje poslednju pouzdanu cenu sa lista** (npr. „Poslednja pouzdana cena: 280 RSD (09/2025 – 02/2026)“).
 

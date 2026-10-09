@@ -2,6 +2,7 @@ package com.rad.shifttracker.ui.dialozi
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,8 +15,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.obracun.MonthlyOvertimeNetImpact
-import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.PopupDialog
+import com.rad.shifttracker.ui.CenteredDialog
+import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
@@ -26,25 +27,22 @@ fun OvertimeNetImpactDialog(
     impact: MonthlyOvertimeNetImpact,
     onDismiss: () -> Unit
 ) {
-    PopupDialog(
-        title = "Prekovremeno",
-        onDismiss = onDismiss,
-        scrollable = true
-    ) {
+    CenteredDialog(title = "Prekovremeno", onDismiss = onDismiss) {
         if (!impact.hasAnyNetEffect) {
-            PopupCard {
-                Text(
-                    text = "Nema prekovremenih sati u ovom mesecu.",
-                    color = MaterialTheme.extendedColors.warning,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            return@PopupDialog
+            Text(
+                text = "Nema prekovremenih sati u ovom mesecu.",
+                color = MaterialTheme.extendedColors.warning,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            return@CenteredDialog
         }
 
-        PopupCard {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
             SectionLabel(text = "Dodatna neto zarada")
             AutoSizeText(
                 text = signedMoneyText(impact.paidOvertimeNetDifference),
