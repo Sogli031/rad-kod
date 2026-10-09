@@ -87,4 +87,49 @@ internal class RepositoryAbsenceSimulator(
             replacedNightHours = replacedNightHours
         )
     }
+
+    /**
+     * Neto razlika koju bolovanje u mesecu pravi u odnosu na platu da su ti radni dani odrađeni:
+     * mesec kakav jeste − isti mesec sa danima bolovanja vraćenim na smenu iz rasporeda.
+     * Isto poređenje kao pregled pri unosu bolovanja, samo unazad; negativno znači gubitak.
+     */
+    fun sickLeaveNetDifference(
+        year: Int,
+        month: Int,
+        scheduledShift: (LocalDate) -> Shift?
+    ): Double {
+        val currentRecords = recordStore.getMonthRecords(MonthKey(year, month))
+        var replaced = false
+        val workedRecords = currentRecords.map { record ->
+            if (record.shift != Shift.SICK || record.workHours <= 0 || !record.weekday.isWorkday) {
+                return@map record
+            }
+            replaced = true
+            val shift = scheduledShift(record.date)?.takeIf { it in Shift.workShifts() }
+                ?: DayRecord(year, month, record.day, Shift.OFF, hours = 0).inferDeficitReplacementShift(currentRecords)
+            DayRecord(
+                year = year,
+                month = month,
+                day = record.day,
+                shift = shift,
+                hours = record.workHours,
+                holidayOverride = record.holidayOverride
+            )
+        }
+        if (!replaced) return 0.0
+
+        val currentNet = payQueries.calculateAnnualMonthNetPayUnsafe(
+            year = year,
+            month = month,
+            monthRecords = currentRecords,
+            includeRegress = true
+        ).displayPay
+        val workedNet = payQueries.calculateAnnualMonthNetPayUnsafe(
+            year = year,
+            month = month,
+            monthRecords = workedRecords,
+            includeRegress = true
+        ).displayPay
+        return currentNet - workedNet
+    }
 }

@@ -112,6 +112,7 @@ import com.rad.shifttracker.repo.exportCloudBackupJson
 import com.rad.shifttracker.repo.getPreviewNetPayBreakdown
 import com.rad.shifttracker.repo.getResolvedPayBasesForWorkMonth
 import com.rad.shifttracker.repo.getScheduledShiftForDate
+import com.rad.shifttracker.repo.getSickLeaveNetDifference
 import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.repo.getVacationDaysRemaining
 import com.rad.shifttracker.repo.getVacationDaysUsed
@@ -2886,6 +2887,35 @@ class ShiftRepositoryTest {
 
         ShiftScheduler(defaultHours = 8).applySickRange(repo, 2026, 5, 4, 4, 0.65)
         assertEquals(repo.getNetPayBreakdown(2026, 5).displayPay, preview.previewNetPay, 0.01)
+    }
+
+    @Test
+    fun `razlika bolovanja posle upisa jednaka je preview-u pri unosu`() {
+        repo.grossHourlyRateValue = 1_000.0
+        repo.foodPerDayValue = 0.0
+        repo.employeeContributionsPercentValue = 20.0
+        repo.taxReliefValue = 0.0
+        repo.taxPercentValue = 10.0
+        repo.setMonthlyPayBases(
+            2026,
+            4,
+            MonthlyPayBases.fromUnifiedPayBase(2026, 4, 1_000.0)
+        )
+        for (day in 4..8) repo.set(2026, 5, day, Shift.THIRD, 8, holidayOverride = false)
+        assertEquals(0.0, repo.getSickLeaveNetDifference(2026, 5), 0.01)
+
+        val preview = repo.previewAbsenceRangeNetImpact(
+            year = 2026,
+            month = 5,
+            startDay = 6,
+            endDay = 6,
+            absenceShift = Shift.SICK,
+            sickPayRate = 0.65
+        )
+        ShiftScheduler(defaultHours = 8).applySickRange(repo, 2026, 5, 6, 6, 0.65)
+
+        assertTrue(preview.netDifference < 0.0)
+        assertEquals(preview.netDifference, repo.getSickLeaveNetDifference(2026, 5), 0.01)
     }
 
     @Test

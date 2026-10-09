@@ -47,6 +47,7 @@ fun WorkHoursDialog(
     month: MonthKey,
     payDetails: MonthlyPayDetails,
     deficitNetLoss: Double,
+    sickLeaveNetDifference: Double,
     seniorityConfigured: Boolean,
     onDismiss: () -> Unit
 ) {
@@ -63,7 +64,7 @@ fun WorkHoursDialog(
 
         WorkHoursSection("Pregled", overviewRows(summary, payBreakdown, payDetails))
         WorkHoursTableSection("Dodaci", addOnRows(payBreakdown, payDetails))
-        WorkHoursTableSection("Izostanci i naknade", absenceAndLeaveRows(payBreakdown, payDetails, deficitNetLoss))
+        WorkHoursTableSection("Izostanci i naknade", absenceAndLeaveRows(payBreakdown, payDetails, deficitNetLoss, sickLeaveNetDifference))
         WorkHoursSection("Ostalo u obračunu", otherPayrollRows(payBreakdown, payDetails))
     }
 }
@@ -270,10 +271,21 @@ private fun addOnRows(
 private fun absenceAndLeaveRows(
     payBreakdown: MonthlyNetPayBreakdown,
     payDetails: MonthlyPayDetails,
-    deficitNetLoss: Double
+    deficitNetLoss: Double,
+    sickLeaveNetDifference: Double
 ): List<WorkHoursTableLine> {
     return buildList {
-        addGrossRow("Bolovanje", payDetails.sickMinutes, payDetails.grossSickPay, payDetails)
+        // Bolovanje se prikazuje kao razlika prema plati da su ti dani odrađeni, ne kao cela naknada.
+        if (payDetails.grossSickPay > 0.0) {
+            add(
+                WorkHoursTableLine(
+                    label = "Bolovanje",
+                    hours = formatPayDetailMinutes(payDetails.sickMinutes),
+                    amount = signedMoneyText(sickLeaveNetDifference),
+                    tone = if (sickLeaveNetDifference >= 0.0) WorkHoursTone.Positive else WorkHoursTone.Danger
+                )
+            )
+        }
         addGrossRow(
             "Plaćeno odsustvo – dobrovoljno davanje krvi",
             payDetails.paidLeaveMinutes,

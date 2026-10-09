@@ -250,6 +250,7 @@ private fun MainPayrollDialog(
                 month = data.workHoursMonth,
                 payDetails = data.workHoursPayDetails,
                 deficitNetLoss = data.workHoursOvertimeNetImpact.deficitNetLoss,
+                sickLeaveNetDifference = data.workHoursSickLeaveNetDifference,
                 seniorityConfigured = rememberRepoValue(data.repo) { isSeniorityConfiguredValue },
                 onDismiss = onDismiss
             )
@@ -314,6 +315,7 @@ internal data class MainDialogData(
     val workHoursMonth: MonthKey,
     val workHoursPayDetails: MonthlyPayDetails,
     val workHoursOvertimeNetImpact: MonthlyOvertimeNetImpact,
+    val workHoursSickLeaveNetDifference: Double,
     val salaryDetailsReceipt: MonthlyReceipt,
     val salaryDetailsFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val monthlyReceipt: MonthlyReceipt,

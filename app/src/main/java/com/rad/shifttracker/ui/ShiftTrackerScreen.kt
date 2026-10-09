@@ -175,6 +175,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             workHoursMonth = MonthKey(currentYear, currentMonth),
             workHoursPayDetails = ui.selectedMonthPayDetails,
             workHoursOvertimeNetImpact = ui.overtimeNetImpact,
+            workHoursSickLeaveNetDifference = ui.sickLeaveNetDifference,
             salaryDetailsReceipt = ui.nextMonthReceipt,
             salaryDetailsFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown,
             monthlyReceipt = ui.monthlyReceipt,

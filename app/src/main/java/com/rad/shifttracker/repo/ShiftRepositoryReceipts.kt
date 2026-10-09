@@ -277,6 +277,10 @@ fun ShiftRepository.previewAbsenceRangeNetImpact(
     )
 }
 
+fun ShiftRepository.getSickLeaveNetDifference(year: Int, month: Int): Double = synchronized(lock) {
+    absenceSimulator.sickLeaveNetDifference(year, month) { date -> getScheduledShiftForDate(date) }
+}
+
 fun ShiftRepository.getPreviewNetPayBreakdown(
     year: Int,
     month: Int,

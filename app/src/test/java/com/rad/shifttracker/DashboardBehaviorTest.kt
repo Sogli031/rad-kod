@@ -72,6 +72,7 @@ class DashboardBehaviorTest {
                     month = MonthKey(YEAR, MONTH),
                     payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
                     deficitNetLoss = 0.0,
+                    sickLeaveNetDifference = 0.0,
                     seniorityConfigured = true,
                     onDismiss = {}
                 )

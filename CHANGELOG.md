@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [7.5] - 2026-10-09
+- **Bolovanje u „Sati rada“ kao razlika od plate:** red „Bolovanje“ više ne prikazuje celu naknadu, već koliko je neto plata manja (crveno) ili veća (zeleno) nego da su ti dani odrađeni po rasporedu smena. Isti iznos kao pregled pri unosu bolovanja.
+
 ## [7.2] - 2026-10-07
 Sređivanje arhitekture iz audita, bez promene obračuna i izgleda (svi testovi i snimci ekrana isti).
 - **Upisi kroz ViewModel:** dijalozi (dan, odsustvo, popuna smena, davanje krvi, akontacija, topli obrok, praznici, minuli rad, godišnji, listići, brisanje, Opcije, vraćanje backup-a) više ne pišu direktno u repozitorijum, već kroz `MainViewModel` (`DataActions`: dani, podešavanja, listići). Novi test pada ako neki ekran ponovo upiše mimo njega.
