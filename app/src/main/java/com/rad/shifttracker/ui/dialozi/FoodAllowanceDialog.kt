@@ -65,6 +65,8 @@ internal fun FoodAllowanceDialog(
     val findings = rememberRepoValue(repo) { mealPriceFindings(this) }
     val found = mealPriceSourceFor(findings, selectedMonth)
     val reliable = found?.takeIf { it.reliable && it.price.toDouble() == price }
+    // Najnovija pouzdana cena sa lista (findings su najnoviji prvi), kao oslonac pri ručnom unosu.
+    val lastReliable = findings.firstOrNull { it.reliable }
     // Nepouzdana cena sa lista se samo predlaže u polju; upisuje je korisnik.
     var input by remember(selectedMonth, found?.price, price) {
         mutableStateOf(formatRateInput(found?.price?.toDouble() ?: price))
@@ -119,6 +121,15 @@ internal fun FoodAllowanceDialog(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
+            if (reliable == null && lastReliable != null) {
+                Text(
+                    text = "Poslednja pouzdana cena: ${lastReliable.price} ${CONFIG.pay.currency} " +
+                        "(${monthText(lastReliable.from)} – ${monthText(lastReliable.until)})",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
             if (reliable == null) {
                 GlowButton(
                     text = "Sačuvaj",
@@ -165,6 +176,8 @@ private fun listsText(count: Int): String {
     val paucal = count % 10 in 1..4 && count % 100 !in 11..14
     return "$count ${if (paucal) "liste" else "listi"}"
 }
+
+private fun monthText(month: MonthKey): String = "%02d/%d".format(month.month, month.year)
 
 private fun money(value: Double): String =
     formatSerbianDecimal(BigDecimal.valueOf(value).setScale(0, RoundingMode.HALF_UP))
