@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [9.1] - 2026-10-09
+- **Kalendar:** naziv odsustva u danu („Plaćeno odsustvo“, „Godišnji odmor“) se smanjuje do veličine 9 pre nego što se skrati tačkicama, kao ranije.
+
 ## [9.0] - 2026-10-09
 - **Davanje krvi u obračunu:** ispod reda „Davanje krvi“ piše koliko je više (zeleno) ili manje (crveno) nego da su ti dani odrađeni, kao kod godišnjeg i bolovanja.
 - **Ispravka:** dani davanja krvi više ne ulaze u razliku za bolovanje (u danima su upisani kao bolovanje sa oznakom plaćenog odsustva).

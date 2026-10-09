@@ -58,6 +58,9 @@ private const val DAY_TINT_ALPHA = 0.18f
 private const val DAY_TINT_BORDER_ALPHA = 0.35f
 /** Tekst ćelije je 11sp (M3 `labelSmall`) i ne smanjuje se; što ne stane skraćuje se, pun opis ima čitač ekrana. */
 private const val CALENDAR_DETAIL_FONT_SIZE = 11f
+
+// Duži naziv („Plaćeno odsustvo“) se smanjuje do ove veličine pre nego što se skrati tačkicama.
+private const val CALENDAR_DETAIL_MIN_FONT_SIZE = 9f
 /** Najmanja dodirna visina ćelije (M3 minimum). */
 internal const val CALENDAR_MIN_CELL_HEIGHT = 48f
 /**
@@ -336,7 +339,7 @@ private fun RowScope.DayButton(
                     textAlign = TextAlign.Center
                 ),
                 maxFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
-                minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
+                minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -352,7 +355,7 @@ private fun RowScope.DayButton(
                         textAlign = TextAlign.Center
                     ),
                     maxFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
-                    minFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
+                    minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )
