@@ -48,6 +48,7 @@ import com.rad.shifttracker.uvoz.applyMonthFill
 import com.rad.shifttracker.uvoz.applyPayslipChanges
 import com.rad.shifttracker.uvoz.fillAllMonths
 import com.rad.shifttracker.uvoz.importManualPayslip
+import com.rad.shifttracker.uvoz.importManualPayslips
 import java.time.LocalDate
 
 /**
@@ -93,6 +94,8 @@ internal interface PayslipActions {
     fun fillAllMonths(months: List<MonthKey>): FillAllResult
     /** Dugo traje: zove se van glavne niti. Vraća poruku i da li je greška. */
     fun importManualPayslip(result: PayslipParseResult): Pair<String, Boolean>
+    /** Više lista odjednom (izbor više PDF-ova); van glavne niti. */
+    fun importManualPayslips(results: List<PayslipParseResult>): Pair<String, Boolean>
     fun startGmailImport()
     /** Vraćanje iz oblaka uz sigurnosnu kopiju; vraća poruku za korisnika. */
     suspend fun restoreBackup(fetch: suspend () -> String?, messages: RestoreMessages): String
@@ -225,6 +228,9 @@ internal class RepoDataActions(
     override fun fillAllMonths(months: List<MonthKey>): FillAllResult = fillAllMonths(repo, months)
 
     override fun importManualPayslip(result: PayslipParseResult): Pair<String, Boolean> = importManualPayslip(repo, result)
+
+    override fun importManualPayslips(results: List<PayslipParseResult>): Pair<String, Boolean> =
+        importManualPayslips(repo, results)
 
     override fun startGmailImport() = GmailImportRunner.start(appContext, repo)
 

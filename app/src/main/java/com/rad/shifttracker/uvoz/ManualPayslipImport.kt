@@ -14,7 +14,7 @@ import com.rad.shifttracker.listici.PayslipSideRunKind
 import com.rad.shifttracker.listici.formatSerbianDecimal
 import com.rad.shifttracker.listici.runPayslipSafely
 
-internal const val MANUAL_PAYSLIP_IMPORT_LABEL = "Učitaj listu iz fajla (PDF)"
+internal const val MANUAL_PAYSLIP_IMPORT_LABEL = "Učitaj liste iz fajlova (PDF)"
 
 /**
  * Ručno izabran PDF, jedan po jedan, upisuje se kao iz Gmail-a. Za kolege kojima Gmail još nema stare
@@ -31,6 +31,46 @@ internal fun importManualPayslip(
     runPayslipSafely {
         if (result is PayslipParseResult.SideRun) importManualSideRun(repo, result) else importManualFinalPayslip(repo, result, today)
     } ?: (PAYSLIP_UNEXPECTED_ERROR_TEXT to true)
+
+/**
+ * Više izabranih PDF-ova odjednom (npr. poslednjih 5–10 lista skinutih u Downloads): fajlovi koji
+ * nisu liste se preskaču, a liste se upisuju od najstarijeg meseca, da na kraju važe podešavanja
+ * sa najnovije. Za isti mesec i vrstu važi poslednji izabran fajl. Vraća poruku i da li je sve palo.
+ */
+internal fun importManualPayslips(
+    repo: ShiftRepository,
+    results: List<PayslipParseResult>,
+    today: LocalDate = LocalDate.now()
+): Pair<String, Boolean> {
+    val readable = results.filter { it !is PayslipParseResult.Failure }
+    val skipped = results.size - readable.size
+    val ordered = readable
+        .associateBy { result -> manualImportKey(result) }
+        .values
+        .sortedWith(compareBy({ manualImportMonthIndex(it) }, { if (it is PayslipParseResult.SideRun) 1 else 0 }))
+    val messages = ordered.map { importManualPayslip(repo, it, today) }
+    val imported = messages.count { !it.second }
+    val parts = buildList {
+        add("Učitano lista: $imported od ${results.size} izabranih fajlova.")
+        if (skipped > 0) add("Preskočeno $skipped (nisu liste ili se ne mogu pročitati).")
+        messages.forEach { (text, _) -> add(text) }
+    }
+    return parts.joinToString("\n\n") to (imported == 0)
+}
+
+private fun manualImportKey(result: PayslipParseResult): String = when (result) {
+    is PayslipParseResult.Success -> "L-${result.payslip.month}"
+    is PayslipParseResult.SideRun -> "S-${result.month}-${result.kind}-${result.runLabel}"
+    is PayslipParseResult.Failure -> "F"
+}
+
+private fun manualImportMonthIndex(result: PayslipParseResult): Int = when (result) {
+    is PayslipParseResult.Success -> result.payslip.month.year * MONTHS_IN_YEAR + result.payslip.month.month
+    is PayslipParseResult.SideRun -> result.month.year * MONTHS_IN_YEAR + result.month.month
+    is PayslipParseResult.Failure -> 0
+}
+
+private const val MONTHS_IN_YEAR = 12
 
 private fun importManualFinalPayslip(repo: ShiftRepository, result: PayslipParseResult, today: LocalDate): Pair<String, Boolean> {
     val outcome = payslipPickOutcome(repo, result, month = null)

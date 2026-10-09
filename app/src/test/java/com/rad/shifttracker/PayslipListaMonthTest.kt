@@ -43,6 +43,7 @@ import com.rad.shifttracker.listici.PAYSLIP_TOTAL_ROWS
 import com.rad.shifttracker.uvoz.PayslipReconciliation
 import com.rad.shifttracker.listici.PayslipRowTone
 import com.rad.shifttracker.uvoz.importManualPayslip
+import com.rad.shifttracker.uvoz.importManualPayslips
 import com.rad.shifttracker.uvoz.payslipExtrasBeyondApp
 import com.rad.shifttracker.listici.payslipFromJsonOrNull
 import com.rad.shifttracker.listici.payslipMealEntitlementNet
@@ -437,6 +438,30 @@ class PayslipListaMonthTest {
         if (expected != null && expected > 0.0) {
             assertEquals(expected, repo.getMonthlyNetAdjustments(2026, 9).advancePaymentNet, 0.001)
         }
+    }
+
+    @Test
+    fun manualImportOfSeveralFilesSkipsNonPayslipsAndSavesEachMonth() {
+        val repo = testRepository()
+        val july = august().copy(month = MonthKey(2026, 7))
+        val results = listOf(
+            PayslipParseResult.Success(august()),
+            parsePayslip(listOf("nije lista")),
+            PayslipParseResult.Success(july)
+        )
+
+        val (text, isError) = importManualPayslips(repo, results)
+
+        assertTrue(text, !isError)
+        assertTrue(text, text.startsWith("Učitano lista: 2 od 3 izabranih fajlova."))
+        assertTrue(text, text.contains("Preskočeno 1"))
+        // Od najstarijeg meseca: jul pa avgust, da na kraju važi najnovija lista.
+        assertTrue(text, text.indexOf(monthYearText(MonthKey(2026, 7))) < text.indexOf(monthYearText(MonthKey(2026, 8))))
+        assertEquals(august(), repo.getSavedPayslip(2026, 8))
+        assertEquals(MonthKey(2026, 7), repo.getSavedPayslip(2026, 7)?.month)
+
+        val (_, allFailed) = importManualPayslips(testRepository(), listOf(parsePayslip(listOf("nije lista"))))
+        assertTrue(allFailed)
     }
 
     @Test

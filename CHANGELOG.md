@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [8.7] - 2026-10-09
+- **„Učitaj liste iz fajlova (PDF)“:** u Opcijama se sada bira više lista odjednom; birač se otvara u Downloads-u. Fajlovi koji nisu liste se preskaču, a liste se upisuju od najstarijeg meseca (na kraju važe podešavanja sa najnovije). Za kolege koje još nemaju prosleđivanje na Gmail: skinu poslednjih 5–10 lista sa webmail-a i učitaju ih odjednom. (Ceo folder Downloads Android od verzije 11 ne dozvoljava da se izabere kao folder, zato se biraju fajlovi.)
+
 ## [8.6] - 2026-10-09
 - **Bolovanje sa procentom:** „Bolovanje 65%“ (ili „65% i 100%“ kad mesec ima oba).
 - **Bez reda „Topli obrok“ u obračunu:** pripada = pojedeno, pa za isplatu nije bitan. Onih ~164 din nije bio topli obrok nego deo neoporezivog iznosa koji je pogrešno pripao obroku; sada je raspoređen na rad i naknade, a zbir je i dalje tačno neto plata.

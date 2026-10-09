@@ -2,7 +2,12 @@ package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +36,11 @@ import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.readPayslip
 import com.rad.shifttracker.uvoz.rememberTransportWorkMonth
 
-/** Opcije: dugme koje otvara sistemski birač PDF-a (bez dozvola za skladište) i poruka o ishodu. */
+/**
+ * Opcije: dugme otvara sistemski birač (bez dozvola za skladište) u Downloads-u, gde se označi
+ * više lista odjednom. Ceo folder Downloads se od Androida 11 ne može izabrati kao folder,
+ * pa se biraju fajlovi; ne-liste se preskaču.
+ */
 @Composable
 internal fun ManualPayslipImportButton(actions: DataActions) {
     val context = LocalContext.current
@@ -39,20 +48,21 @@ internal fun ManualPayslipImportButton(actions: DataActions) {
     var isReading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    val picker = rememberLauncherForActivityResult(OpenPdfsInDownloads()) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
         isReading = true
         message = null
         scope.launch {
-            val result = withContext(Dispatchers.IO) { readPayslip(context, uri) }
-            message = withContext(Dispatchers.Default) { actions.importManualPayslip(result) }
-            (result as? PayslipParseResult.SideRun)?.let { rememberTransportWorkMonth(context, listOf(it)) }
+            val results = withContext(Dispatchers.IO) { uris.map { readPayslip(context, it) } }
+            message = withContext(Dispatchers.Default) { actions.importManualPayslips(results) }
+            val sideRuns = results.filterIsInstance<PayslipParseResult.SideRun>()
+            if (sideRuns.isNotEmpty()) rememberTransportWorkMonth(context, sideRuns)
             isReading = false
         }
     }
 
     RoundedButton(
-        text = if (isReading) "Čitam listu..." else MANUAL_PAYSLIP_IMPORT_LABEL,
+        text = if (isReading) "Čitam liste..." else MANUAL_PAYSLIP_IMPORT_LABEL,
         modifier = Modifier
             .fillMaxWidth()
             .height(UI.buttonHeight.dp),
@@ -60,7 +70,7 @@ internal fun ManualPayslipImportButton(actions: DataActions) {
         textColor = MaterialTheme.colorScheme.onSurface,
         borderColor = MaterialTheme.colorScheme.outlineVariant,
         textStyle = MaterialTheme.typography.labelLarge,
-        onClick = { if (!isReading) picker.launch(arrayOf("application/pdf")) }
+        onClick = { if (!isReading) picker.launch(Unit) }
     )
     message?.let { (text, isError) ->
         if (isError) {
@@ -76,3 +86,17 @@ internal fun ManualPayslipImportButton(actions: DataActions) {
         }
     }
 }
+
+/** Više PDF-ova odjednom, sa početkom u Downloads-u (ako birač to podržava). */
+private class OpenPdfsInDownloads : ActivityResultContract<Unit, List<Uri>>() {
+    private val multiple = ActivityResultContracts.OpenMultipleDocuments()
+
+    override fun createIntent(context: Context, input: Unit): Intent =
+        multiple.createIntent(context, arrayOf("application/pdf"))
+            .putExtra(DocumentsContract.EXTRA_INITIAL_URI, DOWNLOADS_INITIAL_URI)
+
+    override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> = multiple.parseResult(resultCode, intent)
+}
+
+private val DOWNLOADS_INITIAL_URI: Uri =
+    DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Download")
