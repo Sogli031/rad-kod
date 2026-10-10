@@ -8,7 +8,7 @@ import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
 
 /**
- * Do 11.1 je auto-popuna četvorobrigade na praznik pon–pet oslobađala samo prvu smenu, a sve
+ * Do 11.2 je auto-popuna četvorobrigade na praznik pon–pet oslobađala samo prvu smenu, a sve
  * praznične OFF dane pisala kao balanceExempt. Po novom pravilu (listići livnice 12/2024–08/2026)
  * praznik na dan smene po ciklusu je slobodan i plaćen (OFF bez balanceExempt), a na slobodan dan
  * po ciklusu se ne plaća. Usklađuju se samo zapisi iz auto-popune:

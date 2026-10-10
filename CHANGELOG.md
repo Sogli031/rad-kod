@@ -3,6 +3,14 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.3] - 2026-10-10
+Četvorobrigada, provereno na 21 listi livnice (12/2024–08/2026):
+- **Popuni po listi radi i za četvorobrigadu.** I „Popuni iz liste“ i „Popuni sve po listama“. Ranije se dugme nudilo, ali nijedan mesec nije popunjen. Upisuje se najverovatniji raspored: smene po ciklusu iz „Popuni“, godišnji, plaćeno odsustvo i bolovanje gde najbolje odgovaraju listi, i praznik rađen ili ne. Četvorobrigada se retko slaže sa listom u sat (zamene smena, dodatna nedelja), pa razlike koje ostanu stoje u poređenju sa listom. Popunjen mesec se ne nudi ponovo. Lista 02/2026 se slaže u svim satima.
+- **Praznici u četvorobrigadi:** praznik pon–pet na dan smene po ciklusu je slobodan i plaćen (ranije samo prva smena). Praznik koji padne na slobodan dan po ciklusu se ne plaća, jer ga pun fond već pokriva kroz rad u režiji. Za 11/2025 to je oko 3.700 din bruto manje, kao na listi. Subotom se praznik radi po ciklusu. Ako je pogon radio na praznik (npr. Veliki petak 2026), to se upiše ručno na danu. Postojeći auto-popunjeni dani se usklade sami.
+- **Godišnji i bolovanje u četvorobrigadi:** smena van pon–pet usred godišnjeg ili bolovanja se ne radi (lista 08/2025: 15 dana GO, 4 odrađene smene).
+- **Minuli rad:** mesec sa sačuvanom listom uzima staž sa liste, a za buduće mesece važi poslednje viđeno povećanje. Livnica je staž povisila u martu 2025, ali u januaru 2026, pa je aplikacija januar i februar 2026 računala sa 20% umesto 20,5%, a mart sa 21%.
+- Kalendar: slobodan dan po ciklusu četvorobrigade piše „OFF“, a ne „0h“ kao da nije odrađen.
+
 ## [11.2] - 2026-10-10
 - **Dve smene u kalendaru rimskim brojevima:** umesto „Druga + Treća“, koje se seklo („Druga …“), u ćeliji piše „II + III“, serifnim slovima kao pravi rimski brojevi. Jedna smena i dalje piše rečju („Druga“).
 
