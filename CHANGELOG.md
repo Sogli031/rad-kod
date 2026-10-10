@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.8] - 2026-10-10
+- **„Za sate“ u trećoj smeni dobija noćni dodatak.** Sati i dalje idu u saldo (i pokrivaju dane koje nisi radio), a noćni dodatak od 41% na te sate plaća se u mesecu kad su rađeni, kao na listi 06/2026 (vraćeni sati u trećoj ušli su u 43h noćnog). Primer: 01.10. nije rađen, dva puta po 4h iz druge u treću „Za sate“ → dan je pokriven i plaća se noćni dodatak na 8h.
+
 ## [11.7] - 2026-10-10
 - **Prekovremeno „Plaćeno“ više ne vraća sate.** Ceo višak radnim danom označen „Plaćeno“ je prekovremeni (sa uvećanjem), čak i kad u mesecu ima dana koje nisi radio. Sati se vraćaju (pokrivaju manjak) samo kad je izabrano „Za sate“. Ranije je višak „Plaćeno“ automatski prvo pokrivao cele neradne dane, ali 6 lista 2024–2026 ima 8h ili više izostanaka uz plaćen prekovremeni, pa to nije pravilo firme.
 

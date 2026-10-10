@@ -1222,6 +1222,32 @@ class PayCalculatorTest {
     }
 
     @Test
+    fun `calculateMonthSummary za sate u trecoj pokriva neradni dan i placa nocni dodatak`() {
+        // 01.10.2026. nije rađen; 2 × 4h iz druge u treću „Za sate" vraćaju tih 8h,
+        // a noćni dodatak (41%) na tih 8h se plaća u oktobru.
+        val records = listOf(
+            DayRecord(2026, 10, 1, Shift.OFF, 0),
+            DayRecord(2026, 10, 5, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 4, overtimeType = OvertimeType.COMP_TIME),
+            DayRecord(2026, 10, 6, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 4, overtimeType = OvertimeType.COMP_TIME)
+        )
+
+        val result = calculator.calculateMonthSummary(
+            records = records,
+            baseRate = 300.0,
+            brigadeType = BrigadeType.TROBRIGADA,
+            summaryYear = 2026,
+            summaryMonth = 10
+        )
+
+        assertEquals(0, result.overtimeHours)
+        assertEquals(8, result.nightHours)
+        assertEquals(0, result.uncoveredDeficitMinutes)
+        assertEquals(0, result.compTimeEndingMinutes)
+        // 16h rada + 8h pokrivenog dana + noćni dodatak na 8h „Za sate".
+        assertEquals(16 * 300.0 + 8 * 300.0 + 8 * 300.0 * 0.41, result.totalPay, 0.01)
+    }
+
+    @Test
     fun `calculateMonthSummary trobrigada placen visak ne odradjuje ceo neradni dan`() {
         // 10h dan (2h viška „Plaćeno") + kraći dan (5h) + OFF radni dan: sati se vraćaju samo
         // uz „Za sate", pa je višak prekovremeni, a neradni dan ostaje neplaćen.
@@ -1433,6 +1459,8 @@ class PayCalculatorTest {
             summaryMonth = 6
         )
         assertEquals(6, withCompTime.overtimeHours)
+        // Listić: 43h noćnog — uključuje i vraćenih 2h + 3h u trećoj.
+        assertEquals(43, withCompTime.nightHours)
     }
 
     @Test

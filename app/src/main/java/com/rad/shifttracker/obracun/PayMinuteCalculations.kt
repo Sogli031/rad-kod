@@ -150,9 +150,26 @@ internal fun nightPremiumMinutes(shift: Shift, shiftMinutes: Int): Int {
     return shiftMinutes / MINUTES_PER_HOUR * MINUTES_PER_HOUR
 }
 
-/** Noćni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun). */
+/**
+ * Noćni minuti sati „Za sate" u trećoj smeni: sami sati idu u saldo, ali se noćni dodatak plaća u
+ * mesecu rada (listić 06/2026: vraćeni +2h 03.06. i +3h 25.06. u trećoj ušli su u 43h noćnog).
+ */
+internal fun compTimeNightPremiumMinutes(record: DayRecord): Int {
+    var minutes = 0
+    if (record.shift == Shift.THIRD) {
+        minutes += nightPremiumMinutes(Shift.THIRD, record.effectiveRegularWorkMinutes) -
+            nightPremiumMinutes(Shift.THIRD, record.paidPrimaryWorkMinutes)
+    }
+    if (record.isCompTimeOvertime && record.shift2 == Shift.THIRD) {
+        minutes += nightPremiumMinutes(Shift.THIRD, record.workHours2 * MINUTES_PER_HOUR)
+    }
+    return minutes.coerceAtLeast(0)
+}
+
+/** Noćni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun), i sati „Za sate" u trećoj. */
 internal fun nightWorkMinutes(record: DayRecord): Int {
-    return paidWorkMinuteSegments(record).sumOf { (shift, minutes) -> nightPremiumMinutes(shift, minutes) }
+    return paidWorkMinuteSegments(record).sumOf { (shift, minutes) -> nightPremiumMinutes(shift, minutes) } +
+        compTimeNightPremiumMinutes(record)
 }
 
 /** Nedeljni minuti dana sa dodatnim minutima (isti izvor kao mesečni obračun). */

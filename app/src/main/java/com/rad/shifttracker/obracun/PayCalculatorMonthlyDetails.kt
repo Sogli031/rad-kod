@@ -143,6 +143,12 @@ internal class PayCalculatorMonthlyDetails(
                 details = details
             )
         }
+        // Sati „Za sate" u trećoj: dodatak se plaća u mesecu rada, sami sati idu u saldo.
+        val compNightMinutes = compTimeNightPremiumMinutes(record)
+        if (compNightMinutes > 0) {
+            details.nightMinutes += compNightMinutes
+            details.grossNightPremium += calculator.compTimeNightPremium(record, baseRate)
+        }
     }
 
     private fun accumulateWorkSegment(

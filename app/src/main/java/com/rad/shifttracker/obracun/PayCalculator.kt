@@ -91,7 +91,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     fun getNightHours(record: DayRecord): Int {
         return paidWorkSegments(record)
             .filter { (shift, _) -> shift == Shift.THIRD }
-            .sumOf { (_, hours) -> hours }
+            .sumOf { (_, hours) -> hours } + compTimeNightPremiumMinutes(record) / MINUTES_PER_HOUR
     }
 
     private fun calculateNightPremium(shift: Shift, shiftMinutes: Int, baseRate: Double): Double {
@@ -158,12 +158,17 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         nonWorkDayPay(record, brigadeType, payBases)?.let { return it }
 
         val shiftsData = paidWorkMinuteSegments(record)
-        return if (isAutomaticWeekendOvertime(record, brigadeType)) {
+        val workPay = if (isAutomaticWeekendOvertime(record, brigadeType)) {
             weekendOvertimeDayPay(record, shiftsData, baseRate)
         } else {
             regularDayPay(record, shiftsData, baseRate, brigadeType, monthlyOvertimeMinutes)
         }
+        return workPay + compTimeNightPremium(record, baseRate)
     }
+
+    /** Noćni dodatak na sate „Za sate" u trećoj smeni (sami sati idu u saldo, vidi [compTimeNightPremiumMinutes]). */
+    internal fun compTimeNightPremium(record: DayRecord, baseRate: Double): Double =
+        compTimeNightPremiumMinutes(record).toDouble() / MINUTES_PER_HOUR * baseRate * premiumBonus(config.shift3Premium)
 
     /** Plata dana bez rada (slobodan dan, praznik, odsustvo, bolovanje, godišnji); null za radni dan. */
     private fun nonWorkDayPay(record: DayRecord, brigadeType: BrigadeType, payBases: ResolvedPayBases): Double? {
