@@ -14,6 +14,8 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 private const val CONNECT_TIMEOUT_MS = 15_000
 private const val READ_TIMEOUT_MS = 30_000
@@ -24,7 +26,7 @@ internal const val UPDATE_INSTALL_ACTION = "com.rad.shifttracker.UPDATE_INSTALL_
 
 /** Ishod preuzimanja i predaje sistemskoj instalaciji. */
 internal sealed interface UpdateInstallResult {
-    /** Sistem prikazuje „Ažurirati aplikaciju?“; dalje vodi korisnik. */
+    /** APK je predat sistemu: instalira se odmah ili posle „Ažurirati aplikaciju?“. */
     data object Started : UpdateInstallResult
 
     /** Telefon još ne dozvoljava Radu da instalira aplikacije: otvorena su podešavanja. */
@@ -142,14 +144,41 @@ private fun abandon(installer: PackageInstaller, sessionId: Int) {
 }
 
 /**
+ * Neuspela ili otkazana instalacija, za prozor ažuriranja (koji tada ponovo nudi „Ažuriraj“).
+ * Uspeh se ne javlja: sistem tada zameni aplikaciju i proces se ugasi.
+ */
+internal object UpdateInstallFailures {
+    private val _events = MutableStateFlow<UpdateInstallFailure?>(null)
+    val events: StateFlow<UpdateInstallFailure?> = _events
+
+    internal fun report(message: String) {
+        _events.value = UpdateInstallFailure(message)
+    }
+}
+
+/** Svaki neuspeh je novi objekat, pa ga prozor primi i kad je poruka ista kao prošli put. */
+internal class UpdateInstallFailure(val message: String)
+
+internal fun updateInstallFailureText(status: Int): String = when (status) {
+    PackageInstaller.STATUS_FAILURE_ABORTED -> "Ažuriranje je otkazano."
+    PackageInstaller.STATUS_FAILURE_STORAGE -> "Nema dovoljno mesta na telefonu za ažuriranje."
+    PackageInstaller.STATUS_FAILURE_CONFLICT,
+    PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "Ova verzija ne može da se instalira preko postojeće."
+    else -> "Instalacija nije uspela. Probaj ponovo."
+}
+
+/**
  * Status instalacije od sistema: kad treba potvrda korisnika, otvara sistemski prozor
- * „Ažurirati aplikaciju?“. Uspešna instalacija zatvara i ponovo pokreće aplikaciju sama.
+ * „Ažurirati aplikaciju?“; neuspeh javlja prozoru ažuriranja. Uspešna instalacija zatvara aplikaciju.
  */
 class UpdateInstallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != UPDATE_INSTALL_ACTION) return
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-        if (status != PackageInstaller.STATUS_PENDING_USER_ACTION) return
+        if (status != PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            if (status != PackageInstaller.STATUS_SUCCESS) UpdateInstallFailures.report(updateInstallFailureText(status))
+            return
+        }
         val confirm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
         } else {

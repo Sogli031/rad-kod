@@ -9,6 +9,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.delay
+import com.rad.shifttracker.azuriranje.UpdateInstallFailure
+import com.rad.shifttracker.azuriranje.UpdateInstallFailures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +47,9 @@ internal const val UPDATE_PERMISSION_TEXT =
     "Dozvoli „Instaliraj nepoznate aplikacije“ za Rad u podešavanjima koja su se otvorila, " +
         "pa se vrati nazad; preuzimanje kreće samo."
 
+internal const val UPDATE_INSTALLING_TEXT = "Instaliram... aplikacija će se zatvoriti, pa je otvori ponovo."
+private const val UPDATE_INSTALL_TIMEOUT_MS = 90_000L
+
 internal fun updatePromptTitle(update: AvailableUpdate): String = "Stigla je verzija ${update.version}"
 
 /**
@@ -73,11 +80,33 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
     var message by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     // Posle dozvole „Instaliraj nepoznate aplikacije“ preuzimanje kreće samo kad se korisnik vrati.
     var waitingForPermission by remember { mutableStateOf(false) }
+    // APK je kod sistema: dugmad su zaključana dok se aplikacija ne zameni (proces se tada ugasi)
+    // ili sistem ne javi neuspeh / otkazivanje.
+    var installing by remember { mutableStateOf(false) }
+    val busy = progress != null || installing
+
+    val failure by UpdateInstallFailures.events.collectAsState()
+    // Neuspeh iz ranijeg pokušaja se ne računa; prati se samo onaj posle ovog predavanja sistemu.
+    var failureBeforeInstall by remember { mutableStateOf<UpdateInstallFailure?>(null) }
+    LaunchedEffect(failure) {
+        val current = failure
+        if (installing && current != null && current !== failureBeforeInstall) {
+            installing = false
+            message = current.message to true
+        }
+    }
+    LaunchedEffect(installing) {
+        if (!installing) return@LaunchedEffect
+        // Ako sistem ne javi ništa (npr. prozor za potvrdu je samo sklonjen), dugme se vraća.
+        delay(UPDATE_INSTALL_TIMEOUT_MS)
+        installing = false
+    }
 
     val startInstall: () -> Unit = {
-        if (progress == null) {
+        if (!busy) {
             progress = 0
             message = null
+            failureBeforeInstall = UpdateInstallFailures.events.value
             scope.launch {
                 val result = withContext(Dispatchers.IO) {
                     downloadAndInstallUpdate(context, update) { percent ->
@@ -85,6 +114,7 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
                     }
                 }
                 progress = null
+                installing = result == UpdateInstallResult.Started
                 waitingForPermission = result == UpdateInstallResult.NeedsPermission
                 message = when (result) {
                     UpdateInstallResult.Started -> null
@@ -102,7 +132,7 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
         onPauseOrDispose { }
     }
 
-    PopupDialog(title = updatePromptTitle(update), onDismiss = { if (progress == null) onDismiss() }, scrollable = true) {
+    PopupDialog(title = updatePromptTitle(update), onDismiss = { if (!busy) onDismiss() }, scrollable = true) {
         PopupCard {
             Text(
                 text = "Sada imaš ${BuildConfig.VERSION_NAME}. Podaci ostaju, ažuriranje samo menja aplikaciju.",
@@ -116,39 +146,66 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            progress?.let { percent ->
-                Text(
-                    text = "Preuzimam... $percent%",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth())
-            }
-            message?.let { (text, isError) ->
-                if (isError) {
-                    FormErrorText(message = text, style = MaterialTheme.typography.bodySmall)
-                } else {
-                    Text(text = text, color = MaterialTheme.extendedColors.warning, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                RoundedButton(
-                    text = UPDATE_PROMPT_LATER,
-                    modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
-                    bgColor = MaterialTheme.colorScheme.surfaceContainer,
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    onClick = { if (progress == null) onDismiss() }
-                )
-                RoundedButton(
-                    text = if (progress != null) "Preuzimam..." else UPDATE_PROMPT_CONFIRM,
-                    modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
-                    bgColor = MaterialTheme.colorScheme.primary,
-                    textColor = MaterialTheme.colorScheme.onPrimary,
-                    bold = true,
-                    onClick = startInstall
-                )
-            }
+            UpdateProgressStatus(progress = progress, installing = installing, message = message)
+            UpdatePromptButtons(
+                confirmText = when {
+                    progress != null -> "Preuzimam..."
+                    installing -> "Instaliram..."
+                    else -> UPDATE_PROMPT_CONFIRM
+                },
+                onLater = { if (!busy) onDismiss() },
+                onConfirm = startInstall
+            )
         }
+    }
+}
+
+/** Napredak preuzimanja, „Instaliram...“ dok sistem menja aplikaciju, pa poruka (greška ili upozorenje). */
+@Composable
+private fun UpdateProgressStatus(progress: Int?, installing: Boolean, message: Pair<String, Boolean>?) {
+    progress?.let { percent ->
+        Text(
+            text = "Preuzimam... $percent%",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
+        LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth())
+    }
+    if (installing) {
+        Text(
+            text = UPDATE_INSTALLING_TEXT,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall
+        )
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    }
+    message?.let { (text, isError) ->
+        if (isError) {
+            FormErrorText(message = text, style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text(text = text, color = MaterialTheme.extendedColors.warning, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun UpdatePromptButtons(confirmText: String, onLater: () -> Unit, onConfirm: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        RoundedButton(
+            text = UPDATE_PROMPT_LATER,
+            modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
+            bgColor = MaterialTheme.colorScheme.surfaceContainer,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            onClick = onLater
+        )
+        RoundedButton(
+            text = confirmText,
+            modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
+            bgColor = MaterialTheme.colorScheme.primary,
+            textColor = MaterialTheme.colorScheme.onPrimary,
+            bold = true,
+            onClick = onConfirm
+        )
     }
 }
 

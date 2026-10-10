@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.5] - 2026-10-10
+- **Ažuriranje ne izgleda kao da je zakočilo:** kad se nova verzija preuzme, prozor piše „Instaliram...“, a dugmad su zaključana dok se aplikacija ne zameni (tada se zatvori, pa se otvori ponovo). Ranije su se „Ažuriraj“ i „Kasnije“ posle preuzimanja ponovo mogli pritisnuti. Ako instalacija ne uspe ili se otkaže, prozor to napiše i „Ažuriraj“ se vraća.
+
 ## [11.4] - 2026-10-10
 - **Sati rada:** dodir na „Sati rada“ ispod kalendara otvara prozor sa obračunom plate za taj mesec (ista tabela kao u prozoru plate), kao što to već rade „Prekovremeno“, „Hrana“ i „Prevoz“.
 - U tabeli obračuna svi iznosi koji ulaze u platu su zeleni (i obični sati i naknade), ne samo dodaci.
