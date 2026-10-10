@@ -92,21 +92,13 @@ internal fun fourBrigadeFundTopUpMinutes(
     return (fundMinutes - filledMinutes).coerceAtLeast(0)
 }
 
-// Zakonski maksimum ukupnog dnevnog rada (Zakon o radu: redovan + prekovremeni
-// ne duže od 12h dnevno). Duži dan ne može biti odrada, pa je ceo višak prekovremeni.
-private const val MAX_LEGAL_DAILY_WORK_MINUTES = 12 * MINUTES_PER_HOUR
-
 /**
- * Prekovremeni po danima za trobrigadu, sa automatskom odradom kao na listiću:
- * višak preko 8h radnim danom prvo odrađuje CELE radne dane koje u tom mesecu
- * nisi radio (neradni radni dan, bez praznika i bez „iskoristi sate") — plaća se
- * kao redovan rad sa noćnim dodatkom — a prekovremeni je samo ostatak.
- * - Listić 06/2026: neradni 08, 10. i 17.06. (24h); +2h 03.06. i +3h 25.06. su
- *   režija, a 01.06. (8h + 6h = 14h, preko 12h) je 6h prekovremenog.
- * - Listić 07/2026: nema celog neradnog dana (31.07. je samo kraći dan), pa je
- *   +3h od 01.07. prekovremeno uz 3h izostanaka.
- * Sati „Za sate" se ne plaćaju (idu u saldo), pa ovde ni ne ulaze. Vikend rad
- * ostaje automatski prekovremeni, a rad na praznik nikad nije prekovremeni.
+ * Prekovremeni po danima za trobrigadu: ceo višak preko 8h radnim danom označen „Plaćeno" je
+ * prekovremeni, čak i kad u mesecu ima neradnih dana (korisnik 10.10.2026: sati se vraćaju
+ * samo kad je izabrano „Za sate"). Ranije je višak automatski prvo pokrivao cele neradne dane
+ * (odrada, po listiću 06/2026), ali 6 lista 2024–2026 ima ≥ 8h izostanaka uz plaćen prekovremeni,
+ * pa to nije pravilo firme. Sati „Za sate" se ne plaćaju (idu u saldo), pa ovde ni ne ulaze.
+ * Vikend rad ostaje automatski prekovremeni, a rad na praznik nikad nije prekovremeni.
  */
 internal fun threeBrigadeOvertimeMinutesByDay(
     sorted: List<DayRecord>,
@@ -122,8 +114,6 @@ private fun threeBrigadeOvertimeAllocation(
     sorted: List<DayRecord>,
     defaultHours: Int
 ): ThreeBrigadeOvertimeAllocation {
-    var missedDayMinutesRemaining = missedWholeWorkdayMinutes(sorted)
-    var madeUpShortageMinutes = 0
     val defaultMinutes = defaultHours * MINUTES_PER_HOUR
     val overtimeByDay = mutableMapOf<DayKey, Int>()
     for (record in sorted) {
@@ -131,30 +121,12 @@ private fun threeBrigadeOvertimeAllocation(
         if (record.weekday.isWeekend) continue
         val recordPaidMinutes = paidWorkMinuteSegments(record).sumOf { (_, minutes) -> minutes }
         val extraMinutes = recordPaidMinutes - defaultMinutes
-        if (extraMinutes <= 0) continue
-        val madeUpMinutes = if (record.totalWorkMinutes <= MAX_LEGAL_DAILY_WORK_MINUTES) {
-            min(extraMinutes, missedDayMinutesRemaining)
-        } else {
-            0
-        }
-        missedDayMinutesRemaining -= madeUpMinutes
-        madeUpShortageMinutes += madeUpMinutes
-        val overtimeMinutes = extraMinutes - madeUpMinutes
-        if (overtimeMinutes > 0) {
-            overtimeByDay[record.key] = overtimeMinutes
+        if (extraMinutes > 0) {
+            overtimeByDay[record.key] = extraMinutes
         }
     }
-    return ThreeBrigadeOvertimeAllocation(overtimeByDay, madeUpShortageMinutes)
-}
-
-/** Manjak celih neradnih radnih dana (odsustvo bez praznika i bez „iskoristi sate"). */
-private fun missedWholeWorkdayMinutes(records: List<DayRecord>): Int {
-    return records
-        .filter { record -> record.shift == Shift.OFF }
-        .sumOf { record ->
-            (record.hoursDeficitMinutesFor(BrigadeType.TROBRIGADA) - record.compHoursUsed * MINUTES_PER_HOUR)
-                .coerceAtLeast(0)
-        }
+    // Bez automatske odrade: višak „Plaćeno" ne pokriva manjak, pa je pokriveno 0.
+    return ThreeBrigadeOvertimeAllocation(overtimeByDay, madeUpShortageMinutes = 0)
 }
 
 /** Manjak meseca koji ne pokriva "iskoristi sate" (i koji zato mogu da upiju viškovi). */

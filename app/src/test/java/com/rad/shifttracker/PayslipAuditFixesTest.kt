@@ -14,22 +14,23 @@ import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.initialCompBalanceMinutesValue
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.DayRecord
+import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 
 /** Greške nađene poređenjem sa platnim listićima 05–08/2026 (provera 2026-09-22). */
 class PayslipAuditFixesTest {
     private val calculator = PayCalculator()
 
-    private fun juneWithMakeUp(): List<DayRecord> = listOf(
-        // 03.06. +2h odrađuje deo neradnog 08.06. (8h): ostaje 6h manjka.
+    private fun junePaidExtraWithOffDay(): List<DayRecord> = listOf(
+        // 03.06. +2h „Plaćeno" je prekovremeni; neradni 08.06. (8h) ostaje ceo manjak.
         DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2),
         DayRecord(2026, 6, 8, Shift.OFF, 0)
     )
 
     @Test
-    fun `odradjeni sati se ne placaju ponovo iz pozitivnog salda`() {
+    fun `placen visak je prekovremeni a manjak pokriva saldo`() {
         val summary = calculator.calculateMonthSummary(
-            records = juneWithMakeUp(),
+            records = junePaidExtraWithOffDay(),
             baseRate = 300.0,
             brigadeType = BrigadeType.TROBRIGADA,
             summaryYear = 2026,
@@ -37,39 +38,41 @@ class PayslipAuditFixesTest {
             startingCompBalanceMinutes = 10 * 60
         )
 
-        // 10h rada (2h odrade) + ostatak neradnog dana 6h iz salda = 16h. Ranije je
-        // saldo plaćao svih 8h pa su 2h odrade bile plaćene dvaput.
-        assertEquals(0, summary.overtimeHours)
-        assertEquals(16 * 300.0, summary.totalPay, 0.01)
-        assertEquals(6 * 60, summary.coveredDeficitMinutes)
+        // 8h rada + 2h prekovremenog (141%) + ceo neradni dan 8h iz salda.
+        assertEquals(2, summary.overtimeHours)
+        assertEquals(8 * 300.0 + 2 * 300.0 * 1.41 + 8 * 300.0, summary.totalPay, 0.01)
+        assertEquals(8 * 60, summary.coveredDeficitMinutes)
         assertEquals(0, summary.uncoveredDeficitMinutes)
-        assertEquals(4 * 60, summary.compTimeEndingMinutes)
+        assertEquals(2 * 60, summary.compTimeEndingMinutes)
     }
 
     @Test
-    fun `odrada bez salda ostavlja samo neodradjeni manjak`() {
+    fun `placen visak bez salda ostavlja ceo manjak`() {
         val summary = calculator.calculateMonthSummary(
-            records = juneWithMakeUp(),
+            records = junePaidExtraWithOffDay(),
             baseRate = 300.0,
             brigadeType = BrigadeType.TROBRIGADA,
             summaryYear = 2026,
             summaryMonth = 6
         )
 
-        assertEquals(10 * 300.0, summary.totalPay, 0.01)
-        assertEquals(6 * 60, summary.uncoveredDeficitMinutes)
-        assertEquals(-6 * 60, summary.compTimeEndingMinutes)
+        assertEquals(8 * 300.0 + 2 * 300.0 * 1.41, summary.totalPay, 0.01)
+        assertEquals(8 * 60, summary.uncoveredDeficitMinutes)
+        assertEquals(-8 * 60, summary.compTimeEndingMinutes)
     }
 
     @Test
-    fun `saldo narednog meseca pamti odradjene sate`() {
+    fun `za sate vraca sate a placeno ne`() {
         val repo = testRepository()
         repo.initialCompBalanceMinutesValue = 10 * 60
         repo.set(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2)
         repo.set(2026, 6, 8, Shift.OFF, 0)
 
+        assertEquals(2 * 60, repo.getSummary(2026, 6).compTimeEndingMinutes)
+        assertEquals(2 * 60, repo.getSummary(2026, 7).compTimeStartingMinutes)
+
+        repo.set(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2, overtimeType = OvertimeType.COMP_TIME)
         assertEquals(4 * 60, repo.getSummary(2026, 6).compTimeEndingMinutes)
-        assertEquals(4 * 60, repo.getSummary(2026, 7).compTimeStartingMinutes)
     }
 
     @Test

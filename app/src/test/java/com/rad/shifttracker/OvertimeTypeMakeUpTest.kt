@@ -9,7 +9,7 @@ import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
 
-/** Automatska odrada (višak radnim danom odrađuje cele neradne dane) i vrste prekovremenog. */
+/** Vrste prekovremenog: „Plaćeno" je uvek prekovremeni, sati se vraćaju samo uz „Za sate". */
 class OvertimeTypeMakeUpTest {
     @Test
     fun `stara oznaka odrada se cita kao placeno`() {
@@ -24,9 +24,9 @@ class OvertimeTypeMakeUpTest {
     }
 
     @Test
-    fun `jun 2026 visak automatski odradjuje neradne dane kao platni listic`() {
-        // Listić 06/2026: 6h prekovremenog (01.06. 14h), +2h 03.06. i +3h 25.06. su
-        // režija sa noćnim dodatkom jer odrađuju neradne dane 08, 10. i 17.06.
+    fun `jun 2026 placen visak ne odradjuje neradne dane`() {
+        // Sati se vraćaju samo uz „Za sate": +2h 03.06. i +3h 25.06. kao „Plaćeno" su prekovremeni
+        // uz 6h od 01.06., iako mesec ima neradne dane 08, 10. i 17.06.
         val repo = testRepository()
         repo.set(2026, 6, 1, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 6)
         repo.set(2026, 6, 3, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 2)
@@ -45,9 +45,8 @@ class OvertimeTypeMakeUpTest {
 
         val details = repo.getMonthlyPayDetails(2026, 6)
 
-        assertEquals(6 * 60, details.overtimeMinutes)
-        assertEquals(138 * 60, details.regularWorkedBaseMinutes)
-        assertEquals(43 * 60, details.nightMinutes)
+        assertEquals(11 * 60, details.overtimeMinutes)
+        assertEquals(133 * 60, details.regularWorkedBaseMinutes)
     }
 
     @Test

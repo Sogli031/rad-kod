@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.7] - 2026-10-10
+- **Prekovremeno „Plaćeno“ više ne vraća sate.** Ceo višak radnim danom označen „Plaćeno“ je prekovremeni (sa uvećanjem), čak i kad u mesecu ima dana koje nisi radio. Sati se vraćaju (pokrivaju manjak) samo kad je izabrano „Za sate“. Ranije je višak „Plaćeno“ automatski prvo pokrivao cele neradne dane, ali 6 lista 2024–2026 ima 8h ili više izostanaka uz plaćen prekovremeni, pa to nije pravilo firme.
+
 ## [11.6] - 2026-10-10
 - Bez izmena u aplikaciji: verzija za proveru ažuriranja (tiha instalacija i „Instaliram...“ iz 11.5).
 

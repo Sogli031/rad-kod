@@ -1222,9 +1222,9 @@ class PayCalculatorTest {
     }
 
     @Test
-    fun `calculateMonthSummary trobrigada visak automatski odradjuje ceo neradni dan`() {
-        // 10h dan (2h viška) + kraći dan (5h) + OFF radni dan: višak odrađuje
-        // neradni dan kao na listiću 06/2026 — nema prekovremenog.
+    fun `calculateMonthSummary trobrigada placen visak ne odradjuje ceo neradni dan`() {
+        // 10h dan (2h viška „Plaćeno") + kraći dan (5h) + OFF radni dan: sati se vraćaju samo
+        // uz „Za sate", pa je višak prekovremeni, a neradni dan ostaje neplaćen.
         val records = listOf(
             DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2),
             DayRecord(2026, 6, 8, Shift.OFF, 0),
@@ -1239,9 +1239,8 @@ class PayCalculatorTest {
             summaryMonth = 6
         )
 
-        assertEquals(0, result.overtimeHours)
-        // Svih 15h se plaća kao redovan rad, bez prekovremene premije.
-        assertEquals(15 * 300.0, result.totalPay, 0.01)
+        assertEquals(2, result.overtimeHours)
+        assertEquals(8 * 300.0 + 2 * 300.0 * 1.41 + 5 * 300.0, result.totalPay, 0.01)
     }
 
     @Test
@@ -1271,8 +1270,8 @@ class PayCalculatorTest {
     }
 
     @Test
-    fun `calculateMonthSummary trobrigada odrada preko neradnog dana je prekovremeni samo za visak`() {
-        // Ceo neradni dan (8h), višak 10h u dva dana: 8h odrađuje dan, 2h ostaje prekovremeno.
+    fun `calculateMonthSummary trobrigada ceo placen visak je prekovremeni i uz neradni dan`() {
+        // Ceo neradni dan (8h) i višak 8h „Plaćeno" u dva dana: ništa se ne odrađuje, svih 8h je prekovremeno.
         val records = listOf(
             DayRecord(2026, 6, 3, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 4),
             DayRecord(2026, 6, 4, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 4),
@@ -1288,8 +1287,8 @@ class PayCalculatorTest {
             summaryMonth = 6
         )
 
-        assertEquals(0, result.overtimeHours)
-        assertEquals(29 * 300.0, result.totalPay, 0.01)
+        assertEquals(8, result.overtimeHours)
+        assertEquals(2 * (8 * 300.0 + 4 * 300.0 * 1.41) + 5 * 300.0, result.totalPay, 0.01)
 
         val moreExtra = calculator.calculateMonthSummary(
             records = records + DayRecord(2026, 6, 9, Shift.FIRST, 8, shift2 = Shift.SECOND, hours2 = 2),
@@ -1298,7 +1297,7 @@ class PayCalculatorTest {
             summaryYear = 2026,
             summaryMonth = 6
         )
-        assertEquals(2, moreExtra.overtimeHours)
+        assertEquals(10, moreExtra.overtimeHours)
     }
 
     @Test
@@ -1381,10 +1380,10 @@ class PayCalculatorTest {
     }
 
     @Test
-    fun `calculateMonthSummary trobrigada jun 2026 daje 6h prekovremenog kao platni listic`() {
-        // Regresija sa zvaničnog listića 06/2026: dupla smena 14h je plaćeni
-        // prekovremeni (6h), a viškovi 2h i 3h automatski odrađuju neradne dane
-        // 08, 10. i 17.06. uz noćni dodatak — noćni ukupno 43h.
+    fun `calculateMonthSummary trobrigada jun 2026 daje 6h prekovremenog kad su visak 03 i 25 za sate`() {
+        // Listić 06/2026 ima 6h prekovremenog (01.06. 14h). Firma je viškove 2h (03.06.) i
+        // 3h (25.06.) vratila u sate, pa u aplikaciji ti dani idu kao „Za sate"; sa „Plaćeno"
+        // je svih 11h prekovremeno (sati se vraćaju samo uz „Za sate").
         val records = listOf(
             DayRecord(2026, 6, 1, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 6),
             DayRecord(2026, 6, 2, Shift.SECOND, 8),
@@ -1410,27 +1409,30 @@ class PayCalculatorTest {
             DayRecord(2026, 6, 30, Shift.FIRST, 5)
         )
 
-        val result = calculator.calculateMonthSummary(
+        val allPaid = calculator.calculateMonthSummary(
             records = records,
             baseRate = 300.0,
             brigadeType = BrigadeType.TROBRIGADA,
             summaryYear = 2026,
             summaryMonth = 6
         )
+        assertEquals(144, allPaid.workHours)
+        assertEquals(11, allPaid.overtimeHours)
 
-        assertEquals(144, result.workHours)
-        assertEquals(6, result.overtimeHours)
-        assertEquals(43, result.nightHours)
-
-        // Isti mesec bez celih neradnih dana: nema šta da se odradi, svih 11h je prekovremeno.
-        val allPaid = calculator.calculateMonthSummary(
-            records = records.filterNot { record -> record.shift == Shift.OFF },
+        val withCompTime = calculator.calculateMonthSummary(
+            records = records.map { record ->
+                if (record.day == 3 || record.day == 25) {
+                    DayRecord(2026, 6, record.day, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = record.workHours2, overtimeType = OvertimeType.COMP_TIME)
+                } else {
+                    record
+                }
+            },
             baseRate = 300.0,
             brigadeType = BrigadeType.TROBRIGADA,
             summaryYear = 2026,
             summaryMonth = 6
         )
-        assertEquals(11, allPaid.overtimeHours)
+        assertEquals(6, withCompTime.overtimeHours)
     }
 
     @Test
