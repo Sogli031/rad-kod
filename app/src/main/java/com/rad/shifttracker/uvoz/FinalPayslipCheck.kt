@@ -6,6 +6,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.getSavedPayslip
+import com.rad.shifttracker.repo.getLatestSavedPayslipMonth
 import com.rad.shifttracker.repo.isPayslipDeleted
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.monthYearText
@@ -39,6 +40,19 @@ internal fun finalPayslipCheckMonth(repo: ShiftRepository, today: LocalDate): Mo
     val previous = YearMonth.from(today).minusMonths(1)
     val month = MonthKey(previous.year, previous.monthValue)
     return month.takeIf { repo.getSavedPayslip(it.year, it.month) == null && !repo.isPayslipDeleted(it) }
+}
+
+/**
+ * Meseci čije liste treba potražiti pri ulasku, od starijeg: [finalPayslipCheckMonth] i mesec pre njega
+ * ako je propušten (aplikacija nije otvarana od 15. do kraja meseca, pa 1.–14. sledećeg ne traži ništa).
+ * Propušten mesec se traži samo kad već postoji starija sačuvana lista, da se ne pretražuje unazad bez kraja.
+ */
+internal fun finalPayslipCheckMonths(repo: ShiftRepository, today: LocalDate): List<MonthKey> {
+    val beforePrevious = YearMonth.from(today).minusMonths(2)
+    val missed = MonthKey(beforePrevious.year, beforePrevious.monthValue)
+    val newestSaved = repo.getLatestSavedPayslipMonth()
+    val missedMonth = missed.takeIf { newestSaved != null && newestSaved < it && !repo.isPayslipDeleted(it) }
+    return listOfNotNull(missedMonth, finalPayslipCheckMonth(repo, today))
 }
 
 /** Poruka o stigloj listi sa svakom izmenom podešavanja (staro → novo), ili „Bez izmena“. */
@@ -85,13 +99,15 @@ internal fun runFinalPayslipCheckOnEntry(context: Context, repo: ShiftRepository
         }
         Log.i(SIDE_RUN_LOG_TAG, "ponovo pročitano ${found?.size ?: "0 (nema pristupa)"} od ${refreshMonths.size} lista")
     }
-    val month = finalPayslipCheckMonth(repo, today) ?: return
+    val months = finalPayslipCheckMonths(repo, today).ifEmpty { return }
     if (now - prefs.getLong(KEY_LAST_CHECK_MILLIS, 0L) < FINAL_PAYSLIP_CHECK_INTERVAL_MS) return
     prefs.edit().putLong(KEY_LAST_CHECK_MILLIS, now).apply()
 
-    val (found, gmail) = findFinalPayslip(context, month)
-    Log.i(SIDE_RUN_LOG_TAG, "konačna ${monthYearText(month)}: ${if (found != null) "nađena" else "nema"} ($gmail)")
-    found?.let { applyArrivedFinalPayslip(repo, it, month) }?.let(SideRunMessages::post)
+    for (month in months) {
+        val (found, gmail) = findFinalPayslip(context, month)
+        Log.i(SIDE_RUN_LOG_TAG, "konačna ${monthYearText(month)}: ${if (found != null) "nađena" else "nema"} ($gmail)")
+        found?.let { applyArrivedFinalPayslip(repo, it, month) }?.let(SideRunMessages::post)
+    }
 }
 
 /** Lista za [month] iz Gmail-a, a iz foldera samo kad Gmail ne radi; uz nju i ishod Gmail pretrage. */

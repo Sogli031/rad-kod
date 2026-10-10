@@ -82,7 +82,9 @@ class ShiftRepository(
         getCompBalanceAtMonthStartUnsafe = compBalanceCalculator::hoursAtMonthStart,
         getCompBalanceMinutesAtMonthStartUnsafe = compBalanceCalculator::minutesAtMonthStart,
         calculateYearsOfServiceUnsafe = ::calculateYearsOfServiceUnsafe,
-        percentDeductionsForMonthUnsafe = { month -> percentDeductionsForMonth(month, savedPayslipsUnsafe()) }
+        percentDeductionsForMonthUnsafe = { month -> percentDeductionsForMonth(month, savedPayslipsUnsafe()) },
+        savedPayslipUnsafe = { month -> savedPayslipUnsafe(month) },
+        savedPayslipsUnsafe = { savedPayslipsUnsafe() }
     )
     internal val absenceSimulator = RepositoryAbsenceSimulator(
         config = config,

@@ -23,11 +23,11 @@ import com.rad.shifttracker.obracun.calculateMonthlyNetPayBreakdown
 import com.rad.shifttracker.obracun.calculateMonthlyReceipt
 import com.rad.shifttracker.obracun.calculateRecentNetPayAverage
 import com.rad.shifttracker.obracun.calculateTransportEligibleDays
-import com.rad.shifttracker.obracun.grossHourlyRateForMonth
 import com.rad.shifttracker.obracun.previousMonthKey
 import com.rad.shifttracker.obracun.recentNetPayAverageMonthKeys
 import com.rad.shifttracker.obracun.resolveHourlyValueForMonth
 import java.time.LocalDate
+import com.rad.shifttracker.listici.ParsedPayslip
 
 internal class RepositoryPayQueries(
     private val config: AppConfig,
@@ -36,7 +36,10 @@ internal class RepositoryPayQueries(
     private val getCompBalanceAtMonthStartUnsafe: (Int, Int) -> Int,
     private val getCompBalanceMinutesAtMonthStartUnsafe: (Int, Int) -> Int,
     private val calculateYearsOfServiceUnsafe: (Int, Int) -> Int,
-    private val percentDeductionsForMonthUnsafe: (MonthKey) -> PercentDeductions?
+    private val percentDeductionsForMonthUnsafe: (MonthKey) -> PercentDeductions?,
+    /** Sačuvana lista meseca: njen koeficijent, vrednost sata i olakšica važe za taj mesec. */
+    private val savedPayslipUnsafe: (MonthKey) -> ParsedPayslip? = { null },
+    private val savedPayslipsUnsafe: () -> List<ParsedPayslip> = { emptyList() }
 ) {
     private val payBaseResolver = RepositoryPayBaseResolver(
         config = config,
@@ -95,13 +98,40 @@ internal class RepositoryPayQueries(
         }
     }
 
+    /**
+     * Bruto satnica meseca. Mesec sa sačuvanom listom koristi koeficijent i vrednost sata sa nje, pa
+     * kasnija promena koeficijenta (napredovanje) ne menja obračun starijih meseci.
+     */
     fun grossHourlyRateUnsafe(year: Int, month: Int): Double {
-        return grossHourlyRateForMonth(payState.payCoefficient, year, month, payState.hourlyValueChanges)
+        val coefficient = savedPayslipUnsafe(MonthKey(year, month))?.coefficient?.toDouble()
+            ?.takeIf { it.isFinite() && it > 0.0 }
+            ?: payState.payCoefficient
+        return coefficient * hourlyValueUnsafe(year, month)
     }
 
     fun hourlyValueUnsafe(year: Int, month: Int): Double {
-        return resolveHourlyValueForMonth(year, month, payState.hourlyValueChanges).value
+        return savedPayslipUnsafe(MonthKey(year, month))?.hourlyValue?.toDouble()?.takeIf { it.isFinite() && it > 0.0 }
+            ?: resolveHourlyValueForMonth(year, month, payState.hourlyValueChanges).value
     }
+
+    /**
+     * Poreska olakšica meseca rada. Olakšica se menja od januara, a važi po datumu isplate (lista 12/2025,
+     * isplaćena u januaru, ima 34.221 kao 2026). Zato: sa liste tog meseca, inače sa najnovije liste iste
+     * godine isplate, inače iz podešavanja (najnovija lista).
+     */
+    fun taxReliefUnsafe(year: Int, month: Int): Double {
+        val key = MonthKey(year, month)
+        fun ParsedPayslip.relief() = taxReliefRsd?.toDouble()?.takeIf { it.isFinite() && it >= 0.0 }
+        savedPayslipUnsafe(key)?.relief()?.let { return it }
+        val paymentYear = payslipPaymentYear(key)
+        return savedPayslipsUnsafe()
+            .filter { payslipPaymentYear(it.month) == paymentYear }
+            .maxByOrNull { it.month }
+            ?.relief()
+            ?: payState.taxRelief
+    }
+
+    private fun payslipPaymentYear(month: MonthKey): Int = if (month.month == 12) month.year + 1 else month.year
 
     fun getPayBaseResolutionMonthForWorkMonthUnsafe(year: Int, month: Int): MonthKey {
         return payBaseResolver.payBaseResolutionMonthForWorkMonth(year, month)
@@ -200,7 +230,7 @@ internal class RepositoryPayQueries(
         summary: MonthSummary,
         grossHourlyRate: Double = grossHourlyRateUnsafe(year, month),
         contributionsPercent: Double = payState.employeeContributionsPercent,
-        taxRelief: Double = payState.taxRelief,
+        taxRelief: Double = taxReliefUnsafe(year, month),
         taxPercent: Double = payState.taxPercent,
         grossAdditions: MonthlyGrossAdditions = monthlyGrossAdditionsUnsafe(year, month),
         includeRegress: Boolean = true,

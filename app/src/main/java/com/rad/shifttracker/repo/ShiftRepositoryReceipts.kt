@@ -221,15 +221,14 @@ internal fun ShiftRepository.percentDeductionsFromSalaryUnsafe(salaryMonth: Mont
 /** Svi sačuvani listići, svaki pod svojim mesecem; oštećen ili pod tuđim mesecom se preskače. */
 internal fun ShiftRepository.savedPayslipsUnsafe(): List<ParsedPayslip> {
     parsedPayslipCache.keys.retainAll(savedPayslipJsonByMonth.keys)
-    return savedPayslipJsonByMonth.mapNotNull { (key, json) ->
-        val cached = parsedPayslipCache[key]?.takeIf { it.first == json }
-        val payslip = if (cached != null) {
-            cached.second
-        } else {
-            payslipFromJsonOrNull(json)?.takeIf { it.month == key }.also { parsedPayslipCache[key] = json to it }
-        }
-        payslip
-    }
+    return savedPayslipJsonByMonth.keys.mapNotNull { key -> savedPayslipUnsafe(key) }
+}
+
+/** Sačuvan listić meseca [month] (pročitan jednom, pa iz keša), ili null. */
+internal fun ShiftRepository.savedPayslipUnsafe(month: MonthKey): ParsedPayslip? {
+    val json = savedPayslipJsonByMonth[month] ?: return null
+    parsedPayslipCache[month]?.takeIf { it.first == json }?.let { return it.second }
+    return payslipFromJsonOrNull(json)?.takeIf { it.month == month }.also { parsedPayslipCache[month] = json to it }
 }
 
 internal fun ShiftRepository.getMonthlyFoodSpendingBreakdownUnsafe(month: MonthKey): MonthlyFoodSpendingBreakdown {
@@ -345,7 +344,7 @@ fun ShiftRepository.previewPayCoefficientNetDifference(
         monthRecords = monthRecords,
         grossHourlyRate = coefficient * hourlyValue,
         contributionsPercent = payState.employeeContributionsPercent,
-        taxRelief = payState.taxRelief,
+        taxRelief = payQueries.taxReliefUnsafe(year, month),
         taxPercent = payState.taxPercent
     ).displayPay
     previewNetPay - currentNetPay

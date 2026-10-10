@@ -282,11 +282,17 @@ class PayrollCorrectionsRegressionTest {
     }
 
     @Test
-    fun `maj 2026 koristi cenu obroka od 274 dinara pre nove cene`() {
+    fun `maj 2026 koristi cenu obroka od 280 dinara kao liste sa prekoracenjem`() {
         assertEquals(
             0,
-            BigDecimal("274.00").compareTo(
+            BigDecimal("280.00").compareTo(
                 resolveMealPriceForDate(LocalDate.of(2026, 5, 20), DEFAULT_MEAL_PRICE_PERIODS)
+            )
+        )
+        assertEquals(
+            0,
+            BigDecimal("240.00").compareTo(
+                resolveMealPriceForDate(LocalDate.of(2024, 11, 20), DEFAULT_MEAL_PRICE_PERIODS)
             )
         )
         assertEquals(
@@ -296,7 +302,7 @@ class PayrollCorrectionsRegressionTest {
             )
         )
 
-        // 20 priznatih obroka × 274,00 = 5.480,00 neto sa listića 05/2026.
+        // 20 priznatih obroka × 280,00 = 5.600,00; lista 05/2026 ima 5.480 jer je toliko pojedeno.
         val records = (1..20).map { day -> DayRecord(2026, 5, day, Shift.FIRST, 8) }
         val calculation = calculateMealEntitlementForAccountingMonth(
             records = records,
@@ -304,7 +310,7 @@ class PayrollCorrectionsRegressionTest {
             pricePeriods = DEFAULT_MEAL_PRICE_PERIODS
         )
         assertEquals(20, calculation.recognizedMealCount)
-        assertEquals(0, BigDecimal("5480.00").compareTo(calculation.mealEntitlementNet))
+        assertEquals(0, BigDecimal("5600.00").compareTo(calculation.mealEntitlementNet))
     }
 
     private fun junePaidAndCompTimeRecords(): List<DayRecord> {

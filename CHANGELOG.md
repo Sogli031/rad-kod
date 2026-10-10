@@ -4,7 +4,14 @@ Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
 ## [10.7] - 2026-10-10
-- **Povreda na radu 100% pri popuni po listi:** bolovanje bez procenta na listi (50 „Bolovanje-Povreda na radu“) upisuje se kao 100%, ne 65%. Lista popunjava „% RADA“ samo kad stavka nije 100% (40 Bolovanje: 65), pa se procenat i dalje uzima sa liste kad postoji. Lista 06/2025: 6.499 umesto 4.224 RSD bruto.
+Sitnice iz provere obračuna na svim listama 2023–2026:
+- **Povreda na radu 100% pri popuni po listi:** bolovanje bez procenta na listi (50 „Bolovanje-Povreda na radu“) upisuje se kao 100%, a ne 65%. Lista popunjava „% RADA“ samo kad stavka nije 100% (kod 40 Bolovanje stoji 65), pa se procenat i dalje uzima sa liste kad postoji. Lista 06/2025: 6.499 umesto 4.224 RSD bruto.
+- **Stariji meseci po svojoj listi:** mesec sa sačuvanom listom koristi koeficijent i vrednost sata sa nje, pa napredovanje ne menja obračun ranijih meseci. Poreska olakšica važi po godini isplate: 2025. se računa sa 28.423, a ne sa 34.221.
+- **Osnovica sa svake liste:** uvoz iz Gmail-a („Proveri sve po listama“) upisuje osnovicu za GO, praznik i bolovanje sa svake liste, ne samo sa najnovije. Stariji meseci više ne pozajmljuju najnoviju osnovicu (954,24 i za 2025). U pregledu izmena i dalje se pokazuje samo najnovija.
+- **Cena toplog obroka:** podrazumevano 240 do 2024, a 280 od 01/2025. Ranije je za 01–05/2026 stajalo pogrešnih 274, izvedenih iz liste 05/2026 na kojoj je 5.480 pojedeno, a ne iznos koji pripada. Na postojećim instalacijama se ta stara vrednost uklanja.
+- **Propuštena konačna lista:** ako aplikacija nije otvarana od 15. do kraja meseca, lista za taj mesec se potraži i sledećeg meseca (ako već postoji starija sačuvana lista).
+- **Raspored smena posle promene brigade:** kad se auto-popunjeni dani ne slažu svi sa istim rasporedom (npr. „Popuni“ ponovo posle prelaska u drugu brigadu), važi raspored iz poslednjih 8 nedelja. „Popuni iz liste“ više ne javlja „Nije prepoznat tvoj raspored“.
+- **Sati prekovremenog (četvorobrigada):** minuti se sabiraju pa se tek onda pretvaraju u sate. Kartica na početnom ekranu ponekad je pokazivala sat manje nego detalji plate.
 
 ## [10.6] - 2026-10-10
 - **Stara lista više ne kvari tekuće mesece:** ručno učitana lista iz 2024. (vrednost sata 195) je spuštala i 2025. i 2026. na 195 (oktobarska plata 65.198 → 52.628 RSD). Vrednost sata sada ima ugrađenu istoriju sa lista (185 do 2023, 195 u 2024, 214,50 u 2025, 226 od 2026), a vrednost sa liste važi samo do sledeće poznate promene.

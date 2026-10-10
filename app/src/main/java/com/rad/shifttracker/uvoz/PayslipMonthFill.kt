@@ -25,6 +25,7 @@ import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.listici.FillDiagnostics
 import com.rad.shifttracker.listici.FillHints
 import com.rad.shifttracker.listici.ParsedPayslip
+import com.rad.shifttracker.listici.PayslipItem
 import com.rad.shifttracker.listici.isSickLeave
 import com.rad.shifttracker.listici.runPayslipSafely
 import com.rad.shifttracker.listici.solveMonthFill
@@ -244,10 +245,7 @@ internal fun fillTargetsFrom(payslip: ParsedPayslip): FillTargets? {
     for (sick in items.values.filter { it.isSickLeave() }) {
         val sickHours = wholeHours(sick.hours)?.takeIf { it % DAY_HOURS == 0 } ?: return null
         if (sickHours > 0) {
-            // Lista popunjava „% RADA“ samo kad nije 100% (40 Bolovanje: 65); stavka bez procenta je pun
-            // iznos — 50 „Bolovanje-Povreda na radu“ (06/2025) je 100%, kao 10 i 11.
-            val rate = sick.percent?.toDouble()?.div(100.0) ?: 1.0
-            blocks += FillLeaveBlock(FillDayKind.SICK, sickHours / DAY_HOURS, rate)
+            blocks += FillLeaveBlock(FillDayKind.SICK, sickHours / DAY_HOURS, sickLeaveRate(sick))
         }
     }
     val holidayWork = wholeHours((items[5] ?: items[23])?.hours) ?: return null
@@ -310,6 +308,12 @@ private fun verifyMonthFill(
 }
 
 /** Upisuje raspored; dani meseca koji nisu u rasporedu brišu se (bez brisanja celog meseca). */
+/**
+ * Lista popunjava „% RADA“ samo kad stavka nije 100% (40 Bolovanje: 65); stavka bez procenta je pun
+ * iznos — 50 „Bolovanje-Povreda na radu“ (06/2025) je 100%, kao 10 i 11.
+ */
+private fun sickLeaveRate(item: PayslipItem): Double = item.percent?.toDouble()?.div(100.0) ?: 1.0
+
 internal fun applyMonthFill(repo: ShiftRepository, result: MonthFillResult.Success) {
     replaceMonth(repo, result.month, result.days, result.absenceRoundingGross)
 }

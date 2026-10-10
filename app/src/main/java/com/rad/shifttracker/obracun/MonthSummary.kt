@@ -8,6 +8,7 @@ data class MonthSummary(
     var workHours: Int = 0,
     var workMinutes: Int = 0,
     var overtimeHours: Int = 0,
+    var overtimeMinutes: Int = 0,
     var sickHours: Int = 0,
     var paidLeaveHours: Int = 0,
     var paidLeaveMinutes: Int = 0,

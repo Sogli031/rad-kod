@@ -57,11 +57,20 @@ data class MealPricePeriod(
  * kao periodi i mogu da zamene iznos od prvog dana izabranog meseca.
  */
 val DEFAULT_MEAL_PRICE_PERIODS: List<MealPricePeriod> = listOf(
-    // Cena do 31.05.2026 sa listića 05/2026: 5.480,00 neto / 20 priznatih obroka.
-    MealPricePeriod(LocalDate.of(2026, 1, 1), BigDecimal("274.00")),
+    // Cene sa lista sa prekoračenjem (samo tu je neto TO2 = obroci × cena): 240,00 na listama
+    // 09/2023–12/2024, 280,00 na listama 09/2025–02/2026. I 01–04/2025 je bilo 280: pojedeno je više od
+    // 240 × dana rada (01/2025: 4.625 za 19 dana), a lista ništa nije skinula.
+    MealPricePeriod(LocalDate.of(2023, 1, 1), BigDecimal("240.00")),
+    MealPricePeriod(LocalDate.of(2025, 1, 1), BigDecimal("280.00")),
     MealPricePeriod(LocalDate.of(2026, 6, 1), BigDecimal("240.00")),
     MealPricePeriod(LocalDate.of(2026, 7, 1), BigDecimal("280.00"))
 )
+
+/**
+ * Ugrađena cena 274,00 od 01/2026 (do 10.6) bila je pogrešno izvedena iz liste 05/2026 bez prekoračenja
+ * (5.480 je pojedeno, ne pripada); postojeće instalacije su je sačuvale, pa se pri učitavanju uklanja.
+ */
+internal val WRONG_DEFAULT_MEAL_PRICE: Pair<MonthKey, Double> = MonthKey(2026, 1) to 274.0
 
 data class RecognizedMealDecision(
     val accountingDate: LocalDate,

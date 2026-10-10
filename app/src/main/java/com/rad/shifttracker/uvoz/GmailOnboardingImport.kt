@@ -204,14 +204,14 @@ internal data class SettingDifference(val label: String, val oldText: String, va
 internal fun applyOnboardingPayslips(repo: ShiftRepository, payslips: List<ParsedPayslip>): PayslipImportPlan? {
     if (payslips.isEmpty()) return null
     val built = buildPayslipImportPlan(repo, payslips, failures = emptyList(), includeGlobalSettings = true)
-    // Važi samo najnovija osnovica; starije ne utiču ni na šta, pa se ne upisuju.
+    // Osnovica se upisuje sa svake liste: inače stariji meseci pozajme najnoviju (954,24 i za 2025).
+    // Tekuće mesece i dalje određuje najnovija, pa se u pregledu izmena pokazuje samo ona.
+    applyPayslipChanges(repo, built.changes)
+    built.payslips.forEach { repo.savePayslip(it) }
     val newestBase = built.payslips.lastOrNull { payslipPayBaseAnchor(it) != null }?.month
-    val plan = built.copy(
+    return built.copy(
         changes = built.changes.filter { it.kind != PayslipChangeKind.PAY_BASE || it.month == newestBase }
     )
-    applyPayslipChanges(repo, plan.changes)
-    plan.payslips.forEach { repo.savePayslip(it, withPayBase = it.month == newestBase) }
-    return plan
 }
 
 /**

@@ -17,6 +17,7 @@ import com.rad.shifttracker.uvoz.mealPriceFindings
 import com.rad.shifttracker.uvoz.mealPricesFromPayslips
 import com.rad.shifttracker.uvoz.mealPriceSourceFor
 import com.rad.shifttracker.repo.savePayslip
+import com.rad.shifttracker.repo.foodPerDayValue
 import com.rad.shifttracker.listici.parsePayslip
 import com.rad.shifttracker.listici.shouldReplaceLastPayslip
 import com.rad.shifttracker.obracun.PayBaseSelectionMode
@@ -191,7 +192,8 @@ class PayslipImportTest {
 
     @Test
     fun importWritesMealPriceForTheWholePeriod() {
-        val repo = testRepository()
+        // Jedna ručna cena za sve mesece, pa obe cene sa lista moraju da se upišu.
+        val repo = testRepository().apply { foodPerDayValue = 300.0 }
         val plan = buildPayslipImportPlan(repo, realMealSlips(), emptyList())
         val changes = plan.changes.filter { it.kind == PayslipChangeKind.MEAL_PRICE }
         assertEquals(listOf(MonthKey(2025, 9), MonthKey(2024, 10)), changes.map { it.month })
@@ -199,7 +201,6 @@ class PayslipImportTest {
         applyPayslipChanges(repo, changes)
         assertEquals(240.0, repo.getFoodPerDayForMonth(2024, 11), 0.0)
         assertEquals(280.0, repo.getFoodPerDayForMonth(2025, 9), 0.0)
-        // Ugrađenih 274 od 01/2026 je u periodu 09/2025–02/2026, pa i januar dobija 280.
         assertEquals(280.0, repo.getFoodPerDayForMonth(2026, 1), 0.0)
         assertEquals(280.0, repo.getFoodPerDayForMonth(2026, 2), 0.0)
         assertTrue(

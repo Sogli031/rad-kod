@@ -13,6 +13,7 @@ import com.rad.shifttracker.obracun.DEFAULT_MEAL_PRICE_PERIODS
 import com.rad.shifttracker.obracun.HourlyValueChange
 import com.rad.shifttracker.obracun.KnownPayBaseAnchor
 import com.rad.shifttracker.obracun.MealPricePeriod
+import com.rad.shifttracker.obracun.WRONG_DEFAULT_MEAL_PRICE
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MAX_BASE_PAY
@@ -290,15 +291,15 @@ internal fun ShiftRepository.restoreMealPriceHistoryUnsafe(snapshot: ShiftReposi
             key.year > 0 && key.month in 1..12 && value.isFinite() && value >= 0.0
         }.mapValues { (_, value) -> value.coerceAtMost(MAX_FOOD_PER_DAY) }
     )
-    // Ugrađena istorija se dopunjuje samo tamo gde korisnik nema svoju cenu
-    // koja već pokriva taj period: postojeće instalacije su snimljene bez
-    // perioda pre 01.06.2026 (cena 274,00 sa listića 05/2026), pa bi im
-    // obračun starijih meseci koristio pogrešnu cenu. Ako korisnik ima cenu
-    // koja važi od ranijeg meseca, ona ostaje netaknuta.
+    val (wrongKey, wrongPrice) = WRONG_DEFAULT_MEAL_PRICE
+    if (payState.foodPerDayChanges[wrongKey] == wrongPrice) payState.foodPerDayChanges.remove(wrongKey)
+    // Ugrađena istorija se dopunjuje samo tamo gde sačuvana cena (korisnika ili sa lista) ne važi već od
+    // ranijeg meseca. Poredi se sa sačuvanim stanjem, ne sa upravo dopunjenim periodima, inače bi
+    // dopunjen 01/2023 „pokrio“ i 09/2025.
+    val savedKeys = payState.foodPerDayChanges.keys.toSet()
     DEFAULT_MEAL_PRICE_PERIODS.forEach { period ->
         val key = MonthKey(period.validFrom.year, period.validFrom.monthValue)
-        val coveredByUserPrice = payState.foodPerDayChanges.keys.any { it <= key }
-        if (!coveredByUserPrice) {
+        if (savedKeys.none { it <= key }) {
             payState.foodPerDayChanges[key] = period.netAmountPerMeal.toDouble()
         }
     }

@@ -17,6 +17,7 @@ import java.time.YearMonth
 private const val FOUR_BRIGADE_CYCLE_DAYS = 8
 private const val MIN_PATTERN_WORK_RECORDS = 10
 private const val MIN_PATTERN_MATCH_PERCENT = 85
+private const val RECENT_PATTERN_DAYS = 56L
 
 internal class RollingPayBaseMonthSimulator(
     private val config: AppConfig,
@@ -142,7 +143,12 @@ internal class RollingPayBaseMonthSimulator(
     }
 
     private fun findFourBrigadePattern(scheduler: ShiftScheduler): FourBrigadePattern? {
-        val recordSet = fourBrigadePatternRecordSet()
+        val primary = fourBrigadePatternRecordSet()
+        return findFourBrigadePatternIn(scheduler, primary)
+            ?: recentRecordSet(primary)?.let { findFourBrigadePatternIn(scheduler, it) }
+    }
+
+    private fun findFourBrigadePatternIn(scheduler: ShiftScheduler, recordSet: PatternRecordSet): FourBrigadePattern? {
         val records = recordSet.records
         val workRecords = records.filter { it.shift in Shift.workShifts() }
         if (workRecords.size < MIN_PATTERN_WORK_RECORDS) return null
@@ -199,7 +205,23 @@ internal class RollingPayBaseMonthSimulator(
     }
 
     private fun findShiftFillPattern(scheduler: ShiftScheduler): ShiftFillSettings? {
-        val recordSet = shiftFillPatternRecordSet()
+        val primary = shiftFillPatternRecordSet()
+        return findShiftFillPatternIn(scheduler, primary)
+            ?: recentRecordSet(primary)?.let { findShiftFillPatternIn(scheduler, it) }
+    }
+
+    /**
+     * Auto-popunjeni dani koji ne prate svi isti raspored (npr. „Popuni“ ponovo posle promene brigade):
+     * važi raspored poslednjih [RECENT_PATTERN_DAYS] dana tih zapisa, uz dozvoljena odstupanja.
+     */
+    private fun recentRecordSet(primary: PatternRecordSet): PatternRecordSet? {
+        if (primary.allowOutliers) return null
+        val last = primary.records.lastOrNull()?.date ?: return null
+        val since = last.minusDays(RECENT_PATTERN_DAYS)
+        return PatternRecordSet(records = primary.records.filter { it.date.isAfter(since) }, allowOutliers = true)
+    }
+
+    private fun findShiftFillPatternIn(scheduler: ShiftScheduler, recordSet: PatternRecordSet): ShiftFillSettings? {
         val workRecords = recordSet.records
         if (workRecords.size < MIN_PATTERN_WORK_RECORDS) return null
         var bestSettings: ShiftFillSettings? = null

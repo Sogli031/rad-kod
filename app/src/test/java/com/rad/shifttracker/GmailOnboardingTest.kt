@@ -200,13 +200,14 @@ class GmailOnboardingTest {
     }
 
     @Test
-    fun onlyNewestPayBaseIsWritten() {
+    fun everyPayBaseIsWrittenButOnlyNewestIsReported() {
         val repo = testRepository()
         val payslips = (1..8).map(::payslip)
         val bases = applyOnboardingPayslips(repo, payslips)!!.changes.filter { it.kind == PayslipChangeKind.PAY_BASE }
-        val newest = payslips.last { payslipPayBaseAnchor(it) != null }.month
-        assertEquals(listOf(newest), bases.map { it.month })
-        assertEquals(listOf(newest), repo.getKnownPayBaseAnchors().map { it.month })
+        val withBase = payslips.filter { payslipPayBaseAnchor(it) != null }.map { it.month }
+        assertEquals(listOf(withBase.last()), bases.map { it.month })
+        // Stariji meseci imaju svoju osnovicu, ne pozajmljuju najnoviju.
+        assertEquals(withBase, repo.getKnownPayBaseAnchors().map { it.month }.sorted())
     }
 
     @Test

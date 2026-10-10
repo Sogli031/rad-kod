@@ -475,8 +475,9 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         summary.workHours += record.totalHours
         summary.workMinutes += record.totalWorkMinutes
         summary.workDays += 1
-        summary.overtimeHours += monthlyOvertimeMinutes?.let { it / MINUTES_PER_HOUR }
-            ?: getOvertimeHours(record, brigadeType)
+        // Minuti se sabiraju pa dele na kraju: četvorobrigada ume da da 30 min prekovremenog u dva dana.
+        summary.overtimeMinutes += monthlyOvertimeMinutes ?: getOvertimeMinutes(record, brigadeType)
+        summary.overtimeHours = summary.overtimeMinutes / MINUTES_PER_HOUR
         summary.sundayHours += getSundayHours(record)
         summary.nightHours += getNightHours(record)
         summary.totalPay += calculateDailyPay(
