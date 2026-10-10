@@ -28,6 +28,7 @@ import com.rad.shifttracker.ui.dialozi.OvertimeNetImpactDialog
 import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
 import com.rad.shifttracker.ui.dialozi.SickVacationDialog
+import com.rad.shifttracker.ui.dialozi.TransportDialog
 import com.rad.shifttracker.ui.dialozi.VacationBalanceDialog
 
 /** Gmail pri ulasku: na prvom pokretanju posle „Popuni smene“ (tada se uvod beleži kao završen), posle ažuriranja samo provera. */
@@ -119,6 +120,7 @@ internal fun MainDialogs(
                 onDismiss = onDismiss
             )
         }
+        DialogState.Transport -> TransportDialog(repo = data.repo, onDismiss = onDismiss)
 
         DialogState.OvertimeNetImpact -> {
             OvertimeNetImpactDialog(

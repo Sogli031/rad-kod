@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.1] - 2026-10-10
+- **Prevoz:** dodir na stavku „Prevoz“ ispod kalendara otvara mali prozor kao kod „Hrane“: prevoz po danu preuzet iz obračuna prevoza. Stavka se i dalje vidi samo kad je prevoz učitan.
+- Opcije: prevoz više ne piše na dnu, a „Otežani uslovi“ se vide samo kad ih zaista ima (sa liste, šifra 21).
 ## [11.0] - 2026-10-10
 - **Prozor dana bez skoka:** pri promeni tipa dana (Radio sam, Bolovanje, Godišnji, Plaćeno odsustvo, Nisam radio) stare kontrole izblede, nove uđu, a visina lista se menja glatko. Isto važi za karticu „Prekovremeno“ i red „Razlika“.
 - Nazivi dana (PON…NED) imaju iste ivice i razmake kao mreža kalendara, pa je svaki tačno iznad sredine svoje kolone.

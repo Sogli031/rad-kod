@@ -9,7 +9,6 @@ import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.SHOW_TEST_EXPORT_ACTIONS
 import com.rad.shifttracker.ui.dialozi.difficultWorkConditionsStatusText
-import com.rad.shifttracker.ui.dialozi.transportDailyAmountStatusText
 import com.rad.shifttracker.ui.dialozi.optionsDialogActionLabels
 import com.rad.shifttracker.ui.mainPayCardAmount
 
@@ -99,15 +98,14 @@ class OptionsDialogTextTest {
         val options = mainSource("OptionsDialog.kt")
         val lista = mainSource("PayslipReaderDialog.kt")
 
-        assertTrue(options.contains("SectionLabel(text = MANUAL_PAY_SETTINGS_SECTION_LABEL)"))
+        assertTrue(options.contains("SectionLabel(text = DIFFICULT_WORK_CONDITIONS_SECTION_LABEL)"))
         // Sekcija „Odbici od plate“ (Član sindikata) je ukinuta: obustave su samo sa liste.
         assertFalse(options.contains("Odbici od plate"))
         // Otežani uslovi se više ne kucaju: upisuje ih lista (šifra 21), ovde se samo prikazuju.
         assertFalse(options.contains("repo.difficultWorkConditionsPercentValue ="))
-        assertTrue(options.contains("difficultWorkConditionsStatusText(rememberRepoValue(repo) { difficultWorkConditionsPercentValue })"))
-        // Prevoz po danu se više ne kuca: samo se prikazuje, upisuje ga obračun prevoza.
-        assertFalse(options.contains("repo.transportDailyAmountValue ="))
-        assertTrue(options.contains("transportDailyAmountStatusText(rememberRepoValue(repo) { transportDailyAmountValue })"))
+        assertTrue(options.contains("rememberRepoValue(repo) { difficultWorkConditionsPercentValue }"))
+        // Prevoz se ne vidi u Opcijama: prikazuje ga stavka „Prevoz“ ispod kalendara.
+        assertFalse(options.contains("transportDailyAmountValue"))
         assertFalse(lista.contains("difficultWorkConditionsPercentValue"))
         assertFalse(lista.contains("transportDailyAmountValue"))
     }
@@ -115,12 +113,7 @@ class OptionsDialogTextTest {
     @Test
     fun `difficult conditions status shows percent from payslip or none`() {
         assertEquals("Otežani uslovi rada: 32%", difficultWorkConditionsStatusText(32.0))
-        assertEquals("Otežani uslovi rada: nema", difficultWorkConditionsStatusText(0.0))
-    }
-
-    @Test
-    fun `transport status shows none until a transport run is read`() {
-        assertEquals("Prevoz po danu: nema", transportDailyAmountStatusText(0.0))
+        assertEquals(null, difficultWorkConditionsStatusText(0.0))
     }
 
     @Test

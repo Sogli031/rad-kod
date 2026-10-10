@@ -242,7 +242,8 @@ private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (Dia
         onOvertimeClick = { onOpenDialog(DialogState.OvertimeNetImpact) },
         onFoodClick = { onOpenDialog(DialogState.Food) },
         // Prevoz za rad u prikazanom mesecu isplaćuje se sledećeg meseca; bez dnevnog iznosa stavke nema.
-        transportAmount = ui.nextMonthReceipt.takeIf { it.transportDailyAmount > 0.0 }?.transportAmount
+        transportAmount = ui.nextMonthReceipt.takeIf { it.transportDailyAmount > 0.0 }?.transportAmount,
+        onTransportClick = { onOpenDialog(DialogState.Transport) }
     )
     Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
         SalaryCard(

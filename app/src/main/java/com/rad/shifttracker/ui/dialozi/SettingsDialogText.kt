@@ -117,8 +117,8 @@ internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL = "Prevoz po danu"
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_HINT = "Unesi iznos prevoza po radnom danu"
 
-/** Opcije: otežani uslovi (sa liste) i prevoz (iz obračuna prevoza), samo prikaz. */
-internal const val MANUAL_PAY_SETTINGS_SECTION_LABEL = "Otežani uslovi i prevoz"
+/** Opcije: otežani uslovi sa liste, samo prikaz. */
+internal const val DIFFICULT_WORK_CONDITIONS_SECTION_LABEL = "Otežani uslovi"
 internal const val DIFFICULT_WORK_CONDITIONS_STATUS_LABEL = "Otežani uslovi rada"
 
 internal fun satnicaGrossPreviewText(coefficient: Double, hourlyValue: Double): String {

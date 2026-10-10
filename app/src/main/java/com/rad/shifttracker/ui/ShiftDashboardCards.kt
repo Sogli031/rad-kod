@@ -87,7 +87,8 @@ internal fun StatsSection(
     summary: MonthSummary,
     onOvertimeClick: () -> Unit,
     onFoodClick: () -> Unit,
-    transportAmount: Double? = null
+    transportAmount: Double? = null,
+    onTransportClick: () -> Unit
 ) {
     // Vrednosti odbroje do novog meseca; font se meri po ciljnoj vrednosti.
     val workHours = rememberCountingValue(summary.workHours)
@@ -121,6 +122,7 @@ internal fun StatsSection(
                 "Prevoz",
                 formatNumber(shownTransport),
                 if (amount > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = onTransportClick,
                 measureKey = formatNumber(amount)
             )
         }
