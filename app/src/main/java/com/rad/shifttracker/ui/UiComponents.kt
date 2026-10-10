@@ -55,7 +55,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AutoSizeText
 import java.util.Locale
@@ -357,6 +359,8 @@ fun StatCard(
     }
 }
 
+private const val STAT_LABEL_LETTER_SPACING_EM = 0.055f
+
 /** Vrednost + sitna etiketa; deli se između StatCard i zajedničke kartice statistike. */
 @Composable
 fun StatColumn(
@@ -364,7 +368,8 @@ fun StatColumn(
     value: String,
     color: Color,
     modifier: Modifier = Modifier,
-    measureKey: String = value
+    measureKey: String = value,
+    labelMinFontSize: TextUnit = MaterialTheme.typography.labelSmall.fontSize
 ) {
     Column(
         modifier = modifier
@@ -386,11 +391,12 @@ fun StatColumn(
             text = label.uppercase(),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmallEmphasized.copy(
-                letterSpacing = 0.6.sp,
+                // U em, da se razmak smanjuje zajedno sa slovima (0.6sp pri 11sp).
+                letterSpacing = STAT_LABEL_LETTER_SPACING_EM.em,
                 textAlign = TextAlign.Center
             ),
             maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
+            minFontSize = labelMinFontSize,
             maxLines = 1,
             modifier = Modifier.fillMaxWidth()
         )

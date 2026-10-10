@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.8] - 2026-10-10
+- **Prevoz ispod kalendara:** pored „Sati rada“, „Prekovremeno“ i „Hrana“ stoji i četvrta, informativna stavka „Prevoz“: iznos prevoza za rad u prikazanom mesecu (dani sa najmanje 4 sata rada × prevoz po danu). Ko ima prevoz 0 po danu, i dalje vidi samo tri stavke.
+- U četiri stubca se natpis „PREKOVREMENO“ smanjuje da stane ceo, umesto da se seče (proveravano i na telefonu od 360dp sa uvećanim fontom).
+
 ## [10.7] - 2026-10-10
 Sitnice iz provere obračuna na svim listama 2023–2026:
 - **Povreda na radu 100% pri popuni po listi:** bolovanje bez procenta na listi (50 „Bolovanje-Povreda na radu“) upisuje se kao 100%, a ne 65%. Lista popunjava „% RADA“ samo kad stavka nije 100% (kod 40 Bolovanje stoji 65), pa se procenat i dalje uzima sa liste kad postoji. Lista 06/2025: 6.499 umesto 4.224 RSD bruto.

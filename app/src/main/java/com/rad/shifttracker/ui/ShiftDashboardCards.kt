@@ -78,18 +78,23 @@ internal fun totalCardLabel(year: Int, month: Int): String {
     return "Primanja u ${monthLocativeText(MonthKey(year, month))}"
 }
 
-/** Tri statistike u jednoj kartici, razdvojene tankim linijama. */
+/**
+ * Statistike u jednoj kartici, razdvojene tankim linijama. [transportAmount] je prevoz za rad u
+ * mesecu (samo informativno); `null` kad korisnik nema prevoz — tada ostaju tri stavke.
+ */
 @Composable
 internal fun StatsSection(
     summary: MonthSummary,
     onOvertimeClick: () -> Unit,
-    onFoodClick: () -> Unit
+    onFoodClick: () -> Unit,
+    transportAmount: Double? = null
 ) {
     // Vrednosti odbroje do novog meseca; font se meri po ciljnoj vrednosti.
     val workHours = rememberCountingValue(summary.workHours)
     val overtimeHours = rememberCountingValue(summary.overtimeHours)
     val foodAllowance = rememberCountingValue(summary.foodAllowance)
-    val stats = listOf(
+    val shownTransport = rememberCountingValue(transportAmount ?: 0.0)
+    val stats = listOfNotNull(
         // Samo prikaz: detalji sati su u isplati (dodir na platu).
         StatItem(
             WORK_HOURS_CARD_LABEL,
@@ -110,10 +115,18 @@ internal fun StatsSection(
             if (summary.foodAllowance > 0) MaterialTheme.extendedColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onFoodClick,
             measureKey = formatNumber(summary.foodAllowance)
-        )
+        ),
+        transportAmount?.let { amount ->
+            StatItem(
+                "Prevoz",
+                formatNumber(shownTransport),
+                if (amount > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                measureKey = formatNumber(amount)
+            )
+        }
     )
 
-    // Pri velikom fontu tri stubca ne staju: kartica se lomi po dva u redu.
+    // Pri velikom fontu stubci ne staju: kartica se lomi po dva u redu.
     val perRow = if (LocalDensity.current.fontScale > WIDE_LAYOUT_FONT_SCALE) 2 else stats.size
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -137,6 +150,8 @@ internal fun StatsSection(
                             value = stat.value,
                             color = stat.color,
                             measureKey = stat.measureKey,
+                            // U četiri stubca „PREKOVREMENO“ ne staje: etiketa se smanjuje umesto da se seče.
+                            labelMinFontSize = STAT_LABEL_MIN_SP.sp,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
@@ -148,6 +163,8 @@ internal fun StatsSection(
         }
     }
 }
+
+private const val STAT_LABEL_MIN_SP = 5
 
 /** Iznad ovog sistemskog fonta stubci (statistika, donja traka) idu u dva reda. */
 internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f

@@ -234,13 +234,15 @@ private fun ShiftCalendarPane(
     }
 }
 
-/** Statistika meseca (sati, prekovremeno, topli obrok) i kartice sa platom. */
+/** Statistika meseca (sati, prekovremeno, topli obrok, prevoz ako ga ima) i kartice sa platom. */
 @Composable
 private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (DialogState) -> Unit) {
     StatsSection(
         summary = ui.summary,
         onOvertimeClick = { onOpenDialog(DialogState.OvertimeNetImpact) },
-        onFoodClick = { onOpenDialog(DialogState.Food) }
+        onFoodClick = { onOpenDialog(DialogState.Food) },
+        // Prevoz za rad u prikazanom mesecu isplaćuje se sledećeg meseca; bez dnevnog iznosa stavke nema.
+        transportAmount = ui.nextMonthReceipt.takeIf { it.transportDailyAmount > 0.0 }?.transportAmount
     )
     Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
         SalaryCard(
