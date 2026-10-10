@@ -29,6 +29,7 @@ import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
 import com.rad.shifttracker.ui.dialozi.SickVacationDialog
 import com.rad.shifttracker.ui.dialozi.TransportDialog
+import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
 import com.rad.shifttracker.ui.dialozi.VacationBalanceDialog
 
 /** Gmail pri ulasku: na prvom pokretanju posle „Popuni smene“ (tada se uvod beleži kao završen), posle ažuriranja samo provera. */
@@ -56,6 +57,29 @@ private fun AutoFillStartDialog(state: DialogState, data: MainDialogData, onDism
         actions = data.actions,
         onDismiss = { if (onboarding) data.onDialogChange(DialogState.GmailOnboarding) else onDismiss() }
     )
+}
+
+/** Prozori stavki ispod kalendara (Sati rada, Prekovremeno, Hrana, Prevoz). */
+@Composable
+private fun MainStatDialog(state: DialogState, data: MainDialogData, onDismiss: () -> Unit) {
+    when (state) {
+        DialogState.WorkHours -> WorkHoursDialog(
+            receipt = data.salaryDetailsReceipt,
+            payDetails = data.workHoursPayDetails,
+            repo = data.repo,
+            onDismiss = onDismiss
+        )
+        DialogState.OvertimeNetImpact -> OvertimeNetImpactDialog(impact = data.overtimeNetImpact, onDismiss = onDismiss)
+        DialogState.Food -> FoodAllowanceDialog(
+            year = data.currentYear,
+            month = data.currentMonth,
+            repo = data.repo,
+            actions = data.actions,
+            onDismiss = onDismiss
+        )
+        DialogState.Transport -> TransportDialog(repo = data.repo, onDismiss = onDismiss)
+        else -> Unit
+    }
 }
 
 @Composable
@@ -111,23 +135,10 @@ internal fun MainDialogs(
         DialogState.PayDetails,
         DialogState.SalaryDetails -> MainPayrollDialog(state, data, onDismiss)
 
-        DialogState.Food -> {
-            FoodAllowanceDialog(
-                year = data.currentYear,
-                month = data.currentMonth,
-                repo = data.repo,
-                actions = data.actions,
-                onDismiss = onDismiss
-            )
-        }
-        DialogState.Transport -> TransportDialog(repo = data.repo, onDismiss = onDismiss)
-
-        DialogState.OvertimeNetImpact -> {
-            OvertimeNetImpactDialog(
-                impact = data.overtimeNetImpact,
-                onDismiss = onDismiss
-            )
-        }
+        DialogState.WorkHours,
+        DialogState.OvertimeNetImpact,
+        DialogState.Food,
+        DialogState.Transport -> MainStatDialog(state, data, onDismiss)
 
         DialogState.Minuli -> {
             MinuliRadDialog(

@@ -189,9 +189,9 @@ private fun PayDetailsSectionCard(
     }
 }
 
-/** Obračun plate meseca isplate kao tabela koja se sabira u neto platu, ispod isplate. */
+/** Obračun plate meseca isplate kao tabela koja se sabira u neto platu (ispod isplate i u prozoru „Sati rada“). */
 @Composable
-private fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
+internal fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
     val payrollMonth = monthlyReceipt.payrollMonth
     val year = payrollMonth.year
     val month = payrollMonth.month

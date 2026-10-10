@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.4] - 2026-10-10
+- **Sati rada:** dodir na „Sati rada“ ispod kalendara otvara prozor sa obračunom plate za taj mesec (ista tabela kao u prozoru plate), kao što to već rade „Prekovremeno“, „Hrana“ i „Prevoz“.
+- U tabeli obračuna svi iznosi koji ulaze u platu su zeleni (i obični sati i naknade), ne samo dodaci.
+
 ## [11.3] - 2026-10-10
 Četvorobrigada, provereno na 21 listi livnice (12/2024–08/2026):
 - **Popuni po listi radi i za četvorobrigadu.** I „Popuni iz liste“ i „Popuni sve po listama“. Ranije se dugme nudilo, ali nijedan mesec nije popunjen. Upisuje se najverovatniji raspored: smene po ciklusu iz „Popuni“, godišnji, plaćeno odsustvo i bolovanje gde najbolje odgovaraju listi, i praznik rađen ili ne. Četvorobrigada se retko slaže sa listom u sat (zamene smena, dodatna nedelja), pa razlike koje ostanu stoje u poređenju sa listom. Popunjen mesec se ne nudi ponovo. Lista 02/2026 se slaže u svim satima.

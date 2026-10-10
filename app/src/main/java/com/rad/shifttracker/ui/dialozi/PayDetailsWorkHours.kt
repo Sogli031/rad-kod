@@ -149,7 +149,8 @@ private val PayrollTone.color: Color
     @Composable
     @ReadOnlyComposable
     get() = when (this) {
-        PayrollTone.Plain -> MaterialTheme.colorScheme.onSurface
+        // Osnovna zarada (obični sati, naknade) je zelena kao i dodaci: svi iznosi koji ulaze u platu iste boje.
+        PayrollTone.Plain -> MaterialTheme.extendedColors.success
         PayrollTone.Positive -> MaterialTheme.extendedColors.success
         PayrollTone.Negative -> MaterialTheme.colorScheme.error
         PayrollTone.Muted -> MaterialTheme.colorScheme.onSurfaceVariant

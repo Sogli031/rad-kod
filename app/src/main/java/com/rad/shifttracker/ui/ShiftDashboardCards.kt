@@ -88,7 +88,8 @@ internal fun StatsSection(
     onOvertimeClick: () -> Unit,
     onFoodClick: () -> Unit,
     transportAmount: Double? = null,
-    onTransportClick: () -> Unit
+    onTransportClick: () -> Unit,
+    onWorkHoursClick: () -> Unit
 ) {
     // Vrednosti odbroje do novog meseca; font se meri po ciljnoj vrednosti.
     val workHours = rememberCountingValue(summary.workHours)
@@ -96,11 +97,12 @@ internal fun StatsSection(
     val foodAllowance = rememberCountingValue(summary.foodAllowance)
     val shownTransport = rememberCountingValue(transportAmount ?: 0.0)
     val stats = listOfNotNull(
-        // Samo prikaz: detalji sati su u isplati (dodir na platu).
+        // Dodir otvara obračun plate za ovaj mesec (ista tabela kao u prozoru plate).
         StatItem(
             WORK_HOURS_CARD_LABEL,
             formatHours(workHours),
             MaterialTheme.colorScheme.onSurface,
+            onClick = onWorkHoursClick,
             measureKey = formatHours(summary.workHours)
         ),
         StatItem(
