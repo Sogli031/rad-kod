@@ -244,7 +244,10 @@ internal fun fillTargetsFrom(payslip: ParsedPayslip): FillTargets? {
     for (sick in items.values.filter { it.isSickLeave() }) {
         val sickHours = wholeHours(sick.hours)?.takeIf { it % DAY_HOURS == 0 } ?: return null
         if (sickHours > 0) {
-            blocks += FillLeaveBlock(FillDayKind.SICK, sickHours / DAY_HOURS, sick.percent?.toDouble()?.div(100.0))
+            // Lista popunjava „% RADA“ samo kad nije 100% (40 Bolovanje: 65); stavka bez procenta je pun
+            // iznos — 50 „Bolovanje-Povreda na radu“ (06/2025) je 100%, kao 10 i 11.
+            val rate = sick.percent?.toDouble()?.div(100.0) ?: 1.0
+            blocks += FillLeaveBlock(FillDayKind.SICK, sickHours / DAY_HOURS, rate)
         }
     }
     val holidayWork = wholeHours((items[5] ?: items[23])?.hours) ?: return null
