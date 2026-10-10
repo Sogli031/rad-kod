@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -332,12 +333,17 @@ private fun RowScope.DayButton(
                 maxLines = 1
             )
             // Prvo smanji font (npr. "Praznik" u uskoj ćeliji), tek na minimumu skrati tačkicama.
+            // Dve smene su rimski brojevi („II + III“), serifni da liče na prave.
+            val romanShifts = record?.isDoubleShift == true
+            val detailStyle = MaterialTheme.typography.labelSmall
             AutoSizeText(
                 text = detailLines[0],
                 color = tint.detail,
-                style = MaterialTheme.typography.labelSmall.copy(
+                style = detailStyle.copy(
                     lineHeight = 12.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontFamily = if (romanShifts) FontFamily.Serif else detailStyle.fontFamily,
+                    letterSpacing = if (romanShifts) 0.sp else detailStyle.letterSpacing
                 ),
                 maxFontSize = CALENDAR_DETAIL_FONT_SIZE.sp,
                 minFontSize = CALENDAR_DETAIL_MIN_FONT_SIZE.sp,
@@ -442,6 +448,17 @@ internal fun calendarDayTint(
     }
 }
 
+/**
+ * Rimski broj smene. Ćelija ga crta serifnim fontom ([FontFamily.Serif]), pa I dobija crtice gore i dole
+ * kao pravi rimski broj; Unicode Ⅱ u Robotu izgleda kao obično II, a Space Grotesk ga nema.
+ */
+internal fun shiftRomanNumeral(shift: Shift): String = when (shift) {
+    Shift.FIRST -> "I"
+    Shift.SECOND -> "II"
+    Shift.THIRD -> "III"
+    else -> shift.icon
+}
+
 internal fun calendarDayDetailText(
     record: DayRecord?,
     isHolidayDay: Boolean,
@@ -463,8 +480,9 @@ internal fun calendarDayDetailText(
         }
         Shift.VACATION -> "Godišnji\nodmor"
         else -> {
+            // Dve smene rečima („Druga + Treća“) ne staju u ćeliju, pa idu rimskim brojevima: „II + III“.
             val shiftLabel = if (record.isDoubleShift && record.shift2 != null) {
-                "${record.shift.icon} + ${record.shift2.icon}"
+                "${shiftRomanNumeral(record.shift)} + ${shiftRomanNumeral(record.shift2)}"
             } else {
                 record.shift.icon
             }

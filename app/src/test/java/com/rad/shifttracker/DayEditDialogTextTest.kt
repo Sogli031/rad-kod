@@ -163,6 +163,13 @@ class DayEditDialogTextTest {
     }
 
     @Test
+    fun calendarDoubleShiftUsesRomanNumerals() {
+        val record = DayRecord(2026, 9, 7, Shift.SECOND, 8, shift2 = Shift.THIRD, hours2 = 4)
+
+        assertEquals("II + III\n12h",calendarDayDetailText(record, isHolidayDay = false, workedHoliday = false))
+    }
+
+    @Test
     fun calendarWorkedHolidayShowsOnlyShiftAndHours() {
         val record = DayRecord(2026, 5, 1, Shift.FIRST, 8)
 

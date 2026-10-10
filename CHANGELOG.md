@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.2] - 2026-10-10
+- **Dve smene u kalendaru rimskim brojevima:** umesto „Druga + Treća“, koje se seklo („Druga …“), u ćeliji piše „II + III“, serifnim slovima kao pravi rimski brojevi. Jedna smena i dalje piše rečju („Druga“).
+
 ## [11.1] - 2026-10-10
 - **Prevoz:** dodir na stavku „Prevoz“ ispod kalendara otvara mali prozor kao kod „Hrane“: prevoz po danu preuzet iz obračuna prevoza. Stavka se i dalje vidi samo kad je prevoz učitan.
 - Opcije: prevoz više ne piše na dnu, a „Otežani uslovi“ se vide samo kad ih zaista ima (sa liste, šifra 21).
