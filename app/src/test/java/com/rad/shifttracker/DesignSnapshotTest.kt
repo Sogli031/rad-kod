@@ -245,7 +245,8 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
             StatsSection(
                 summary = summary,
                 onOvertimeClick = {},
-                onFoodClick = {}
+                onFoodClick = {},
+                transportAmount = nextMonthReceipt.takeIf { it.transportDailyAmount > 0.0 }?.transportAmount
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
                 SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, onClick = {})
