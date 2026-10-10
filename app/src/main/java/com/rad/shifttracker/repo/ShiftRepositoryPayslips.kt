@@ -53,7 +53,10 @@ internal fun ShiftRepository.savePayslip(payslip: ParsedPayslip, withPayBase: Bo
     val json = payslipToJson(payslip)
     val changed = synchronized(lock) {
         deletedPayslipTombstones.remove(payslip.month)
-        savedPayslipJsonByMonth.put(payslip.month, json) != json
+        (savedPayslipJsonByMonth.put(payslip.month, json) != json).also { changed ->
+            // Mesec povećanja staža za minuli rad se čita sa sačuvanih lista.
+            if (changed) payState.invalidateSummariesAndRolling()
+        }
     }
     val anchor = payslipPayBaseAnchor(payslip)?.takeIf { withPayBase }
     if (anchor != null && getKnownPayBaseAnchors().none { it.month == anchor.month }) {
@@ -74,6 +77,7 @@ internal fun ShiftRepository.deletePayslip(month: MonthKey) {
             if (wasRemoved) {
                 deletedPayslipTombstones.add(month)
                 payslipVacationDaysCache.remove(month)
+                payState.invalidateSummariesAndRolling()
             }
         }
     }

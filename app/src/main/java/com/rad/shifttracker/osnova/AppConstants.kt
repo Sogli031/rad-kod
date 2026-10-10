@@ -85,3 +85,9 @@ const val DEFAULT_PAY_COEFFICIENT = 2.82
 const val HOURLY_VALUE_FROM_JANUARY_2026 = 226.0
 
 const val HOURLY_VALUE_BEFORE_JANUARY_2026 = 214.5
+
+/** Vrednost sata 2024. (liste 01–12/2024). */
+const val HOURLY_VALUE_2024 = 195.0
+
+/** Vrednost sata do kraja 2023. (liste 07–12/2023). */
+const val HOURLY_VALUE_BEFORE_2024 = 185.0

@@ -4,6 +4,8 @@ import java.util.Locale
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatMoney2
 import com.rad.shifttracker.osnova.HOURLY_VALUE_BEFORE_JANUARY_2026
+import com.rad.shifttracker.osnova.HOURLY_VALUE_2024
+import com.rad.shifttracker.osnova.HOURLY_VALUE_BEFORE_2024
 import com.rad.shifttracker.osnova.HOURLY_VALUE_FROM_JANUARY_2026
 import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.obracun.MonthlyReceipt
@@ -82,9 +84,9 @@ internal fun payDetailsTotalLabel(receipt: MonthlyReceipt): String {
 }
 
 internal fun defaultHourlyHistoryInfoText(): String {
-    return "Fiksno: pre januara 2026. koristi se ${formatHourlyValue(HOURLY_VALUE_BEFORE_JANUARY_2026)} " +
-        "${CONFIG.pay.currency}, od januara 2026. koristi se " +
-        "${formatHourlyValue(HOURLY_VALUE_FROM_JANUARY_2026)} ${CONFIG.pay.currency}."
+    return "Fiksno: do 2023. koristi se ${formatHourlyValue(HOURLY_VALUE_BEFORE_2024)}, " +
+        "2024. ${formatHourlyValue(HOURLY_VALUE_2024)}, 2025. ${formatHourlyValue(HOURLY_VALUE_BEFORE_JANUARY_2026)}, " +
+        "od januara 2026. ${formatHourlyValue(HOURLY_VALUE_FROM_JANUARY_2026)} ${CONFIG.pay.currency}."
 }
 
 internal fun moneyText(value: Double): String {

@@ -12,6 +12,8 @@ import com.rad.shifttracker.obracun.calculateKnownStartSeniorityPreview
 import com.rad.shifttracker.obracun.calculatePayslipAnchoredSeniorityYears
 import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.godisnji.PayslipSeniorityPoint
+import com.rad.shifttracker.godisnji.seniorityAnniversaryMonth
 
 var ShiftRepository.initialCompBalanceValue: Int
     get() = synchronized(lock) { payState.initialCompBalance }
@@ -57,7 +59,10 @@ internal fun ShiftRepository.calculateYearsOfServiceUnsafe(year: Int, month: Int
             targetYear = year,
             targetMonth = month,
             increaseFactor = payState.minuliRadIncreaseFactor,
-            ratePerYear = config.pay.minuliRadPerYear
+            ratePerYear = config.pay.minuliRadPerYear,
+            anniversaryMonth = seniorityAnniversaryMonth(
+                savedPayslipsUnsafe().mapNotNull { slip -> slip.seniorityYears?.let { PayslipSeniorityPoint(slip.month, it) } }
+            )
         )
     }
 }

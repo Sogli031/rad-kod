@@ -92,6 +92,12 @@ fun estimateSeniorityFromPayslipPercent(
     )
 }
 
+/**
+ * Staž za minuli rad u mesecu [targetYear]/[targetMonth] od procenta sa poslednje liste.
+ * [anniversaryMonth] = mesec u kom liste povećavaju staž (Valjaonica: januar — 01/2024, 01/2025 i
+ * 01/2026 su po godinu više nego decembar pre njih); tada se godina dodaje/oduzima za svaki takav
+ * mesec između liste i ciljnog meseca. Bez njega (ili uz uvećanje staža) staž raste 12 meseci posle liste.
+ */
 internal fun calculatePayslipAnchoredSeniorityYears(
     lastPayslipYear: Int,
     lastPayslipMonth: Int,
@@ -99,7 +105,8 @@ internal fun calculatePayslipAnchoredSeniorityYears(
     targetYear: Int,
     targetMonth: Int,
     increaseFactor: SeniorityIncreaseFactor,
-    ratePerYear: Double
+    ratePerYear: Double,
+    anniversaryMonth: Int? = null
 ): Int {
     if (lastPayslipYear <= 0) return 0
     val estimate = estimateSeniorityFromPayslipPercent(
@@ -108,6 +115,14 @@ internal fun calculatePayslipAnchoredSeniorityYears(
         increaseFactor = increaseFactor,
         ratePerYear = ratePerYear
     )
+    if (anniversaryMonth != null && anniversaryMonth in 1..12 && increaseFactor == SeniorityIncreaseFactor.NONE) {
+        val anchor = lastPayslipYear * MONTHS_PER_YEAR + (lastPayslipMonth.coerceIn(1, 12) - 1)
+        val target = targetYear * MONTHS_PER_YEAR + (targetMonth.coerceIn(1, 12) - 1)
+        // Povećanja u (lista, cilj] se dodaju, a u (cilj, lista] oduzimaju.
+        val range = if (target > anchor) (anchor + 1)..target else (target + 1)..anchor
+        val increases = range.count { it % MONTHS_PER_YEAR == anniversaryMonth - 1 }
+        return (estimate.accountingFullYears + if (target > anchor) increases else -increases).coerceAtLeast(0)
+    }
     val elapsedEffectiveMonths = fullMonthsBetween(
         startYear = lastPayslipYear,
         startMonth = lastPayslipMonth,

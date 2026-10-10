@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.6] - 2026-10-10
+- **Stara lista više ne kvari tekuće mesece:** ručno učitana lista iz 2024. (vrednost sata 195) je spuštala i 2025. i 2026. na 195 (oktobarska plata 65.198 → 52.628 RSD). Vrednost sata sada ima ugrađenu istoriju sa lista (185 do 2023, 195 u 2024, 214,50 u 2025, 226 od 2026), a vrednost sa liste važi samo do sledeće poznate promene.
+- **Minuli rad raste u januaru, kao na listama** (01/2024, 01/2025 i 01/2026 su po godinu više nego decembar pre njih). Ranije je staž rastao 12 meseci posle liste sa koje je upisan, pa je npr. posle liste za avgust januar–jul pokazivao 0,5% manje. Mesec povećanja se čita sa sačuvanih lista.
+
 ## [10.5] - 2026-10-09
 - **Auto-popuna:** izabrani režim smena i „Prvi dan“ / „Drugi dan“ su plavi kao ostala dugmad u temi (bili su žuti).
 

@@ -52,4 +52,31 @@ class PayRateHistoryTest {
             0.001
         )
     }
+
+    @Test
+    fun `fixed hourly history matches payslips before 2025`() {
+        assertEquals(185.0, defaultHourlyValueForMonth(2023, 12), 0.001)
+        assertEquals(195.0, defaultHourlyValueForMonth(2024, 1), 0.001)
+        assertEquals(195.0, defaultHourlyValueForMonth(2024, 12), 0.001)
+        assertEquals(214.5, defaultHourlyValueForMonth(2025, 1), 0.001)
+    }
+
+    @Test
+    fun `old payslip value does not leak past the next known hourly value`() {
+        // Ručno učitana lista 06/2024 (195) ne sme da spusti 2025. i 2026. na 195.
+        val changes = mapOf(MonthKey(2024, 6) to 195.0)
+
+        assertEquals(195.0, resolveHourlyValueForMonth(2024, 12, changes).value, 0.001)
+        assertEquals(214.5, resolveHourlyValueForMonth(2025, 6, changes).value, 0.001)
+        assertEquals(226.0, resolveHourlyValueForMonth(2026, 10, changes).value, 0.001)
+    }
+
+    @Test
+    fun `change after the last known point still applies forward`() {
+        val changes = mapOf(MonthKey(2025, 3) to 220.0, MonthKey(2027, 1) to 240.0)
+
+        assertEquals(220.0, resolveHourlyValueForMonth(2025, 12, changes).value, 0.001)
+        assertEquals(226.0, resolveHourlyValueForMonth(2026, 12, changes).value, 0.001)
+        assertEquals(240.0, resolveHourlyValueForMonth(2028, 5, changes).value, 0.001)
+    }
 }

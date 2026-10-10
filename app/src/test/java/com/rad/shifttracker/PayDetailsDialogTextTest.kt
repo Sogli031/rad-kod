@@ -135,7 +135,7 @@ class PayDetailsDialogTextTest {
     @Test
     fun `fixed hourly history info explains default cutoff`() {
         assertEquals(
-            "Fiksno: pre januara 2026. koristi se 214.5 RSD, od januara 2026. koristi se 226 RSD.",
+            "Fiksno: do 2023. koristi se 185, 2024. 195, 2025. 214.5, od januara 2026. 226 RSD.",
             defaultHourlyHistoryInfoText()
         )
     }
