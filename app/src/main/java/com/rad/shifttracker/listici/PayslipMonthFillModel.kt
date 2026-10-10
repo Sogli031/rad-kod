@@ -17,7 +17,12 @@ import com.rad.shifttracker.smene.Shift
  *     neobičnih dana (vidi [solveMonthFill]).
  * Rezultat se pre upisa proverava punim obračunom aplikacije na kopiji korisnikovih podataka.
  */
-internal enum class FillDayKind { WORK, VACATION, PAID_LEAVE, SICK, ABSENT, HOLIDAY_OFF, HOLIDAY_WORK, WEEKEND_WORK }
+internal enum class FillDayKind {
+    WORK, VACATION, PAID_LEAVE, SICK, ABSENT, HOLIDAY_OFF, HOLIDAY_WORK, WEEKEND_WORK,
+
+    /** Četvorobrigada: slobodan dan po ciklusu (i praznik na njega — ne plaća se). */
+    CYCLE_OFF
+}
 
 internal data class FillDay(
     val date: LocalDate,

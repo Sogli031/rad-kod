@@ -8,6 +8,7 @@ import com.rad.shifttracker.data.backup.GoogleDriveBackupProvider
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.loadFromLocal
+import com.rad.shifttracker.repo.migrateFourBrigadeHolidays
 import com.rad.shifttracker.repo.reschedule
 import com.rad.shifttracker.repo.saveToLocal
 import com.rad.shifttracker.uvoz.resetUnloadedTransportDaily
@@ -47,6 +48,7 @@ class AppContainer internal constructor(private val appContext: Application) {
         shiftRepository.loadFromLocal(appContext)
         shiftRepository.onChange { persistence.schedule() }
         resetUnloadedTransportDaily(appContext, shiftRepository)
+        shiftRepository.migrateFourBrigadeHolidays()
         BloodDonationReminderScheduler.reschedule(appContext, shiftRepository)
         // Dnevni safety-net backup ako korisnik dugo ne menja podatke.
         BackupScheduler.schedulePeriodic(appContext)

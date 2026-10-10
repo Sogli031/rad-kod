@@ -261,6 +261,28 @@ class GmailOnboardingTest {
     }
 
     @Test
+    fun seniorityFollowsEachListAndTheNewestAnniversary() {
+        // Livnica: staž 39 → 40 u martu 2025, a 40 → 41 već u januaru 2026.
+        val repo = testRepository()
+        fun slip(year: Int, month: Int, years: Int) = payslip(1).copy(
+            month = MonthKey(year, month),
+            seniorityPercent = java.math.BigDecimal(years * 0.5).setScale(1),
+            seniorityYears = years
+        )
+        listOf(slip(2025, 2, 39), slip(2025, 3, 40), slip(2025, 12, 40), slip(2026, 1, 41), slip(2026, 2, 41)).forEach {
+            val ready = payslipPickOutcome(repo, PayslipParseResult.Success(it), it.month) as PayslipPickOutcome.Ready
+            applyPayslipChanges(repo, ready.plan.changes)
+            repo.savePayslip(it)
+        }
+        assertEquals(39, repo.getMonthlyPayDetails(2025, 2).completedYearsOfService)
+        assertEquals(40, repo.getMonthlyPayDetails(2025, 3).completedYearsOfService)
+        assertEquals(41, repo.getMonthlyPayDetails(2026, 1).completedYearsOfService)
+        assertEquals(41, repo.getMonthlyPayDetails(2026, 3).completedYearsOfService)
+        assertEquals(41, repo.getMonthlyPayDetails(2026, 12).completedYearsOfService)
+        assertEquals(42, repo.getMonthlyPayDetails(2027, 1).completedYearsOfService)
+    }
+
+    @Test
     fun finalListIsAwaitedFromTheFifteenthUntilItIsLoaded() {
         val repo = testRepository()
         assertEquals(null, finalPayslipCheckMonth(repo, LocalDate.of(2026, 9, 14)))

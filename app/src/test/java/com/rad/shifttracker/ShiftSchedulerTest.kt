@@ -8,9 +8,10 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import com.rad.shifttracker.godisnji.VacationYearBalance
-import com.rad.shifttracker.obracun.holidayPremiumMinutes
-import com.rad.shifttracker.obracun.paidWorkMinuteSegments
 import com.rad.shifttracker.repo.BatchRecord
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.migrateFourBrigadeHolidays
+import com.rad.shifttracker.smene.DayRecordSource
 import com.rad.shifttracker.repo.brigadeTypeValue
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.getSummary
@@ -470,15 +471,11 @@ class ShiftSchedulerTest {
         assertEquals(Shift.THIRD, repo.get(2026, 5, 4)?.shift)
     }
 
-    @Test
-    fun `populateMonthsAhead cetvorobrigada radi praznike po rasporedu`() {
-        val repo = testRepository()
-        val referenceDate = LocalDate.of(2026, 4, 1)
-
+    private fun fillLivnica(repo: ShiftRepository, month: LocalDate) {
         // Livnica, 25.09.2026. = drugi dan treće smene (indeks 5 u ciklusu 1-1-2-2-3-3-0-0).
         scheduler.populateMonthsAhead(
             repo = repo,
-            referenceDate = referenceDate,
+            referenceDate = month,
             settings = ShiftFillSettings(
                 mode = ShiftFillMode.FOUR_BRIGADE,
                 anchorDate = LocalDate.of(2026, 9, 25),
@@ -487,20 +484,71 @@ class ShiftSchedulerTest {
             ),
             monthsAhead = 0
         )
+    }
 
-        // Uskrs 2026: 10.04. (pet) i 11.04. (sub) treća smena, 12. i 13.04. slobodni po ciklusu.
-        assertEquals(Shift.THIRD, repo.get(2026, 4, 10)!!.shift)
-        assertTrue(repo.get(2026, 4, 10)!!.workedOnHoliday)
+    @Test
+    fun `populateMonthsAhead cetvorobrigada ne radi smenu na praznik pon-pet`() {
+        val repo = testRepository()
+        fillLivnica(repo, LocalDate.of(2026, 4, 1))
+
+        // Uskrs 2026: 10.04. (pet) je po ciklusu treća, 13.04. (pon) prva smena — oba slobodna i plaćena.
+        // Listić 04/2026 izuzetno ima rad u petak (pogon je radio); to se upisuje ručno na danu.
+        assertEquals(Shift.OFF, repo.get(2026, 4, 10)!!.shift)
         assertEquals(Shift.OFF, repo.get(2026, 4, 13)!!.shift)
         assertEquals(0, repo.get(2026, 4, 13)!!.hoursDeficitFor(BrigadeType.CETVOROBRIGADA))
-        // Listić 04/2026: rad na praznik 14 h (6 + 2 na petak, 6 na subotu), državni praznik 8 h (ponedeljak).
         val details = repo.getMonthlyPayDetails(2026, 4)
-        val holidayPremiumMinutes = repo.getMonthRecords(2026, 4).sumOf { record ->
-            paidWorkMinuteSegments(record).sumOf { (shift, minutes) -> record.holidayPremiumMinutes(shift, minutes) }
-        }
-        assertEquals(14 * 60, holidayPremiumMinutes)
-        assertEquals("05 po satu, kao na listiću", 14 * 60, details.publicHolidayWorkedBaseMinutes)
+        // 6 h rada na praznik ostaje od treće smene 09.04. koja prelazi u petak.
+        assertEquals(6 * 60, details.publicHolidayWorkedBaseMinutes)
+        assertEquals(16 * 60, details.paidHolidayMinutes)
+    }
+
+    @Test
+    fun `populateMonthsAhead cetvorobrigada ne placa praznik na slobodan dan po ciklusu`() {
+        val repo = testRepository()
+        fillLivnica(repo, LocalDate.of(2025, 11, 1))
+
+        // Listić 11/2025: 11.11. (uto) je slobodan po ciklusu — nema državnog praznika, fond pokriva 01.
+        val record = repo.get(2025, 11, 11)!!
+        assertEquals(Shift.OFF, record.shift)
+        assertTrue(record.isHoliday)
+        val details = repo.getMonthlyPayDetails(2025, 11)
+        assertEquals(0, details.paidHolidayMinutes)
+        assertEquals(160 * 60, details.regularWorkedBaseMinutes)
+    }
+
+    @Test
+    fun `populateMonthsAhead cetvorobrigada subotom radi praznik po ciklusu`() {
+        val repo = testRepository()
+        fillLivnica(repo, LocalDate.of(2026, 5, 1))
+
+        // Listić 05/2026: 01.05. (pet, druga smena) plaćen praznik, 02.05. (sub, druga smena) rad na praznik 8 h.
+        assertEquals(Shift.OFF, repo.get(2026, 5, 1)!!.shift)
+        assertEquals(Shift.SECOND, repo.get(2026, 5, 2)!!.shift)
+        val details = repo.getMonthlyPayDetails(2026, 5)
         assertEquals(8 * 60, details.paidHolidayMinutes)
+        assertEquals(8 * 60, details.publicHolidayWorkedBaseMinutes)
+    }
+
+    @Test
+    fun `stari cetvorobrigadni praznici se uskladjuju pri pokretanju`() {
+        val repo = testRepository()
+        listOf(1, 2, 5).forEach { fillLivnica(repo, LocalDate.of(2026, it, 1)) }
+        // Zapisi kao iz ranije verzije: plaćen praznik sa balanceExempt i smene na praznik.
+        repo.setBatch(
+            listOf(
+                BatchRecord(2026, 1, 7, Shift.FIRST, 8, source = DayRecordSource.AUTO_FILL),
+                BatchRecord(2026, 2, 17, Shift.OFF, 0, balanceExempt = true, source = DayRecordSource.AUTO_FILL),
+                BatchRecord(2026, 5, 1, Shift.SECOND, 8, source = DayRecordSource.AUTO_FILL)
+            )
+        )
+
+        assertEquals(2, repo.migrateFourBrigadeHolidays(LocalDate.of(2026, 5, 10)))
+        assertEquals(Shift.OFF, repo.get(2026, 5, 1)!!.shift)
+        assertEquals(false, repo.get(2026, 5, 1)!!.balanceExempt)
+        assertEquals(16 * 60, repo.getMonthlyPayDetails(2026, 2).paidHolidayMinutes)
+        // Raniji mesec: smena na praznik ostaje (korisnik je možda tako i radio).
+        assertEquals(Shift.FIRST, repo.get(2026, 1, 7)!!.shift)
+        assertEquals(0, repo.migrateFourBrigadeHolidays(LocalDate.of(2026, 5, 10)))
     }
 
     @Test

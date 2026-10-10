@@ -87,7 +87,7 @@ internal class DailyPayCategoryBreakdownCalculator(
     }
 
     private fun offDay(record: DayRecord, brigadeType: BrigadeType): DailyPayCategoryBreakdown {
-        val paidHolidayMinutes = if (record.isHoliday && record.weekday.isWorkday) {
+        val paidHolidayMinutes = if (record.isPaidHolidayOff(brigadeType)) {
             defaultHours * MINUTES_PER_HOUR
         } else {
             0

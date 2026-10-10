@@ -9,17 +9,20 @@ internal data class PayslipSeniorityPoint(val month: MonthKey, val years: Int)
 /**
  * Staž na 01.01. (KU čl. 29: dužina odmora se određuje po stanju na taj dan).
  * [exact] je false kad mesec povećanja staža još nije viđen na listićima pa je broj procena;
- * [anniversaryMonth] je mesec u kom listić prvi put pokaže godinu više.
+ * [anniversaryMonth] je mesec u kom listić poslednji put pokaže godinu više.
  */
 internal data class SeniorityOnJanuaryFirst(val years: Int, val exact: Boolean, val anniversaryMonth: Int?)
 
 private fun MonthKey.index(): Int = year * 12 + (month - 1)
 
-/** Mesec povećanja staža: dva uzastopna meseca gde listić pokaže tačno godinu više. */
+/**
+ * Mesec povećanja staža: dva uzastopna meseca gde listić pokaže tačno godinu više. Važi najnovije
+ * povećanje — firma ga je pomerila: livnica 2025. u martu (39 → 40), a 2026. u januaru (40 → 41).
+ */
 internal fun seniorityAnniversaryMonth(points: List<PayslipSeniorityPoint>): Int? =
     points.sortedBy { it.month.index() }
         .zipWithNext()
-        .firstOrNull { (a, b) -> b.month.index() - a.month.index() == 1 && b.years == a.years + 1 }
+        .lastOrNull { (a, b) -> b.month.index() - a.month.index() == 1 && b.years == a.years + 1 }
         ?.second?.month?.month
 
 /**

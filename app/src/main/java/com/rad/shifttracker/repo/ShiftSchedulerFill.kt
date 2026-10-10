@@ -76,14 +76,8 @@ fun ShiftScheduler.populateMonthsAhead(
         // nad kalendarom — isto kao u previewVacationRange.
         val isHolidayDate = existing?.holidayOverride
             ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
-        // Praznik pon–pet je slobodan dan (plaćen kao državni praznik). Četvorobrigada radi
-        // praznike po ciklusu, osim prve smene (kao ponedeljkom posle nedelje) — livnica, listići
-        // 02, 04 i 05/2026: rad na praznik i državni praznik tačni tek uz to pravilo.
-        val holidayDayApplies = when (normalizedSettings.mode) {
-            ShiftFillMode.FOUR_BRIGADE ->
-                calculateShiftForDate(date, normalizedSettings) == Shift.FIRST
-            else -> date.dayOfWeek.value <= DayOfWeek.FRIDAY.value
-        }
+        // Praznik pon–pet je slobodan dan (plaćen kao državni praznik); subotom četvorobrigada radi po ciklusu.
+        val holidayDayApplies = date.dayOfWeek.value <= DayOfWeek.FRIDAY.value
         val record = if (holidayDayApplies && isHolidayDate) {
             BatchRecord(
                 year = date.year,
@@ -91,7 +85,8 @@ fun ShiftScheduler.populateMonthsAhead(
                 day = date.dayOfMonth,
                 shift = Shift.OFF,
                 hours = 0,
-                balanceExempt = true,
+                balanceExempt = normalizedSettings.mode != ShiftFillMode.FOUR_BRIGADE ||
+                    !isFourBrigadeCycleWorkday(date, normalizedSettings),
                 source = DayRecordSource.AUTO_FILL
             )
         } else {
@@ -117,6 +112,17 @@ fun ShiftScheduler.populateMonthsAhead(
         repo.setBatch(records)
     }
     return records.size
+}
+
+/**
+ * Četvorobrigada, praznik pon–pet (livnica, listići 12/2024–08/2026): kad je po ciklusu tog dana
+ * smena (i ponedeljkom kad je prva smena slobodna), praznik se najčešće ne radi i plaća se (12) —
+ * zapis bez [BatchRecord.balanceExempt]. Slobodan dan po ciklusu ostaje balanceExempt i ne plaća
+ * se: pun fond ga već pokriva kroz rad u režiji (01), npr. 11.11.2025.
+ */
+private fun ShiftScheduler.isFourBrigadeCycleWorkday(date: LocalDate, settings: ShiftFillSettings): Boolean {
+    val cycleStartIndex = settings.cycleDayIndex ?: getFourBrigadeCycleStartIndex(settings.selectedShift, 0)
+    return fourBrigadeCycleShiftForDate(date, settings.anchorDate, cycleStartIndex) in Shift.workShifts()
 }
 
 private fun isWeekendOffRecord(record: BatchRecord): Boolean {
@@ -162,7 +168,7 @@ fun ShiftScheduler.applySickRange(
         }
     }
 
-    if (records.isNotEmpty()) repo.setBatch(records)
+    if (records.isNotEmpty()) repo.setBatch(records + fourBrigadeShiftsInsideAbsence(repo, records))
     return records.size
 }
 
@@ -179,8 +185,26 @@ fun ShiftScheduler.applyVacationRange(
         BatchRecord(date.year, date.monthValue, date.dayOfMonth, Shift.VACATION, defaultHours)
     }
 
-    if (records.isNotEmpty()) repo.setBatch(records)
+    if (records.isNotEmpty()) repo.setBatch(records + fourBrigadeShiftsInsideAbsence(repo, records))
     return records.size
+}
+
+/**
+ * Četvorobrigada: smena iz „Popuni“ van pon–pet između prvog i poslednjeg dana odsustva se ne radi
+ * (na godišnjem se ni subotom ne ide na posao) — listić livnice 08/2025: 15 dana GO, 4 odrađene smene.
+ */
+private fun fourBrigadeShiftsInsideAbsence(repo: ShiftRepository, absence: List<BatchRecord>): List<BatchRecord> {
+    if (repo.brigadeTypeValue != BrigadeType.CETVOROBRIGADA || absence.isEmpty()) return emptyList()
+    val dates = absence.map { LocalDate.of(it.year, it.month, it.day) }
+    val first = dates.min()
+    val last = dates.max()
+    return generateSequence(first.plusDays(1)) { it.plusDays(1) }
+        .takeWhile { it < last }
+        .filter { it.dayOfWeek.value > DayOfWeek.FRIDAY.value }
+        .mapNotNull { date -> repo.get(date.year, date.monthValue, date.dayOfMonth) }
+        .filter { it.source == DayRecordSource.AUTO_FILL && it.shift in Shift.workShifts() }
+        .map { BatchRecord(it.year, it.month, it.day, Shift.OFF, 0, balanceExempt = true, source = DayRecordSource.AUTO_FILL) }
+        .toList()
 }
 
 fun ShiftScheduler.previewVacationRange(

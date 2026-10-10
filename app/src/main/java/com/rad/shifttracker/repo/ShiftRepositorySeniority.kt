@@ -14,6 +14,7 @@ import com.rad.shifttracker.smene.BrigadeType
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.godisnji.PayslipSeniorityPoint
 import com.rad.shifttracker.godisnji.seniorityAnniversaryMonth
+import com.rad.shifttracker.smene.MonthKey
 
 var ShiftRepository.initialCompBalanceValue: Int
     get() = synchronized(lock) { payState.initialCompBalance }
@@ -52,18 +53,23 @@ internal fun ShiftRepository.calculateYearsOfServiceUnsafe(): Int {
 internal fun ShiftRepository.calculateYearsOfServiceUnsafe(year: Int, month: Int): Int {
     return when (payState.seniorityInputMode) {
         SeniorityInputMode.KNOWN_START -> calculateKnownStartYearsOfServiceUnsafe(year, month)
-        SeniorityInputMode.PAYSLIP_PERCENT -> calculatePayslipAnchoredSeniorityYears(
-            lastPayslipYear = payState.minuliRadLastPayslipYear,
-            lastPayslipMonth = payState.minuliRadLastPayslipMonth,
-            payslipPercent = payState.minuliRadPayslipPercent,
-            targetYear = year,
-            targetMonth = month,
-            increaseFactor = payState.minuliRadIncreaseFactor,
-            ratePerYear = config.pay.minuliRadPerYear,
-            anniversaryMonth = seniorityAnniversaryMonth(
-                savedPayslipsUnsafe().mapNotNull { slip -> slip.seniorityYears?.let { PayslipSeniorityPoint(slip.month, it) } }
+        SeniorityInputMode.PAYSLIP_PERCENT -> {
+            val points = savedPayslipsUnsafe().mapNotNull { slip ->
+                slip.seniorityYears?.let { PayslipSeniorityPoint(slip.month, it) }
+            }
+            // Mesec sa sačuvanom listom: staž sa te liste, kao koeficijent i vrednost sata.
+            points.firstOrNull { it.month == MonthKey(year, month) }?.let { return it.years }
+            calculatePayslipAnchoredSeniorityYears(
+                lastPayslipYear = payState.minuliRadLastPayslipYear,
+                lastPayslipMonth = payState.minuliRadLastPayslipMonth,
+                payslipPercent = payState.minuliRadPayslipPercent,
+                targetYear = year,
+                targetMonth = month,
+                increaseFactor = payState.minuliRadIncreaseFactor,
+                ratePerYear = config.pay.minuliRadPerYear,
+                anniversaryMonth = seniorityAnniversaryMonth(points)
             )
-        )
+        }
     }
 }
 

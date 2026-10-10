@@ -266,7 +266,7 @@ private fun RowScope.DayButton(
         MaterialTheme.colorScheme,
         MaterialTheme.extendedColors
     )
-    val detailText = calendarDayDetailText(record, isHolidayDay, workedHoliday)
+    val detailText = calendarDayDetailText(record, isHolidayDay, workedHoliday, brigadeType)
     val detailLines = detailText.split("\n")
 
     val doubleIndicatorColor = if (record?.isDoubleShift == true && record.shift2 != null) {
@@ -462,14 +462,16 @@ internal fun shiftRomanNumeral(shift: Shift): String = when (shift) {
 internal fun calendarDayDetailText(
     record: DayRecord?,
     isHolidayDay: Boolean,
-    workedHoliday: Boolean
+    workedHoliday: Boolean,
+    brigadeType: BrigadeType = BrigadeType.TROBRIGADA
 ): String {
     if (record == null) return if (isHolidayDay || workedHoliday) "Praznik" else "-"
 
     return when (record.shift) {
         Shift.OFF -> when {
             isHolidayDay || workedHoliday -> "Praznik"
-            record.weekday.isWorkday -> "0h"
+            // Četvorobrigada: slobodan dan po ciklusu (balanceExempt) nije neodrađen radni dan.
+            record.weekday.isWorkday && !(brigadeType == BrigadeType.CETVOROBRIGADA && record.balanceExempt) -> "0h"
             else -> "OFF"
         }
         Shift.SICK -> when {

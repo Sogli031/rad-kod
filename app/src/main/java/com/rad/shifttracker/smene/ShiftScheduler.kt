@@ -108,10 +108,13 @@ class ShiftScheduler(
         anchorDate: LocalDate,
         cycleStartIndex: Int
     ): Shift {
+        return applyFourBrigadeNonWorkingRules(date, fourBrigadeCycleShiftForDate(date, anchorDate, cycleStartIndex))
+    }
+
+    /** Smena po ciklusu, pre pravila za nedelju i ponedeljak. */
+    fun fourBrigadeCycleShiftForDate(date: LocalDate, anchorDate: LocalDate, cycleStartIndex: Int): Shift {
         val daysDiff = ChronoUnit.DAYS.between(anchorDate, date).toInt()
-        val cycleIndex = Math.floorMod(cycleStartIndex + daysDiff, FOUR_BRIGADE_CYCLE.size)
-        val cycleShift = getFourBrigadeCycleShift(cycleIndex)
-        return applyFourBrigadeNonWorkingRules(date, cycleShift)
+        return getFourBrigadeCycleShift(Math.floorMod(cycleStartIndex + daysDiff, FOUR_BRIGADE_CYCLE.size))
     }
 
     private fun applyFourBrigadeNonWorkingRules(date: LocalDate, cycleShift: Shift): Shift {

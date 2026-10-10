@@ -209,7 +209,7 @@ private fun paidAbsenceFundMinutes(
         minutes += when {
             record.shift == Shift.SICK || record.shift == Shift.VACATION ->
                 record.workHours * MINUTES_PER_HOUR
-            record.shift == Shift.OFF && record.isHoliday -> defaultHours * MINUTES_PER_HOUR
+            record.isPaidHolidayOff(BrigadeType.CETVOROBRIGADA) -> defaultHours * MINUTES_PER_HOUR
             else -> 0
         }
     }

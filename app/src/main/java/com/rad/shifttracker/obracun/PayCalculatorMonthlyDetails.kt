@@ -98,7 +98,7 @@ internal class PayCalculatorMonthlyDetails(
         val weekday = record.weekday
 
         if (record.shift == Shift.OFF) {
-            if (record.isHoliday && weekday.isWorkday) {
+            if (record.isPaidHolidayOff(brigadeType)) {
                 details.paidHolidayMinutes += config.defaultHours * MINUTES_PER_HOUR
                 details.grossPaidHoliday += config.defaultHours * payBases.paidHolidayHourlyBase.value
             }

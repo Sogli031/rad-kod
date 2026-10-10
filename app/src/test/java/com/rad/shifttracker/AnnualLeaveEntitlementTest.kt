@@ -53,6 +53,15 @@ class AnnualLeaveEntitlementTest {
     }
 
     @Test
+    fun `vazi najnovije povecanje kad ga firma pomeri`() {
+        // Livnica: 2025. staž raste u martu, a 2026. već u januaru.
+        val slips = points("1/2025" to 39, "2/2025" to 39, "3/2025" to 40, "12/2025" to 40, "1/2026" to 41, "2/2026" to 41)
+
+        assertEquals(1, seniorityAnniversaryMonth(slips))
+        assertEquals(SeniorityOnJanuaryFirst(42, true, 1), seniorityOnJanuaryFirst(slips, 2027))
+    }
+
+    @Test
     fun `granica staza od 15 godina menja pravo tek u godini posle navrsenih 15`() {
         val slips = points("4/2030" to 15, "5/2030" to 16)
         fun days(year: Int) = annualLeaveEntitlement(

@@ -25,6 +25,19 @@ import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.repo.populateMonthsAhead
+import com.rad.shifttracker.repo.applyVacationRange
+import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.repo.brigadeTypeValue
+import com.rad.shifttracker.listici.FillDayKind
+import com.rad.shifttracker.listici.PayslipItem
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.ui.calendarDayDetailText
+import com.rad.shifttracker.uvoz.MonthFillOffer
+import com.rad.shifttracker.uvoz.MonthFillResult
+import com.rad.shifttracker.uvoz.applyMonthFill
+import com.rad.shifttracker.uvoz.monthFillOffer
+import com.rad.shifttracker.uvoz.planMonthFromPayslip
 
 /** Listić livnice (četvorobrigada) 08/2026 skraćen na redove koje parser koristi; bez imena, JMBG-a i računa. */
 private val FOUNDRY_AUGUST_2026 = """
@@ -120,5 +133,78 @@ class FourBrigadePayslipTest {
         repo.set(2026, 8, 5, Shift.OFF, 0)
         val details = repo.getMonthlyPayDetails(2026, 8)
         assertTrue(details.regularWorkedBaseMinutes < 168 * 60)
+    }
+
+    /** Livnica: „Popuni“ → Četvorobrigada, 10.10.2026. prvi dan treće smene, godinu unapred (kao otac). */
+    private fun livnica(): ShiftRepository {
+        val repo = testRepository()
+        val today = LocalDate.of(2026, 10, 10)
+        ShiftScheduler().populateMonthsAhead(repo, today, ShiftFillSettings(ShiftFillMode.FOUR_BRIGADE, today, Shift.THIRD, 4), 12)
+        repo.difficultWorkConditionsPercentValue = 32.0
+        return repo
+    }
+
+    private fun item(code: Int, hours: Int) = PayslipItem(code, "šifra $code", BigDecimal(hours), null, BigDecimal.ZERO)
+
+    /** Lista livnice za drugi mesec: iste stavke kao 08/2026, sa časovima tog meseca. */
+    private fun foundry(month: MonthKey, fund: Int, vararg hours: Pair<Int, Int>): ParsedPayslip =
+        foundry().copy(month = month, fundHours = fund, items = hours.associate { (code, h) -> code to item(code, h) })
+
+    @Test
+    fun fourBrigadeMonthIsFilledFromPayslip() {
+        // Lista 02/2026: 144 h režije, 16 h državnog praznika (16. i 17.02.), 56 h noćnog, 12 h nedelje.
+        val repo = livnica()
+        val february = foundry(MonthKey(2026, 2), 160, 1 to 144, 12 to 16, 20 to 56, 21 to 136, 22 to 12)
+        repo.savePayslip(february, withPayBase = false)
+
+        val result = planMonthFromPayslip(repo, february)
+        assertTrue(result.toString(), result is MonthFillResult.Success)
+        result as MonthFillResult.Success
+        applyMonthFill(repo, result)
+
+        val hourRows = buildPayslipReconciliation(repo, february).rows.filter { it.isHours }
+        assertTrue(hourRows.filterNot { it.matches }.toString(), hourRows.all { it.matches })
+        assertEquals(Shift.OFF, repo.get(2026, 2, 17)!!.shift)
+        assertEquals(MonthFillOffer.NONE, monthFillOffer(repo, MonthKey(2026, 2), null))
+    }
+
+    @Test
+    fun fourBrigadeVacationKeepsWeekendShiftsInsideItFree() {
+        // Lista 08/2025: 15 dana GO, a odrađene samo 4 smene (32 h) — subote usred godišnjeg se ne rade.
+        val repo = livnica()
+        val august = foundry(MonthKey(2025, 8), 168, 1 to 48, 10 to 120, 20 to 16, 21 to 32)
+        repo.savePayslip(august, withPayBase = false)
+
+        val result = planMonthFromPayslip(repo, august) as MonthFillResult.Success
+        assertEquals(15, result.days.count { it.kind == FillDayKind.VACATION })
+        applyMonthFill(repo, result)
+
+        val hourRows = buildPayslipReconciliation(repo, august).rows.filter { it.isHours }
+        assertTrue(hourRows.filterNot { it.matches }.toString(), hourRows.all { it.matches })
+        assertEquals(0, repo.getMonthlyPayDetails(2025, 8).overtimeMinutes)
+    }
+
+    @Test
+    fun fourBrigadeMonthWithoutCycleAsksForSchedule() {
+        val repo = testRepository()
+        repo.brigadeTypeValue = BrigadeType.CETVOROBRIGADA
+        val result = planMonthFromPayslip(repo, foundry())
+        assertTrue(result.toString(), result is MonthFillResult.Failure && result.message.contains("Popuni"))
+    }
+
+    @Test
+    fun vacationRangeFreesWeekendShiftsInsideIt() {
+        val repo = livnica()
+        // 02.–13.11.2026: subota 07.11. je po ciklusu smena, a usred godišnjeg je.
+        assertTrue(repo.get(2026, 11, 7)!!.shift in Shift.workShifts())
+        ShiftScheduler().applyVacationRange(repo, 2026, 11, 2, 13)
+        assertEquals(Shift.OFF, repo.get(2026, 11, 7)!!.shift)
+    }
+
+    @Test
+    fun fourBrigadeCycleOffDayShowsOff() {
+        val repo = livnica()
+        val off = (1..30).map { repo.get(2026, 11, it)!! }.first { it.shift == Shift.OFF && it.weekday.isWorkday && !it.isHoliday }
+        assertEquals("OFF", calendarDayDetailText(off, isHolidayDay = false, workedHoliday = false, brigadeType = BrigadeType.CETVOROBRIGADA))
     }
 }

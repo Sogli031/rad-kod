@@ -53,9 +53,6 @@ internal sealed interface MonthFillResult {
 
 private const val DAY_HOURS = 8
 internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip): MonthFillResult {
-    if (repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA) {
-        return MonthFillResult.Failure("Popunjavanje po listi za sada radi samo za smene pon–pet (ne za četvorobrigadu).")
-    }
     unknownHourItemsText(payslip)?.let { unknown ->
         return MonthFillResult.Failure("Lista ima stavke koje popunjavanje još ne ume da rasporedi: $unknown. Mesec nije menjan.")
     }
@@ -63,6 +60,7 @@ internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip)
         "Časovi na listi nisu u celim satima ili celim danima, pa ih ne mogu tačno rasporediti."
     )
     fundMismatchText(repo, payslip)?.let { return MonthFillResult.Failure(it) }
+    if (repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA) return planFourBrigadeMonth(repo, payslip, targets)
     val calendar = buildFillCalendar(
         month = payslip.month,
         scheduledShift = { date -> repo.getScheduledShiftForDate(date) },
@@ -185,6 +183,7 @@ internal fun monthFillOffer(repo: ShiftRepository, month: MonthKey, reconciliati
     val hoursMatch = reconciliation?.let { check -> check.hasAppData && check.rows.filter { it.isHours }.all { it.matches } } == true
     return when {
         hoursMatch -> MonthFillOffer.NONE
+        isFourBrigadeMonthFilled(repo, month) -> MonthFillOffer.NONE
         userEnteredDayCount(repo, month) == 0 -> MonthFillOffer.EMPTY_MONTH
         else -> MonthFillOffer.REPLACE
     }
@@ -193,6 +192,15 @@ internal fun monthFillOffer(repo: ShiftRepository, month: MonthKey, reconciliati
 /** „Popuni iz liste“ bez potvrde: mesec nema korisnikovih upisa i časovi se ne slažu sa listom. */
 internal fun shouldOfferMonthFill(repo: ShiftRepository, month: MonthKey, reconciliation: PayslipReconciliation?): Boolean =
     monthFillOffer(repo, month, reconciliation) == MonthFillOffer.EMPTY_MONTH
+
+/** Četvorobrigada: mesec je već upisan kao najverovatniji raspored po listi (ostale razlike lista ne objašnjava). */
+private fun isFourBrigadeMonthFilled(repo: ShiftRepository, month: MonthKey): Boolean {
+    if (repo.brigadeTypeValue != BrigadeType.CETVOROBRIGADA) return false
+    val payslip = repo.getSavedPayslip(month.year, month.month) ?: return false
+    val targets = fillTargetsFrom(payslip) ?: return false
+    val days = bestFourBrigadeDays(repo, payslip, targets) ?: return false
+    return monthMatchesFillDays(repo, month, days)
+}
 
 /** Ishod popune svih meseci: popunjeni, i meseci koje nije moglo (sa porukom). */
 internal data class FillAllResult(val filled: List<MonthKey>, val failed: List<Pair<MonthKey, String>>)
@@ -289,7 +297,7 @@ internal fun buildFillCalendar(
  * Kopija korisnikovih podataka (podešavanja, saldo sati, drugi meseci) za proveru rasporeda.
  * Izvoz za oblak ne oreže istoriju, pa pravi repozitorijum ostaje netaknut.
  */
-private fun verificationCopy(repo: ShiftRepository): ShiftRepository {
+internal fun verificationCopy(repo: ShiftRepository): ShiftRepository {
     val copy = ShiftRepository()
     if (!copy.importFromJson(repo.exportCloudBackupJson(null))) {
         copy.brigadeTypeValue = repo.brigadeTypeValue
@@ -297,7 +305,7 @@ private fun verificationCopy(repo: ShiftRepository): ShiftRepository {
     return copy
 }
 
-private fun verifyMonthFill(
+internal fun verifyMonthFill(
     scratch: ShiftRepository,
     payslip: ParsedPayslip,
     targets: FillTargets,
@@ -329,7 +337,7 @@ private fun replaceMonth(repo: ShiftRepository, month: MonthKey, days: List<Fill
             repo.delete(record.year, record.month, record.day)
         }
     }
-    writeFillDays(repo, days, holidayOverrides)
+    writeFillDays(repo, days, holidayOverrides, repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA)
     repo.setMonthlyAbsencePenaltyGross(month.year, month.month, absenceRoundingGross)
 }
 
@@ -337,7 +345,12 @@ private fun replaceMonth(repo: ShiftRepository, month: MonthKey, days: List<Fill
  * Izostanak sa listića firma nije pokrila satima iz salda, pa ceo i skraćen dan
  * izostanka ne troše saldo (inače bi ga obračun platio iz pozitivnog salda).
  */
-private fun writeFillDays(repo: ShiftRepository, days: List<FillDay>, holidayOverrides: Map<LocalDate, Boolean?>) {
+private fun writeFillDays(
+    repo: ShiftRepository,
+    days: List<FillDay>,
+    holidayOverrides: Map<LocalDate, Boolean?>,
+    fourBrigade: Boolean
+) {
     val batch = days.map { day ->
         val (y, m, d) = Triple(day.date.year, day.date.monthValue, day.date.dayOfMonth)
         val shortDay = day.hours < DAY_HOURS && day.date.dayOfWeek.value <= DayOfWeek.FRIDAY.value
@@ -354,7 +367,9 @@ private fun writeFillDays(repo: ShiftRepository, days: List<FillDay>, holidayOve
             FillDayKind.SICK -> BatchRecord(y, m, d, Shift.SICK, DAY_HOURS, sickPayRate = day.sickRate)
             FillDayKind.PAID_LEAVE -> BatchRecord(y, m, d, Shift.SICK, DAY_HOURS, source = DayRecordSource.PAID_LEAVE)
             FillDayKind.ABSENT -> BatchRecord(y, m, d, Shift.OFF, 0, balanceExempt = true)
-            FillDayKind.HOLIDAY_OFF -> BatchRecord(y, m, d, Shift.OFF, 0, balanceExempt = true, source = DayRecordSource.AUTO_FILL)
+            // Četvorobrigada: plaćen praznik je bez balanceExempt (slobodan dan po ciklusu se ne plaća).
+            FillDayKind.HOLIDAY_OFF -> BatchRecord(y, m, d, Shift.OFF, 0, balanceExempt = !fourBrigade, source = DayRecordSource.AUTO_FILL)
+            FillDayKind.CYCLE_OFF -> BatchRecord(y, m, d, Shift.OFF, 0, balanceExempt = true, source = DayRecordSource.AUTO_FILL)
         }
         if (override == null) record else record.copy(holidayOverride = override, holidayWorkOverride = if (override) null else false)
     }
@@ -362,4 +377,5 @@ private fun writeFillDays(repo: ShiftRepository, days: List<FillDay>, holidayOve
 }
 
 /** Dani koji odstupaju od običnog rada po rasporedu (za pregled pre upisa). */
-internal fun FillDay.isSpecial(): Boolean = !(kind == FillDayKind.WORK && hours == DAY_HOURS && shift == templateShift)
+internal fun FillDay.isSpecial(): Boolean =
+    kind != FillDayKind.CYCLE_OFF && !(kind == FillDayKind.WORK && hours == DAY_HOURS && shift == templateShift)

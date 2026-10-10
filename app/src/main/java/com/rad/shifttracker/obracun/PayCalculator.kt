@@ -155,7 +155,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         payBases: ResolvedPayBases = defaultPayBases(),
         monthlyOvertimeMinutes: Int? = null
     ): Double {
-        nonWorkDayPay(record, payBases)?.let { return it }
+        nonWorkDayPay(record, brigadeType, payBases)?.let { return it }
 
         val shiftsData = paidWorkMinuteSegments(record)
         return if (isAutomaticWeekendOvertime(record, brigadeType)) {
@@ -166,11 +166,11 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
     }
 
     /** Plata dana bez rada (slobodan dan, praznik, odsustvo, bolovanje, godišnji); null za radni dan. */
-    private fun nonWorkDayPay(record: DayRecord, payBases: ResolvedPayBases): Double? {
+    private fun nonWorkDayPay(record: DayRecord, brigadeType: BrigadeType, payBases: ResolvedPayBases): Double? {
         val isWorkday = record.weekday.isWorkday
         return when {
             record.shift == Shift.OFF ->
-                if (record.isHoliday && isWorkday) config.defaultHours * payBases.paidHolidayHourlyBase.value else 0.0
+                if (record.isPaidHolidayOff(brigadeType)) config.defaultHours * payBases.paidHolidayHourlyBase.value else 0.0
             record.workHours <= 0 -> 0.0
             record.isPaidLeave ->
                 if (isWorkday) record.workHours.toDouble() * payBases.vacationHourlyBase.value else 0.0
@@ -448,7 +448,7 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
                 summary.totalPay += calculateDailyPay(record, baseRate, brigadeType, payBases)
             }
         } else if (record.shift == Shift.OFF) {
-            if (record.isHoliday && record.weekday.isWorkday) {
+            if (record.isPaidHolidayOff(brigadeType)) {
                 summary.totalPay += calculateDailyPay(record, baseRate, brigadeType, payBases)
             }
         } else if (record.shift in Shift.workShifts() && record.workHours > 0) {
@@ -591,6 +591,14 @@ class PayCalculator(private val config: PayConfig = CONFIG.pay) {
         return holidayPay
     }
 }
+
+/**
+ * Neradni praznik pon–pet koji se plaća kao državni praznik (12). Četvorobrigada: slobodan dan po
+ * ciklusu (balanceExempt) se ne plaća — pun fond ga pokriva kroz rad u režiji (01), listić 11/2025.
+ */
+internal fun DayRecord.isPaidHolidayOff(brigadeType: BrigadeType): Boolean =
+    shift == Shift.OFF && isHoliday && weekday.isWorkday &&
+        !(brigadeType == BrigadeType.CETVOROBRIGADA && balanceExempt)
 
 internal fun paidWorkMinuteSegments(record: DayRecord): List<Pair<Shift, Int>> {
     if (record.shift !in Shift.workShifts() || record.effectiveRegularWorkMinutes <= 0) return emptyList()

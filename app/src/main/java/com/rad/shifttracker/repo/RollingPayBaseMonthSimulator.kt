@@ -119,7 +119,10 @@ internal class RollingPayBaseMonthSimulator(
 
         for (day in 1..lengthOfMonth) {
             val date = LocalDate.of(monthKey.year, monthKey.month, day)
-            val shift = if (isFourBrigadeHolidayOff(date)) {
+            // Isto pravilo kao auto-popuna: praznik pon–pet je slobodan, plaćen samo ako je po ciklusu smena.
+            val cycleWorkday = scheduler.fourBrigadeCycleShiftForDate(date, pattern.anchorDate, pattern.cycleStartIndex) in
+                Shift.workShifts()
+            val shift = if (isWorkdayHoliday(date)) {
                 Shift.OFF
             } else {
                 scheduler.calculateFourBrigadeShiftForDate(
@@ -135,7 +138,7 @@ internal class RollingPayBaseMonthSimulator(
                 day = day,
                 shift = shift,
                 hours = hours,
-                balanceExempt = shift == Shift.OFF
+                balanceExempt = shift == Shift.OFF && !(isWorkdayHoliday(date) && cycleWorkday)
             )
         }
 
@@ -310,9 +313,8 @@ internal class RollingPayBaseMonthSimulator(
     }
 
     /**
-     * U četvorobrigadi je i subota cikličan radni dan, pa auto-fill subotnji
-     * praznik upisuje kao OFF — simulacija i prepoznavanje obrasca moraju
-     * da koriste isto pravilo, inače se obrazac ne poklapa.
+     * Praznik pon–pet (i subotnji iz ranijih verzija auto-popune) je u četvorobrigadi OFF bez obzira
+     * na ciklus, pa ga prepoznavanje obrasca ne broji kao odstupanje.
      */
     private fun isFourBrigadeHolidayOff(date: LocalDate): Boolean {
         val weekday = Weekday.from(date)
