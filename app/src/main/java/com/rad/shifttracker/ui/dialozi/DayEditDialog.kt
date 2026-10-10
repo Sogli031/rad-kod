@@ -1,6 +1,19 @@
 package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.Alignment
+import com.rad.shifttracker.ui.RadMotion
+import com.rad.shifttracker.ui.rememberReducedMotion
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
@@ -117,12 +130,36 @@ internal fun DayEditDialog(
             )
         }
 
-        DayEditShiftControls(
-            form = form,
-            vacationWarning = vacationValidation.message,
-            onHoursPickerRequest = { picker -> hoursPicker = picker },
-            onShortageClick = { showShortageDialog = true }
-        )
+        // Promena tipa dana: stare kontrole izblede, nove uđu, a visina lista se menja glatko umesto skoka.
+        val reducedMotion = rememberReducedMotion()
+        AnimatedContent(
+            targetState = dayEditControlsKind(form.shift1, form.paidLeave),
+            transitionSpec = {
+                if (reducedMotion) {
+                    EnterTransition.None togetherWith ExitTransition.None
+                } else {
+                    (fadeIn(RadMotion.effects()) togetherWith fadeOut(RadMotion.fastEffects()))
+                        .using(SizeTransform(clip = true) { _, _ -> RadMotion.spatial() })
+                }
+            },
+            contentAlignment = Alignment.TopCenter,
+            label = "dayEditControls"
+        ) { kind ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (reducedMotion) Modifier else Modifier.animateContentSize(RadMotion.spatial())),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                DayEditShiftControls(
+                    kind = kind,
+                    form = form,
+                    vacationWarning = vacationValidation.message,
+                    onHoursPickerRequest = { picker -> hoursPicker = picker },
+                    onShortageClick = { showShortageDialog = true }
+                )
+            }
+        }
 
         if (form.compHoursUsed > 0 || monthSummary.compTimeStarting > 0) {
             DayEditCompensationBlock(
@@ -167,17 +204,31 @@ internal fun DayEditDialog(
     }
 }
 
-/** Kontrole izabranog tipa dana: smene i sati za rad, stopa za bolovanje, upozorenje za godišnji. */
+/** Grupa kontrola ispod „Tip dana“; promena grupe pokreće prelaz. */
+private enum class DayEditControlsKind { WORK, SICK, PAID_LEAVE, VACATION, OFF }
+
+private fun dayEditControlsKind(shift: Shift, paidLeave: Boolean): DayEditControlsKind = when (shift) {
+    Shift.FIRST, Shift.SECOND, Shift.THIRD -> DayEditControlsKind.WORK
+    Shift.SICK -> if (paidLeave) DayEditControlsKind.PAID_LEAVE else DayEditControlsKind.SICK
+    Shift.VACATION -> DayEditControlsKind.VACATION
+    Shift.OFF -> DayEditControlsKind.OFF
+}
+
+/**
+ * Kontrole izabranog tipa dana: smene i sati za rad, stopa za bolovanje, upozorenje za godišnji.
+ * Crta se po [kind] (ne po trenutnom unosu), da kontrole koje izlaze izblede u svom obliku.
+ */
 @Composable
 private fun DayEditShiftControls(
+    kind: DayEditControlsKind,
     form: DayEditForm,
     vacationWarning: String?,
     onHoursPickerRequest: (HoursPickerState) -> Unit,
     onShortageClick: () -> Unit
 ) {
     val pickerAccent = MaterialTheme.colorScheme.primary
-    when (form.shift1) {
-        Shift.FIRST, Shift.SECOND, Shift.THIRD -> DayEditWorkControls(
+    when (kind) {
+        DayEditControlsKind.WORK -> DayEditWorkControls(
             state = DayEditWorkControlState(
                 shift1 = form.shift1,
                 workHours1 = form.workHours1,
@@ -231,18 +282,16 @@ private fun DayEditShiftControls(
             }
         )
 
-        Shift.SICK -> if (form.paidLeave) {
-            DayEditPaidLeaveControls()
-        } else {
-            DayEditSickControls(
-                sickPayRate = form.sickPayRate,
-                onSickPayRateSelected = { selected -> form.sickPayRate = selected }
-            )
-        }
+        DayEditControlsKind.PAID_LEAVE -> DayEditPaidLeaveControls()
 
-        Shift.VACATION -> DayEditVacationControls(warningMessage = vacationWarning)
+        DayEditControlsKind.SICK -> DayEditSickControls(
+            sickPayRate = form.sickPayRate,
+            onSickPayRateSelected = { selected -> form.sickPayRate = selected }
+        )
 
-        Shift.OFF -> DayEditOffControls()
+        DayEditControlsKind.VACATION -> DayEditVacationControls(warningMessage = vacationWarning)
+
+        DayEditControlsKind.OFF -> DayEditOffControls()
     }
 }
 

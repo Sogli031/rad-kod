@@ -160,8 +160,9 @@ internal fun WeekdayHeader() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.weekdayHeaderHeight.dp)
-                .padding(horizontal = Spacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                // Iste ivice i razmaci kao mreža dana u [CalendarSection]: svaki naziv je tačno iznad svoje kolone.
+                .padding(horizontal = CALENDAR_PADDING.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             WEEKDAY_NAMES.forEachIndexed { index, name ->

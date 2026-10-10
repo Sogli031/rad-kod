@@ -1,6 +1,9 @@
 package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
+import androidx.compose.animation.animateContentSize
+import com.rad.shifttracker.ui.RadMotion
+import com.rad.shifttracker.ui.rememberReducedMotion
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
@@ -74,7 +77,12 @@ internal fun DayEditStatusHeader(
     }
 
     if (estimatedNetDailyPay > 0.0 || netDifferenceText != null) {
-        PopupCard(spacing = Spacing.sm) {
+        val reducedMotion = rememberReducedMotion()
+        // Red „Razlika“ se pojavljuje pri izmeni; kartica raste glatko, ne skokom.
+        PopupCard(
+            modifier = if (reducedMotion) Modifier else Modifier.animateContentSize(RadMotion.spatial()),
+            spacing = Spacing.sm
+        ) {
             DayEditValueRow(
                 label = "Neto procena",
                 value = "${formatNumber(estimatedNetDailyPay)} ${CONFIG.pay.currency}",
