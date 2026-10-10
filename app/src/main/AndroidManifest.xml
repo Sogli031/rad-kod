@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Ažuriranje iz aplikacije: skida rad.apk sa GitHub release-a i predaje ga sistemskoj instalaciji. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Android 12+: ažuriranje samog sebe bez sistemskog „Ažurirati?“ (setRequireUserAction NOT_REQUIRED). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <application
         android:name=".RadApplication"
