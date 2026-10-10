@@ -32,6 +32,7 @@ import com.rad.shifttracker.listici.regressTotalsByMonth
 import com.rad.shifttracker.uvoz.sideRunCheckNeeded
 import com.rad.shifttracker.listici.sideRuns
 import com.rad.shifttracker.uvoz.transportChangedText
+import com.rad.shifttracker.uvoz.shouldResetTransportDaily
 import com.rad.shifttracker.obracun.DEFAULT_REGRESS_NET
 import com.rad.shifttracker.repo.getMonthlyNetAdjustments
 import com.rad.shifttracker.repo.getRegressNetForMonth
@@ -172,6 +173,28 @@ class AdvanceFromPayslipsTest {
         assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
         assertEquals(240.0, repo.transportDailyAmountValue, 0.001)
         assertEquals(listOf(september), changed)
+    }
+
+    @Test
+    fun transportStartsAtZeroUntilATransportRunIsRead() {
+        val repo = testRepository()
+        assertEquals(0.0, repo.transportDailyAmountValue, 0.001)
+        val changes = mutableListOf<Pair<Double, Double>>()
+        applySideRuns(repo, listOf(side(transportAugust)), onTransportChanged = { old, new -> changes += old to new })
+        assertEquals(listOf(0.0 to 240.0), changes)
+        assertEquals(
+            "Prevoz po danu upisan: ${formatMoney2(240.0)} RSD (iz obračuna prevoza).",
+            transportChangedText(0.0, 240.0)
+        )
+    }
+
+    @Test
+    fun oldDefaultTransportIsResetOnlyWhenNoTransportRunWasApplied() {
+        assertEquals(true, shouldResetTransportDaily(transportRunApplied = false, daily = 240.0))
+        assertEquals(false, shouldResetTransportDaily(transportRunApplied = true, daily = 240.0))
+        // Iznos koji nije stara podrazumevana vrednost je sa obračuna (iz verzija pre pamćenja meseca).
+        assertEquals(false, shouldResetTransportDaily(transportRunApplied = false, daily = 230.0))
+        assertEquals(false, shouldResetTransportDaily(transportRunApplied = false, daily = 0.0))
     }
 
     @Test

@@ -3193,9 +3193,10 @@ class ShiftRepositoryTest {
     }
 
     @Test
-    fun `transportDailyAmountValue podrazumevano je 240 i odbija negativnu vrednost`() {
-        assertEquals(240.0, repo.transportDailyAmountValue, 0.01)
+    fun `transportDailyAmountValue podrazumevano je 0 i odbija negativnu vrednost`() {
+        assertEquals(0.0, repo.transportDailyAmountValue, 0.01)
 
+        repo.transportDailyAmountValue = 240.0
         repo.transportDailyAmountValue = -50.0
 
         assertEquals(240.0, repo.transportDailyAmountValue, 0.01)

@@ -10,6 +10,7 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.loadFromLocal
 import com.rad.shifttracker.repo.reschedule
 import com.rad.shifttracker.repo.saveToLocal
+import com.rad.shifttracker.uvoz.resetUnloadedTransportDaily
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -45,6 +46,7 @@ class AppContainer internal constructor(private val appContext: Application) {
         // Učitaj iz lokalne memorije ODMAH (sinhrono, brzo); container se objavljuje tek posle.
         shiftRepository.loadFromLocal(appContext)
         shiftRepository.onChange { persistence.schedule() }
+        resetUnloadedTransportDaily(appContext, shiftRepository)
         BloodDonationReminderScheduler.reschedule(appContext, shiftRepository)
         // Dnevni safety-net backup ako korisnik dugo ne menja podatke.
         BackupScheduler.schedulePeriodic(appContext)

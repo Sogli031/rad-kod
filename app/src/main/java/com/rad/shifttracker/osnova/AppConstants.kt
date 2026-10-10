@@ -48,7 +48,8 @@ data class PayConfig(
     val vacationPayBaseHourly: Double = 918.81,
     val paidHolidayPayBaseHourly: Double = 918.81,
     val sickPayBaseHourly: Double = 918.81,
-    val transportPerWorkDay: Double = 240.0,
+    // Nema prevoza dok se ne pročita iz obračuna prevoza (ko ga ne dobija, ostaje 0).
+    val transportPerWorkDay: Double = 0.0,
     val difficultWorkConditionsPercent: Double = 0.0,
     val defaultEmployeeContributionsPercent: Double = 19.9,
     val defaultTaxRelief: Double = 34_221.0,

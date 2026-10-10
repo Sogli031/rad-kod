@@ -27,6 +27,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
 import java.time.LocalDate
 import java.time.YearMonth
+import com.rad.shifttracker.repo.transportDailyAmountValue
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.RepoDataActions
 import com.rad.shifttracker.repo.getMonthlyReceipt
@@ -175,7 +176,8 @@ class DesignSnapshotTest {
     private fun snapshotPath(name: String, widthDp: Int, fontScale: Float): String =
         "src/test/snapshots/${name}_w${widthDp}_f${(fontScale * 100).toInt()}.png"
 
-    private fun sampleRepository(): ShiftRepository = sampleMonthRepository()
+    // Sa prevozom, da snimak pokaže sve četiri stavke ispod kalendara.
+    private fun sampleRepository(): ShiftRepository = sampleMonthRepository().apply { transportDailyAmountValue = 240.0 }
 
     private companion object {
         const val YEAR = 2026

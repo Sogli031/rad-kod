@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [10.9] - 2026-10-10
+- **Prevoz je podrazumevano 0 dok se ne učita iz obračuna prevoza.** Do sada je bio 240, pa su i oni koji prevoz ne dobijaju videli stavku „Prevoz“ sa pogrešnim iznosom. Ako na instalaciji obračun prevoza nikad nije učitan, stara vrednost 240 se vraća na 0. Čim provera pri ulasku nađe obračun prevoza, upisuje pravi iznos („Prevoz po danu upisan: …“).
+- U Opcijama piše „Prevoz po danu: nema“ dok obračun prevoza nije učitan.
+
 ## [10.8] - 2026-10-10
 - **Prevoz ispod kalendara:** pored „Sati rada“, „Prekovremeno“ i „Hrana“ stoji i četvrta, informativna stavka „Prevoz“: iznos prevoza za rad u prikazanom mesecu (dani sa najmanje 4 sata rada × prevoz po danu). Ko ima prevoz 0 po danu, i dalje vidi samo tri stavke.
 - U četiri stubca se natpis „PREKOVREMENO“ smanjuje da stane ceo, umesto da se seče (proveravano i na telefonu od 360dp sa uvećanim fontom).

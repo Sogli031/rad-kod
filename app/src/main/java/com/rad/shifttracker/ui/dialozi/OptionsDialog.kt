@@ -114,7 +114,8 @@ private fun ManualPaySettingsSection(repo: ShiftRepository) {
 }
 
 internal fun transportDailyAmountStatusText(daily: Double): String =
-    "$SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL: ${formatMoney2(daily)} $CURRENCY_LABEL"
+    if (daily > 0.0) "$SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL: ${formatMoney2(daily)} $CURRENCY_LABEL"
+    else "$SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL: nema"
 
 internal fun difficultWorkConditionsStatusText(percent: Double): String =
     if (percent > 0.0) "$DIFFICULT_WORK_CONDITIONS_STATUS_LABEL: ${formatRateInput(percent)}%" else "$DIFFICULT_WORK_CONDITIONS_STATUS_LABEL: nema"

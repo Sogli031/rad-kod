@@ -9,6 +9,7 @@ import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.SHOW_TEST_EXPORT_ACTIONS
 import com.rad.shifttracker.ui.dialozi.difficultWorkConditionsStatusText
+import com.rad.shifttracker.ui.dialozi.transportDailyAmountStatusText
 import com.rad.shifttracker.ui.dialozi.optionsDialogActionLabels
 import com.rad.shifttracker.ui.mainPayCardAmount
 
@@ -115,6 +116,11 @@ class OptionsDialogTextTest {
     fun `difficult conditions status shows percent from payslip or none`() {
         assertEquals("Otežani uslovi rada: 32%", difficultWorkConditionsStatusText(32.0))
         assertEquals("Otežani uslovi rada: nema", difficultWorkConditionsStatusText(0.0))
+    }
+
+    @Test
+    fun `transport status shows none until a transport run is read`() {
+        assertEquals("Prevoz po danu: nema", transportDailyAmountStatusText(0.0))
     }
 
     @Test

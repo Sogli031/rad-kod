@@ -141,6 +141,23 @@ internal fun runSideRunCheckOnEntry(context: Context, repo: ShiftRepository, tod
         prefs.edit().putStringSet(KEY_CONFIRMED_ADVANCE_MONTHS, stored).apply()
     }
 }
+/**
+ * Do 10.8 je prevoz po danu podrazumevano bio 240, pa su ga imali i oni koji prevoz ne dobijaju.
+ * Ako obračun prevoza nikad nije primenjen na ovoj instalaciji, ta stara vrednost se vraća na 0;
+ * provera pri ulasku je ponovo upiše čim nađe obračun.
+ */
+internal fun resetUnloadedTransportDaily(context: Context, repo: ShiftRepository) {
+    val prefs = context.getSharedPreferences(SIDE_RUN_CHECK_PREFS, Context.MODE_PRIVATE)
+    if (shouldResetTransportDaily(prefs.contains(KEY_TRANSPORT_WORK_MONTH), repo.transportDailyAmountValue)) {
+        repo.transportDailyAmountValue = 0.0
+    }
+}
+
+internal fun shouldResetTransportDaily(transportRunApplied: Boolean, daily: Double): Boolean =
+    !transportRunApplied && kotlin.math.abs(daily - LEGACY_DEFAULT_TRANSPORT_PER_DAY) < 0.005
+
+private const val LEGACY_DEFAULT_TRANSPORT_PER_DAY = 240.0
+
 /** Pamti mesec rada najnovijeg primenjenog obračuna prevoza, da provera pri ulasku zna da ga ima. */
 internal fun rememberTransportWorkMonth(context: Context, runs: List<PayslipParseResult.SideRun>) {
     val prefs = context.getSharedPreferences(SIDE_RUN_CHECK_PREFS, Context.MODE_PRIVATE)
@@ -235,7 +252,8 @@ internal fun regressChangedText(month: MonthKey, old: Double, new: Double): Stri
     "Regres promenjen: ${formatMoney2(old)} → ${formatMoney2(new)} ${CONFIG.pay.currency} (od ${monthYearText(month)})."
 
 internal fun transportChangedText(old: Double, new: Double): String =
-    "Prevoz po danu promenjen: ${formatMoney2(old)} → ${formatMoney2(new)} ${CONFIG.pay.currency} (iz obračuna prevoza)."
+    if (old <= 0.0) "Prevoz po danu upisan: ${formatMoney2(new)} ${CONFIG.pay.currency} (iz obračuna prevoza)."
+    else "Prevoz po danu promenjen: ${formatMoney2(old)} → ${formatMoney2(new)} ${CONFIG.pay.currency} (iz obračuna prevoza)."
 
 /**
  * Poruke o upisu iz obračuna — prikazuju se u aplikaciji (ne kao obaveštenje na telefonu):
