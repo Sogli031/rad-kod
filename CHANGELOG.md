@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.0] - 2026-10-10
+- **Prozor dana bez skoka:** pri promeni tipa dana (Radio sam, Bolovanje, Godišnji, Plaćeno odsustvo, Nisam radio) stare kontrole izblede, nove uđu, a visina lista se menja glatko. Isto važi za karticu „Prekovremeno“ i red „Razlika“.
+- Nazivi dana (PON…NED) imaju iste ivice i razmake kao mreža kalendara, pa je svaki tačno iznad sredine svoje kolone.
 ## [10.9] - 2026-10-10
 - **Prevoz je podrazumevano 0 dok se ne učita iz obračuna prevoza.** Do sada je bio 240, pa su i oni koji prevoz ne dobijaju videli stavku „Prevoz“ sa pogrešnim iznosom. Ako na instalaciji obračun prevoza nikad nije učitan, stara vrednost 240 se vraća na 0. Čim provera pri ulasku nađe obračun prevoza, upisuje pravi iznos („Prevoz po danu upisan: …“).
 - U Opcijama piše „Prevoz po danu: nema“ dok obračun prevoza nije učitan.

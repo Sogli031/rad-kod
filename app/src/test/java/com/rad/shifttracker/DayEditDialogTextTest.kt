@@ -268,8 +268,8 @@ class DayEditDialogTextTest {
     fun sickDayEditShowsOnlyPayRateChoices() {
         val source = dayEditDialogSource()
         val sickBranch = source.substring(
-            source.indexOf("Shift.SICK -> "),
-            source.indexOf("Shift.VACATION -> DayEditVacationControls(")
+            source.indexOf("DayEditControlsKind.SICK -> "),
+            source.indexOf("DayEditControlsKind.VACATION -> DayEditVacationControls(")
         )
         val sickControls = functionSource(source, "fun DayEditSickControls(")
 
@@ -287,8 +287,8 @@ class DayEditDialogTextTest {
     fun vacationDayEditShowsWarningWithoutManualHoursSelector() {
         val source = dayEditDialogSource()
         val vacationBranch = source.substring(
-            source.indexOf("Shift.VACATION -> DayEditVacationControls("),
-            source.indexOf("Shift.OFF -> DayEditOffControls()")
+            source.indexOf("DayEditControlsKind.VACATION -> DayEditVacationControls("),
+            source.indexOf("DayEditControlsKind.OFF -> DayEditOffControls()")
         )
         val vacationControls = functionSource(source, "fun DayEditVacationControls(")
 
