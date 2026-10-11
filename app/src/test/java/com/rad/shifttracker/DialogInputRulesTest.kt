@@ -8,18 +8,15 @@ import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.ui.dialozi.absenceDayRangeError
 import com.rad.shifttracker.ui.dialozi.absenceDayRangeOrNull
-import com.rad.shifttracker.ui.dialozi.autoFillMonthsError
+import com.rad.shifttracker.ui.dialozi.autoFillWeekQuestion
 import com.rad.shifttracker.ui.dialozi.autoFillSettings
 
 /** Pravila unosa izdvojena iz dijaloga „Auto-popuna“ i „Bolovanje / Godišnji“. */
 class DialogInputRulesTest {
     @Test
-    fun `broj meseci unapred mora biti od 1 do 24`() {
-        assertEquals("Unesi broj meseci.", autoFillMonthsError(""))
-        assertEquals("Broj meseci mora biti najmanje 1.", autoFillMonthsError("0"))
-        assertEquals("Maksimalno 24 meseca unapred.", autoFillMonthsError("25"))
-        assertNull(autoFillMonthsError("1"))
-        assertNull(autoFillMonthsError("24"))
+    fun `pitanje o smeni radnim danom za ovu a vikendom za sledecu sedmicu`() {
+        assertEquals("Koju smenu radiš ove sedmice?", autoFillWeekQuestion(isWeekend = false))
+        assertEquals("Koju smenu radiš sledeće sedmice?", autoFillWeekQuestion(isWeekend = true))
     }
 
     @Test

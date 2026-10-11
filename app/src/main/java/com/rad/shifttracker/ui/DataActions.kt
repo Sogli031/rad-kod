@@ -28,6 +28,8 @@ import com.rad.shifttracker.repo.minuliRadLastPayslipYearValue
 import com.rad.shifttracker.repo.minuliRadPayslipPercentValue
 import com.rad.shifttracker.repo.minuliRadStartMonthValue
 import com.rad.shifttracker.repo.minuliRadStartYearValue
+import com.rad.shifttracker.repo.AUTO_FILL_MONTHS_AHEAD
+import com.rad.shifttracker.repo.AutoFillPatternStore
 import com.rad.shifttracker.repo.populateMonthsAhead
 import com.rad.shifttracker.repo.recordBloodDonation
 import com.rad.shifttracker.repo.savePayslip
@@ -62,7 +64,8 @@ internal interface DayActions {
     fun saveDay(record: DayRecord)
     fun applySickRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int, sickPayRate: Double?)
     fun applyVacationRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int)
-    fun populateMonthsAhead(scheduler: ShiftScheduler, referenceDate: LocalDate, settings: ShiftFillSettings, monthsAhead: Int)
+    /** „Popuni smene“: presnimi raspored od danas i drži ga popunjenim unapred (kontinualno). */
+    fun populateAutoFill(scheduler: ShiftScheduler, today: LocalDate, settings: ShiftFillSettings)
     fun deleteMonth(year: Int, month: Int)
     fun deleteAllData()
     fun recordBloodDonation(date: LocalDate)
@@ -148,8 +151,10 @@ internal class RepoDataActions(
         scheduler.applyVacationRange(repo, year, month, startDay, endDay)
     }
 
-    override fun populateMonthsAhead(scheduler: ShiftScheduler, referenceDate: LocalDate, settings: ShiftFillSettings, monthsAhead: Int) {
-        scheduler.populateMonthsAhead(repo, referenceDate, settings, monthsAhead)
+    override fun populateAutoFill(scheduler: ShiftScheduler, today: LocalDate, settings: ShiftFillSettings) {
+        scheduler.populateMonthsAhead(repo, today, settings, AUTO_FILL_MONTHS_AHEAD)
+        // Isti obrazac posle sam produžava raspored pri pokretanju aplikacije.
+        AutoFillPatternStore.save(appContext, settings)
     }
 
     override fun deleteMonth(year: Int, month: Int) {

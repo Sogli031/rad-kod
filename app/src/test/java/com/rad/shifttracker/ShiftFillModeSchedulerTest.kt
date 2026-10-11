@@ -8,7 +8,6 @@ import com.rad.shifttracker.smene.ReferenceWorkWeek
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.smene.ShiftScheduler
-import com.rad.shifttracker.ui.dialozi.formatReferenceWorkWeek
 
 class ShiftFillModeSchedulerTest {
 
@@ -44,16 +43,6 @@ class ShiftFillModeSchedulerTest {
         assertEquals(
             ReferenceWorkWeek(LocalDate.of(2026, 5, 18), LocalDate.of(2026, 5, 22)),
             scheduler.getReferenceWorkWeek(LocalDate.of(2026, 5, 18))
-        )
-    }
-
-    @Test
-    fun `formatReferenceWorkWeek prikazuje ponedeljak petak`() {
-        assertEquals(
-            "11.05.2026 - 15.05.2026",
-            formatReferenceWorkWeek(
-                ReferenceWorkWeek(LocalDate.of(2026, 5, 11), LocalDate.of(2026, 5, 15))
-            )
         )
     }
 

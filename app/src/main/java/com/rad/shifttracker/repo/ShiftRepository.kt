@@ -306,6 +306,25 @@ class ShiftRepository(
         return outcome.recordsDeletedCount
     }
 
+    /**
+     * Ponovna popuna (npr. promena brigade): od [from] nadalje briše stari raspored — auto-popunjene
+     * dane i ručno promenjene smene/slobodne dane — da ga nova popuna presnimi. Ostaju odsustva
+     * (godišnji, bolovanje, plaćeno odsustvo, davanje krvi), prekovremeni i ručno menjan praznik.
+     */
+    fun clearScheduleFrom(from: LocalDate): Int {
+        val deleted = synchronized(lock) {
+            val toDelete = recordStore.allRecords.filter { record ->
+                !record.date.isBefore(from) && record.isReplaceableSchedule()
+            }
+            toDelete.forEach { recordStore.delete(it.year, it.month, it.day) }
+            toDelete.size
+        }
+        if (deleted > 0) {
+            notifyChange()
+        }
+        return deleted
+    }
+
     fun deleteAutoFilledHolidayRecordsBefore(cutoffMonth: MonthKey): Int {
         val deleted = synchronized(lock) {
             holidayRecords.deleteAutoFilledHolidayRecordsBefore(cutoffMonth)
@@ -397,3 +416,11 @@ internal fun MonthKey.minusMonthsForRetention(months: Long): MonthKey {
     return MonthKey(result.year, result.monthValue)
 }
 
+private fun DayRecord.isReplaceableSchedule(): Boolean = when (source) {
+    DayRecordSource.AUTO_FILL -> true
+    // Ručno samo promenjena smena ili slobodan dan; prekovremeni, iskorišćeni sati i manjak ostaju.
+    DayRecordSource.MANUAL -> holidayOverride == null && shift != Shift.VACATION && shift != Shift.SICK &&
+        shift2 == null && compHoursUsed == 0 && regularShortageMinutes == 0
+    DayRecordSource.BLOOD_DONATION_LEAVE,
+    DayRecordSource.PAID_LEAVE -> false
+}

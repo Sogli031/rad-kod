@@ -46,20 +46,71 @@ fun ShiftScheduler.populateMonthsAhead(
     val safeMonths = monthsAhead.coerceAtLeast(0)
     if (!isValidFillSettings(settings)) return 0
 
-    val normalizedSettings = when (settings.mode) {
-        ShiftFillMode.FIRST_SECOND,
-        ShiftFillMode.THREE_BRIGADE -> settings.copy(anchorDate = getReferenceWorkWeek(settings.anchorDate).start)
-        else -> settings
-    }
+    val normalizedSettings = normalizeFillSettings(settings)
     repo.brigadeTypeValue = brigadeTypeForFillMode(normalizedSettings.mode)
 
     val referenceMonth = referenceDate.withDayOfMonth(1)
     repo.deleteAutoFilledHolidayRecordsBefore(
         MonthKey(referenceMonth.year, referenceMonth.monthValue)
     )
-    val startDate = referenceMonth
+    // Ponovna popuna (npr. promena brigade) presnimava raspored od danas nadalje bez pitanja;
+    // prošli dani ostaju kakvi su — tada se radilo po starom rasporedu.
+    repo.clearScheduleFrom(referenceDate)
     val endMonth = referenceMonth.plusMonths(safeMonths.toLong())
-    val endDate = endMonth.withDayOfMonth(endMonth.lengthOfMonth())
+    return fillDateRange(
+        repo = repo,
+        normalizedSettings = normalizedSettings,
+        startDate = referenceMonth,
+        endDate = endMonth.withDayOfMonth(endMonth.lengthOfMonth()),
+        keepExistingBefore = referenceDate
+    )
+}
+
+/**
+ * Popuna ide „kontinualno“: drži se popunjeno samo do kraja meseca [AUTO_FILL_MONTHS_AHEAD]
+ * meseci posle tekućeg, a kako vreme odmiče (pri pokretanju aplikacije) dopisuju se novi dani.
+ * Tako raspored nikad ne ističe, a u memoriji je uvek najviše oko godinu dana unapred.
+ */
+const val AUTO_FILL_MONTHS_AHEAD = 12
+
+/** Poslednji dan koji auto-popuna drži popunjenim. */
+fun autoFillHorizonEnd(today: LocalDate): LocalDate {
+    val endMonth = today.withDayOfMonth(1).plusMonths(AUTO_FILL_MONTHS_AHEAD.toLong())
+    return endMonth.withDayOfMonth(endMonth.lengthOfMonth())
+}
+
+/**
+ * Dopisuje dane od poslednjeg auto-popunjenog do [autoFillHorizonEnd], po istom obrascu.
+ * Ne dira prošlost, ručne unose ni ranije popunjene dane. Bez ijednog auto-popunjenog dana
+ * (popuna nikad nije pokrenuta) ne radi ništa. Vraća broj upisanih dana.
+ */
+fun ShiftScheduler.extendAutoFill(
+    repo: ShiftRepository,
+    today: LocalDate,
+    settings: () -> ShiftFillSettings?
+): Int {
+    val lastFilled = repo.lastAutoFilledDate() ?: return 0
+    val start = maxOf(lastFilled.plusDays(1), today.withDayOfMonth(1))
+    val end = autoFillHorizonEnd(today)
+    if (start.isAfter(end)) return 0
+    val pattern = settings()?.takeIf(::isValidFillSettings) ?: return 0
+    return fillDateRange(repo, normalizeFillSettings(pattern), start, end)
+}
+
+private fun ShiftScheduler.normalizeFillSettings(settings: ShiftFillSettings): ShiftFillSettings =
+    when (settings.mode) {
+        ShiftFillMode.FIRST_SECOND,
+        ShiftFillMode.THREE_BRIGADE -> settings.copy(anchorDate = getReferenceWorkWeek(settings.anchorDate).start)
+        else -> settings
+    }
+
+private fun ShiftScheduler.fillDateRange(
+    repo: ShiftRepository,
+    normalizedSettings: ShiftFillSettings,
+    startDate: LocalDate,
+    endDate: LocalDate,
+    keepExistingBefore: LocalDate = startDate
+): Int {
     val records = mutableListOf<BatchRecord>()
 
     var date = startDate
@@ -68,7 +119,10 @@ fun ShiftScheduler.populateMonthsAhead(
         // Automatsko popunjavanje ne sme da pregazi ručne unose
         // (godišnji, bolovanje, dupla smena...) ni krvodavalaštvo —
         // zamenjuje samo prazne dane i ranije auto-popunjene zapise.
-        if (existing != null && existing.source != DayRecordSource.AUTO_FILL) {
+        // Pre [keepExistingBefore] (već prošli dani) dopunjavaju se samo prazni dani.
+        val keepExisting = existing != null &&
+            (existing.source != DayRecordSource.AUTO_FILL || date.isBefore(keepExistingBefore))
+        if (keepExisting) {
             date = date.plusDays(1)
             continue
         }

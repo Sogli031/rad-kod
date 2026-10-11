@@ -4,8 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
-import java.time.DayOfWeek
-import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.abs
 import com.rad.shifttracker.osnova.CONFIG
@@ -21,35 +19,8 @@ import com.rad.shifttracker.obracun.ResolvedPayBase
 import com.rad.shifttracker.obracun.ResolvedPayBases
 import com.rad.shifttracker.obracun.RollingPayBaseCalculation
 import com.rad.shifttracker.repo.AbsenceRangeNetImpact
-import com.rad.shifttracker.smene.ReferenceWorkWeek
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.osnova.formatPayBaseRateText
-
-internal fun formatAutoFillReferenceDate(date: LocalDate): String {
-    val weekday = when (date.dayOfWeek) {
-        DayOfWeek.MONDAY -> "Ponedeljak"
-        DayOfWeek.TUESDAY -> "Utorak"
-        DayOfWeek.WEDNESDAY -> "Sreda"
-        DayOfWeek.THURSDAY -> "Četvrtak"
-        DayOfWeek.FRIDAY -> "Petak"
-        DayOfWeek.SATURDAY -> "Subota"
-        DayOfWeek.SUNDAY -> "Nedelja"
-    }
-    return "$weekday ${date.dayOfMonth}.${date.monthValue}.${date.year}."
-}
-
-internal fun formatReferenceWorkWeek(week: ReferenceWorkWeek): String {
-    return String.format(
-        Locale.getDefault(),
-        "%02d.%02d.%04d - %02d.%02d.%04d",
-        week.start.dayOfMonth,
-        week.start.monthValue,
-        week.start.year,
-        week.end.dayOfMonth,
-        week.end.monthValue,
-        week.end.year
-    )
-}
 
 internal fun filterDecimalInput(value: String): String {
     val sb = StringBuilder()
