@@ -1,12 +1,17 @@
 package com.rad.shifttracker.ui.dialozi
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -34,8 +40,6 @@ import com.rad.shifttracker.azuriranje.downloadAndInstallUpdate
 import com.rad.shifttracker.azuriranje.fetchAvailableUpdate
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.ui.FormErrorText
-import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.RoundedButton
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.extendedColors
@@ -132,32 +136,48 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
         onPauseOrDispose { }
     }
 
-    PopupDialog(title = updatePromptTitle(update), onDismiss = { if (!busy) onDismiss() }, scrollable = true) {
-        PopupCard {
-            Text(
-                text = "Sada imaš ${BuildConfig.VERSION_NAME}. Podaci ostaju, ažuriranje samo menja aplikaciju.",
-                color = MaterialTheme.extendedColors.textSecondary,
-                style = MaterialTheme.typography.bodySmall
-            )
-            if (update.notes.isNotBlank()) {
+    // Centrirani prozor (kao u BanketLux-u): obaveštenje koje traži odluku, ne list sa dna.
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = !busy),
+        title = { Text(updatePromptTitle(update)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
                 Text(
-                    text = update.notes,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = "Sada imaš ${BuildConfig.VERSION_NAME}. Podaci ostaju, ažuriranje samo menja aplikaciju.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (update.notes.isNotBlank()) {
+                    Text(
+                        text = update.notes,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                UpdateProgressStatus(progress = progress, installing = installing, message = message)
             }
-            UpdateProgressStatus(progress = progress, installing = installing, message = message)
-            UpdatePromptButtons(
-                confirmText = when {
-                    progress != null -> "Preuzimam..."
-                    installing -> "Instaliram..."
-                    else -> UPDATE_PROMPT_CONFIRM
-                },
-                onLater = { if (!busy) onDismiss() },
-                onConfirm = startInstall
-            )
+        },
+        confirmButton = {
+            Button(onClick = startInstall, enabled = !busy) {
+                Text(
+                    when {
+                        progress != null -> "Preuzimam..."
+                        installing -> "Instaliram..."
+                        else -> UPDATE_PROMPT_CONFIRM
+                    }
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { if (!busy) onDismiss() }, enabled = !busy) {
+                Text(UPDATE_PROMPT_LATER)
+            }
         }
-    }
+    )
 }
 
 /** Napredak preuzimanja, „Instaliram...“ dok sistem menja aplikaciju, pa poruka (greška ili upozorenje). */
@@ -185,27 +205,6 @@ private fun UpdateProgressStatus(progress: Int?, installing: Boolean, message: P
         } else {
             Text(text = text, color = MaterialTheme.extendedColors.warning, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-@Composable
-private fun UpdatePromptButtons(confirmText: String, onLater: () -> Unit, onConfirm: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        RoundedButton(
-            text = UPDATE_PROMPT_LATER,
-            modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
-            bgColor = MaterialTheme.colorScheme.surfaceContainer,
-            textColor = MaterialTheme.colorScheme.onSurface,
-            onClick = onLater
-        )
-        RoundedButton(
-            text = confirmText,
-            modifier = Modifier.weight(1f).height(UI.dialogActionHeight.dp),
-            bgColor = MaterialTheme.colorScheme.primary,
-            textColor = MaterialTheme.colorScheme.onPrimary,
-            bold = true,
-            onClick = onConfirm
-        )
     }
 }
 

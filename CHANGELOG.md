@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [11.9] - 2026-10-11
+- **Prozor „Stigla je verzija“ je sada na sredini ekrana**, kao u BanketLux-u: naslov, izmene, dugmad „Ažuriraj“ i „Kasnije“. Dok traje preuzimanje i instalacija piše „Preuzimam...“ / „Instaliram...“ i prozor ne može slučajno da se zatvori.
+
 ## [11.8] - 2026-10-10
 - **„Za sate“ u trećoj smeni dobija noćni dodatak.** Sati i dalje idu u saldo (i pokrivaju dane koje nisi radio), a noćni dodatak od 41% na te sate plaća se u mesecu kad su rađeni, kao na listi 06/2026 (vraćeni sati u trećoj ušli su u 43h noćnog). Primer: 01.10. nije rađen, dva puta po 4h iz druge u treću „Za sate“ → dan je pokriven i plaća se noćni dodatak na 8h.
 
