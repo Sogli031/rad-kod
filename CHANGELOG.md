@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.1] - 2026-10-11
+- **Auto-popuna: smena i dan u bloku biraju se kao „Izaberi smenu“** u prozoru dana — jedan red segmenata, izabrani je plav sa kvačicom.
+
 ## [12.0] - 2026-10-11
 - **Dugmad za izbor imaju animaciju i kvačicu**, kao „Izaberi smenu“: u „Tip dana“, u prozoru Bolovanje/Godišnji (tip odsustva i isplata) i u Auto-popuni (režim, smena, dan u bloku). Boja se glatko pretapa, a uz izabrano dugme uleti kvačica.
 - **Auto-popuna bez seckanja:** pri promeni režima kartice se pretapaju i visina se menja glatko, kao kad menjaš tip dana; i poruka o grešci ulazi glatko.

@@ -15,15 +15,11 @@ import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.ui.emphasized
-import com.rad.shifttracker.ui.color
-import com.rad.shifttracker.ui.textColor
 
 private const val AUTO_FILL_MODE_CHOICE_HEIGHT = 65
 private const val AUTO_FILL_SHIFT_CHOICE_HEIGHT = 50
 private const val AUTO_FILL_MODE_CHOICE_SPACING = 8
-private const val AUTO_FILL_SHIFT_CHOICE_SPACING = 6
 private const val AUTO_FILL_BORDER_ALPHA = 0.5f
-private const val AUTO_FILL_UNSELECTED_SHIFT_ALPHA = 0.2f
 
 internal data class AutoFillShiftChoice(
     val label: String,
@@ -78,69 +74,33 @@ internal fun AutoFillModeGrid(
     }
 }
 
+/** Izbor smene kao „Izaberi smenu“ u prozoru dana: jedan red segmenata, izabrani sa kvačicom. */
 @Composable
 internal fun AutoFillShiftGrid(
     options: List<AutoFillShiftChoice>,
     selectedShift: Shift,
     onShiftSelected: (Shift) -> Unit
 ) {
-    val border = MaterialTheme.colorScheme.outlineVariant.copy(alpha = AUTO_FILL_BORDER_ALPHA)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(AUTO_FILL_SHIFT_CHOICE_SPACING.dp)
-    ) {
-        for (option in options) {
-            AnimatedChoiceButton(
-                text = option.label,
-                selected = option.shift == selectedShift,
-                // Boja smene ostaje: izabrana puna, ostale prigušene.
-                colors = ChoiceButtonColors(
-                    selectedContainer = option.shift.color,
-                    container = option.shift.color.copy(alpha = AUTO_FILL_UNSELECTED_SHIFT_ALPHA),
-                    selectedContent = option.shift.textColor,
-                    content = option.shift.textColor,
-                    selectedBorder = option.shift.color,
-                    border = border
-                ),
-                onClick = { onShiftSelected(option.shift) },
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp,
-                shape = CircleShape,
-                textStyle = MaterialTheme.typography.labelMedium.emphasized()
-            )
-        }
-    }
+    DayEditSegmentedChoice(
+        options = options.map { option ->
+            DayEditChoice(option.label, option.shift == selectedShift) { onShiftSelected(option.shift) }
+        },
+        minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT
+    )
 }
 
+/** „Prvi dan / Drugi dan“ — isti segmentni izbor kao smena iznad. */
 @Composable
 internal fun AutoFillBlockDayGrid(
     selectedIndex: Int,
     onSelected: (Int) -> Unit
 ) {
-    val colors = autoFillNeutralColors()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(AUTO_FILL_SHIFT_CHOICE_SPACING.dp)
-    ) {
-        for ((label, index) in listOf("Prvi dan" to 0, "Drugi dan" to 1)) {
-            AnimatedChoiceButton(
-                text = label,
-                selected = selectedIndex == index,
-                colors = colors,
-                onClick = { onSelected(index) },
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp,
-                shape = CircleShape,
-                textStyle = MaterialTheme.typography.labelLarge.emphasized()
-            )
-        }
-    }
+    DayEditSegmentedChoice(
+        options = listOf("Prvi dan" to 0, "Drugi dan" to 1).map { (label, index) ->
+            DayEditChoice(label, selectedIndex == index) { onSelected(index) }
+        },
+        minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT
+    )
 }
 
 internal fun defaultStartShiftForMode(mode: ShiftFillMode, current: Shift): Shift {
