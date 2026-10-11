@@ -8,7 +8,7 @@ object UI {
     const val saveButtonHeight = 52
     const val headerHeight = 52
     const val statCardHeight = 62
-    const val totalCardHeight = 96
+    const val totalCardHeight = 104
     const val compTimeBarHeight = 62
     const val weekdayHeaderHeight = 24
     const val dayButtonHeight = 58

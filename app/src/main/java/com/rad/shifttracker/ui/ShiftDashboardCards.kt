@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,8 +47,8 @@ internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 // Svaki red je zaseban dodir (plata, primanja): najmanje 48dp (M3 / ATF TouchTargetSizeCheck).
 internal const val COMPACT_PAY_CARD_HEIGHT = 48
-// Dve kartice plate su vizuelno jedna grupa: bez razmaka, gornja/donja zaobljena.
-internal const val PAY_CARDS_SPACING = 0
+// Dve kartice plate su odvojene (svaka svoja kartica), da se ne čitaju kao jedno dugme.
+internal const val PAY_CARDS_SPACING = 8
 
 /**
  * Obe kartice ispod kalendara su „Plata za <mesec>“: gornja za izabrani mesec (stiže sledećeg
@@ -170,8 +169,8 @@ internal fun TotalCard(
         amount = mainPayCardAmount(receipt, deductionsNet),
         isAvailable = receipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.onSurface,
-        shape = MaterialTheme.shapes.medium.copy(topStart = ZeroCornerSize, topEnd = ZeroCornerSize),
-        showTopDivider = true,
+        shape = MaterialTheme.shapes.medium,
+        showTopDivider = false,
         onClick = onClick
     )
 }
@@ -188,11 +187,7 @@ internal fun SalaryCard(
         amount = mainPayCardAmount(nextMonthReceipt, deductionsNet),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.primary,
-        shape = if (SHOW_TOTAL_CARD) {
-            MaterialTheme.shapes.medium.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize)
-        } else {
-            MaterialTheme.shapes.medium
-        },
+        shape = MaterialTheme.shapes.medium,
         showTopDivider = false,
         onClick = onClick
     )
