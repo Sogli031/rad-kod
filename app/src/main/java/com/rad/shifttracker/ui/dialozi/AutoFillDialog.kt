@@ -2,6 +2,24 @@ package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import com.rad.shifttracker.ui.RadMotion
+import com.rad.shifttracker.ui.Spacing
+import com.rad.shifttracker.ui.rememberReducedMotion
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -74,19 +92,41 @@ internal fun AutoFillDialog(
             )
         }
 
-        AutoFillShiftCards(
-            fillMode = fillMode,
-            startShift = startShift,
-            cycleBlockDayIndex = cycleBlockDayIndex,
-            onShiftSelected = {
-                startShift = it
-                errorMessage = null
+        // Promena režima: stare kartice izblede, nove uđu, a visina lista se menja glatko
+        // umesto skoka — isti prelaz kao promena tipa dana u prozoru dana.
+        val reducedMotion = rememberReducedMotion()
+        AnimatedContent(
+            targetState = fillMode,
+            transitionSpec = {
+                if (reducedMotion) {
+                    EnterTransition.None togetherWith ExitTransition.None
+                } else {
+                    (fadeIn(RadMotion.effects()) togetherWith fadeOut(RadMotion.fastEffects()))
+                        .using(SizeTransform(clip = true) { _, _ -> RadMotion.spatial() })
+                }
             },
-            onBlockDaySelected = {
-                cycleBlockDayIndex = it
-                errorMessage = null
+            contentAlignment = Alignment.TopCenter,
+            label = "autoFillShiftCards"
+        ) { mode ->
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                AutoFillShiftCards(
+                    fillMode = mode,
+                    startShift = startShift,
+                    cycleBlockDayIndex = cycleBlockDayIndex,
+                    onShiftSelected = {
+                        startShift = it
+                        errorMessage = null
+                    },
+                    onBlockDaySelected = {
+                        cycleBlockDayIndex = it
+                        errorMessage = null
+                    }
+                )
             }
-        )
+        }
 
         PopupCard {
             SectionLabel(text = "Meseci unapred")
@@ -104,8 +144,15 @@ internal fun AutoFillDialog(
             )
         }
 
-        errorMessage?.let { message ->
-            FormErrorText(message = message)
+        AnimatedVisibility(
+            visible = errorMessage != null,
+            enter = if (reducedMotion) EnterTransition.None else fadeIn(RadMotion.effects()) + expandVertically(RadMotion.spatial()),
+            exit = if (reducedMotion) ExitTransition.None else fadeOut(RadMotion.fastEffects()) + shrinkVertically(RadMotion.fastSpatial())
+        ) {
+            // Poslednja poruka ostaje dok traje izlazna animacija.
+            var shownMessage by remember { mutableStateOf("") }
+            LaunchedEffect(errorMessage) { errorMessage?.let { shownMessage = it } }
+            FormErrorText(message = errorMessage ?: shownMessage)
         }
 
         GlowButton(
@@ -148,7 +195,9 @@ private fun AutoFillHeaderCard(
     referenceWeekText: String,
     fourBrigadeReferenceDateText: String
 ) {
-    PopupCard {
+    val reducedMotion = rememberReducedMotion()
+    // Red sa referentnom sedmicom / početnim danom se pojavljuje po režimu; kartica raste glatko.
+    PopupCard(modifier = if (reducedMotion) Modifier else Modifier.animateContentSize(RadMotion.spatial())) {
         AutoSizeText(
             text = "Automatsko popunjavanje smena",
             color = MaterialTheme.colorScheme.onSurface,

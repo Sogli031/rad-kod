@@ -31,8 +31,9 @@ class AutoFillDialogComponentsTest {
 
         assertEquals(0, Regex("""\.height\(AUTO_FILL_MODE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
         assertEquals(0, Regex("""\.height\(AUTO_FILL_SHIFT_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(2, Regex("""\.heightIn\(min = AUTO_FILL_MODE_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
-        assertEquals(4, Regex("""\.heightIn\(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT\.dp\)""").findAll(source).count())
+        // Red i dugme (AnimatedChoiceButton prima minimalnu visinu kao `minHeight`).
+        assertEquals(2, Regex("""(\.heightIn\(min|minHeight) = AUTO_FILL_MODE_CHOICE_HEIGHT\.dp""").findAll(source).count())
+        assertEquals(4, Regex("""(\.heightIn\(min|minHeight) = AUTO_FILL_SHIFT_CHOICE_HEIGHT\.dp""").findAll(source).count())
     }
 }
 

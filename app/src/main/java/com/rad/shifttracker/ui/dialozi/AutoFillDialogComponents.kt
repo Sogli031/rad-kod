@@ -6,13 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillMode
-import com.rad.shifttracker.ui.RoundedButton
+import com.rad.shifttracker.ui.emphasized
 import com.rad.shifttracker.ui.color
 import com.rad.shifttracker.ui.textColor
 
@@ -20,18 +22,38 @@ private const val AUTO_FILL_MODE_CHOICE_HEIGHT = 65
 private const val AUTO_FILL_SHIFT_CHOICE_HEIGHT = 50
 private const val AUTO_FILL_MODE_CHOICE_SPACING = 8
 private const val AUTO_FILL_SHIFT_CHOICE_SPACING = 6
+private const val AUTO_FILL_BORDER_ALPHA = 0.5f
+private const val AUTO_FILL_UNSELECTED_SHIFT_ALPHA = 0.2f
 
 internal data class AutoFillShiftChoice(
     val label: String,
     val shift: Shift
 )
 
+/** Neutralni izbor (režim, dan u bloku): izabrano `primary`, ostalo tamna podloga — kao do sad. */
+@Composable
+private fun autoFillNeutralColors(): ChoiceButtonColors {
+    val scheme = MaterialTheme.colorScheme
+    return ChoiceButtonColors(
+        selectedContainer = scheme.primary,
+        container = scheme.surfaceContainerHigh,
+        selectedContent = scheme.onPrimary,
+        content = scheme.onSurface,
+        selectedBorder = scheme.primary,
+        border = scheme.outlineVariant.copy(alpha = AUTO_FILL_BORDER_ALPHA)
+    )
+}
+
 @Composable
 internal fun AutoFillModeGrid(
     selectedMode: ShiftFillMode,
     onModeSelected: (ShiftFillMode) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(AUTO_FILL_MODE_CHOICE_SPACING.dp)) {
+    val colors = autoFillNeutralColors()
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(AUTO_FILL_MODE_CHOICE_SPACING.dp)
+    ) {
         for (rowModes in ShiftFillMode.values().toList().chunked(2)) {
             Row(
                 modifier = Modifier
@@ -40,18 +62,15 @@ internal fun AutoFillModeGrid(
                 horizontalArrangement = Arrangement.spacedBy(AUTO_FILL_MODE_CHOICE_SPACING.dp)
             ) {
                 for (mode in rowModes) {
-                    val isSelected = mode == selectedMode
-                    RoundedButton(
+                    AnimatedChoiceButton(
                         text = mode.label,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = AUTO_FILL_MODE_CHOICE_HEIGHT.dp)
-                            .fillMaxHeight(),
-                        bgColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                        textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        textStyle = MaterialTheme.typography.labelLarge,
-                        bold = true,
-                        onClick = { onModeSelected(mode) }
+                        selected = mode == selectedMode,
+                        colors = colors,
+                        onClick = { onModeSelected(mode) },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        minHeight = AUTO_FILL_MODE_CHOICE_HEIGHT.dp,
+                        shape = CircleShape,
+                        textStyle = MaterialTheme.typography.labelLarge.emphasized()
                     )
                 }
             }
@@ -65,25 +84,32 @@ internal fun AutoFillShiftGrid(
     selectedShift: Shift,
     onShiftSelected: (Shift) -> Unit
 ) {
+    val border = MaterialTheme.colorScheme.outlineVariant.copy(alpha = AUTO_FILL_BORDER_ALPHA)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp),
+            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(AUTO_FILL_SHIFT_CHOICE_SPACING.dp)
     ) {
         for (option in options) {
-            val isSelected = option.shift == selectedShift
-            RoundedButton(
+            AnimatedChoiceButton(
                 text = option.label,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (isSelected) option.shift.color else option.shift.color.copy(alpha = 0.2f),
-                textColor = option.shift.textColor,
-                textStyle = MaterialTheme.typography.labelMedium,
-                bold = true,
-                onClick = { onShiftSelected(option.shift) }
+                selected = option.shift == selectedShift,
+                // Boja smene ostaje: izabrana puna, ostale prigušene.
+                colors = ChoiceButtonColors(
+                    selectedContainer = option.shift.color,
+                    container = option.shift.color.copy(alpha = AUTO_FILL_UNSELECTED_SHIFT_ALPHA),
+                    selectedContent = option.shift.textColor,
+                    content = option.shift.textColor,
+                    selectedBorder = option.shift.color,
+                    border = border
+                ),
+                onClick = { onShiftSelected(option.shift) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp,
+                shape = CircleShape,
+                textStyle = MaterialTheme.typography.labelMedium.emphasized()
             )
         }
     }
@@ -94,25 +120,24 @@ internal fun AutoFillBlockDayGrid(
     selectedIndex: Int,
     onSelected: (Int) -> Unit
 ) {
+    val colors = autoFillNeutralColors()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp),
+            .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(AUTO_FILL_SHIFT_CHOICE_SPACING.dp)
     ) {
         for ((label, index) in listOf("Prvi dan" to 0, "Drugi dan" to 1)) {
-            val isSelected = selectedIndex == index
-            RoundedButton(
+            AnimatedChoiceButton(
                 text = label,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp)
-                    .fillMaxHeight(),
-                bgColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = { onSelected(index) }
+                selected = selectedIndex == index,
+                colors = colors,
+                onClick = { onSelected(index) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                minHeight = AUTO_FILL_SHIFT_CHOICE_HEIGHT.dp,
+                shape = CircleShape,
+                textStyle = MaterialTheme.typography.labelLarge.emphasized()
             )
         }
     }

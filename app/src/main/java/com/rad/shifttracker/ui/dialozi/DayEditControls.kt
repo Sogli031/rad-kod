@@ -4,13 +4,11 @@ import com.rad.shifttracker.ui.DataActions
 import androidx.compose.animation.animateContentSize
 import com.rad.shifttracker.ui.RadMotion
 import com.rad.shifttracker.ui.rememberReducedMotion
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +49,6 @@ import com.rad.shifttracker.osnova.formatShortageMinutes
 import com.rad.shifttracker.godisnji.VacationRequestValidation
 import com.rad.shifttracker.ui.CARD_BORDER_ALPHA
 import com.rad.shifttracker.ui.LabeledSwitchRow
-import com.rad.shifttracker.ui.MIN_TOUCH_TARGET
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.labelLargeEmphasized
 import com.rad.shifttracker.ui.radClickable
@@ -195,6 +192,7 @@ internal fun DayEditSegmentedChoice(options: List<DayEditChoice>, minHeight: Int
     }
 }
 
+/** Izbor u prozoru dana i odsustva: izgled kao do sad, a promena izbora animirana sa kvačicom. */
 @Composable
 internal fun RowScope.DayEditChoiceButton(
     text: String,
@@ -203,37 +201,26 @@ internal fun RowScope.DayEditChoiceButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val shape = MaterialTheme.shapes.small
-    val alpha = if (enabled) 1f else DISABLED_CHOICE_ALPHA
-    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = (if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.extendedColors.textSecondary).copy(alpha = alpha)
-    val border = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .heightIn(min = MIN_TOUCH_TARGET)
-            .heightIn(min = minHeight.dp)
-            .clip(shape)
-            .background(bg)
-            .border(1.dp, border, shape)
-            // Izbor se najavljuje kao radio dugme sa stanjem „izabrano“, ne kao običan klik.
-            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        AutoSizeText(
-            text = text,
-            color = fg,
-            style = (if (selected) MaterialTheme.typography.labelLargeEmphasized else MaterialTheme.typography.labelLarge).copy(
-                textAlign = TextAlign.Center
-            ),
-            maxFontSize = MaterialTheme.typography.labelLarge.fontSize,
-            minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-            maxLines = 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
-        )
-    }
+    val scheme = MaterialTheme.colorScheme
+    AnimatedChoiceButton(
+        text = text,
+        selected = selected,
+        colors = ChoiceButtonColors(
+            selectedContainer = scheme.primary,
+            container = scheme.surfaceContainerHigh,
+            selectedContent = scheme.onPrimary,
+            content = MaterialTheme.extendedColors.textSecondary,
+            selectedBorder = scheme.primary,
+            border = scheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
+        ),
+        onClick = onClick,
+        modifier = Modifier.weight(1f),
+        minHeight = minHeight.dp,
+        enabled = enabled,
+        disabledAlpha = DISABLED_CHOICE_ALPHA,
+        textStyle = MaterialTheme.typography.labelLarge,
+        selectedTextStyle = MaterialTheme.typography.labelLargeEmphasized
+    )
 }
 
 @Composable
