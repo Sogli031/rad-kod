@@ -34,8 +34,7 @@ import com.rad.shifttracker.ui.components.AppIcons
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatCurrency
-import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.ui.dialozi.monthLocativeText
+import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.osnova.formatNumber
@@ -43,7 +42,7 @@ import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.obracun.MonthSummary
 
-// Kad je kartica „Primanja u …“ sakrivena, kartica plate ostaje sama i zaobljena.
+// Kad je donja kartica (plata za prethodni mesec) sakrivena, kartica plate ostaje sama i zaobljena.
 internal const val SHOW_TOTAL_CARD = true
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
@@ -52,31 +51,18 @@ internal const val COMPACT_PAY_CARD_HEIGHT = 48
 // Dve kartice plate su vizuelno jedna grupa: bez razmaka, gornja/donja zaobljena.
 internal const val PAY_CARDS_SPACING = 0
 
-/** Plata za rad u mesecu: „Septembarska plata“ (isplaćuje se sledećeg meseca). */
+/**
+ * Obe kartice ispod kalendara su „Plata za <mesec>“: gornja za izabrani mesec (stiže sledećeg
+ * meseca), donja za prethodni (stiže u izabranom mesecu). Ranije „Oktobarska plata“ i
+ * „Primanja u Oktobru“ — dva pojma za isti novac pomeren za mesec zbunjivala su kolege.
+ */
 internal fun salaryCardLabel(month: Int): String {
-    val adjective = when (month) {
-        1 -> "Januarska"
-        2 -> "Februarska"
-        3 -> "Martovska"
-        4 -> "Aprilska"
-        5 -> "Majska"
-        6 -> "Junska"
-        7 -> "Julska"
-        8 -> "Avgustovska"
-        9 -> "Septembarska"
-        10 -> "Oktobarska"
-        11 -> "Novembarska"
-        12 -> "Decembarska"
-        else -> return "Plata"
-    }
-    return "$adjective plata"
+    if (month !in 1..12) return "Plata"
+    return "Plata za ${MONTH_NAMES[month].lowercase()}"
 }
 
-/** Šta leže na račun u mesecu (plata za prošli mesec, akontacija, prevoz): „Primanja u Septembru“. */
-internal fun totalCardLabel(year: Int, month: Int): String {
-    if (month !in 1..12) return "Primanja"
-    return "Primanja u ${monthLocativeText(MonthKey(year, month))}"
-}
+/** Donja kartica: plata čija isplata stiže u izabranom mesecu, imenovana po mesecu rada. */
+internal fun totalCardLabel(receipt: MonthlyReceipt): String = salaryCardLabel(receipt.salaryMonth.month)
 
 /**
  * Statistike u jednoj kartici, razdvojene tankim linijama. [transportAmount] je prevoz za rad u
@@ -180,7 +166,7 @@ internal fun TotalCard(
     onClick: () -> Unit
 ) {
     PayAmountCard(
-        label = totalCardLabel(receipt.year, receipt.month),
+        label = totalCardLabel(receipt),
         amount = mainPayCardAmount(receipt, deductionsNet),
         isAvailable = receipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.onSurface,

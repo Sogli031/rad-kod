@@ -65,7 +65,7 @@ internal data class ShiftRepositorySnapshot(
      * ovoga obrisana satnica ne bi mogla da ostane obrisana.
      */
     val deletedHourlyValueMonths: List<MonthKey> = emptyList(),
-    /** Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru") uključuju prevoz. */
+    /** Da li kartice ispod kalendara („Plata za septembar", „Plata za avgust") uključuju prevoz. */
     val mainPaySalaryOnly: Boolean = true,
     /** Sačuvani platni listići po mesecu (JSON listića) za „Uporedi“. */
     val savedPayslips: Map<MonthKey, String> = emptyMap(),

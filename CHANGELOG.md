@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.5] - 2026-10-11
+- **Kartice plate ispod kalendara se zovu isto:** „Plata za oktobar“ (stiže u novembru) i ispod „Plata za septembar“ (stiže u oktobru), umesto „Oktobarska plata“ i „Primanja u Oktobru“.
+
 ## [12.4] - 2026-10-11
 - Bolovanje / Godišnji: prvo se bira tip odsustva, pa tek onda opseg dana.
 

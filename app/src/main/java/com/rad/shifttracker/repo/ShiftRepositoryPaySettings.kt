@@ -331,7 +331,7 @@ var ShiftRepository.transportDailyAmountValue: Double
  * Kad je isključen, servis ne upisuje ništa i nema pitanja za pristup obaveštenjima.
  */
 /**
- * Da li kartice ispod kalendara („Septembarska plata", „Primanja u Septembru")
+ * Da li kartice ispod kalendara („Plata za septembar", „Plata za avgust")
  * prikazuju samo neto platu za rad (podrazumevano), bez regresa i prevoza.
  * Isključeno = plata, regres i prevoz zajedno; detalji plate uvek prikazuju sve stavke.
  */

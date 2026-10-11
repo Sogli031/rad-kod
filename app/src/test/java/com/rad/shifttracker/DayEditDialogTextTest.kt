@@ -34,6 +34,8 @@ import com.rad.shifttracker.ui.dialozi.formatInitialCompBalanceInput
 import com.rad.shifttracker.ui.dialozi.parseInitialCompBalanceInputMinutes
 import com.rad.shifttracker.ui.salaryCardLabel
 import com.rad.shifttracker.ui.totalCardLabel
+import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.ui.useCompactTotalCardLayout
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeShiftAfter
@@ -496,16 +498,17 @@ class DayEditDialogTextTest {
     }
 
     @Test
-    fun totalCardUsesMonthlyReceiptLabel() {
-        assertEquals("Primanja u Septembru", totalCardLabel(2026, 9))
-        assertEquals("Primanja u Martu", totalCardLabel(2026, 3))
+    fun totalCardIsNamedByTheMonthOfWork() {
+        // Isplata u oktobru je plata za septembar.
+        val receipt = MonthlyReceipt(year = 2026, month = 10, salaryMonth = MonthKey(2026, 9), salaryNetPay = 1.0, regressNetPay = 0.0)
+        assertEquals("Plata za septembar", totalCardLabel(receipt))
     }
 
     @Test
     fun salaryCardUsesSelectedMonthName() {
-        assertEquals("Julska plata", salaryCardLabel(7))
-        assertEquals("Septembarska plata", salaryCardLabel(9))
-        assertEquals("Martovska plata", salaryCardLabel(3))
+        assertEquals("Plata za jul", salaryCardLabel(7))
+        assertEquals("Plata za septembar", salaryCardLabel(9))
+        assertEquals("Plata za mart", salaryCardLabel(3))
     }
 
     @Test
