@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.3] - 2026-10-11
+- Auto-popuna: uklonjena napomena ispod dugmeta „Popuni smene“.
+- Bolovanje / Godišnji: mesec odsustva („Oktobar 2026“) krupnije i belo, srazmerno strelicama.
+
 ## [12.2] - 2026-10-11
 - **Auto-popuna je jednostavnija:** nema više referentne sedmice ni datuma. Radnim danom pita „Koju smenu radiš ove sedmice?“, vikendom „…sledeće sedmice?“; četvorobrigada pita „Koju smenu radiš danas?“ i „Koji ti je to dan zaredom?“. Jedna smena samo kaže da svakog radnog dana ide Prva.
 - **Bez „Meseci unapred“ — popuna je kontinualna:** raspored se drži popunjenim do kraja meseca godinu dana unapred i sam se dopisuje pri pokretanju aplikacije kako vreme ide. Ništa se ne gomila godinama unapred. Postojeći korisnici ne moraju ništa: obrazac se prepozna iz već popunjenih smena.

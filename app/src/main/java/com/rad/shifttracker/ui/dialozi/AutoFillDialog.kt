@@ -35,7 +35,6 @@ import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.RadMotion
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
-import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.ui.rememberReducedMotion
 import com.rad.shifttracker.ui.titleMediumEmphasized
 
@@ -121,17 +120,8 @@ internal fun AutoFillDialog(
                 onDismiss()
             }
         )
-        Text(
-            text = AUTO_FILL_ROLLING_HINT,
-            color = MaterialTheme.extendedColors.textSecondary,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
-
-internal const val AUTO_FILL_ROLLING_HINT =
-    "Raspored se sam dopunjava unapred kako vreme ide. Ako promeniš smenu, ponovo popuni — sve unapred se presnimi."
 
 /** Pitanje o smeni za izabrani režim: ova (vikendom sledeća) sedmica, ili današnji dan četvorobrigade. */
 @Composable

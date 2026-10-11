@@ -43,6 +43,7 @@ import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.extendedColors
+import com.rad.shifttracker.ui.titleLargeEmphasized
 import com.rad.shifttracker.ui.titleMediumEmphasized
 import com.rad.shifttracker.godisnji.VacationRangePreview
 import com.rad.shifttracker.repo.AbsenceRangeNetImpact
@@ -186,8 +187,9 @@ private fun AbsenceMonthCard(year: Int, month: Int, onPrevious: () -> Unit, onNe
             HeaderChevron(icon = Icons.Filled.ChevronLeft, label = "Prethodni mesec", onClick = onPrevious)
             Text(
                 text = "${MONTH_NAMES[month]} $year",
-                color = MaterialTheme.extendedColors.textSecondary,
-                style = MaterialTheme.typography.bodyMedium,
+                // Krupno i belo, srazmerno strelicama — to je ono što se ovde bira.
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
