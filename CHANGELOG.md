@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.4] - 2026-10-11
+- Bolovanje / Godišnji: prvo se bira tip odsustva, pa tek onda opseg dana.
+
 ## [12.3] - 2026-10-11
 - Auto-popuna: uklonjena napomena ispod dugmeta „Popuni smene“.
 - Bolovanje / Godišnji: mesec odsustva („Oktobar 2026“) krupnije i belo, srazmerno strelicama.

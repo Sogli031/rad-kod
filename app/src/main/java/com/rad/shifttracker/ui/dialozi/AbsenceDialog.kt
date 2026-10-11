@@ -113,6 +113,17 @@ internal fun SickVacationDialog(
             }
         )
 
+        // Prvo se bira tip odsustva, pa tek onda opseg dana.
+        AbsenceTypeCard(
+            absenceType = absenceType,
+            sickPayRate = sickPayRate,
+            onAbsenceTypeSelected = {
+                absenceType = it
+                errorMessage = null
+            },
+            onSickPayRateSelected = { sickPayRate = it }
+        )
+
         AbsenceDayRangeCard(
             startText = startText,
             endText = endText,
@@ -124,16 +135,6 @@ internal fun SickVacationDialog(
                 endText = it.filter(Char::isDigit)
                 errorMessage = null
             }
-        )
-
-        AbsenceTypeCard(
-            absenceType = absenceType,
-            sickPayRate = sickPayRate,
-            onAbsenceTypeSelected = {
-                absenceType = it
-                errorMessage = null
-            },
-            onSickPayRateSelected = { sickPayRate = it }
         )
 
         AbsenceNetImpactCard(previewImpact)
