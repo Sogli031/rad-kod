@@ -193,9 +193,9 @@ internal fun SalaryCard(
     )
 }
 
-/** Iznos na kartici ispod kalendara: neto plata i regres posle obustava, kao „Ukupno“ u detaljima isplate (bez prevoza). */
+/** Iznos na kartici ispod kalendara: samo neto plata za rad posle obustava, bez regresa i prevoza. */
 internal fun mainPayCardAmount(receipt: MonthlyReceipt, deductionsNet: Double = 0.0): Double {
-    return (receipt.displayPay - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
+    return (receipt.workSalaryPay - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
 }
 
 /** Jedan red grupe plate: etiketa levo, iznos desno. */

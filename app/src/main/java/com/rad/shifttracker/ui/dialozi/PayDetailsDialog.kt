@@ -50,7 +50,6 @@ import com.rad.shifttracker.ui.headlineMediumEmphasized
 import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
-import com.rad.shifttracker.ui.mainPayCardAmount
 import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.repo.getNetPayBreakdown
 import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
@@ -255,6 +254,12 @@ private fun PaymentRows(
         monthlyReceipt.regressNetPay,
         MaterialTheme.extendedColors.success
     )
+    CompactMoneyRowIf(
+        monthlyReceipt.transportAmount > 0.0,
+        payDetailsTransportLabel(monthlyReceipt),
+        monthlyReceipt.transportAmount,
+        MaterialTheme.extendedColors.success
+    )
     if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
             FINAL_PAYMENT_DEDUCTIONS_LABEL,
@@ -292,11 +297,14 @@ private fun PaymentRows(
     }
 }
 
-/** Ukupno u ovom prozoru: neto plata i regres minus obustave sa listića, isto kao na glavnom ekranu. */
+/**
+ * Ukupno u ovom prozoru: neto plata, regres i prevoz minus obustave sa listića — sve što leže na račun.
+ * Kartica na glavnom ekranu je samo neto plata posle obustava ([com.rad.shifttracker.ui.mainPayCardAmount]).
+ */
 internal fun payDetailsTotalAfterDeductions(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown
-): Double = mainPayCardAmount(monthlyReceipt, finalPayment.deductionsNet)
+): Double = (monthlyReceipt.totalReceivedThisMonth - finalPayment.deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
 
 /** „Ukupno za isplatu 20.“: ukupno za isplatu u mesecu minus već uplaćena akontacija. */
 internal fun payDetailsTotalOn20(

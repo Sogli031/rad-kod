@@ -43,7 +43,7 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `kartice ispod kalendara su plata i regres posle obustava, bez prevoza`() {
+    fun `kartice ispod kalendara su neto plata posle obustava, bez regresa i prevoza`() {
         val receipt = MonthlyReceipt(
             year = 2026,
             month = 8,
@@ -54,10 +54,10 @@ class OptionsDialogTextTest {
             transportDailyAmount = 240.0
         )
 
-        assertEquals(120_000.0, mainPayCardAmount(receipt), 0.001)
+        assertEquals(100_000.0, mainPayCardAmount(receipt), 0.001)
         assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false)), 0.001)
         // Obustave sa listića se oduzimaju kao u detaljima isplate, nikad ispod nule.
-        assertEquals(80_000.0, mainPayCardAmount(receipt, deductionsNet = 40_000.0), 0.001)
+        assertEquals(60_000.0, mainPayCardAmount(receipt, deductionsNet = 40_000.0), 0.001)
         assertEquals(0.0, mainPayCardAmount(receipt, deductionsNet = 150_000.0), 0.001)
     }
 

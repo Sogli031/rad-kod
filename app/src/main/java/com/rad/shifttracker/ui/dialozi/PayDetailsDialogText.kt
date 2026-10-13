@@ -62,6 +62,11 @@ internal fun payDetailsRegressLabel(receipt: MonthlyReceipt): String {
     return "Regres za ${monthNameText(receipt.paymentMonth)}"
 }
 
+/** Prevoz se isplaćuje uz platu za isti mesec rada: „Prevoz za Oktobar“. */
+internal fun payDetailsTransportLabel(receipt: MonthlyReceipt): String {
+    return "Prevoz za ${monthNameText(receipt.salaryMonth)}"
+}
+
 /** Iznos kao u ostatku prozora isplate: „51.996,94“ (tačka za hiljade, zarez za decimale). */
 internal fun srMoney(value: Double): String {
     val safe = if (value.isFinite()) value else 0.0

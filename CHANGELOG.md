@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.6] - 2026-10-13
+- **Kartice plate ispod kalendara bez regresa:** „Plata za oktobar“ i „Plata za septembar“ prikazuju samo neto platu za rad posle obustava, bez regresa i prevoza. Uvek je tako, bez prekidača.
+- **Isplata (dodir na karticu) prikazuje sve što leže na račun:** neto plata, akontacija, regres, novi red „Prevoz za <mesec>“ i obustave; „Ukupno za isplatu“ (i velika cifra na vrhu) = plata + regres + prevoz − obustave, a „Ukupno za isplatu 20.“ od toga oduzima akontaciju.
+
 ## [12.5] - 2026-10-11
 - **Kartice plate ispod kalendara se zovu isto:** „Plata za oktobar“ (stiže u novembru) i ispod „Plata za septembar“ (stiže u oktobru), umesto „Oktobarska plata“ i „Primanja u Oktobru“. Kartice su sada odvojene razmakom, da se ne čitaju kao jedno dugme.
 

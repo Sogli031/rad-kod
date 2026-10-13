@@ -91,6 +91,11 @@ class PayrollTableTest {
 
         assertEquals(58_487.70, payDetailsTotalAfterDeductions(receipt, finalPayment), 0.001)
         assertEquals(33_487.70, payDetailsTotalOn20(receipt, finalPayment), 0.001)
+        // Prevoz ulazi u ukupno za isplatu (20 dana × 240 = 4.800), a na glavnoj kartici ne.
+        val withTransport = receipt.copy(transportEligibleDays = 20, transportDailyAmount = 240.0)
+        assertEquals(63_287.70, payDetailsTotalAfterDeductions(withTransport, finalPayment), 0.001)
+        assertEquals(38_287.70, payDetailsTotalOn20(withTransport, finalPayment), 0.001)
+        assertEquals(38_487.70, com.rad.shifttracker.ui.mainPayCardAmount(withTransport, finalPayment.deductionsNet), 0.001)
         assertEquals("Ukupno za isplatu 20.11.", payDetailsTotalOn20Label(receipt))
         assertEquals("Ukupno za isplatu 20.01.", payDetailsTotalOn20Label(receipt.copy(year = 2027, month = 1)))
     }
