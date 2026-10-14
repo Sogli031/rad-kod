@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.5] - 2026-10-14
+- **Meseci se menjaju prevlačenjem levo-desno.** Ceo ekran prati prst: ako se prevuče malo, vrati se na isti mesec, a ako se prevuče dovoljno (ili brzo), pređe na prethodni / sledeći. Susedni meseci se računaju unapred, pa je prelaz odmah spreman.
+- **Novi mesec ostaje na istoj visini skrolovanja** — ako si bio dole kod obračuna, i u sledećem mesecu si dole, ne vraća na vrh.
+- Strelice u zaglavlju klize na susedni mesec istim pokretom.
+
 ## [13.4] - 2026-10-14
 - Provera poreza sa paragraf.rs je proređena: od decembra do februara (kad se olakšica menja) jednom dnevno, ostatak godine jednom mesečno.
 

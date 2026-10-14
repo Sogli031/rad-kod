@@ -89,13 +89,32 @@ internal class MainViewModel(
     private val stateFlow = MutableStateFlow<MainMonthState?>(null)
     val state: StateFlow<MainMonthState?> = stateFlow.asStateFlow()
 
+    /**
+     * Izabrani mesec i njegovi susedi (prethodni, sledeći), da prevlačenje meseca odmah pokaže
+     * spreman ekran. Posle izabranog meseca susedi se računaju u pozadini; uz to se čuva još par
+     * nedavno viđenih meseci sa istim podacima, pa je povratak nazad trenutan.
+     */
+    private val statesFlow = MutableStateFlow<Map<MonthKey, MainMonthState>>(emptyMap())
+    val states: StateFlow<Map<MonthKey, MainMonthState>> = statesFlow.asStateFlow()
+
     private val changeToken = repo.onChange { tick.value += 1 }
 
     init {
         viewModelScope.launch {
             combine(tick, monthFlow, todayFlow) { t, m, d -> MainStateKey(t, m, d) }.collectLatest { key ->
                 if (key == stateFlow.value?.key) return@collectLatest
-                stateFlow.value = withContext(Dispatchers.Default) { compute(key) }
+                val current = withContext(Dispatchers.Default) { compute(key) }
+                stateFlow.value = current
+                // Isti podaci (tick) i isti dan: ranije izračunati meseci ostaju važeći.
+                val cached = statesFlow.value.filterValues { it.key.tick == key.tick && it.key.today == key.today }
+                statesFlow.value = cached + (key.month to current)
+                for (offset in listOf(1L, -1L)) {
+                    val neighbor = YearMonth.of(key.month.year, key.month.month).plusMonths(offset)
+                    val neighborKey = key.copy(month = MonthKey(neighbor.year, neighbor.monthValue))
+                    if (neighborKey.month in statesFlow.value) continue
+                    val computed = withContext(Dispatchers.Default) { compute(neighborKey) }
+                    statesFlow.value = (statesFlow.value + (neighborKey.month to computed)).nearest(key.month)
+                }
             }
         }
         viewModelScope.launch {
@@ -109,6 +128,14 @@ internal class MainViewModel(
     }
 
     fun showPreviousMonth() = shift(-1)
+
+    /** Mesec na koji je ekran prevučen. */
+    fun showMonth(target: MonthKey) {
+        if (target == monthFlow.value) return
+        saved[KEY_YEAR] = target.year
+        saved[KEY_MONTH] = target.month
+        monthFlow.value = target
+    }
 
     fun showNextMonth() = shift(1)
 
@@ -146,3 +173,15 @@ internal class MainViewModel(
         )
     }
 }
+
+/** Najviše [MAX_CACHED_MONTHS] meseci najbližih izabranom (ostali se izbace iz memorije). */
+private fun Map<MonthKey, MainMonthState>.nearest(center: MonthKey): Map<MonthKey, MainMonthState> {
+    if (size <= MAX_CACHED_MONTHS) return this
+    val centerIndex = center.year * 12 + center.month
+    return entries
+        .sortedBy { kotlin.math.abs(it.key.year * 12 + it.key.month - centerIndex) }
+        .take(MAX_CACHED_MONTHS)
+        .associate { it.key to it.value }
+}
+
+private const val MAX_CACHED_MONTHS = 5

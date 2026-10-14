@@ -1,15 +1,9 @@
 package com.rad.shifttracker.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,13 +17,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.brigadeTypeValue
@@ -49,23 +47,34 @@ import com.rad.shifttracker.ui.dialozi.isPayslipMonthUnfinished
 
 /**
  * Sadržaj glavnog ekrana: kalendar sa zaglavljem i karticama salda i godišnjeg, statistika i plata,
- * pa donja traka. Na širokom ekranu kalendar i iznosi idu u dve kolone. Dijalozi se otvaraju preko
- * [onOpenDialog], a sam ekran ([ShiftTrackerScreen]) drži koji je dijalog otvoren.
+ * pa donja traka. Meseci su stranice koje se prevlače levo-desno: ekran prati prst, a pri puštanju se
+ * vrati ako je prevučen malo, ili pređe na susedni mesec ako je prevučen dovoljno (ili brzo). Svi
+ * meseci dele visinu skrolovanja, pa novi mesec ostaje na istom mestu. Na širokom ekranu kalendar i
+ * iznosi idu u dve kolone. Dijalozi se otvaraju preko [onOpenDialog].
  */
 @Composable
 internal fun ShiftTrackerContent(
-    ui: MainMonthState,
+    states: Map<MonthKey, MainMonthState>,
     month: MonthKey,
     today: LocalDate,
     repo: ShiftRepository,
     refreshKey: Int,
-    onPrevMonth: () -> Unit,
-    onNextMonth: () -> Unit,
+    onMonthSelected: (MonthKey) -> Unit,
     onOpenDialog: (DialogState) -> Unit
 ) {
-    val currentYear = month.year
-    val currentMonth = month.month
     val snackbarHostState = LocalAppSnackbar.current
+    val pagerState = rememberPagerState(initialPage = month.pageIndex()) { MONTH_PAGE_COUNT }
+    val scope = rememberCoroutineScope()
+    // Strelice u zaglavlju i izbor meseca spolja: stranica klizi na taj mesec.
+    LaunchedEffect(month) {
+        if (pagerState.currentPage != month.pageIndex()) pagerState.animateScrollToPage(month.pageIndex())
+    }
+    // Prevučen mesec postaje izabran tek kad se stranica smiri (dijalozi i podaci prate njega).
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page -> onMonthSelected(monthOfPage(page)) }
+    }
+    // Zajednička visina skrolovanja: trenutni mesec je upisuje, susedni je prate.
+    var sharedScroll by rememberSaveable { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -74,79 +83,41 @@ internal fun ShiftTrackerContent(
             .background(MaterialTheme.colorScheme.background)
             .padding(WindowInsets.safeDrawing.asPaddingValues())
     ) {
-        // Cela strana skroluje kad ne staje (veći font, mesec od šest nedelja); donja traka ostaje zakucana.
         val wide = currentWindowAdaptiveInfo().windowSizeClass
             .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
-        var selectedDay by rememberSaveable(currentYear, currentMonth) { mutableStateOf<Int?>(null) }
-        val selectedDayRecord = remember(selectedDay, currentYear, currentMonth, refreshKey) {
-            selectedDay?.let { repo.get(currentYear, currentMonth, it) }
-        }
-        val selectedDayBrigade = remember(refreshKey) { repo.brigadeTypeValue }
-        // Kalendar sa zaglavljem i statistika sa platom: jedna kolona na telefonu, dve kolone na širokom ekranu.
-        val calendarPane: @Composable ColumnScope.() -> Unit = {
-            ShiftCalendarPane(
-                ui = ui,
-                month = month,
-                today = today,
-                repo = repo,
-                refreshKey = refreshKey,
-                onPrevMonth = onPrevMonth,
-                onNextMonth = onNextMonth,
-                onDayClick = { day, record ->
-                    // Na širokom ekranu dodir bira dan (panel desno), izmena ide dugmetom „Izmeni“.
-                    if (wide) selectedDay = day else onOpenDialog(DialogState.DayEdit(day, record))
-                },
-                onOpenDialog = onOpenDialog
-            )
-        }
-        val summaryPane: @Composable ColumnScope.() -> Unit = {
-            selectedDay?.takeIf { wide }?.let { day ->
-                SelectedDayCard(
-                    year = currentYear,
-                    month = currentMonth,
-                    day = day,
-                    today = today,
-                    record = selectedDayRecord,
-                    brigadeType = selectedDayBrigade,
-                    onEdit = { onOpenDialog(DialogState.DayEdit(day, selectedDayRecord)) }
-                )
-            }
-            ShiftPayPane(ui = ui, repo = repo, onOpenDialog = onOpenDialog)
-        }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BackgroundLayer()
 
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxHeight()
-                    .widthIn(max = (if (wide) UI.wideContentMaxWidth else UI.contentMaxWidth).dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(
-                        start = Spacing.lg,
-                        top = Spacing.lg,
-                        end = Spacing.lg,
-                        bottom = Spacing.sm
-                    ),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                if (wide) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            content = calendarPane
-                        )
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            content = summaryPane
-                        )
-                    }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 1,
+                key = { it }
+            ) { page ->
+                val pageMonth = monthOfPage(page)
+                val pageUi = states[pageMonth]
+                val scroll = rememberSaveable(saver = ScrollState.Saver) { ScrollState(sharedScroll) }
+                if (page == pagerState.currentPage) {
+                    LaunchedEffect(scroll) { snapshotFlow { scroll.value }.collect { sharedScroll = it } }
                 } else {
-                    calendarPane()
-                    summaryPane()
+                    LaunchedEffect(sharedScroll) { scroll.scrollTo(sharedScroll) }
+                }
+                if (pageUi == null) {
+                    // Susedni mesec se još računa (pozadinska nit): samo pozadina, bez praznog kalendara.
+                    Box(Modifier.fillMaxSize())
+                } else {
+                    MonthPage(
+                        ui = pageUi,
+                        month = pageMonth,
+                        today = today,
+                        repo = repo,
+                        refreshKey = refreshKey,
+                        wide = wide,
+                        scroll = scroll,
+                        onPrevMonth = { scope.launch { pagerState.animateScrollToPage(page - 1) } },
+                        onNextMonth = { scope.launch { pagerState.animateScrollToPage(page + 1) } },
+                        onOpenDialog = onOpenDialog
+                    )
                 }
             }
 
@@ -172,7 +143,93 @@ internal fun ShiftTrackerContent(
     }
 }
 
-/** Zaglavlje meseca, kartice salda sati i godišnjeg, i kalendar sa prelazom između meseci. */
+/** Jedan mesec kao stranica: kalendar sa zaglavljem, pa statistika i plata; cela strana skroluje. */
+@Composable
+private fun MonthPage(
+    ui: MainMonthState,
+    month: MonthKey,
+    today: LocalDate,
+    repo: ShiftRepository,
+    refreshKey: Int,
+    wide: Boolean,
+    scroll: ScrollState,
+    onPrevMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onOpenDialog: (DialogState) -> Unit
+) {
+    var selectedDay by rememberSaveable(month) { mutableStateOf<Int?>(null) }
+    val selectedDayRecord = remember(selectedDay, month, refreshKey) {
+        selectedDay?.let { repo.get(month.year, month.month, it) }
+    }
+    val selectedDayBrigade = remember(refreshKey) { repo.brigadeTypeValue }
+    // Kalendar sa zaglavljem i statistika sa platom: jedna kolona na telefonu, dve kolone na širokom ekranu.
+    val calendarPane: @Composable ColumnScope.() -> Unit = {
+        ShiftCalendarPane(
+            ui = ui,
+            month = month,
+            today = today,
+            repo = repo,
+            refreshKey = refreshKey,
+            onPrevMonth = onPrevMonth,
+            onNextMonth = onNextMonth,
+            onDayClick = { day, record ->
+                // Na širokom ekranu dodir bira dan (panel desno), izmena ide dugmetom „Izmeni“.
+                if (wide) selectedDay = day else onOpenDialog(DialogState.DayEdit(day, record))
+            },
+            onOpenDialog = onOpenDialog
+        )
+    }
+    val summaryPane: @Composable ColumnScope.() -> Unit = {
+        selectedDay?.takeIf { wide }?.let { day ->
+            SelectedDayCard(
+                year = month.year,
+                month = month.month,
+                day = day,
+                today = today,
+                record = selectedDayRecord,
+                brigadeType = selectedDayBrigade,
+                onEdit = { onOpenDialog(DialogState.DayEdit(day, selectedDayRecord)) }
+            )
+        }
+        ShiftPayPane(ui = ui, repo = repo, onOpenDialog = onOpenDialog)
+    }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = (if (wide) UI.wideContentMaxWidth else UI.contentMaxWidth).dp)
+                .fillMaxWidth()
+                .verticalScroll(scroll)
+                .padding(
+                    start = Spacing.lg,
+                    top = Spacing.lg,
+                    end = Spacing.lg,
+                    bottom = Spacing.sm
+                ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            if (wide) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        content = calendarPane
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        content = summaryPane
+                    )
+                }
+            } else {
+                calendarPane()
+                summaryPane()
+            }
+        }
+    }
+}
+
+/** Zaglavlje meseca, kartice salda sati i godišnjeg, i kalendar meseca. */
 @Composable
 private fun ShiftCalendarPane(
     ui: MainMonthState,
@@ -187,7 +244,6 @@ private fun ShiftCalendarPane(
 ) {
     val currentYear = month.year
     val currentMonth = month.month
-    val reducedMotion = rememberReducedMotion()
     HeaderSection(
         month = currentMonth,
         year = currentYear,
@@ -211,27 +267,14 @@ private fun ShiftCalendarPane(
         )
     }
     WeekdayHeader()
-    // Prelaz meseca: M3 „shared axis“ (klizanje po x + bledenje); stari mesec izlazi sa svojim podacima.
-    AnimatedContent(
-        targetState = currentYear * MONTHS_PER_YEAR + (currentMonth - 1),
-        transitionSpec = {
-            if (reducedMotion) {
-                EnterTransition.None togetherWith ExitTransition.None
-            } else {
-                monthTransition(forward = targetState > initialState)
-            }
-        },
-        label = "month"
-    ) { monthIndex ->
-        CalendarSection(
-            year = monthIndex / MONTHS_PER_YEAR,
-            month = monthIndex % MONTHS_PER_YEAR + 1,
-            today = today,
-            repo = repo,
-            refreshKey = refreshKey,
-            onDayClick = onDayClick
-        )
-    }
+    CalendarSection(
+        year = currentYear,
+        month = currentMonth,
+        today = today,
+        repo = repo,
+        refreshKey = refreshKey,
+        onDayClick = onDayClick
+    )
 }
 
 /** Statistika meseca (sati, prekovremeno, topli obrok, prevoz ako ga ima), isplata i obračun plate. */
@@ -255,16 +298,12 @@ private fun ShiftPayPane(ui: MainMonthState, repo: ShiftRepository, onOpenDialog
 }
 
 private const val MONTHS_PER_YEAR = 12
-/** M3 shared axis X (spring iz [RadMotion]): novi mesec ulazi sa strane smera, stari izlazi na suprotnu stranu. */
-private fun monthTransition(forward: Boolean): ContentTransform {
-    val direction = if (forward) 1 else -1
-    val enter = slideInHorizontally(RadMotion.spatial()) {
-        direction * it / MONTH_SLIDE_DIVISOR
-    } + fadeIn(RadMotion.effects())
-    val exit = slideOutHorizontally(RadMotion.fastSpatial()) {
-        -direction * it / MONTH_SLIDE_DIVISOR
-    } + fadeOut(RadMotion.fastEffects())
-    return enter togetherWith exit
-}
 
-private const val MONTH_SLIDE_DIVISOR = 8
+/** Stranice meseci: od januara 1900. do decembra 2199. (indeks = godina × 12 + mesec − 1, od 1900.). */
+private const val FIRST_PAGE_YEAR = 1900
+private const val MONTH_PAGE_COUNT = 300 * MONTHS_PER_YEAR
+
+private fun MonthKey.pageIndex(): Int = (year - FIRST_PAGE_YEAR) * MONTHS_PER_YEAR + (month - 1)
+
+private fun monthOfPage(page: Int): MonthKey =
+    MonthKey(FIRST_PAGE_YEAR + page / MONTHS_PER_YEAR, page % MONTHS_PER_YEAR + 1)

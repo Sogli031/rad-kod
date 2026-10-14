@@ -143,14 +143,14 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         }
     }
 
+    val monthStates by viewModel.states.collectAsStateWithLifecycle()
     ShiftTrackerContent(
-        ui = ui,
+        states = monthStates + (ui.key.month to ui),
         month = MonthKey(currentYear, currentMonth),
         today = today,
         repo = repo,
         refreshKey = repoTick.intValue,
-        onPrevMonth = viewModel::showPreviousMonth,
-        onNextMonth = viewModel::showNextMonth,
+        onMonthSelected = viewModel::showMonth,
         onOpenDialog = { state -> dialogState = state }
     )
 
