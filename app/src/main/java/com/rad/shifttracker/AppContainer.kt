@@ -11,6 +11,7 @@ import com.rad.shifttracker.repo.loadFromLocal
 import com.rad.shifttracker.repo.extendAutoFillOnStart
 import com.rad.shifttracker.repo.migrateFourBrigadeHolidays
 import com.rad.shifttracker.repo.migrateFourBrigadeSaturdayRule
+import com.rad.shifttracker.uvoz.WebTaxUpdate
 import com.rad.shifttracker.repo.reschedule
 import com.rad.shifttracker.repo.saveToLocal
 import com.rad.shifttracker.uvoz.resetUnloadedTransportDaily
@@ -52,6 +53,9 @@ class AppContainer internal constructor(private val appContext: Application) {
         resetUnloadedTransportDaily(appContext, shiftRepository)
         shiftRepository.migrateFourBrigadeHolidays()
         shiftRepository.migrateFourBrigadeSaturdayRule()
+        // Porez i olakšica sa interneta: sačuvano odmah, provera paragraf.rs jednom dnevno u pozadini.
+        WebTaxUpdate.applyStored(appContext, shiftRepository)
+        Thread({ WebTaxUpdate.refreshIfDue(appContext, shiftRepository) }, "rad-web-tax").start()
         // Kontinualna popuna: raspored se dopisuje do ~godinu dana unapred kako vreme odmiče.
         shiftRepository.extendAutoFillOnStart(appContext)
         BloodDonationReminderScheduler.reschedule(appContext, shiftRepository)

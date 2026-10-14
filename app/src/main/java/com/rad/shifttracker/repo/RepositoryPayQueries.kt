@@ -41,6 +41,9 @@ internal class RepositoryPayQueries(
     private val savedPayslipUnsafe: (MonthKey) -> ParsedPayslip? = { null },
     private val savedPayslipsUnsafe: () -> List<ParsedPayslip> = { emptyList() }
 ) {
+    /** Olakšica, doprinosi i porez po mesecu (lista, pa internet posle poslednje liste). */
+    val taxRates = RepositoryTaxRates(payState, savedPayslipUnsafe, savedPayslipsUnsafe)
+
     private val payBaseResolver = RepositoryPayBaseResolver(
         config = config,
         payState = payState,
@@ -113,25 +116,6 @@ internal class RepositoryPayQueries(
         return savedPayslipUnsafe(MonthKey(year, month))?.hourlyValue?.toDouble()?.takeIf { it.isFinite() && it > 0.0 }
             ?: resolveHourlyValueForMonth(year, month, payState.hourlyValueChanges).value
     }
-
-    /**
-     * Poreska olakšica meseca rada. Olakšica se menja od januara, a važi po datumu isplate (lista 12/2025,
-     * isplaćena u januaru, ima 34.221 kao 2026). Zato: sa liste tog meseca, inače sa najnovije liste iste
-     * godine isplate, inače iz podešavanja (najnovija lista).
-     */
-    fun taxReliefUnsafe(year: Int, month: Int): Double {
-        val key = MonthKey(year, month)
-        fun ParsedPayslip.relief() = taxReliefRsd?.toDouble()?.takeIf { it.isFinite() && it >= 0.0 }
-        savedPayslipUnsafe(key)?.relief()?.let { return it }
-        val paymentYear = payslipPaymentYear(key)
-        return savedPayslipsUnsafe()
-            .filter { payslipPaymentYear(it.month) == paymentYear }
-            .maxByOrNull { it.month }
-            ?.relief()
-            ?: payState.taxRelief
-    }
-
-    private fun payslipPaymentYear(month: MonthKey): Int = if (month.month == 12) month.year + 1 else month.year
 
     fun getPayBaseResolutionMonthForWorkMonthUnsafe(year: Int, month: Int): MonthKey {
         return payBaseResolver.payBaseResolutionMonthForWorkMonth(year, month)
@@ -229,9 +213,9 @@ internal class RepositoryPayQueries(
         month: Int,
         summary: MonthSummary,
         grossHourlyRate: Double = grossHourlyRateUnsafe(year, month),
-        contributionsPercent: Double = payState.employeeContributionsPercent,
-        taxRelief: Double = taxReliefUnsafe(year, month),
-        taxPercent: Double = payState.taxPercent,
+        contributionsPercent: Double = taxRates.contributionsPercentUnsafe(year, month),
+        taxRelief: Double = taxRates.taxReliefUnsafe(year, month),
+        taxPercent: Double = taxRates.taxPercentUnsafe(year, month),
         grossAdditions: MonthlyGrossAdditions = monthlyGrossAdditionsUnsafe(year, month),
         includeRegress: Boolean = true,
         includeHourlyValue: Boolean = false

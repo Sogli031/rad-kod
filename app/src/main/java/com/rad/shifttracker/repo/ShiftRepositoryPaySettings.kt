@@ -17,6 +17,7 @@ import com.rad.shifttracker.obracun.WRONG_DEFAULT_MEAL_PRICE
 import com.rad.shifttracker.obracun.MonthlyNetPayBreakdown
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MAX_BASE_PAY
+import com.rad.shifttracker.obracun.WebTaxParameters
 
 var ShiftRepository.payCoefficientValue: Double
     get() = synchronized(lock) { payState.payCoefficient }
@@ -220,6 +221,21 @@ var ShiftRepository.taxReliefValue: Double
             paySettingsUpdater.setTaxRelief(value.coerceAtMost(MAX_TAX_RELIEF))
         }
         notifyChange()
+    }
+
+/** Porez i doprinosi sa interneta; važe samo za mesece posle poslednje liste ([WebTaxParameters]). */
+var ShiftRepository.webTaxParametersValue: WebTaxParameters?
+    get() = synchronized(lock) { payState.webTaxParameters }
+    set(value) {
+        val changed = synchronized(lock) {
+            if (payState.webTaxParameters == value) {
+                false
+            } else {
+                payState.webTaxParameters = value
+                true
+            }
+        }
+        if (changed) notifyChange()
     }
 
 var ShiftRepository.taxPercentValue: Double

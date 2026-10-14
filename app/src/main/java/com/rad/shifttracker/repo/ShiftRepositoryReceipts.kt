@@ -343,9 +343,9 @@ fun ShiftRepository.previewPayCoefficientNetDifference(
         month = month,
         monthRecords = monthRecords,
         grossHourlyRate = coefficient * hourlyValue,
-        contributionsPercent = payState.employeeContributionsPercent,
-        taxRelief = payQueries.taxReliefUnsafe(year, month),
-        taxPercent = payState.taxPercent
+        contributionsPercent = payQueries.taxRates.contributionsPercentUnsafe(year, month),
+        taxRelief = payQueries.taxRates.taxReliefUnsafe(year, month),
+        taxPercent = payQueries.taxRates.taxPercentUnsafe(year, month)
     ).displayPay
     previewNetPay - currentNetPay
 }

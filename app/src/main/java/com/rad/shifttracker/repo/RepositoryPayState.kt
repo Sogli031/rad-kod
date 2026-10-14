@@ -16,6 +16,7 @@ import com.rad.shifttracker.obracun.PayBaseSelectionMode
 import com.rad.shifttracker.obracun.RollingPayBaseCalculation
 import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
 import com.rad.shifttracker.obracun.SeniorityInputMode
+import com.rad.shifttracker.obracun.WebTaxParameters
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.TreeMap
@@ -36,6 +37,9 @@ internal class RepositoryPayState(config: AppConfig) {
     var employeeContributionsPercent = config.pay.defaultEmployeeContributionsPercent
     var taxRelief = config.pay.defaultTaxRelief
     var taxPercent = config.pay.defaultTaxPercent
+
+    /** Porez, doprinosi i olakšica sa interneta; ne čuva se u backup-u (svoj fajl, [com.rad.shifttracker.uvoz.WebTaxUpdate]). */
+    var webTaxParameters: WebTaxParameters? = null
     var difficultWorkConditionsPercent = config.pay.difficultWorkConditionsPercent
     var initialCompBalance = 0
     var initialCompBalanceMinutes = 0

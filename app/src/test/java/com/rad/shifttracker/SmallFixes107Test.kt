@@ -40,12 +40,12 @@ class SmallFixes107Test {
         val repo = testRepository()
         repo.savePayslip(januaryAs("06/2025", listOf("PORESKA OLAKŠICA 28,423.00 0.00 28,423.00")))
 
-        assertEquals(28_423.0, repo.payQueries.taxReliefUnsafe(2025, 6), 0.001)
+        assertEquals(28_423.0, repo.payQueries.taxRates.taxReliefUnsafe(2025, 6), 0.001)
         // 07/2025 nema listu, ali se isplaćuje iste godine kao 06/2025.
-        assertEquals(28_423.0, repo.payQueries.taxReliefUnsafe(2025, 7), 0.001)
+        assertEquals(28_423.0, repo.payQueries.taxRates.taxReliefUnsafe(2025, 7), 0.001)
         // 12/2025 se isplaćuje u 2026: važi podešavanje (najnovija olakšica).
-        assertEquals(34_221.0, repo.payQueries.taxReliefUnsafe(2025, 12), 0.001)
-        assertEquals(34_221.0, repo.payQueries.taxReliefUnsafe(2026, 10), 0.001)
+        assertEquals(34_221.0, repo.payQueries.taxRates.taxReliefUnsafe(2025, 12), 0.001)
+        assertEquals(34_221.0, repo.payQueries.taxRates.taxReliefUnsafe(2026, 10), 0.001)
     }
 
     @Test

@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.3] - 2026-10-14
+- **Vraćeno ažuriranje poreza sa interneta (paragraf.rs), ali lista uvek ima prednost.** Jednom dnevno pri pokretanju aplikacija tiho proveri porez na zarade, doprinose radnika i neoporezivi iznos (olakšicu, sa datumom od kad važi). Te vrednosti važe samo za mesece čija je isplata posle isplate poslednje liste i samo kad je promena stigla posle nje — npr. nova olakšica od 1.1.2027. odmah ulazi u procenu plate za decembar i januar, a kad 20.2. stigne lista, ona preuzima. Bez interneta ili kad stranica ne može pouzdano da se pročita, ne menja se ništa.
+
 ## [13.2] - 2026-10-14
 - Ispod akontacije piše „Minimalna akontacija: …“ umesto „Minimalno po KU: …“.
 
