@@ -57,7 +57,7 @@ private const val UPDATE_INSTALL_TIMEOUT_MS = 90_000L
 internal fun updatePromptTitle(update: AvailableUpdate): String = "Stigla je verzija ${update.version}"
 
 /**
- * Pri pokretanju jednom pita GitHub za novu verziju; ako je ima, nudi ažuriranje. Ne prikazuje se
+ * Pri pokretanju jednom pita GitHub za novu verziju; ako je ima, odmah je instalira. Ne prikazuje se
  * pri prvom pokretanju ni preko drugog prozora; posle „Kasnije“ ćuti do sledećeg pokretanja.
  */
 @Composable
@@ -75,7 +75,7 @@ internal fun UpdatePromptHost(firstLaunch: Boolean, otherDialogOpen: Boolean) {
     UpdatePromptDialog(update = available, onDismiss = { dismissed = true })
 }
 
-/** „Stigla je verzija X“: izmene iz release-a, pa preuzimanje sa napretkom i sistemska instalacija. */
+/** „Stigla je verzija X“: odmah preuzima sa napretkom i predaje sistemskoj instalaciji, bez spiska izmena. */
 @Composable
 internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -128,6 +128,8 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
             }
         }
     }
+    // Preuzimanje kreće samo čim se prozor pojavi; „Ažuriraj“ ostaje za ponovni pokušaj posle greške.
+    LaunchedEffect(Unit) { startInstall() }
     LifecycleResumeEffect(waitingForPermission) {
         if (waitingForPermission && canInstallUpdates(context)) {
             waitingForPermission = false
@@ -146,18 +148,6 @@ internal fun UpdatePromptDialog(update: AvailableUpdate, onDismiss: () -> Unit) 
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                Text(
-                    text = "Sada imaš ${BuildConfig.VERSION_NAME}. Podaci ostaju, ažuriranje samo menja aplikaciju.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (update.notes.isNotBlank()) {
-                    Text(
-                        text = update.notes,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
                 UpdateProgressStatus(progress = progress, installing = installing, message = message)
             }
         },

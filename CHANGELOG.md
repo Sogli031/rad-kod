@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.7] - 2026-10-14
+- **Ažuriranje kreće samo:** kad stigne nova verzija, preuzimanje i instalacija počinju odmah, bez dugmeta „Ažuriraj“ (ono ostaje samo za ponovni pokušaj posle greške). Prozor više ne prikazuje spisak izmena.
+
 ## [12.6] - 2026-10-13
 - **Kartice plate ispod kalendara bez regresa:** „Plata za oktobar“ i „Plata za septembar“ prikazuju samo neto platu za rad posle obustava, bez regresa i prevoza. Uvek je tako, bez prekidača.
 - **Isplata (dodir na karticu) prikazuje sve što leže na račun:** neto plata, akontacija, regres, novi red „Prevoz za <mesec>“ i obustave; „Ukupno za isplatu“ (i velika cifra na vrhu) = plata + regres + prevoz − obustave, a „Ukupno za isplatu 20.“ od toga oduzima akontaciju.
