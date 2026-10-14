@@ -25,7 +25,6 @@ import com.rad.shifttracker.ui.dialozi.InitialCompBalanceDialog
 import com.rad.shifttracker.ui.dialozi.MinuliRadDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
 import com.rad.shifttracker.ui.dialozi.OvertimeNetImpactDialog
-import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
 import com.rad.shifttracker.ui.dialozi.TransportDialog
 import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
@@ -120,9 +119,6 @@ internal fun MainDialogs(
             )
         }
 
-        DialogState.PayDetails,
-        DialogState.SalaryDetails -> MainPayrollDialog(state, data, onDismiss)
-
         DialogState.WorkHours,
         DialogState.OvertimeNetImpact,
         DialogState.Food,
@@ -196,37 +192,6 @@ internal fun MainDialogs(
                 onDismiss = onDismiss
             )
         }
-    }
-}
-
-@Composable
-private fun MainPayrollDialog(
-    state: DialogState,
-    data: MainDialogData,
-    onDismiss: () -> Unit
-) {
-    when (state) {
-        DialogState.PayDetails -> {
-            PayDetailsDialog(
-                monthlyReceipt = data.monthlyReceipt,
-                monthlyFinalPaymentBreakdown = data.monthlyFinalPaymentBreakdown,
-                payDetails = data.payDetails,
-                repo = data.repo,
-                onDismiss = onDismiss
-            )
-        }
-
-        DialogState.SalaryDetails -> {
-            PayDetailsDialog(
-                monthlyReceipt = data.salaryDetailsReceipt,
-                monthlyFinalPaymentBreakdown = data.salaryDetailsFinalPaymentBreakdown,
-                payDetails = data.workHoursPayDetails,
-                repo = data.repo,
-                onDismiss = onDismiss
-            )
-        }
-
-        else -> Unit
     }
 }
 

@@ -3,6 +3,13 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.0] - 2026-10-14
+- **Isplata i obračun plate su ispod kalendara** (skroluje se), umesto kartice „Neto plata“ i posebnog prozora.
+- **Isplata prikazuje samo neto platu, akontaciju i obustave.** „Ukupno za isplatu 20.“ (neto plata − obustave − akontacija) pojavljuje se tek kad je akontacija upisana. Regres i prevoz se ne prikazuju u isplati.
+- „Nije plaćeno“ prikazuje samo red sa izostancima, bez objašnjenja.
+- Uklonjen prekidač „Plata sa regresom i prevozom“ iz Opcija.
+- **Aplikacija se zove VBS**, a ikona je logo Valjaonice bakra Sevojno, uvećan da se tekst vidi.
+
 ## [12.9] - 2026-10-14
 - **Bolovanje i godišnji za više dana iz prozora dana:** kad izabereš Bolovanje ili Godišnji, ispod „Tip dana“ je kartica „Do kog dana“. Strelicama biraš poslednji dan (može i u sledeći mesec), a ispod piše ukupno radnih dana, npr. „8 radnih dana bolovanja“. Vikendi, a kod godišnjeg i praznici, preskaču se kao ranije.
 - **Uklonjeno dugme „Bol/GO“** iz donje trake: sve se radi iz prozora dana.

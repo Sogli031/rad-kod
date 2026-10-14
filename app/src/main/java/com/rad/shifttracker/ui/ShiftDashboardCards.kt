@@ -1,7 +1,6 @@
 package com.rad.shifttracker.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
@@ -24,41 +22,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rad.shifttracker.ui.components.AppIcons
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.osnova.CONFIG
-import com.rad.shifttracker.osnova.formatCurrency
-import com.rad.shifttracker.osnova.MONTH_NAMES
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.osnova.formatHours
 import com.rad.shifttracker.osnova.formatNumber
 import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
-import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.obracun.MonthSummary
 
-// Kad je donja kartica (plata za prethodni mesec) sakrivena, kartica plate ostaje sama i zaobljena.
-internal const val SHOW_TOTAL_CARD = false
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
-// Svaki red je zaseban dodir (plata, primanja): najmanje 48dp (M3 / ATF TouchTargetSizeCheck).
-internal const val COMPACT_PAY_CARD_HEIGHT = 48
-// Dve kartice plate su odvojene (svaka svoja kartica), da se ne čitaju kao jedno dugme.
-internal const val PAY_CARDS_SPACING = 8
-
-/** Kartica ispod kalendara: neto plata za rad u izabranom mesecu (korisnik 14.10.2026: samo ona). */
-internal const val SALARY_CARD_LABEL = "Neto plata"
-
-/** Donja kartica (sakrivena, [SHOW_TOTAL_CARD]): plata čija isplata stiže u izabranom mesecu. */
-internal fun totalCardLabel(receipt: MonthlyReceipt): String {
-    val month = receipt.salaryMonth.month
-    if (month !in 1..12) return "Plata"
-    return "Plata za ${MONTH_NAMES[month].lowercase()}"
-}
 
 /**
  * Statistike u jednoj kartici, razdvojene tankim linijama. [transportAmount] je prevoz za rad u
@@ -154,135 +131,6 @@ private const val STAT_LABEL_MIN_SP = 5
 
 /** Iznad ovog sistemskog fonta stubci (statistika, donja traka) idu u dva reda. */
 internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f
-
-@Composable
-internal fun TotalCard(
-    receipt: MonthlyReceipt,
-    deductionsNet: Double = 0.0,
-    onClick: () -> Unit
-) {
-    PayAmountCard(
-        label = totalCardLabel(receipt),
-        amount = mainPayCardAmount(receipt, deductionsNet = deductionsNet),
-        isAvailable = receipt.isSalaryAvailable,
-        amountColor = MaterialTheme.colorScheme.onSurface,
-        shape = MaterialTheme.shapes.medium,
-        showTopDivider = false,
-        onClick = onClick
-    )
-}
-
-@Composable
-internal fun SalaryCard(
-    nextMonthReceipt: MonthlyReceipt,
-    withExtras: Boolean = false,
-    deductionsNet: Double = 0.0,
-    onClick: () -> Unit
-) {
-    PayAmountCard(
-        label = SALARY_CARD_LABEL,
-        amount = mainPayCardAmount(nextMonthReceipt, withExtras, deductionsNet),
-        isAvailable = nextMonthReceipt.isSalaryAvailable,
-        amountColor = MaterialTheme.colorScheme.primary,
-        shape = MaterialTheme.shapes.medium,
-        showTopDivider = false,
-        onClick = onClick
-    )
-}
-
-/**
- * Iznos na kartici ispod kalendara, posle obustava: samo neto plata za rad (podrazumevano) ili,
- * uz prekidač u Opcijama, plata sa regresom i prevozom.
- */
-internal fun mainPayCardAmount(receipt: MonthlyReceipt, withExtras: Boolean = false, deductionsNet: Double = 0.0): Double {
-    val amount = if (withExtras) receipt.totalReceivedThisMonth else receipt.workSalaryPay
-    return (amount - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
-}
-
-/** Jedan red grupe plate: etiketa levo, iznos desno. */
-@Composable
-private fun PayAmountCard(
-    label: String,
-    amount: Double,
-    isAvailable: Boolean,
-    amountColor: Color,
-    shape: Shape,
-    showTopDivider: Boolean,
-    onClick: (() -> Unit)? = null
-) {
-    val shownAmount = rememberCountingValue(amount)
-    val totalText = if (isAvailable) {
-        "${formatCurrency(shownAmount)} ${CONFIG.pay.currency}"
-    } else TOTAL_CARD_UNAVAILABLE_TEXT
-    val targetText = if (isAvailable) {
-        "${formatCurrency(amount)} ${CONFIG.pay.currency}"
-    } else TOTAL_CARD_UNAVAILABLE_TEXT
-    val totalColor = if (isAvailable) amountColor else MaterialTheme.extendedColors.warning
-    val clickModifier = if (onClick != null) Modifier.radClickable(onClick = onClick) else Modifier
-    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = COMPACT_PAY_CARD_HEIGHT.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
-            .then(clickModifier),
-        // Etiketa i iznos su vertikalno u sredini reda (red je viši od teksta: 48dp dodirna površina).
-        contentAlignment = Alignment.CenterStart
-    ) {
-        // Okvir se crta ručno da bi se spojio preko oba reda kao jedna kartica.
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .border(1.dp, borderColor, shape)
-        )
-        if (showTopDivider) {
-            HorizontalDivider(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = Spacing.lg),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = CARD_BORDER_ALPHA)
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AutoSizeText(
-                text = label,
-                color = MaterialTheme.extendedColors.textSecondary,
-                style = MaterialTheme.typography.bodyMedium.copy(textAlign = TextAlign.Start),
-                maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                minFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                maxLines = 1,
-                modifier = Modifier
-                    .weight(1.15f)
-                    .padding(end = Spacing.xs)
-            )
-            AutoSizeText(
-                text = totalText,
-                color = totalColor,
-                style = MaterialTheme.typography.titleLargeEmphasized.copy(
-                    textAlign = TextAlign.End,
-                    fontFeatureSettings = TABULAR_FIGURES
-                ),
-                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                minFontSize = MaterialTheme.typography.titleMedium.fontSize,
-                maxLines = 1,
-                measureKey = targetText,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            )
-        }
-    }
-}
-
-internal fun useCompactTotalCardLayout(cardWidthDp: Float): Boolean {
-    return cardWidthDp < 320f
-}
 
 /**
  * Donja traka akcija (M3 stil donje trake): površina `surfaceContainer`, pet akcija sa ikonom i

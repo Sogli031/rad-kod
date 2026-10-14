@@ -44,6 +44,7 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.brigadeTypeValue
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.ui.dialozi.PayDetailsSections
 import com.rad.shifttracker.ui.dialozi.isPayslipMonthUnfinished
 
 /**
@@ -110,7 +111,7 @@ internal fun ShiftTrackerContent(
                     onEdit = { onOpenDialog(DialogState.DayEdit(day, selectedDayRecord)) }
                 )
             }
-            ShiftPayPane(ui = ui, onOpenDialog = onOpenDialog)
+            ShiftPayPane(ui = ui, repo = repo, onOpenDialog = onOpenDialog)
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BackgroundLayer()
@@ -233,9 +234,9 @@ private fun ShiftCalendarPane(
     }
 }
 
-/** Statistika meseca (sati, prekovremeno, topli obrok, prevoz ako ga ima) i kartice sa platom. */
+/** Statistika meseca (sati, prekovremeno, topli obrok, prevoz ako ga ima), isplata i obračun plate. */
 @Composable
-private fun ShiftPayPane(ui: MainMonthState, onOpenDialog: (DialogState) -> Unit) {
+private fun ShiftPayPane(ui: MainMonthState, repo: ShiftRepository, onOpenDialog: (DialogState) -> Unit) {
     StatsSection(
         summary = ui.summary,
         onOvertimeClick = { onOpenDialog(DialogState.OvertimeNetImpact) },
@@ -245,21 +246,12 @@ private fun ShiftPayPane(ui: MainMonthState, onOpenDialog: (DialogState) -> Unit
         onTransportClick = { onOpenDialog(DialogState.Transport) },
         onWorkHoursClick = { onOpenDialog(DialogState.WorkHours) }
     )
-    Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-        SalaryCard(
-            nextMonthReceipt = ui.nextMonthReceipt,
-            withExtras = ui.mainPayWithExtras,
-            deductionsNet = ui.nextMonthFinalPaymentBreakdown.deductionsNet,
-            onClick = { onOpenDialog(DialogState.SalaryDetails) }
-        )
-        if (SHOW_TOTAL_CARD) {
-            TotalCard(
-                receipt = ui.monthlyReceipt,
-                    deductionsNet = ui.monthlyFinalPaymentBreakdown.deductionsNet,
-                onClick = { onOpenDialog(DialogState.PayDetails) }
-            )
-        }
-    }
+    PayDetailsSections(
+        monthlyReceipt = ui.nextMonthReceipt,
+        monthlyFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown,
+        payDetails = ui.selectedMonthPayDetails,
+        repo = repo
+    )
 }
 
 private const val MONTHS_PER_YEAR = 12

@@ -14,7 +14,6 @@ import com.rad.shifttracker.obracun.SeniorityInputMode
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.applyBloodDonationLeave
 import com.rad.shifttracker.repo.applyAbsenceRange
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.repo.buildCloudBackup
 import com.rad.shifttracker.repo.clearBloodDonationLeaveForDate
 import com.rad.shifttracker.repo.deleteBloodDonation
@@ -63,9 +62,6 @@ internal interface DataActions : DayActions, SettingsActions, PayslipActions
 /** Upisi dana u kalendaru: smene, odsustva, davanje krvi i brisanje. */
 internal interface DayActions {
     fun saveDay(record: DayRecord)
-    /** Prekidač u Opcijama: kartica „Neto plata“ sa regresom i prevozom (false = samo plata). */
-    fun setMainPayWithExtras(enabled: Boolean)
-
     /** Bolovanje ili godišnji od [start] do [end], i preko granice meseca. */
     fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?)
     /** „Popuni smene“: presnimi raspored od danas i drži ga popunjenim unapred (kontinualno). */
@@ -145,10 +141,6 @@ internal class RepoDataActions(
             regularShortageMinutes = record.regularShortageMinutes,
             source = record.source
         )
-    }
-
-    override fun setMainPayWithExtras(enabled: Boolean) {
-        repo.mainPaySalaryOnly = !enabled
     }
 
     override fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?) {

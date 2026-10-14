@@ -85,7 +85,6 @@ internal const val SATNICA_HOURLY_VALUE_LABEL = "Vrednost sata"
 internal const val SATNICA_DIFFICULT_WORK_CONDITIONS_LABEL = "Otežani uslovi rada (%)"
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_LABEL = "Prevoz po danu"
-internal const val MAIN_PAY_WITH_EXTRAS_LABEL = "Plata sa regresom i prevozom"
 
 internal const val SATNICA_TRANSPORT_DAILY_AMOUNT_HINT = "Unesi iznos prevoza po radnom danu"
 

@@ -22,17 +22,9 @@ import com.rad.shifttracker.obracun.calculateMonthlyFoodSpendingBreakdown
 import com.rad.shifttracker.obracun.mealSpentSupportingText
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
-import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP
-import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT
 import com.rad.shifttracker.ui.dialozi.PAY_DETAILS_WORK_HOURS_LABEL
 import com.rad.shifttracker.ui.dialozi.defaultHourlyHistoryInfoText
 import com.rad.shifttracker.ui.dialozi.payDetailsNetSalaryLabel
-import com.rad.shifttracker.ui.dialozi.payDetailsReceiptDescriptionText
-import com.rad.shifttracker.ui.dialozi.payDetailsRegressLabel
-import com.rad.shifttracker.ui.dialozi.payDetailsTransportLabel
-import com.rad.shifttracker.ui.dialozi.payDetailsTotalLabel
-import com.rad.shifttracker.ui.dialozi.paymentMonthTitleText
-import com.rad.shifttracker.ui.dialozi.payrollMonthTitleText
 
 class PayDetailsDialogTextTest {
 
@@ -44,25 +36,6 @@ class PayDetailsDialogTextTest {
     @Test
     fun `pay details explains missing receipt input`() {
         assertEquals("Nije moguće izračunati", TOTAL_CARD_UNAVAILABLE_TEXT)
-        assertEquals("Nedostaje obračun prethodnog meseca.", PAY_DETAILS_RECEIPT_UNAVAILABLE_TEXT)
-    }
-
-    @Test
-    fun `receipt labels separate payment and payroll month`() {
-        val receipt = MonthlyReceipt(
-            year = 2026,
-            month = 7,
-            salaryMonth = MonthKey(2026, 6),
-            salaryNetPay = 92_131.0,
-            regressNetPay = 0.0,
-            transportEligibleDays = 19,
-            transportDailyAmount = 240.0
-        )
-
-        assertEquals("Isplata u Julu 2026", paymentMonthTitleText(receipt))
-        assertEquals("Isplata u Januaru 2027", paymentMonthTitleText(receipt.copy(year = 2027, month = 1)))
-        assertEquals("Obračun za Jun 2026", payrollMonthTitleText(receipt))
-        assertEquals(null, payDetailsReceiptDescriptionText(receipt))
     }
 
     @Test
@@ -78,39 +51,6 @@ class PayDetailsDialogTextTest {
         )
 
         assertEquals("Neto plata za April", payDetailsNetSalaryLabel(receipt))
-        assertEquals("Regres za Maj", payDetailsRegressLabel(receipt))
-        assertEquals("Prevoz za April", payDetailsTransportLabel(receipt))
-        assertEquals("Ukupno za isplatu u Maju", payDetailsTotalLabel(receipt))
-    }
-
-    @Test
-    fun `receipt total label uses payment month locative`() {
-        val months = listOf(
-            1 to "Ukupno za isplatu u Januaru",
-            2 to "Ukupno za isplatu u Februaru",
-            3 to "Ukupno za isplatu u Martu",
-            4 to "Ukupno za isplatu u Aprilu",
-            5 to "Ukupno za isplatu u Maju",
-            6 to "Ukupno za isplatu u Junu",
-            7 to "Ukupno za isplatu u Julu",
-            8 to "Ukupno za isplatu u Avgustu",
-            9 to "Ukupno za isplatu u Septembru",
-            10 to "Ukupno za isplatu u Oktobru",
-            11 to "Ukupno za isplatu u Novembru",
-            12 to "Ukupno za isplatu u Decembru"
-        )
-
-        months.forEach { (month, expectedLabel) ->
-            val receipt = MonthlyReceipt(
-                year = 2026,
-                month = month,
-                salaryMonth = MonthKey(2026, month.minus(1).takeIf { it >= 1 } ?: 12),
-                salaryNetPay = 100_000.0,
-                regressNetPay = 0.0
-            )
-
-            assertEquals(expectedLabel, payDetailsTotalLabel(receipt))
-        }
     }
 
     @Test
@@ -143,37 +83,22 @@ class PayDetailsDialogTextTest {
     }
 
     @Test
-    fun `pay details keeps shared bottom safe padding for long content`() {
-        val source = mainSource("PayDetailsDialog.kt")
-
-        assertEquals(72, PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP)
-        assertTrue(source.contains("WindowInsets.safeDrawing.asPaddingValues()"))
-        assertTrue(source.contains("WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()"))
-        assertTrue(source.contains("maxOf("))
-        assertTrue(source.contains("PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP.dp"))
-        assertTrue(!source.contains("WindowInsets.systemBars"))
-        // Bez ovoga je razmak ispod statusne trake dupli.
-        assertTrue(source.contains("decorFitsSystemWindows = false"))
-    }
-
-    @Test
-    fun `isplata je jedan spisak - plata, akontacija, regres, prevoz, obustave, ukupno, pa preostalo 20`() {
+    fun `isplata je neto plata, akontacija, obustave, pa 20 tek kad stigne akontacija`() {
         val source = mainSource("PayDetailsDialog.kt")
         val body = source.substring(source.indexOf("private fun PaymentRows("))
         val order = listOf(
             "payDetailsNetSalaryLabel(monthlyReceipt)",
             "AdvancePaymentRow(",
-            "payDetailsRegressLabel(monthlyReceipt)",
-            "payDetailsTransportLabel(monthlyReceipt)",
             "FINAL_PAYMENT_DEDUCTIONS_LABEL",
-            "payDetailsTotalLabel(monthlyReceipt)",
             "payDetailsTotalOn20Label(monthlyReceipt)"
         ).map { body.indexOf(it) }
 
         assertTrue(order.all { it >= 0 })
         assertEquals(order.sorted(), order)
         assertTrue(body.contains("if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0)"))
-        assertTrue(source.contains("monthlyReceipt.totalReceivedThisMonth - finalPayment.deductionsNet"))
+        // Regres i prevoz se ne prikazuju u isplati.
+        assertTrue(!source.contains("regressNetPay"))
+        assertTrue(!source.contains("transportAmount"))
         assertTrue(source.contains("ADVANCE_NOT_PAID_TEXT"))
         assertTrue(source.contains("AdvanceMinimumText("))
         assertTrue(!source.contains("FINAL_PAYMENT_REMAINING_LABEL"))
@@ -258,7 +183,6 @@ class PayDetailsDialogTextTest {
     fun `pay details extracts visual card shells`() {
         val source = mainSource("PayDetailsDialog.kt")
 
-        assertTrue(source.contains("PayDetailsHeroCard("))
         assertTrue(source.contains("PayDetailsSectionCard("))
     }
 }

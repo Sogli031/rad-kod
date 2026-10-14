@@ -39,19 +39,16 @@ import com.rad.shifttracker.ui.BottomBar
 import com.rad.shifttracker.ui.CalendarSection
 import com.rad.shifttracker.ui.CompTimeCard
 import com.rad.shifttracker.ui.HeaderSection
-import com.rad.shifttracker.ui.PAY_CARDS_SPACING
 import com.rad.shifttracker.ui.RadTheme
-import com.rad.shifttracker.ui.SHOW_TOTAL_CARD
-import com.rad.shifttracker.ui.SalaryCard
 import com.rad.shifttracker.ui.ShiftTrackerScreen
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.StatsSection
-import com.rad.shifttracker.ui.TotalCard
 import com.rad.shifttracker.ui.VacationCard
 import com.rad.shifttracker.ui.WeekdayHeader
 import com.rad.shifttracker.ui.dialozi.DayEditDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
-import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
+import com.rad.shifttracker.ui.dialozi.PayDetailsSections
+import androidx.compose.foundation.background
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.osnova.UI
@@ -122,13 +119,22 @@ class DesignSnapshotTest {
 
     @Test
     fun `pay details dialog 360dp font 1_0`() = dialog("pay_details", fontScale = 1.0f) { repo ->
-        PayDetailsDialog(
-            monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
-            monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
-            payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
-            repo = repo,
-            onDismiss = {}
-        )
+        // Isplata i obračun su ispod kalendara; ovde ceo deo bez kalendara, da stane na snimak.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.material3.MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            PayDetailsSections(
+                monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
+                monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
+                payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
+                repo = repo
+            )
+        }
     }
 
     @Test
@@ -257,12 +263,12 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 onTransportClick = {},
                 onWorkHoursClick = {}
             )
-            Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-                SalaryCard(nextMonthReceipt = nextMonthReceipt, onClick = {})
-                if (SHOW_TOTAL_CARD) {
-                    TotalCard(receipt = monthlyReceipt, onClick = {})
-                }
-            }
+            PayDetailsSections(
+                monthlyReceipt = nextMonthReceipt,
+                monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
+                payDetails = repo.getMonthlyPayDetails(year, month),
+                repo = repo
+            )
         }
         }
         BottomBar(

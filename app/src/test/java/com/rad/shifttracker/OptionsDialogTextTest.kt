@@ -4,14 +4,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.krv.BLOOD_DONATION_BOTTOM_BAR_LABEL
-import com.rad.shifttracker.obracun.MonthlyReceipt
-import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.SHOW_TEST_EXPORT_ACTIONS
 import com.rad.shifttracker.ui.dialozi.difficultWorkConditionsStatusText
 import com.rad.shifttracker.ui.dialozi.optionsDialogActionLabels
-import com.rad.shifttracker.ui.mainPayCardAmount
 
 class OptionsDialogTextTest {
     @Test
@@ -37,48 +33,10 @@ class OptionsDialogTextTest {
     }
 
     @Test
-    fun `opcije imaju prekidac plata sa regresom i prevozom`() {
+    fun `opcije nemaju prekidac za regres i prevoz`() {
         val optionsSource = mainSource("OptionsDialog.kt")
-        assertTrue(optionsSource.contains("title = MAIN_PAY_WITH_EXTRAS_LABEL"))
-        assertTrue(optionsSource.contains("actions.setMainPayWithExtras(checked)"))
-        assertTrue(mainSource("ShiftTrackerContent.kt").contains("withExtras = ui.mainPayWithExtras"))
-    }
-
-    @Test
-    fun `kartice ispod kalendara su neto plata posle obustava, bez regresa i prevoza`() {
-        val receipt = MonthlyReceipt(
-            year = 2026,
-            month = 8,
-            salaryMonth = MonthKey(2026, 7),
-            salaryNetPay = 100_000.0,
-            regressNetPay = 20_000.0,
-            transportEligibleDays = 10,
-            transportDailyAmount = 240.0
-        )
-
-        assertEquals(100_000.0, mainPayCardAmount(receipt), 0.001)
-        assertEquals(0.0, mainPayCardAmount(receipt.copy(isSalaryAvailable = false)), 0.001)
-        // Obustave sa listića se oduzimaju kao u detaljima isplate, nikad ispod nule.
-        assertEquals(60_000.0, mainPayCardAmount(receipt, deductionsNet = 40_000.0), 0.001)
-        assertEquals(0.0, mainPayCardAmount(receipt, deductionsNet = 150_000.0), 0.001)
-    }
-
-    @Test
-    fun `prekidac u opcijama dodaje regres i prevoz na karticu`() {
-        val receipt = MonthlyReceipt(
-            year = 2026,
-            month = 8,
-            salaryMonth = MonthKey(2026, 7),
-            salaryNetPay = 100_000.0,
-            regressNetPay = 20_000.0,
-            transportEligibleDays = 10,
-            transportDailyAmount = 240.0
-        )
-
-        assertEquals(receipt.totalReceivedThisMonth, mainPayCardAmount(receipt, withExtras = true), 0.001)
-        assertEquals(receipt.totalReceivedThisMonth - 40_000.0, mainPayCardAmount(receipt, withExtras = true, deductionsNet = 40_000.0), 0.001)
-        // Podrazumevano isključeno: nova instalacija prikazuje samo platu.
-        assertEquals(true, testRepository().mainPaySalaryOnly)
+        assertTrue(!optionsSource.contains("mainPaySalaryOnly"))
+        assertTrue(!optionsSource.contains("MainPayWithExtras"))
     }
 
     @Test

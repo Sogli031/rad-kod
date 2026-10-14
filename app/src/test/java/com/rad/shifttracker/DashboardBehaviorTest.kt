@@ -1,12 +1,8 @@
 package com.rad.shifttracker
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import java.time.YearMonth
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -19,10 +15,8 @@ import com.rad.shifttracker.repo.getMonthlyPayDetails
 import com.rad.shifttracker.repo.getMonthlyReceipt
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.RadTheme
-import com.rad.shifttracker.ui.SalaryCard
-import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
+import com.rad.shifttracker.ui.dialozi.PayDetailsSections
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
-import com.rad.shifttracker.ui.SALARY_CARD_LABEL
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali
@@ -44,32 +38,19 @@ class DashboardBehaviorTest {
     }
 
     @Test
-    fun `kartica plate prikazuje iznos sledeceg meseca i dodir je otvara`() {
-        val repo = repoWithMonth()
-        val receipt = repo.getMonthlyReceipt(YEAR, MONTH + 1)
-        var clicks = 0
-
-        rule.setContent {
-            RadTheme { SalaryCard(nextMonthReceipt = receipt, onClick = { clicks++ }) }
-        }
-
-        rule.onNodeWithText(SALARY_CARD_LABEL).assertIsDisplayed().performClick()
-        assertEquals(1, clicks)
-    }
-
-    @Test
     fun `isplata ispod pokazuje tabelu obracuna plate meseca obracuna`() {
         val repo = repoWithMonth()
 
         rule.setContent {
             RadTheme {
-                PayDetailsDialog(
-                    monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
-                    monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
-                    payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
-                    repo = repo,
-                    onDismiss = {}
-                )
+                androidx.compose.foundation.layout.Column {
+                    PayDetailsSections(
+                        monthlyReceipt = repo.getMonthlyReceipt(YEAR, MONTH + 1),
+                        monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(YEAR, MONTH + 1),
+                        payDetails = repo.getMonthlyPayDetails(YEAR, MONTH),
+                        repo = repo
+                    )
+                }
             }
         }
 

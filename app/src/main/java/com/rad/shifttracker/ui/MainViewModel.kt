@@ -27,7 +27,6 @@ import com.rad.shifttracker.obracun.MonthlyOvertimeNetImpact
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
 import com.rad.shifttracker.repo.getMonthlyPayDetails
@@ -53,8 +52,6 @@ internal data class MainMonthState(
     val payBreakdown: MonthlyNetPayBreakdown,
     val monthlyReceipt: MonthlyReceipt,
     val nextMonthReceipt: MonthlyReceipt,
-    /** Kartica „Neto plata“ sa regresom i prevozom (prekidač u Opcijama, podrazumevano isključen). */
-    val mainPayWithExtras: Boolean,
     val monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val nextMonthFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     val overtimeNetImpact: MonthlyOvertimeNetImpact,
@@ -139,7 +136,6 @@ internal class MainViewModel(
             payBreakdown = repo.getNetPayBreakdown(year, month),
             monthlyReceipt = monthlyReceipt,
             nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue),
-            mainPayWithExtras = !repo.mainPaySalaryOnly,
             monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(year, month),
             nextMonthFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
             overtimeNetImpact = repo.getMonthlyOvertimeNetImpact(year, month),

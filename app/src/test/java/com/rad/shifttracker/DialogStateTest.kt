@@ -18,8 +18,6 @@ class DialogStateTest {
         DialogState.GmailOnboarding to "GmailOnboarding",
         DialogState.GmailUpdate to "GmailUpdate",
         DialogState.BasePay to "BasePay",
-        DialogState.PayDetails to "PayDetails",
-        DialogState.SalaryDetails to "SalaryDetails",
         DialogState.OvertimeNetImpact to "OvertimeNetImpact",
         DialogState.Food to "Food",
         DialogState.Minuli to "Minuli",

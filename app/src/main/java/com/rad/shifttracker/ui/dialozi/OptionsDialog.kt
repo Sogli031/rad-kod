@@ -5,15 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import com.rad.shifttracker.repo.mainPaySalaryOnly
-import com.rad.shifttracker.ui.LabeledSwitchRow
-import com.rad.shifttracker.ui.Spacing
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,8 +33,6 @@ internal fun OptionsDialog(
     onDismiss: () -> Unit
 ) {
     val actionLabels = optionsDialogActionLabels()
-    val savedWithExtras = rememberRepoValue(repo) { !mainPaySalaryOnly }
-    var mainPayWithExtras by remember(savedWithExtras) { mutableStateOf(savedWithExtras) }
 
     PopupDialog(
         title = "Opcije",
@@ -57,19 +47,6 @@ internal fun OptionsDialog(
                 OptionActionButton(text = actionLabels[2], onClick = onDebugExportClick)
             }
             UpdateCheckButton()
-        }
-
-        SectionLabel(text = "Prikaz")
-        PopupCard(spacing = 0.dp) {
-            LabeledSwitchRow(
-                title = MAIN_PAY_WITH_EXTRAS_LABEL,
-                checked = mainPayWithExtras,
-                contentPadding = PaddingValues(vertical = Spacing.md),
-                onCheckedChange = { checked ->
-                    mainPayWithExtras = checked
-                    actions.setMainPayWithExtras(checked)
-                }
-            )
         }
 
         SectionLabel(text = GMAIL_PAYSLIP_SECTION_LABEL)

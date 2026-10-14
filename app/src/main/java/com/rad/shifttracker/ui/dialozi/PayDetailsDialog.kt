@@ -1,22 +1,10 @@
 package com.rad.shifttracker.ui.dialozi
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,12 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.osnova.CONFIG
-import com.rad.shifttracker.osnova.formatCurrency
 import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
@@ -46,7 +30,6 @@ import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.bodyMediumEmphasized
 import com.rad.shifttracker.ui.extendedColors
-import com.rad.shifttracker.ui.headlineMediumEmphasized
 import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
@@ -58,122 +41,32 @@ import com.rad.shifttracker.repo.getPaidLeaveNetDifference
 import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
+/**
+ * Ispod kalendara: isplata za izabrani mesec (neto plata, akontacija, obustave, pa „Ukupno za
+ * isplatu 20.“ kad akontacija stigne) i obračun plate tog meseca. Regres i prevoz se ovde ne
+ * prikazuju: kolege porede samo akontaciju i završnu isplatu 20.
+ */
 @Composable
-internal fun PayDetailsDialog(
+internal fun PayDetailsSections(
     monthlyReceipt: MonthlyReceipt,
     monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     payDetails: MonthlyPayDetails,
-    repo: ShiftRepository,
-    onDismiss: () -> Unit
+    repo: ShiftRepository
 ) {
-    val receiptAvailable = monthlyReceipt.isSalaryAvailable
-    val receiptText = if (receiptAvailable) {
-        "${formatCurrency(payDetailsTotalAfterDeductions(monthlyReceipt, monthlyFinalPaymentBreakdown))} ${CONFIG.pay.currency}"
-    } else {
-        TOTAL_CARD_UNAVAILABLE_TEXT
+    PayAccuracyWarningsCard(
+        payAccuracyWarningTexts(payDetails, rememberRepoValue(repo) { isSeniorityConfiguredValue })
+    )
+
+    PayDetailsSectionCard(title = "Isplata") {
+        PaymentRows(
+            monthlyReceipt = monthlyReceipt,
+            finalPayment = monthlyFinalPaymentBreakdown,
+            repo = repo
+        )
     }
-    val receiptDescription = payDetailsReceiptDescriptionText(monthlyReceipt)
-    val safeDrawingPadding = WindowInsets.safeDrawing.asPaddingValues()
-    val navigationBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val bottomScrollPadding = maxOf(
-        navigationBarBottomPadding,
-        PAY_DETAILS_MIN_BOTTOM_SAFE_PADDING_DP.dp
-    ) + Spacing.sm
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        // Preko celog ekrana kao ostali prozori; inače prozor već počinje ispod statusne trake,
-        // pa bi safeDrawing razmak odozgo (i odozdo) bio dodat dvaput.
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(safeDrawingPadding)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-            ) {
-                PayDetailsHeroCard(
-                    paymentTitle = paymentMonthTitleText(monthlyReceipt),
-                    payrollTitle = payrollMonthTitleText(monthlyReceipt),
-                    receiptText = receiptText,
-                    receiptAvailable = receiptAvailable,
-                    receiptDescription = receiptDescription
-                )
-
-                PayAccuracyWarningsCard(
-                    payAccuracyWarningTexts(payDetails, rememberRepoValue(repo) { isSeniorityConfiguredValue })
-                )
-
-                PayDetailsSectionCard(title = "Isplata") {
-                    PaymentRows(
-                        monthlyReceipt = monthlyReceipt,
-                        finalPayment = monthlyFinalPaymentBreakdown,
-                        repo = repo
-                    )
-                }
-
-                if (monthlyReceipt.isSalaryAvailable) {
-                    PayrollMonthTable(monthlyReceipt = monthlyReceipt, payDetails = payDetails, repo = repo)
-                }
-
-                Spacer(
-                    modifier = Modifier.height(bottomScrollPadding)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PayDetailsHeroCard(
-    paymentTitle: String,
-    payrollTitle: String,
-    receiptText: String,
-    receiptAvailable: Boolean,
-    receiptDescription: String?
-) {
-    PopupCard {
-        Text(
-            text = paymentTitle,
-            color = MaterialTheme.extendedColors.textSecondary,
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = payrollTitle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        AutoSizeText(
-            text = receiptText,
-            color = if (receiptAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.warning,
-            style = MaterialTheme.typography.headlineMediumEmphasized.copy(
-                textAlign = TextAlign.Start
-            ),
-            maxFontSize = MaterialTheme.typography.headlineMedium.fontSize,
-            minFontSize = MaterialTheme.typography.titleMedium.fontSize,
-            maxLines = 2,
-            modifier = Modifier.fillMaxWidth()
-        )
-        receiptDescription?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+    if (monthlyReceipt.isSalaryAvailable) {
+        PayrollMonthTable(monthlyReceipt = monthlyReceipt, payDetails = payDetails, repo = repo)
     }
 }
 
@@ -233,8 +126,8 @@ private fun AdvancePaymentRow(
 }
 
 /**
- * Jedan spisak isplate: neto plata, akontacija (deo plate, ne sabira se), regres, obustave
- * i ukupno posle obustava. „Preostalo 20.“ se vidi tek kad je akontacija uplaćena.
+ * Isplata: neto plata, akontacija (deo plate) i obustave. „Ukupno za isplatu 20.“ se vidi tek kad je
+ * akontacija uplaćena; tada je to neto plata − obustave − akontacija.
  */
 @Composable
 private fun PaymentRows(
@@ -242,23 +135,15 @@ private fun PaymentRows(
     finalPayment: MonthlyFinalPaymentBreakdown,
     repo: ShiftRepository
 ) {
+    if (!monthlyReceipt.isSalaryAvailable) {
+        CompactInfoRow(payDetailsNetSalaryLabel(monthlyReceipt), TOTAL_CARD_UNAVAILABLE_TEXT, MaterialTheme.extendedColors.warning)
+        return
+    }
     CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
     AdvancePaymentRow(
         advancePaymentNet = finalPayment.advancePaymentNet,
         monthlyReceipt = monthlyReceipt,
         repo = repo
-    )
-    CompactMoneyRowIf(
-        monthlyReceipt.regressNetPay > 0.0,
-        payDetailsRegressLabel(monthlyReceipt),
-        monthlyReceipt.regressNetPay,
-        MaterialTheme.extendedColors.success
-    )
-    CompactMoneyRowIf(
-        monthlyReceipt.transportAmount > 0.0,
-        payDetailsTransportLabel(monthlyReceipt),
-        monthlyReceipt.transportAmount,
-        MaterialTheme.extendedColors.success
     )
     if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
@@ -270,15 +155,8 @@ private fun PaymentRows(
             CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
         }
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    CompactInfoRow(
-        payDetailsTotalLabel(monthlyReceipt),
-        srMoney(payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment)),
-        MaterialTheme.colorScheme.primary,
-        bold = true
-    )
     if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
-        // Akontacija je već stigla, pa 20. leže ostatak: ukupno za isplatu − akontacija.
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         CompactInfoRow(
             payDetailsTotalOn20Label(monthlyReceipt),
             srMoney(payDetailsTotalOn20(monthlyReceipt, finalPayment)),
@@ -297,20 +175,13 @@ private fun PaymentRows(
     }
 }
 
-/**
- * Ukupno u ovom prozoru: neto plata, regres i prevoz minus obustave sa listića — sve što leže na račun.
- * Kartica na glavnom ekranu je samo neto plata posle obustava ([com.rad.shifttracker.ui.mainPayCardAmount]).
- */
-internal fun payDetailsTotalAfterDeductions(
-    monthlyReceipt: MonthlyReceipt,
-    finalPayment: MonthlyFinalPaymentBreakdown
-): Double = (monthlyReceipt.totalReceivedThisMonth - finalPayment.deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
-
-/** „Ukupno za isplatu 20.“: ukupno za isplatu u mesecu minus već uplaćena akontacija. */
+/** „Ukupno za isplatu 20.“: neto plata − obustave − već uplaćena akontacija (bez regresa i prevoza). */
 internal fun payDetailsTotalOn20(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown
-): Double = (payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment) - finalPayment.advancePaymentNet).coerceAtLeast(0.0)
+): Double = (
+    monthlyReceipt.workSalaryPay - finalPayment.deductionsNet.coerceAtLeast(0.0) - finalPayment.advancePaymentNet
+    ).coerceAtLeast(0.0)
 
 @Composable
 private fun CompactMoneyRow(
@@ -319,18 +190,6 @@ private fun CompactMoneyRow(
     color: Color = MaterialTheme.colorScheme.onSurface
 ) {
     CompactInfoRow(label, srMoney(value), color)
-}
-
-@Composable
-private fun CompactMoneyRowIf(
-    visible: Boolean,
-    label: String,
-    value: Double,
-    color: Color = MaterialTheme.colorScheme.onSurface
-) {
-    if (visible) {
-        CompactMoneyRow(label, value, color)
-    }
 }
 
 @Composable

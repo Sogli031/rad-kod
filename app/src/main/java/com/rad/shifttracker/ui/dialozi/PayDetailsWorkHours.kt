@@ -60,7 +60,6 @@ internal fun PayrollTableCards(title: String, table: PayrollTable) {
                 amount = "≈ ${srMoney(row.amount)}",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            NoteText("Samo informacija — ti sati su već izostavljeni iz plate gore.", MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -10,9 +10,7 @@ import com.rad.shifttracker.smene.DayKey
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.OvertimeType
 import com.rad.shifttracker.smene.Shift
-import com.rad.shifttracker.ui.COMPACT_PAY_CARD_HEIGHT
 import com.rad.shifttracker.ui.DarkExtendedColors
-import com.rad.shifttracker.ui.PAY_CARDS_SPACING
 import com.rad.shifttracker.ui.RadDarkColorScheme
 import com.rad.shifttracker.ui.bottomBarButtonLabels
 import com.rad.shifttracker.ui.bottomBarButtonSpecs
@@ -32,11 +30,6 @@ import com.rad.shifttracker.ui.dialozi.formatAbsenceNetDifference
 import com.rad.shifttracker.ui.dialozi.formatDayEditNetDifference
 import com.rad.shifttracker.ui.dialozi.formatInitialCompBalanceInput
 import com.rad.shifttracker.ui.dialozi.parseInitialCompBalanceInputMinutes
-import com.rad.shifttracker.ui.SALARY_CARD_LABEL
-import com.rad.shifttracker.ui.totalCardLabel
-import com.rad.shifttracker.smene.MonthKey
-import com.rad.shifttracker.obracun.MonthlyReceipt
-import com.rad.shifttracker.ui.useCompactTotalCardLayout
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeHours
 import com.rad.shifttracker.ui.dialozi.defaultOvertimeShiftAfter
 import com.rad.shifttracker.ui.dialozi.overtimeShiftsAfter
@@ -474,37 +467,6 @@ class DayEditDialogTextTest {
         assertNull(formatDayEditNetDifference(3_805.4, 3_805.0, "RSD"))
         assertEquals("Razlika: +1.450 RSD", formatDayEditNetDifference(3_805.0, 5_255.0, "RSD"))
         assertEquals("Razlika: -1.450 RSD", formatDayEditNetDifference(3_805.0, 2_355.0, "RSD"))
-    }
-
-    @Test
-    fun totalCardKeepsPhoneWidthLayoutConsistent() {
-        assertEquals(false, useCompactTotalCardLayout(cardWidthDp = 360f))
-        assertEquals(false, useCompactTotalCardLayout(cardWidthDp = 330f))
-        assertEquals(true, useCompactTotalCardLayout(cardWidthDp = 299f))
-    }
-
-    @Test
-    fun totalCardIsNamedByTheMonthOfWork() {
-        // Isplata u oktobru je plata za septembar.
-        val receipt = MonthlyReceipt(year = 2026, month = 10, salaryMonth = MonthKey(2026, 9), salaryNetPay = 1.0, regressNetPay = 0.0)
-        assertEquals("Plata za septembar", totalCardLabel(receipt))
-    }
-
-    @Test
-    fun salaryCardIsNamedNetPay() {
-        assertEquals("Neto plata", SALARY_CARD_LABEL)
-    }
-
-    @Test
-    fun twoPayCardsKeepTheOldTotalCardFootprint() {
-        assertEquals(UI.totalCardHeight, COMPACT_PAY_CARD_HEIGHT * 2 + PAY_CARDS_SPACING)
-    }
-
-    @Test
-    fun totalCardDoesNotRenderInformativeReceiptSubtitle() {
-        val source = shiftDashboardCardsSource()
-
-        assertEquals(false, source.contains("monthlyReceiptSubtitleText(receipt)"))
     }
 
     @Test

@@ -13,8 +13,6 @@ internal sealed class DialogState {
     data object GmailOnboarding : DialogState()
     data object GmailUpdate : DialogState()
     data object BasePay : DialogState()
-    data object PayDetails : DialogState()
-    data object SalaryDetails : DialogState()
     data object OvertimeNetImpact : DialogState()
     data object Food : DialogState()
     data object Transport : DialogState()
@@ -53,8 +51,6 @@ private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.GmailOnboarding,
     DialogState.GmailUpdate,
     DialogState.BasePay,
-    DialogState.PayDetails,
-    DialogState.SalaryDetails,
     DialogState.OvertimeNetImpact,
     DialogState.Food,
     DialogState.Transport,
