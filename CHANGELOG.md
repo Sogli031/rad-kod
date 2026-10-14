@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.6] - 2026-10-14
+- **Bez poskoka pri prevlačenju sa dna dugog meseca na kraći:** mesec koji izlazi ostaje gde je bio, a povratak u duži mesec je na istom mestu. Visina se pamti samo kad korisnik sam skroluje.
+
 ## [13.5] - 2026-10-14
 - **Meseci se menjaju prevlačenjem levo-desno.** Ceo ekran prati prst: ako se prevuče malo, vrati se na isti mesec, a ako se prevuče dovoljno (ili brzo), pređe na prethodni / sledeći. Susedni meseci se računaju unapred, pa je prelaz odmah spreman.
 - **Novi mesec ostaje na istoj visini skrolovanja** — ako si bio dole kod obračuna, i u sledećem mesecu si dole, ne vraća na vrh.

@@ -98,7 +98,13 @@ internal fun ShiftTrackerContent(
                 val pageUi = states[pageMonth]
                 val scroll = rememberSaveable(saver = ScrollState.Saver) { ScrollState(sharedScroll) }
                 if (page == pagerState.currentPage) {
-                    LaunchedEffect(scroll) { snapshotFlow { scroll.value }.collect { sharedScroll = it } }
+                    // Upisuje se samo kad korisnik skroluje gore-dole: kraći mesec stoji na svom dnu,
+                    // pa bi njegova manja visina na pola prevlačenja povukla mesec koji izlazi naviše
+                    // (poskok), a povratak u duži mesec ne bi bio na istom mestu.
+                    LaunchedEffect(scroll) {
+                        snapshotFlow { scroll.value }
+                            .collect { value -> if (scroll.isScrollInProgress) sharedScroll = value }
+                    }
                 } else {
                     LaunchedEffect(sharedScroll) { scroll.scrollTo(sharedScroll) }
                 }
