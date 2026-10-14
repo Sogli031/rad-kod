@@ -31,7 +31,7 @@ import com.rad.shifttracker.smene.monthYearText
  * Popuna meseca po listi za četvorobrigadu. Lista daje samo zbirove, a četvorobrigada se retko
  * slaže u sat (zamene smena, dodatna nedelja, sat noćnog manje — listići livnice 12/2024–08/2026),
  * pa se upisuje najverovatniji raspored:
- *  - smene po ciklusu prepoznatom iz upisanih smena (nedelja slobodna, ponedeljkom bez prve smene),
+ *  - smene po ciklusu prepoznatom iz upisanih smena (nedelja slobodna; do 12.10.2026. ponedeljkom bez prve smene, od tada subotom bez treće),
  *  - GO, plaćeno odsustvo i bolovanje kao uzastopni dani pon–pet (isto kao „Bol/GO“),
  *  - praznik na dan smene: slobodan i plaćen ili rađen, šta bolje odgovara listi,
  * tako da noćni, nedelja, rad na praznik, državni praznik i odrađeni sati (šifra 21) budu što bliži

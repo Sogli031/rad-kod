@@ -165,7 +165,8 @@ internal class RollingPayBaseMonthSimulator(
                     anchorDate = anchor.date,
                     cycleStartIndex = cycleStartIndex
                 )
-                if (expectedAnchorShift != anchor.shift) continue
+                val legacyAnchorShift = scheduler.legacyFourBrigadeShiftForDate(anchor.date, anchor.date, cycleStartIndex)
+                if (expectedAnchorShift != anchor.shift && legacyAnchorShift != anchor.shift) continue
                 val counts = fourBrigadePatternMatchCounts(scheduler, anchor.date, cycleStartIndex, records)
                 if (counts.matches > bestMatchCount) {
                     bestPattern = FourBrigadePattern(anchor.date, cycleStartIndex)
@@ -197,10 +198,12 @@ internal class RollingPayBaseMonthSimulator(
                 anchorDate = anchorDate,
                 cycleStartIndex = cycleStartIndex
             )
+            // Popuna iz vremena pre promene pravila (ponedeljak/subota) ne kvari prepoznavanje ciklusa.
+            val legacyShift = scheduler.legacyFourBrigadeShiftForDate(record.date, anchorDate, cycleStartIndex)
             val recordMatches = when {
-                record.shift in Shift.workShifts() -> expectedShift == record.shift
+                record.shift in Shift.workShifts() -> expectedShift == record.shift || legacyShift == record.shift
                 isFourBrigadeHolidayOff(record.date) -> true
-                else -> expectedShift == Shift.OFF
+                else -> expectedShift == Shift.OFF || legacyShift == Shift.OFF
             }
             if (recordMatches) matches += 1
         }

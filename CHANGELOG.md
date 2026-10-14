@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.8] - 2026-10-14
+- **Četvorobrigada po novom rasporedu:** prva smena ponedeljkom se radi, a treća smena subotom se ne radi (nedelja ostaje slobodna). Važi od 12.10.2026; raniji meseci ostaju po starom pravilu.
+- **Postojeća popuna se sama presnimava:** pri pokretanju se već popunjen raspored od danas unapred usklađuje sa novim pravilom, bez ponovnog „Popuni“. Samo četvorobrigada i samo auto-popunjeni dani; ručni unosi, praznici, odsustva i prošli dani se ne diraju.
+
 ## [12.7] - 2026-10-14
 - **Ažuriranje kreće samo:** kad stigne nova verzija, preuzimanje i instalacija počinju odmah, bez dugmeta „Ažuriraj“ (ono ostaje samo za ponovni pokušaj posle greške). Prozor više ne prikazuje spisak izmena.
 

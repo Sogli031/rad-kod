@@ -10,6 +10,7 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.loadFromLocal
 import com.rad.shifttracker.repo.extendAutoFillOnStart
 import com.rad.shifttracker.repo.migrateFourBrigadeHolidays
+import com.rad.shifttracker.repo.migrateFourBrigadeSaturdayRule
 import com.rad.shifttracker.repo.reschedule
 import com.rad.shifttracker.repo.saveToLocal
 import com.rad.shifttracker.uvoz.resetUnloadedTransportDaily
@@ -50,6 +51,7 @@ class AppContainer internal constructor(private val appContext: Application) {
         shiftRepository.onChange { persistence.schedule() }
         resetUnloadedTransportDaily(appContext, shiftRepository)
         shiftRepository.migrateFourBrigadeHolidays()
+        shiftRepository.migrateFourBrigadeSaturdayRule()
         // Kontinualna popuna: raspored se dopisuje do ~godinu dana unapred kako vreme odmiče.
         shiftRepository.extendAutoFillOnStart(appContext)
         BloodDonationReminderScheduler.reschedule(appContext, shiftRepository)

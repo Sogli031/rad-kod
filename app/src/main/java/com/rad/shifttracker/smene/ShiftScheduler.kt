@@ -11,6 +11,12 @@ data class ReferenceWorkWeek(
     val end: LocalDate
 )
 
+/**
+ * Livnica je u oktobru 2026. promenila četvorobrigadu: prva smena ponedeljkom se radi, a treća smena
+ * subotom se ne radi (nedelja ostaje slobodna). Ranije: ponedeljkom prva smena slobodna, subota po ciklusu.
+ */
+val FOUR_BRIGADE_SATURDAY_RULE_FROM: LocalDate = LocalDate.of(2026, 10, 12)
+
 class ShiftScheduler(
     private val cycle: List<Int> = CONFIG.weeklyShiftCycle,
     internal val defaultHours: Int = CONFIG.pay.defaultHours
@@ -111,19 +117,33 @@ class ShiftScheduler(
         return applyFourBrigadeNonWorkingRules(date, fourBrigadeCycleShiftForDate(date, anchorDate, cycleStartIndex))
     }
 
-    /** Smena po ciklusu, pre pravila za nedelju i ponedeljak. */
+    /** Smena po ciklusu, pre pravila za nedelju, ponedeljak i subotu. */
     fun fourBrigadeCycleShiftForDate(date: LocalDate, anchorDate: LocalDate, cycleStartIndex: Int): Shift {
         val daysDiff = ChronoUnit.DAYS.between(anchorDate, date).toInt()
         return getFourBrigadeCycleShift(Math.floorMod(cycleStartIndex + daysDiff, FOUR_BRIGADE_CYCLE.size))
     }
 
-    private fun applyFourBrigadeNonWorkingRules(date: LocalDate, cycleShift: Shift): Shift {
-        return when {
-            date.dayOfWeek == DayOfWeek.SUNDAY -> Shift.OFF
-            date.dayOfWeek == DayOfWeek.MONDAY && cycleShift == Shift.FIRST -> Shift.OFF
-            else -> cycleShift
+    private fun applyFourBrigadeNonWorkingRules(date: LocalDate, cycleShift: Shift): Shift =
+        if (date.isBefore(FOUR_BRIGADE_SATURDAY_RULE_FROM)) {
+            legacyFourBrigadeShift(date, cycleShift)
+        } else {
+            when {
+                date.dayOfWeek == DayOfWeek.SUNDAY -> Shift.OFF
+                date.dayOfWeek == DayOfWeek.SATURDAY && cycleShift == Shift.THIRD -> Shift.OFF
+                else -> cycleShift
+            }
         }
+
+    /** Pravilo pre [FOUR_BRIGADE_SATURDAY_RULE_FROM]: nedelja slobodna, ponedeljkom prva smena slobodna. */
+    private fun legacyFourBrigadeShift(date: LocalDate, cycleShift: Shift): Shift = when {
+        date.dayOfWeek == DayOfWeek.SUNDAY -> Shift.OFF
+        date.dayOfWeek == DayOfWeek.MONDAY && cycleShift == Shift.FIRST -> Shift.OFF
+        else -> cycleShift
     }
+
+    /** Smena po starom pravilu (ponedeljak prva slobodna) i za datume posle promene — za prepoznavanje ranije popune. */
+    fun legacyFourBrigadeShiftForDate(date: LocalDate, anchorDate: LocalDate, cycleStartIndex: Int): Shift =
+        legacyFourBrigadeShift(date, fourBrigadeCycleShiftForDate(date, anchorDate, cycleStartIndex))
 
     fun calculateShiftForDate(date: LocalDate, settings: ShiftFillSettings): Shift {
         return when (settings.mode) {

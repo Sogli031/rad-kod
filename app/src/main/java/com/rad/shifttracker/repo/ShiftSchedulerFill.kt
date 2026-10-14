@@ -170,7 +170,7 @@ private fun ShiftScheduler.fillDateRange(
 
 /**
  * Četvorobrigada, praznik pon–pet (livnica, listići 12/2024–08/2026): kad je po ciklusu tog dana
- * smena (i ponedeljkom kad je prva smena slobodna), praznik se najčešće ne radi i plaća se (12) —
+ * smena (i ponedeljkom kad je prva smena slobodna, odnosno subotom kad je treća), praznik se najčešće ne radi i plaća se (12) —
  * zapis bez [BatchRecord.balanceExempt]. Slobodan dan po ciklusu ostaje balanceExempt i ne plaća
  * se: pun fond ga već pokriva kroz rad u režiji (01), npr. 11.11.2025.
  */
