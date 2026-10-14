@@ -13,6 +13,8 @@ import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.ui.dialozi.PayrollTable
+import com.rad.shifttracker.ui.dialozi.payDetailsTotalAfterDeductions
+import com.rad.shifttracker.ui.dialozi.payDetailsTotalLabel
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20
 import com.rad.shifttracker.ui.dialozi.payDetailsTotalOn20Label
 import com.rad.shifttracker.ui.dialozi.payrollTable
@@ -88,8 +90,10 @@ class PayrollTableTest {
             advanceExceedsCalculatedNetPay = false
         )
 
-        // 20.: neto plata − obustave − akontacija; regres i prevoz se ne računaju.
+        // Ukupno: neto plata − obustave; 20.: još − akontacija. Regres i prevoz se ne računaju.
+        assertEquals(38_487.70, payDetailsTotalAfterDeductions(receipt, finalPayment), 0.001)
         assertEquals(13_487.70, payDetailsTotalOn20(receipt, finalPayment), 0.001)
+        assertEquals("Ukupno za isplatu u Novembru", payDetailsTotalLabel(receipt))
         val withTransport = receipt.copy(transportEligibleDays = 20, transportDailyAmount = 240.0)
         assertEquals(13_487.70, payDetailsTotalOn20(withTransport, finalPayment), 0.001)
         assertEquals(0.0, payDetailsTotalOn20(receipt, finalPayment.copy(advancePaymentNet = 90_000.0)), 0.001)

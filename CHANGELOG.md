@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.1] - 2026-10-14
+- **Vraćen red „Ukupno za isplatu u <mesecu>“** ispod kalendara: neto plata − obustave, bez regresa i prevoza. Kad akontacija stigne, ispod je i „Ukupno za isplatu 20.“ (ukupno − akontacija).
+
 ## [13.0] - 2026-10-14
 - **Isplata i obračun plate su ispod kalendara** (skroluje se), umesto kartice „Neto plata“ i posebnog prozora.
 - **Isplata prikazuje samo neto platu, akontaciju i obustave.** „Ukupno za isplatu 20.“ (neto plata − obustave − akontacija) pojavljuje se tek kad je akontacija upisana. Regres i prevoz se ne prikazuju u isplati.

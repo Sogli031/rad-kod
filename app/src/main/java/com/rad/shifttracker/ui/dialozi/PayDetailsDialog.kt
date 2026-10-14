@@ -126,8 +126,8 @@ private fun AdvancePaymentRow(
 }
 
 /**
- * Isplata: neto plata, akontacija (deo plate) i obustave. „Ukupno za isplatu 20.“ se vidi tek kad je
- * akontacija uplaćena; tada je to neto plata − obustave − akontacija.
+ * Isplata: neto plata, akontacija (deo plate), obustave i „Ukupno za isplatu u <mesecu>“ (neto plata −
+ * obustave). „Ukupno za isplatu 20.“ se vidi tek kad je akontacija uplaćena: ukupno − akontacija.
  */
 @Composable
 private fun PaymentRows(
@@ -155,8 +155,14 @@ private fun PaymentRows(
             CompactDeductionDetailRow(label = deduction.name, value = deduction.amountNet)
         }
     }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    CompactInfoRow(
+        payDetailsTotalLabel(monthlyReceipt),
+        srMoney(payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment)),
+        MaterialTheme.colorScheme.primary,
+        bold = true
+    )
     if (finalPayment.isNetPayAvailable && finalPayment.advancePaymentNet > 0.0) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         CompactInfoRow(
             payDetailsTotalOn20Label(monthlyReceipt),
             srMoney(payDetailsTotalOn20(monthlyReceipt, finalPayment)),
@@ -175,13 +181,17 @@ private fun PaymentRows(
     }
 }
 
-/** „Ukupno za isplatu 20.“: neto plata − obustave − već uplaćena akontacija (bez regresa i prevoza). */
+/** „Ukupno za isplatu u <mesecu>“: neto plata − obustave, bez regresa i prevoza. */
+internal fun payDetailsTotalAfterDeductions(
+    monthlyReceipt: MonthlyReceipt,
+    finalPayment: MonthlyFinalPaymentBreakdown
+): Double = (monthlyReceipt.workSalaryPay - finalPayment.deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
+
+/** „Ukupno za isplatu 20.“: ukupno za isplatu − već uplaćena akontacija. */
 internal fun payDetailsTotalOn20(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown
-): Double = (
-    monthlyReceipt.workSalaryPay - finalPayment.deductionsNet.coerceAtLeast(0.0) - finalPayment.advancePaymentNet
-    ).coerceAtLeast(0.0)
+): Double = (payDetailsTotalAfterDeductions(monthlyReceipt, finalPayment) - finalPayment.advancePaymentNet).coerceAtLeast(0.0)
 
 @Composable
 private fun CompactMoneyRow(

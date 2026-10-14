@@ -90,6 +90,7 @@ class PayDetailsDialogTextTest {
             "payDetailsNetSalaryLabel(monthlyReceipt)",
             "AdvancePaymentRow(",
             "FINAL_PAYMENT_DEDUCTIONS_LABEL",
+            "payDetailsTotalLabel(monthlyReceipt)",
             "payDetailsTotalOn20Label(monthlyReceipt)"
         ).map { body.indexOf(it) }
 
