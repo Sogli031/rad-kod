@@ -3,6 +3,13 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [12.9] - 2026-10-14
+- **Bolovanje i godišnji za više dana iz prozora dana:** kad izabereš Bolovanje ili Godišnji, ispod „Tip dana“ je kartica „Do kog dana“. Strelicama biraš poslednji dan (može i u sledeći mesec), a ispod piše ukupno radnih dana, npr. „8 radnih dana bolovanja“. Vikendi, a kod godišnjeg i praznici, preskaču se kao ranije.
+- **Uklonjeno dugme „Bol/GO“** iz donje trake: sve se radi iz prozora dana.
+- Kartica isplate bolovanja ima samo naslov „Isplata bolovanja“.
+- **Ispod kalendara je samo jedna kartica, „Neto plata“** za izabrani mesec; donja kartica (plata za prethodni mesec) je uklonjena.
+- **Vraćen prekidač u Opcijama „Plata sa regresom i prevozom“** (podrazumevano isključen): kad je uključen, „Neto plata“ prikazuje platu zajedno sa regresom i prevozom.
+
 ## [12.8] - 2026-10-14
 - **Četvorobrigada po novom rasporedu:** prva smena ponedeljkom se radi, a treća smena subotom se ne radi (nedelja ostaje slobodna). Važi od 12.10.2026; raniji meseci ostaju po starom pravilu.
 - **Postojeća popuna se sama presnimava:** pri pokretanju se već popunjen raspored od danas unapred usklađuje sa novim pravilom, bez ponovnog „Popuni“. Samo četvorobrigada i samo auto-popunjeni dani; ručni unosi, praznici, odsustva i prošli dani se ne diraju.

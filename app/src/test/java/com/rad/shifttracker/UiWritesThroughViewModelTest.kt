@@ -35,7 +35,7 @@ class UiWritesThroughViewModelTest {
     private val writePatterns = listOf(
         Regex("""\brepo\.(set|save|delete|clear|apply|record|import|populate|update|add)\w*\s*\("""),
         Regex("""\brepo\.\w+\s*=[^=]"""),
-        Regex("""\b(applyMonthFill|fillAllMonths|applyPayslipChanges|importManualPayslip|applySickRange|applyVacationRange|populateMonthsAhead)\(\s*repo\b"""),
+        Regex("""\b(applyMonthFill|fillAllMonths|applyPayslipChanges|importManualPayslip|applySickRange|applyVacationRange|applyAbsenceRange|populateMonthsAhead)\(\s*repo\b"""),
         Regex("""GmailImportRunner\.start\(""")
     )
 

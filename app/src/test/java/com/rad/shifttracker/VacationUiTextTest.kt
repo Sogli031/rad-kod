@@ -158,15 +158,6 @@ class VacationUiTextTest {
     }
 
     @Test
-    fun `bol go dijalog koristi blokadu za nedozvoljeni godisnji`() {
-        val source = appSource("AbsenceDialog.kt")
-
-        assertEquals(true, source.contains("requestValidation.message"))
-        assertEquals(true, source.contains("!preview.requestValidation.isAllowed"))
-        assertEquals(true, source.contains("return@GlowButton"))
-    }
-
-    @Test
     fun `preview tekst prikazuje preskocene dane`() {
         val preview = VacationRangePreview(
             startDate = LocalDate.of(2026, 1, 1),

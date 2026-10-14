@@ -454,8 +454,7 @@ internal fun DayEditSickControls(
     sickPayRate: Double,
     onSickPayRateSelected: (Double) -> Unit
 ) {
-    DayEditSectionCard(title = "Bolovanje") {
-        DayEditChoiceHeader(text = "Isplata bolovanja")
+    DayEditSectionCard(title = "Isplata bolovanja") {
         val rates = listOf(
             CONFIG.pay.sickPayRate to "${(CONFIG.pay.sickPayRate * 100).toInt()}%",
             1.0 to "100%"
@@ -560,7 +559,8 @@ internal fun DayEditSaveButton(
     saveState: DayEditSaveState,
     vacationValidation: VacationRequestValidation,
     actions: DataActions,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    beforeSaveDay: () -> Unit
 ) {
     val isSaveEnabled = saveState.shift1 != Shift.VACATION || vacationValidation.isAllowed
     GlowButton(
@@ -577,6 +577,8 @@ internal fun DayEditSaveButton(
             if (saveState.shift1 == Shift.VACATION && !vacationValidation.isAllowed) {
                 return@GlowButton
             }
+            // Opseg „Do kog dana“ se upisuje pre samog dana, da godišnji tog dana ne bude brojan dvaput.
+            beforeSaveDay()
             actions.saveDay(saveState.toDayRecord())
             onDismiss()
         }

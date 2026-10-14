@@ -95,7 +95,7 @@ class PayrollTableTest {
         val withTransport = receipt.copy(transportEligibleDays = 20, transportDailyAmount = 240.0)
         assertEquals(63_287.70, payDetailsTotalAfterDeductions(withTransport, finalPayment), 0.001)
         assertEquals(38_287.70, payDetailsTotalOn20(withTransport, finalPayment), 0.001)
-        assertEquals(38_487.70, com.rad.shifttracker.ui.mainPayCardAmount(withTransport, finalPayment.deductionsNet), 0.001)
+        assertEquals(38_487.70, com.rad.shifttracker.ui.mainPayCardAmount(withTransport, deductionsNet = finalPayment.deductionsNet), 0.001)
         assertEquals("Ukupno za isplatu 20.11.", payDetailsTotalOn20Label(receipt))
         assertEquals("Ukupno za isplatu 20.01.", payDetailsTotalOn20Label(receipt.copy(year = 2027, month = 1)))
     }

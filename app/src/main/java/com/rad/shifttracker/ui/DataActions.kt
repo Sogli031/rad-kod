@@ -13,8 +13,8 @@ import com.rad.shifttracker.obracun.SeniorityIncreaseFactor
 import com.rad.shifttracker.obracun.SeniorityInputMode
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.applyBloodDonationLeave
-import com.rad.shifttracker.repo.applySickRange
-import com.rad.shifttracker.repo.applyVacationRange
+import com.rad.shifttracker.repo.applyAbsenceRange
+import com.rad.shifttracker.repo.mainPaySalaryOnly
 import com.rad.shifttracker.repo.buildCloudBackup
 import com.rad.shifttracker.repo.clearBloodDonationLeaveForDate
 import com.rad.shifttracker.repo.deleteBloodDonation
@@ -41,6 +41,7 @@ import com.rad.shifttracker.repo.setVacationYearBalance
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.ShiftFillSettings
+import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.uvoz.FillAllResult
 import com.rad.shifttracker.uvoz.GmailImportRunner
@@ -62,8 +63,11 @@ internal interface DataActions : DayActions, SettingsActions, PayslipActions
 /** Upisi dana u kalendaru: smene, odsustva, davanje krvi i brisanje. */
 internal interface DayActions {
     fun saveDay(record: DayRecord)
-    fun applySickRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int, sickPayRate: Double?)
-    fun applyVacationRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int)
+    /** Prekidač u Opcijama: kartica „Neto plata“ sa regresom i prevozom (false = samo plata). */
+    fun setMainPayWithExtras(enabled: Boolean)
+
+    /** Bolovanje ili godišnji od [start] do [end], i preko granice meseca. */
+    fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?)
     /** „Popuni smene“: presnimi raspored od danas i drži ga popunjenim unapred (kontinualno). */
     fun populateAutoFill(scheduler: ShiftScheduler, today: LocalDate, settings: ShiftFillSettings)
     fun deleteMonth(year: Int, month: Int)
@@ -143,12 +147,12 @@ internal class RepoDataActions(
         )
     }
 
-    override fun applySickRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int, sickPayRate: Double?) {
-        scheduler.applySickRange(repo, year, month, startDay, endDay, sickPayRate)
+    override fun setMainPayWithExtras(enabled: Boolean) {
+        repo.mainPaySalaryOnly = !enabled
     }
 
-    override fun applyVacationRange(scheduler: ShiftScheduler, year: Int, month: Int, startDay: Int, endDay: Int) {
-        scheduler.applyVacationRange(repo, year, month, startDay, endDay)
+    override fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?) {
+        scheduler.applyAbsenceRange(repo, shift, start, end, sickPayRate)
     }
 
     override fun populateAutoFill(scheduler: ShiftScheduler, today: LocalDate, settings: ShiftFillSettings) {

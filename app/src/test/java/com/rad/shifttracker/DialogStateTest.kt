@@ -17,7 +17,6 @@ class DialogStateTest {
         DialogState.OnboardingAutoFill to "OnboardingAutoFill",
         DialogState.GmailOnboarding to "GmailOnboarding",
         DialogState.GmailUpdate to "GmailUpdate",
-        DialogState.SickVacation to "SickVacation",
         DialogState.BasePay to "BasePay",
         DialogState.PayDetails to "PayDetails",
         DialogState.SalaryDetails to "SalaryDetails",

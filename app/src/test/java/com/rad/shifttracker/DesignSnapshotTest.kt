@@ -137,6 +137,11 @@ class DesignSnapshotTest {
     }
 
     @Test
+    fun `day edit sick dialog 360dp font 1_0`() = dialog("day_edit_sick", fontScale = 1.0f) { repo ->
+        DayEditDialog(year = YEAR, month = MONTH, day = 27, record = repo.get(YEAR, MONTH, 27), repo = repo, actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()), onDismiss = {})
+    }
+
+    @Test
     fun `day edit dialog 360dp font 1_5`() = dialog("day_edit", fontScale = 1.5f) { repo ->
         DayEditDialog(year = YEAR, month = MONTH, day = 13, record = repo.get(YEAR, MONTH, 13), repo = repo, actions = RepoDataActions(repo, null, RuntimeEnvironment.getApplication()), onDismiss = {})
     }
@@ -253,7 +258,7 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
                 onWorkHoursClick = {}
             )
             Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
-                SalaryCard(month = month, nextMonthReceipt = nextMonthReceipt, onClick = {})
+                SalaryCard(nextMonthReceipt = nextMonthReceipt, onClick = {})
                 if (SHOW_TOTAL_CARD) {
                     TotalCard(receipt = monthlyReceipt, onClick = {})
                 }
@@ -263,7 +268,6 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
         BottomBar(
             modifier = Modifier,
             onAutoFill = {},
-            onSickVacation = {},
             onBasePay = {},
             onHolidays = {},
             onOptions = {},

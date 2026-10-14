@@ -247,7 +247,7 @@ fun ShiftScheduler.applyVacationRange(
  * Četvorobrigada: smena iz „Popuni“ van pon–pet između prvog i poslednjeg dana odsustva se ne radi
  * (na godišnjem se ni subotom ne ide na posao) — listić livnice 08/2025: 15 dana GO, 4 odrađene smene.
  */
-private fun fourBrigadeShiftsInsideAbsence(repo: ShiftRepository, absence: List<BatchRecord>): List<BatchRecord> {
+internal fun fourBrigadeShiftsInsideAbsence(repo: ShiftRepository, absence: List<BatchRecord>): List<BatchRecord> {
     if (repo.brigadeTypeValue != BrigadeType.CETVOROBRIGADA || absence.isEmpty()) return emptyList()
     val dates = absence.map { LocalDate.of(it.year, it.month, it.day) }
     val first = dates.min()

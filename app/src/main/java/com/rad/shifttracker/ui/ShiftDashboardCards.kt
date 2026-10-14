@@ -42,7 +42,7 @@ import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.obracun.MonthSummary
 
 // Kad je donja kartica (plata za prethodni mesec) sakrivena, kartica plate ostaje sama i zaobljena.
-internal const val SHOW_TOTAL_CARD = true
+internal const val SHOW_TOTAL_CARD = false
 internal const val WORK_HOURS_CARD_LABEL = "Sati rada"
 internal const val TOTAL_CARD_UNAVAILABLE_TEXT = "Nije moguće izračunati"
 // Svaki red je zaseban dodir (plata, primanja): najmanje 48dp (M3 / ATF TouchTargetSizeCheck).
@@ -50,18 +50,15 @@ internal const val COMPACT_PAY_CARD_HEIGHT = 48
 // Dve kartice plate su odvojene (svaka svoja kartica), da se ne čitaju kao jedno dugme.
 internal const val PAY_CARDS_SPACING = 8
 
-/**
- * Obe kartice ispod kalendara su „Plata za <mesec>“: gornja za izabrani mesec (stiže sledećeg
- * meseca), donja za prethodni (stiže u izabranom mesecu). Ranije „Oktobarska plata“ i
- * „Primanja u Oktobru“ — dva pojma za isti novac pomeren za mesec zbunjivala su kolege.
- */
-internal fun salaryCardLabel(month: Int): String {
+/** Kartica ispod kalendara: neto plata za rad u izabranom mesecu (korisnik 14.10.2026: samo ona). */
+internal const val SALARY_CARD_LABEL = "Neto plata"
+
+/** Donja kartica (sakrivena, [SHOW_TOTAL_CARD]): plata čija isplata stiže u izabranom mesecu. */
+internal fun totalCardLabel(receipt: MonthlyReceipt): String {
+    val month = receipt.salaryMonth.month
     if (month !in 1..12) return "Plata"
     return "Plata za ${MONTH_NAMES[month].lowercase()}"
 }
-
-/** Donja kartica: plata čija isplata stiže u izabranom mesecu, imenovana po mesecu rada. */
-internal fun totalCardLabel(receipt: MonthlyReceipt): String = salaryCardLabel(receipt.salaryMonth.month)
 
 /**
  * Statistike u jednoj kartici, razdvojene tankim linijama. [transportAmount] je prevoz za rad u
@@ -166,7 +163,7 @@ internal fun TotalCard(
 ) {
     PayAmountCard(
         label = totalCardLabel(receipt),
-        amount = mainPayCardAmount(receipt, deductionsNet),
+        amount = mainPayCardAmount(receipt, deductionsNet = deductionsNet),
         isAvailable = receipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium,
@@ -177,14 +174,14 @@ internal fun TotalCard(
 
 @Composable
 internal fun SalaryCard(
-    month: Int,
     nextMonthReceipt: MonthlyReceipt,
+    withExtras: Boolean = false,
     deductionsNet: Double = 0.0,
     onClick: () -> Unit
 ) {
     PayAmountCard(
-        label = salaryCardLabel(month),
-        amount = mainPayCardAmount(nextMonthReceipt, deductionsNet),
+        label = SALARY_CARD_LABEL,
+        amount = mainPayCardAmount(nextMonthReceipt, withExtras, deductionsNet),
         isAvailable = nextMonthReceipt.isSalaryAvailable,
         amountColor = MaterialTheme.colorScheme.primary,
         shape = MaterialTheme.shapes.medium,
@@ -193,9 +190,13 @@ internal fun SalaryCard(
     )
 }
 
-/** Iznos na kartici ispod kalendara: samo neto plata za rad posle obustava, bez regresa i prevoza. */
-internal fun mainPayCardAmount(receipt: MonthlyReceipt, deductionsNet: Double = 0.0): Double {
-    return (receipt.workSalaryPay - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
+/**
+ * Iznos na kartici ispod kalendara, posle obustava: samo neto plata za rad (podrazumevano) ili,
+ * uz prekidač u Opcijama, plata sa regresom i prevozom.
+ */
+internal fun mainPayCardAmount(receipt: MonthlyReceipt, withExtras: Boolean = false, deductionsNet: Double = 0.0): Double {
+    val amount = if (withExtras) receipt.totalReceivedThisMonth else receipt.workSalaryPay
+    return (amount - deductionsNet.coerceAtLeast(0.0)).coerceAtLeast(0.0)
 }
 
 /** Jedan red grupe plate: etiketa levo, iznos desno. */
@@ -284,7 +285,7 @@ internal fun useCompactTotalCardLayout(cardWidthDp: Float): Boolean {
 }
 
 /**
- * Donja traka akcija (M3 stil donje trake): površina `surfaceContainer`, šest akcija sa ikonom i
+ * Donja traka akcija (M3 stil donje trake): površina `surfaceContainer`, pet akcija sa ikonom i
  * nazivom; cela stavka je dodirna (najmanje 48dp), sa ripple-om i ulogom dugmeta. Jedino „Popuni“
  * ima tonski indikator kao glavna radnja, a „Briši“ je u boji `error`.
  */
@@ -292,7 +293,6 @@ internal fun useCompactTotalCardLayout(cardWidthDp: Float): Boolean {
 internal fun BottomBar(
     modifier: Modifier,
     onAutoFill: () -> Unit,
-    onSickVacation: () -> Unit,
     onBasePay: () -> Unit,
     onHolidays: () -> Unit,
     onOptions: () -> Unit,
@@ -303,7 +303,6 @@ internal fun BottomBar(
     val specs = bottomBarButtonSpecs()
     val buttons = listOf(
         BottomBarItem(specs.autoFill.icon, specs.autoFill.label, scheme.primary, scheme.primaryContainer, onAutoFill),
-        BottomBarItem(specs.sickVacation.icon, specs.sickVacation.label, scheme.onSurfaceVariant, null, onSickVacation),
         BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
         BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
         BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
@@ -394,7 +393,6 @@ private const val DISABLED_ALPHA = 0.38f
 
 internal data class BottomBarButtonLabels(
     val autoFill: String,
-    val sickVacation: String,
     val basePay: String,
     val holidays: String,
     val options: String,
@@ -408,7 +406,6 @@ internal data class BottomBarButtonSpec(
 
 internal data class BottomBarButtonSpecs(
     val autoFill: BottomBarButtonSpec,
-    val sickVacation: BottomBarButtonSpec,
     val basePay: BottomBarButtonSpec,
     val holidays: BottomBarButtonSpec,
     val options: BottomBarButtonSpec,
@@ -419,7 +416,6 @@ internal fun bottomBarButtonLabels(): BottomBarButtonLabels {
     val specs = bottomBarButtonSpecs()
     return BottomBarButtonLabels(
         autoFill = specs.autoFill.label,
-        sickVacation = specs.sickVacation.label,
         basePay = specs.basePay.label,
         holidays = specs.holidays.label,
         options = specs.options.label,
@@ -430,7 +426,6 @@ internal fun bottomBarButtonLabels(): BottomBarButtonLabels {
 internal fun bottomBarButtonSpecs(): BottomBarButtonSpecs {
     return BottomBarButtonSpecs(
         autoFill = BottomBarButtonSpec(icon = AppIcons.today, label = "Popuni"),
-        sickVacation = BottomBarButtonSpec(icon = AppIcons.sickLeave, label = "Bol/GO"),
         basePay = BottomBarButtonSpec(icon = AppIcons.pay, label = "Lista"),
         holidays = BottomBarButtonSpec(icon = AppIcons.sick, label = BLOOD_DONATION_BOTTOM_BAR_LABEL),
         options = BottomBarButtonSpec(icon = AppIcons.settings, label = "Opcije"),

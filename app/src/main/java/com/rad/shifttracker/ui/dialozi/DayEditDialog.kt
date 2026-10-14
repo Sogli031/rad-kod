@@ -85,9 +85,10 @@ internal fun DayEditDialog(
     val estimatedNetDailyPay = remember(saveState) { repo.calculateEstimatedDailyWorkNetPay(saveState.toDayRecord()) }
     val savedNetDailyPay = remember(recordContentKey) { record?.let { repo.calculateEstimatedDailyWorkNetPay(it) } }
     val monthSummary = remember(year, month) { repo.getSummary(year, month) }
-    val vacationValidation = remember(repo, dayDate, form.shift1, record) {
+    val absenceRange = rememberDayEditAbsenceRange(repo, dayDate, form, record)
+    val vacationValidation = remember(repo, absenceRange.dates, form.shift1, record) {
         if (form.shift1 == Shift.VACATION) {
-            repo.validateVacationRequest(listOf(dayDate))
+            repo.validateVacationRequest(absenceRange.dates)
         } else {
             VacationRequestValidation(blockedDates = emptyList(), message = null)
         }
@@ -102,7 +103,11 @@ internal fun DayEditDialog(
         title = "$day. ${MONTH_NAMES[month]}",
         onDismiss = onDismiss,
         scrollable = true,
-        footer = { DayEditSaveButton(saveState, vacationValidation, actions, onDismiss) }
+        footer = {
+            DayEditSaveButton(saveState, vacationValidation, actions, onDismiss) {
+                absenceRange.applyTo(actions, form.sickPayRate)
+            }
+        }
     ) {
         DayEditStatusHeader(estimatedNetDailyPay = estimatedNetDailyPay, savedNetDailyPay = savedNetDailyPay)
         holidayText?.let { text -> DayEditHolidayWarningStrip(text = text) }
@@ -156,7 +161,8 @@ internal fun DayEditDialog(
                     form = form,
                     vacationWarning = vacationValidation.message,
                     onHoursPickerRequest = { picker -> hoursPicker = picker },
-                    onShortageClick = { showShortageDialog = true }
+                    onShortageClick = { showShortageDialog = true },
+                    absenceUntil = { DayEditAbsenceUntilCard(absenceRange, form.shift1) }
                 )
             }
         }
@@ -224,7 +230,8 @@ private fun DayEditShiftControls(
     form: DayEditForm,
     vacationWarning: String?,
     onHoursPickerRequest: (HoursPickerState) -> Unit,
-    onShortageClick: () -> Unit
+    onShortageClick: () -> Unit,
+    absenceUntil: @Composable () -> Unit
 ) {
     val pickerAccent = MaterialTheme.colorScheme.primary
     when (kind) {
@@ -284,12 +291,18 @@ private fun DayEditShiftControls(
 
         DayEditControlsKind.PAID_LEAVE -> DayEditPaidLeaveControls()
 
-        DayEditControlsKind.SICK -> DayEditSickControls(
-            sickPayRate = form.sickPayRate,
-            onSickPayRateSelected = { selected -> form.sickPayRate = selected }
-        )
+        DayEditControlsKind.SICK -> {
+            absenceUntil()
+            DayEditSickControls(
+                sickPayRate = form.sickPayRate,
+                onSickPayRateSelected = { selected -> form.sickPayRate = selected }
+            )
+        }
 
-        DayEditControlsKind.VACATION -> DayEditVacationControls(warningMessage = vacationWarning)
+        DayEditControlsKind.VACATION -> {
+            absenceUntil()
+            DayEditVacationControls(warningMessage = vacationWarning)
+        }
 
         DayEditControlsKind.OFF -> DayEditOffControls()
     }

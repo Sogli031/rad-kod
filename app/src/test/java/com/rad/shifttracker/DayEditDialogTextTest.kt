@@ -32,7 +32,7 @@ import com.rad.shifttracker.ui.dialozi.formatAbsenceNetDifference
 import com.rad.shifttracker.ui.dialozi.formatDayEditNetDifference
 import com.rad.shifttracker.ui.dialozi.formatInitialCompBalanceInput
 import com.rad.shifttracker.ui.dialozi.parseInitialCompBalanceInputMinutes
-import com.rad.shifttracker.ui.salaryCardLabel
+import com.rad.shifttracker.ui.SALARY_CARD_LABEL
 import com.rad.shifttracker.ui.totalCardLabel
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MonthlyReceipt
@@ -278,7 +278,7 @@ class DayEditDialogTextTest {
         val source = dayEditDialogSource()
         val sickBranch = source.substring(
             source.indexOf("DayEditControlsKind.SICK -> "),
-            source.indexOf("DayEditControlsKind.VACATION -> DayEditVacationControls(")
+            source.indexOf("DayEditControlsKind.VACATION -> {")
         )
         val sickControls = functionSource(source, "fun DayEditSickControls(")
 
@@ -287,7 +287,8 @@ class DayEditDialogTextTest {
         assertEquals(false, sickControls.contains("onHoursClick"))
         assertEquals(false, sickControls.contains("DayEditFixedHoursBox("))
         assertEquals(false, sickControls.contains("Sati:"))
-        assertEquals(true, sickControls.contains("DayEditChoiceHeader(text = \"Isplata bolovanja\")"))
+        assertEquals(true, sickControls.contains("DayEditSectionCard(title = \"Isplata bolovanja\")"))
+        assertEquals(false, sickControls.contains("DayEditChoiceHeader("))
         assertEquals(true, sickControls.contains("CONFIG.pay.sickPayRate to"))
         assertEquals(true, sickControls.contains("1.0 to \"100%\""))
     }
@@ -296,7 +297,7 @@ class DayEditDialogTextTest {
     fun vacationDayEditShowsWarningWithoutManualHoursSelector() {
         val source = dayEditDialogSource()
         val vacationBranch = source.substring(
-            source.indexOf("DayEditControlsKind.VACATION -> DayEditVacationControls("),
+            source.indexOf("DayEditControlsKind.VACATION -> {"),
             source.indexOf("DayEditControlsKind.OFF -> DayEditOffControls()")
         )
         val vacationControls = functionSource(source, "fun DayEditVacationControls(")
@@ -388,7 +389,7 @@ class DayEditDialogTextTest {
     fun dayEditBlocksVacationWhenRequestValidationFails() {
         val source = dayEditDialogSource()
 
-        assertEquals(true, source.contains("repo.validateVacationRequest(listOf(dayDate))"))
+        assertEquals(true, source.contains("repo.validateVacationRequest(absenceRange.dates)"))
         assertEquals(true, source.contains("vacationWarning = vacationValidation.message"))
         assertEquals(true, source.contains("warningMessage = vacationWarning"))
         assertEquals(true, source.contains("saveState.shift1 == Shift.VACATION && !vacationValidation.isAllowed"))
@@ -454,24 +455,9 @@ class DayEditDialogTextTest {
     @Test
     fun quickActionPopupsUseSharedSafeContainer() {
         val autoFillSource = appSource("AutoFillDialog.kt")
-        val absenceSource = appSource("AbsenceDialog.kt")
 
         assertEquals(true, autoFillSource.contains("PopupDialog("))
-        assertEquals(true, absenceSource.contains("PopupDialog("))
         assertEquals(false, autoFillSource.contains("heightRatio ="))
-        assertEquals(false, absenceSource.contains("heightRatio ="))
-    }
-
-    @Test
-    fun absenceDialogChoiceButtonsMatchDayEditDialog() {
-        val source = appSource("AbsenceDialog.kt")
-
-        // Bolovanje/Godišnji i procenat izgledaju kao izbori u prozoru dana.
-        assertEquals(2, Regex("""minHeight = DAY_TYPE_CHOICE_HEIGHT""").findAll(source).count())
-        assertEquals(1, Regex("""minHeight = OVERTIME_TYPE_CHOICE_HEIGHT""").findAll(source).count())
-        assertEquals(true, source.contains("text = \"Bolovanje\""))
-        assertEquals(false, source.contains("BOLOVANJE"))
-        assertEquals(false, source.contains("extendedColors.sick"))
     }
 
     @Test
@@ -505,10 +491,8 @@ class DayEditDialogTextTest {
     }
 
     @Test
-    fun salaryCardUsesSelectedMonthName() {
-        assertEquals("Plata za jul", salaryCardLabel(7))
-        assertEquals("Plata za septembar", salaryCardLabel(9))
-        assertEquals("Plata za mart", salaryCardLabel(3))
+    fun salaryCardIsNamedNetPay() {
+        assertEquals("Neto plata", SALARY_CARD_LABEL)
     }
 
     @Test

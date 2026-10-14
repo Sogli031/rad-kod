@@ -22,7 +22,7 @@ import com.rad.shifttracker.ui.RadTheme
 import com.rad.shifttracker.ui.SalaryCard
 import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
-import com.rad.shifttracker.ui.salaryCardLabel
+import com.rad.shifttracker.ui.SALARY_CARD_LABEL
 
 /**
  * Ponašanje kartice plate i dijaloga sati kroz Compose UI test (zamena za testove koji su čitali
@@ -50,10 +50,10 @@ class DashboardBehaviorTest {
         var clicks = 0
 
         rule.setContent {
-            RadTheme { SalaryCard(month = MONTH, nextMonthReceipt = receipt, onClick = { clicks++ }) }
+            RadTheme { SalaryCard(nextMonthReceipt = receipt, onClick = { clicks++ }) }
         }
 
-        rule.onNodeWithText(salaryCardLabel(MONTH)).assertIsDisplayed().performClick()
+        rule.onNodeWithText(SALARY_CARD_LABEL).assertIsDisplayed().performClick()
         assertEquals(1, clicks)
     }
 

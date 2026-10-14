@@ -27,7 +27,6 @@ import com.rad.shifttracker.ui.dialozi.OptionsDialog
 import com.rad.shifttracker.ui.dialozi.OvertimeNetImpactDialog
 import com.rad.shifttracker.ui.dialozi.PayDetailsDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
-import com.rad.shifttracker.ui.dialozi.SickVacationDialog
 import com.rad.shifttracker.ui.dialozi.TransportDialog
 import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
 import com.rad.shifttracker.ui.dialozi.VacationBalanceDialog
@@ -110,17 +109,6 @@ internal fun MainDialogs(
 
         DialogState.GmailOnboarding,
         DialogState.GmailUpdate -> GmailStartDialog(state, data, onDismiss)
-
-        DialogState.SickVacation -> {
-            SickVacationDialog(
-                initialYear = data.currentYear,
-                initialMonth = data.currentMonth,
-                scheduler = data.scheduler,
-                repo = data.repo,
-                actions = data.actions,
-                onDismiss = onDismiss
-            )
-        }
 
         DialogState.BasePay -> {
             PayslipReaderDialog(

@@ -110,7 +110,7 @@ internal fun ShiftTrackerContent(
                     onEdit = { onOpenDialog(DialogState.DayEdit(day, selectedDayRecord)) }
                 )
             }
-            ShiftPayPane(ui = ui, month = month, onOpenDialog = onOpenDialog)
+            ShiftPayPane(ui = ui, onOpenDialog = onOpenDialog)
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             BackgroundLayer()
@@ -162,7 +162,6 @@ internal fun ShiftTrackerContent(
         BottomBar(
             modifier = Modifier,
             onAutoFill = { onOpenDialog(DialogState.AutoFill) },
-            onSickVacation = { onOpenDialog(DialogState.SickVacation) },
             onBasePay = { onOpenDialog(DialogState.BasePay) },
             onHolidays = { onOpenDialog(DialogState.BloodDonation) },
             onOptions = { onOpenDialog(DialogState.Options) },
@@ -236,7 +235,7 @@ private fun ShiftCalendarPane(
 
 /** Statistika meseca (sati, prekovremeno, topli obrok, prevoz ako ga ima) i kartice sa platom. */
 @Composable
-private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (DialogState) -> Unit) {
+private fun ShiftPayPane(ui: MainMonthState, onOpenDialog: (DialogState) -> Unit) {
     StatsSection(
         summary = ui.summary,
         onOvertimeClick = { onOpenDialog(DialogState.OvertimeNetImpact) },
@@ -248,8 +247,8 @@ private fun ShiftPayPane(ui: MainMonthState, month: MonthKey, onOpenDialog: (Dia
     )
     Column(verticalArrangement = Arrangement.spacedBy(PAY_CARDS_SPACING.dp)) {
         SalaryCard(
-            month = month.month,
             nextMonthReceipt = ui.nextMonthReceipt,
+            withExtras = ui.mainPayWithExtras,
             deductionsNet = ui.nextMonthFinalPaymentBreakdown.deductionsNet,
             onClick = { onOpenDialog(DialogState.SalaryDetails) }
         )
