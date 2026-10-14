@@ -105,7 +105,7 @@ class PayDetailsDialogTextTest {
         assertTrue(!source.contains("FINAL_PAYMENT_REMAINING_LABEL"))
         assertTrue(!source.contains("MonthlyPaymentInputRows("))
         assertEquals("nije još uplaćena", ADVANCE_NOT_PAID_TEXT)
-        assertTrue(mainSource("PayDetailsPaymentInputs.kt").contains("Minimalno po KU: "))
+        assertTrue(mainSource("PayDetailsPaymentInputs.kt").contains("Minimalna akontacija: "))
     }
 
     @Test

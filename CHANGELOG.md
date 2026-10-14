@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.2] - 2026-10-14
+- Ispod akontacije piše „Minimalna akontacija: …“ umesto „Minimalno po KU: …“.
+
 ## [13.1] - 2026-10-14
 - **Vraćen red „Ukupno za isplatu u <mesecu>“** ispod kalendara: neto plata − obustave, bez regresa i prevoza. Kad akontacija stigne, ispod je i „Ukupno za isplatu 20.“ (ukupno − akontacija).
 

@@ -21,7 +21,7 @@ internal fun AdvanceMinimumText(
     val advancePrediction = rememberRepoValue(repo, paymentMonth) { getAdvancePaymentPrediction(paymentMonth.year, paymentMonth.month) }
     if (!advancePrediction.isAvailable) return
     Text(
-        text = "Minimalno po KU: ${formatCurrency(advancePrediction.minimumAdvanceNet)} ${CONFIG.pay.currency}",
+        text = "Minimalna akontacija: ${formatCurrency(advancePrediction.minimumAdvanceNet)} ${CONFIG.pay.currency}",
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         maxLines = 2,
