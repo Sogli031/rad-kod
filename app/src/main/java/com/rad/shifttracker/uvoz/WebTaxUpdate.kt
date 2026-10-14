@@ -16,8 +16,8 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.webTaxParametersValue
 
 /**
- * Tiho ažuriranje poreza, doprinosa i olakšice sa paragraf.rs: jednom dnevno pri pokretanju, u
- * pozadini; bez interneta ili kad stranica ne može pouzdano da se pročita, ostaje prethodno stanje.
+ * Tiho ažuriranje poreza, doprinosa i olakšice sa paragraf.rs pri pokretanju, u pozadini: od
+ * decembra do februara (kad se olakšica menja) jednom dnevno, ostatak godine jednom mesečno; bez interneta ili kad stranica ne može pouzdano da se pročita, ostaje prethodno stanje.
  * Vrednosti važe samo za mesece posle poslednje liste ([WebTaxParameters]); listu nikad ne gaze.
  */
 internal object WebTaxUpdate {
@@ -30,10 +30,10 @@ internal object WebTaxUpdate {
         repo.webTaxParametersValue = load(context)
     }
 
-    /** Ako danas još nije provereno, čita paragraf.rs (pozvati van glavne niti). */
+    /** Ako je vreme za proveru ([isWebTaxCheckDue]), čita paragraf.rs (pozvati van glavne niti). */
     fun refreshIfDue(context: Context, repo: ShiftRepository, today: LocalDate = LocalDate.now()) {
         val previous = load(context)
-        if (previous?.fetchedOn == today) return
+        if (!isWebTaxCheckDue(previous?.fetchedOn, today)) return
         val scraped = try {
             fetchTaxParameters()
         } catch (e: IOException) {
@@ -76,6 +76,18 @@ internal object WebTaxUpdate {
             .apply()
     }
 }
+
+/**
+ * Olakšica se menja od 1. januara i objavi se oko Nove godine: od decembra do februara provera je
+ * svaki dan, inače jednom u mesecu. Prvi put uvek.
+ */
+internal fun isWebTaxCheckDue(lastCheck: LocalDate?, today: LocalDate): Boolean = when {
+    lastCheck == null -> true
+    today.monthValue in WEB_TAX_DAILY_MONTHS -> lastCheck != today
+    else -> YearMonth.from(lastCheck) != YearMonth.from(today)
+}
+
+private val WEB_TAX_DAILY_MONTHS = setOf(12, 1, 2)
 
 internal fun encodeWebTaxParameters(value: WebTaxParameters): String = JSONObject().apply {
     put("taxPercent", value.taxPercent)

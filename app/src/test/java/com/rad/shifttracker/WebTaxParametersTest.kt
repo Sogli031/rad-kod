@@ -19,6 +19,7 @@ import com.rad.shifttracker.repo.webTaxParametersValue
 import com.rad.shifttracker.uvoz.collectTaxParameters
 import com.rad.shifttracker.uvoz.decodeWebTaxParameters
 import com.rad.shifttracker.uvoz.encodeWebTaxParameters
+import com.rad.shifttracker.uvoz.isWebTaxCheckDue
 
 /** Porez i olakšica sa paragraf.rs: važe samo posle poslednje liste, lista ih uvek gazi. */
 class WebTaxParametersTest {
@@ -163,5 +164,17 @@ class WebTaxParametersTest {
             )
         }
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `provera je dnevna od decembra do februara, inace mesecna`() {
+        assertTrue(isWebTaxCheckDue(null, LocalDate.of(2026, 10, 14)))
+        // Oktobar: jednom mesečno.
+        assertTrue(!isWebTaxCheckDue(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 14)))
+        assertTrue(isWebTaxCheckDue(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 10, 1)))
+        // Decembar–februar: svaki dan.
+        assertTrue(isWebTaxCheckDue(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 2)))
+        assertTrue(!isWebTaxCheckDue(LocalDate.of(2027, 1, 5), LocalDate.of(2027, 1, 5)))
+        assertTrue(isWebTaxCheckDue(LocalDate.of(2027, 2, 27), LocalDate.of(2027, 2, 28)))
     }
 }
