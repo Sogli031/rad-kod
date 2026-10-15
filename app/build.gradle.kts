@@ -51,8 +51,8 @@ android {
         applicationId = "com.rad.shifttracker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 128
-        versionName = "14.0"
+        versionCode = 129
+        versionName = "14.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

@@ -307,7 +307,6 @@ private const val AI_INTRO_NOTE = "Ništa se ne upisuje u kalendar bez tvoje pot
 internal val AI_CAPABILITIES = listOf(
     "Plata i sati" to "Koliko ću dobiti za novembar?",
     "Šta ako" to "Koliko više dobijam ako radim subotu 14.?",
-    "Godišnji" to "Koliko mi je ostalo godišnjeg?",
     "Planer godišnjeg" to "Kad je najbolje da uzmem 5 dana godišnjeg?",
     "Upis u kalendar" to "Upiši mi bolovanje od 3. do 6. novembra"
 )

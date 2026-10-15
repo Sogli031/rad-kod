@@ -252,7 +252,7 @@ class AiAssistantTest {
     @Test
     fun `uvod u AI prozoru nabraja sve sto AI ume, i planer godisnjeg`() {
         val titles = AI_CAPABILITIES.map { it.first }
-        assertEquals(listOf("Plata i sati", "Šta ako", "Godišnji", "Planer godišnjeg", "Upis u kalendar"), titles)
+        assertEquals(listOf("Plata i sati", "Šta ako", "Planer godišnjeg", "Upis u kalendar"), titles)
         assertTrue(AI_CAPABILITIES.all { (_, example) -> example.isNotBlank() })
     }
 
