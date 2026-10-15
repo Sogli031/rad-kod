@@ -170,6 +170,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
             scheduler = scheduler,
             repo = repo,
             actions = viewModel,
+            aiChat = viewModel.aiChat,
             repoTick = repoTick.intValue,
             workHoursPayDetails = ui.selectedMonthPayDetails,
             salaryDetailsReceipt = ui.nextMonthReceipt,
@@ -190,9 +191,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
                     }
                 )
             },
-            onBloodDonationHistoryChanged = {
-                BloodDonationReminderScheduler.reschedule(context, repo)
-            },
+            onBloodDonationHistoryChanged = { BloodDonationReminderScheduler.reschedule(context, repo) },
             onDialogChange = { state -> dialogState = state },
             onFirstLaunchDone = { if (backup.isFirstLaunch()) backup.markFirstLaunchDone() }
         ),

@@ -7,6 +7,7 @@ import com.rad.shifttracker.smene.DayRecord
 internal sealed class DialogState {
     data object None : DialogState()
     data object AutoFill : DialogState()
+    data object Ai : DialogState()
 
     /** Prvo pokretanje: „Popuni smene“, a kad se zatvori, Gmail sa listama. */
     data object OnboardingAutoFill : DialogState()
@@ -47,6 +48,7 @@ internal fun dialogStateToKey(state: DialogState): String = when (state) {
 private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.None,
     DialogState.AutoFill,
+    DialogState.Ai,
     DialogState.OnboardingAutoFill,
     DialogState.GmailOnboarding,
     DialogState.GmailUpdate,

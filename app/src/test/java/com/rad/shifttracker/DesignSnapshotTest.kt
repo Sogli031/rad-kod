@@ -274,6 +274,7 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
         BottomBar(
             modifier = Modifier,
             onAutoFill = {},
+            onAi = {},
             onBasePay = {},
             onHolidays = {},
             onOptions = {},

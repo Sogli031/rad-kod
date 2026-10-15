@@ -141,6 +141,7 @@ internal const val WIDE_LAYOUT_FONT_SCALE = 1.3f
 internal fun BottomBar(
     modifier: Modifier,
     onAutoFill: () -> Unit,
+    onAi: () -> Unit,
     onBasePay: () -> Unit,
     onHolidays: () -> Unit,
     onOptions: () -> Unit,
@@ -151,6 +152,7 @@ internal fun BottomBar(
     val specs = bottomBarButtonSpecs()
     val buttons = listOf(
         BottomBarItem(specs.autoFill.icon, specs.autoFill.label, scheme.primary, scheme.primaryContainer, onAutoFill),
+        BottomBarItem(specs.ai.icon, specs.ai.label, scheme.onSurfaceVariant, null, onAi),
         BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
         BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
         BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
@@ -241,6 +243,7 @@ private const val DISABLED_ALPHA = 0.38f
 
 internal data class BottomBarButtonLabels(
     val autoFill: String,
+    val ai: String,
     val basePay: String,
     val holidays: String,
     val options: String,
@@ -254,6 +257,7 @@ internal data class BottomBarButtonSpec(
 
 internal data class BottomBarButtonSpecs(
     val autoFill: BottomBarButtonSpec,
+    val ai: BottomBarButtonSpec,
     val basePay: BottomBarButtonSpec,
     val holidays: BottomBarButtonSpec,
     val options: BottomBarButtonSpec,
@@ -264,6 +268,7 @@ internal fun bottomBarButtonLabels(): BottomBarButtonLabels {
     val specs = bottomBarButtonSpecs()
     return BottomBarButtonLabels(
         autoFill = specs.autoFill.label,
+        ai = specs.ai.label,
         basePay = specs.basePay.label,
         holidays = specs.holidays.label,
         options = specs.options.label,
@@ -274,6 +279,7 @@ internal fun bottomBarButtonLabels(): BottomBarButtonLabels {
 internal fun bottomBarButtonSpecs(): BottomBarButtonSpecs {
     return BottomBarButtonSpecs(
         autoFill = BottomBarButtonSpec(icon = AppIcons.today, label = "Popuni"),
+        ai = BottomBarButtonSpec(icon = AppIcons.ai, label = "AI"),
         basePay = BottomBarButtonSpec(icon = AppIcons.pay, label = "Lista"),
         holidays = BottomBarButtonSpec(icon = AppIcons.sick, label = BLOOD_DONATION_BOTTOM_BAR_LABEL),
         options = BottomBarButtonSpec(icon = AppIcons.settings, label = "Opcije"),

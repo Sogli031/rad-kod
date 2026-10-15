@@ -13,6 +13,8 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.AdvancePaymentDialog
+import com.rad.shifttracker.ui.dialozi.AiChatState
+import com.rad.shifttracker.ui.dialozi.AiDialog
 import com.rad.shifttracker.ui.dialozi.AutoFillDialog
 import com.rad.shifttracker.ui.dialozi.BloodDonationDialog
 import com.rad.shifttracker.ui.dialozi.CloudBackupDialog
@@ -105,6 +107,14 @@ internal fun MainDialogs(
 
         DialogState.AutoFill,
         DialogState.OnboardingAutoFill -> AutoFillStartDialog(state, data, onDismiss)
+
+        DialogState.Ai -> AiDialog(
+            chat = data.aiChat,
+            repo = data.repo,
+            today = data.today,
+            onApply = data.actions::applyAiChanges,
+            onDismiss = onDismiss
+        )
 
         DialogState.GmailOnboarding,
         DialogState.GmailUpdate -> GmailStartDialog(state, data, onDismiss)
@@ -257,6 +267,8 @@ internal data class MainDialogData(
     val onBloodDonationDateSaved: () -> Unit,
     val onBloodDonationHistoryChanged: () -> Unit,
     val onDialogChange: (DialogState) -> Unit,
+    /** AI razgovor (živi u view modelu, pa ostaje i kad se prozor zatvori). */
+    val aiChat: AiChatState,
     /** Uvod pri prvom pokretanju je prošao (posle Gmail koraka). */
     val onFirstLaunchDone: () -> Unit = {}
 )

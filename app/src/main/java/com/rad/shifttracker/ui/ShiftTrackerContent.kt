@@ -140,6 +140,7 @@ internal fun ShiftTrackerContent(
         BottomBar(
             modifier = Modifier,
             onAutoFill = { onOpenDialog(DialogState.AutoFill) },
+            onAi = { onOpenDialog(DialogState.Ai) },
             onBasePay = { onOpenDialog(DialogState.BasePay) },
             onHolidays = { onOpenDialog(DialogState.BloodDonation) },
             onOptions = { onOpenDialog(DialogState.Options) },

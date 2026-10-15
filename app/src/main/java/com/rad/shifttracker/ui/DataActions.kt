@@ -52,6 +52,8 @@ import com.rad.shifttracker.uvoz.fillAllMonths
 import com.rad.shifttracker.uvoz.importManualPayslip
 import com.rad.shifttracker.uvoz.importManualPayslips
 import java.time.LocalDate
+import com.rad.shifttracker.ai.AiApplyResult
+import com.rad.shifttracker.ai.AiChange
 
 /**
  * Svi upisi koje ekran i dijalozi rade nad podacima. Dijalozi repozitorijum samo čitaju, a menjaju
@@ -62,6 +64,9 @@ internal interface DataActions : DayActions, SettingsActions, PayslipActions
 /** Upisi dana u kalendaru: smene, odsustva, davanje krvi i brisanje. */
 internal interface DayActions {
     fun saveDay(record: DayRecord)
+
+    /** Izmene iz AI prozora, posle potvrde korisnika. */
+    fun applyAiChanges(changes: List<AiChange>): AiApplyResult
     /** Bolovanje ili godišnji od [start] do [end], i preko granice meseca. */
     fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?)
     /** „Popuni smene“: presnimi raspored od danas i drži ga popunjenim unapred (kontinualno). */
@@ -142,6 +147,9 @@ internal class RepoDataActions(
             source = record.source
         )
     }
+
+    override fun applyAiChanges(changes: List<AiChange>): AiApplyResult =
+        com.rad.shifttracker.ai.applyAiChanges(repo, changes)
 
     override fun applyAbsenceRange(scheduler: ShiftScheduler, shift: Shift, start: LocalDate, end: LocalDate, sickPayRate: Double?) {
         scheduler.applyAbsenceRange(repo, shift, start, end, sickPayRate)

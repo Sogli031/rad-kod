@@ -37,6 +37,10 @@ import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.repo.currentStatus
+import com.rad.shifttracker.BuildConfig
+import com.rad.shifttracker.ai.AiSession
+import com.rad.shifttracker.ai.HttpGeminiTransport
+import com.rad.shifttracker.ui.dialozi.AiChatState
 import com.rad.shifttracker.ui.dialozi.PayDetailsExtras
 import com.rad.shifttracker.ui.dialozi.payDetailsExtras
 
@@ -102,6 +106,12 @@ internal class MainViewModel(
     val states: StateFlow<Map<MonthKey, MainMonthState>> = statesFlow.asStateFlow()
 
     private val changeToken = repo.onChange { tick.value += 1 }
+
+    /** AI razgovor za ceo rad aplikacije (do gašenja procesa). */
+    val aiChat = AiChatState(
+        session = AiSession(HttpGeminiTransport(BuildConfig.GEMINI_API_KEY, BuildConfig.APPLICATION_ID)),
+        scope = viewModelScope
+    )
 
     init {
         viewModelScope.launch {
