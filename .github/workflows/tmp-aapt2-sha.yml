@@ -1,0 +1,19 @@
+name: Tmp aapt2 sha
+
+# Privremeno: SHA-256 Linux verzije aapt2 za verification-metadata.xml.
+on:
+  push:
+    branches:
+      - claude/ai-annual-leave-planner-hnyv8w
+    paths:
+      - .github/workflows/tmp-aapt2-sha.yml
+
+jobs:
+  sha:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          url=https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/9.4.1-15978811/aapt2-9.4.1-15978811-linux.jar
+          curl -sSfL -o aapt2.jar "$url"
+          echo "SHA256=$(sha256sum aapt2.jar | cut -c1-64)"
+          curl -sSfL "$url.sha1" && echo " (google sha1)"; sha1sum aapt2.jar
