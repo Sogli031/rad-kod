@@ -5,6 +5,7 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
 
 ## [14.1] - 2026-10-15
 - **Auto-popuna preko AI-ja:** napišeš koju vrstu smena radiš (jedna smena, prva/druga, „radim tri smene“, „radim četiri smene“) i koju smenu imaš kog dana, npr. „radim tri smene, u ponedeljak 19. sam druga“, i AI predloži popunu rasporeda od danas nadalje, isto kao „Popuni“. Upisuje se tek na „Upiši“.
+- **Cela sedmica jednom rečenicom:** „sledeće sedmice radim treću“ upisuje treću smenu od ponedeljka do petka samo te sedmice; vikend, praznici, bolovanje i godišnji se preskaču. Upisuje se tek na „Upiši“.
 - Na početku AI prozora su samo dva primera, auto-popuna i upis u kalendar, i služe samo za čitanje (dodir više ne upisuje primer u polje). AI i dalje odgovara i na pitanja o plati, „šta ako“ i planer godišnjeg.
 
 ## [14.0] - 2026-10-15

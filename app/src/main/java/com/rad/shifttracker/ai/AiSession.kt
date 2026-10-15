@@ -1,8 +1,10 @@
 package com.rad.shifttracker.ai
 
 import java.net.HttpURLConnection
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
@@ -149,9 +151,18 @@ internal fun systemPrompt(today: LocalDate): String {
         četvorobrigada) i koju smenu ima kog dana, pozovi „predlozi_popunu“ da se raspored sam popuni od danas nadalje; ako ne zna
         dan ili smenu (osim za jednu smenu), pitaj kratko. Za četvorobrigadu pitaj i da li je to prvi ili drugi dan te smene.
         Smene: 1 = prva, 2 = druga, 3 = treća. Prekovremeno je više od 8 sati u smeni ili druga smena istog dana.
+        Ova sedmica je ${weekText(today, 0)}, sledeća ${weekText(today, 1)}.
+        Kad kaže da cele sedmice (ili perioda) radi neku smenu, npr. „sledeće sedmice radim treću“, pozovi „predlozi_izmene“
+        tipa „smena“ od ponedeljka do petka te sedmice sa „samo_radni_dani“: true; menja se samo ta sedmica.
         Datum bez godine je najbliži takav datum od danas. Ako nešto nije jasno (koji dan, koja smena), pitaj kratko.
         Ako alat vrati „greska“, ispravi poziv ili kaži korisniku šta ne može.
     """.trimIndent()
+}
+
+/** „pon 2026-10-19 – ned 2026-10-25“: sedmica [weeksAhead] sedmica posle današnje, da AI ne računa datume. */
+private fun weekText(today: LocalDate, weeksAhead: Long): String {
+    val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).plusWeeks(weeksAhead)
+    return "pon $monday – ned ${monday.plusDays(6)}"
 }
 
 /** Prvi je glavni (besplatan), ostali su rezerva kad je on preopterećen ili ukinut. */

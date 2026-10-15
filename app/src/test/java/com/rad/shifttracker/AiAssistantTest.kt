@@ -303,6 +303,34 @@ class AiAssistantTest {
         }
     }
 
+    @Test
+    fun `smena za celu sedmicu preskace vikend, praznik i godisnji`() {
+        val repo = testRepository()
+        repo.set(2026, 11, 12, Shift.VACATION, 8)
+        val change = parseAiChanges(
+            changes(
+                JSONObject().put("tip", "smena").put("od", "2026-11-09").put("do", "2026-11-15").put("smena", 3)
+                    .put("samo_radni_dani", true)
+            ),
+            today
+        )
+
+        val result = applyAiChanges(repo, change)
+
+        // Pon 9, uto 10, pet 13; sreda 11. je Dan primirja, četvrtak 12. godišnji, a vikend ostaje prazan.
+        assertEquals(3, result.writtenDays)
+        assertEquals(listOf(9, 10, 13), repo.getMonthRecords(2026, 11).filter { it.shift == Shift.THIRD }.map { it.day }.sorted())
+        assertEquals(Shift.VACATION, repo.get(2026, 11, 12)?.shift)
+        assertNull(repo.get(2026, 11, 14))
+        assertTrue(describeAiChange(change[0]).endsWith("(radni dani)"))
+    }
+
+    @Test
+    fun `uputstvo za AI ima datume ove i sledece sedmice`() {
+        val prompt = com.rad.shifttracker.ai.systemPrompt(today)
+        assertTrue(prompt, prompt.contains("Ova sedmica je pon 2026-10-12 – ned 2026-10-18, sledeća pon 2026-10-19 – ned 2026-10-25."))
+    }
+
     private fun candidate(parts: JSONArray) = JSONObject().put(
         "candidates",
         JSONArray().put(JSONObject().put("content", JSONObject().put("role", "model").put("parts", parts)).put("finishReason", "STOP"))

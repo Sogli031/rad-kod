@@ -1,5 +1,6 @@
 package com.rad.shifttracker.ai
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
@@ -11,13 +12,15 @@ import com.rad.shifttracker.repo.applyAbsenceRange
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.ShiftScheduler
+import com.rad.shifttracker.smene.isSerbianHoliday
 
 /** Vrsta izmene koju AI predlaže. */
 internal enum class AiChangeKind { SHIFT, OFF, SICK, VACATION }
 
 /**
  * Jedna izmena rasporeda od [from] do [to]. Smena ima [shift] i [hours] (više od 8 je prekovremeno), a
- * po želji i drugu smenu istog dana ([shift2], [hours2]). Bolovanje i godišnji se upisuju kao u prozoru
+ * po želji i drugu smenu istog dana ([shift2], [hours2]). Sa [workdaysOnly] smena preskače vikend,
+ * praznike, bolovanje i godišnji (npr. „sledeće sedmice radim treću“). Bolovanje i godišnji se upisuju kao u prozoru
  * dana („Do kog dana“): samo radni dani, a godišnji bez praznika i samo ako ga ima dovoljno.
  */
 internal data class AiChange(
@@ -27,7 +30,8 @@ internal data class AiChange(
     val shift: Shift? = null,
     val hours: Int = CONFIG.pay.defaultHours,
     val shift2: Shift? = null,
-    val hours2: Int = 0
+    val hours2: Int = 0,
+    val workdaysOnly: Boolean = false
 )
 
 /** Izmene (ili popuna rasporeda, [fill]) koje čekaju potvrdu korisnika, sa AI-jevim kratkim opisom. */
@@ -69,7 +73,7 @@ private fun parseAiChange(item: JSONObject, today: LocalDate): AiChange {
     require(shift2 == null || hours2 in 1..MAX_SHIFT_HOURS) { "'sati_druge' mora biti od 1 do $MAX_SHIFT_HOURS" }
     require(shift2 == null || shift2 != shift) { "druga smena ne može biti ista kao prva" }
     require(hours + hours2 <= MAX_DAY_TOTAL_HOURS) { "ukupno više od $MAX_DAY_TOTAL_HOURS sati u danu" }
-    return AiChange(kind, from, to, shift, hours, shift2, hours2)
+    return AiChange(kind, from, to, shift, hours, shift2, hours2, item.optBoolean("samo_radni_dani", false))
 }
 
 private fun parseDate(text: String, field: String): LocalDate = try {
@@ -104,6 +108,10 @@ internal fun applyAiChanges(repo: ShiftRepository, changes: List<AiChange>): AiA
             AiChangeKind.SHIFT, AiChangeKind.OFF -> {
                 var date = change.from
                 while (!date.isAfter(change.to)) {
+                    if (change.workdaysOnly && !isPlainWorkday(repo, date)) {
+                        date = date.plusDays(1)
+                        continue
+                    }
                     val shift = change.shift ?: Shift.OFF
                     repo.set(
                         year = date.year,
@@ -123,6 +131,14 @@ internal fun applyAiChanges(repo: ShiftRepository, changes: List<AiChange>): AiA
     return AiApplyResult(written, skipped)
 }
 
+/** Radni dan za „samo radni dani“: pon–pet, nije praznik, bolovanje ni godišnji. */
+private fun isPlainWorkday(repo: ShiftRepository, date: LocalDate): Boolean {
+    if (date.dayOfWeek.value > DayOfWeek.FRIDAY.value) return false
+    val record = repo.get(date.year, date.monthValue, date.dayOfMonth)
+    if (record?.holidayOverride ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)) return false
+    return record?.shift != Shift.SICK && record?.shift != Shift.VACATION
+}
+
 private fun absenceSkipReason(kind: AiChangeKind): String =
     if (kind == AiChangeKind.VACATION) "nema dovoljno godišnjeg ili nema radnih dana u opsegu" else "nema radnih dana u opsegu"
 
@@ -137,6 +153,7 @@ internal fun describeAiChange(change: AiChange): String {
             append("${change.shift?.fullName} ${change.hours} h")
             change.shift2?.let { append(" + ${it.fullName.lowercase()} ${change.hours2} h") }
             append(", $range")
+            if (change.workdaysOnly) append(" (radni dani)")
         }
     }
 }

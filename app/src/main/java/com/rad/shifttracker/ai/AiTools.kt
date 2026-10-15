@@ -249,6 +249,11 @@ private fun changesParams(withSummary: Boolean): JSONObject {
                 .put("sati", JSONObject().put("type", "integer").put("description", "sati u smeni, podrazumevano 8; više od 8 je prekovremeno"))
                 .put("druga_smena", JSONObject().put("type", "integer").put("description", "druga smena istog dana (prekovremeno): 1, 2 ili 3"))
                 .put("sati_druge", JSONObject().put("type", "integer").put("description", "sati druge smene, podrazumevano 8"))
+                .put(
+                    "samo_radni_dani",
+                    JSONObject().put("type", "boolean")
+                        .put("description", "za tip 'smena': preskoči vikend, praznike, bolovanje i godišnji (za celu sedmicu ili period)")
+                )
         )
         .put("required", JSONArray().put("tip").put("od"))
     val properties = JSONObject().put("izmene", JSONObject().put("type", "array").put("items", change))
