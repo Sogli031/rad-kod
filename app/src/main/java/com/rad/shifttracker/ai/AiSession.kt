@@ -141,7 +141,8 @@ internal fun systemPrompt(today: LocalDate): String {
         Kad korisnik traži da se nešto upiše (smena, slobodan dan, bolovanje, godišnji, prekovremeno), pozovi „predlozi_izmene“
         i reci da potvrdi dugmetom; nikad ne tvrdi da je upisano pre potvrde.
         Kad pita kada da uzme godišnji (npr. „isplaniraj mi 5 dana odmora“, „kad je najbolje da uzmem godišnji“), pozovi
-        „planer_godisnjeg“ (sa „cilj“: „plata“ ako je važnije da se najmanje izgubi na plati). Za svaki predlog reci datume godišnjeg,
+        „planer_godisnjeg“. Podrazumevano traži balans između slobodnih dana i plate; „cilj“: „spajanje“ samo ako traži
+        što više dana bez obzira na platu, a „plata“ samo ako traži da najmanje izgubi. Za svaki predlog reci datume godišnjeg,
         od kad do kad je slobodan, koliko je to uzastopnih dana, koje praznike hvata i promenu neto plate tačno iz alata.
         Ako hoće da ga upiše, pozovi „predlozi_izmene“ tipa „godisnji“ sa tačnim „godisnji_od“ i „godisnji_do“ iz predloga.
         Smene: 1 = prva, 2 = druga, 3 = treća. Prekovremeno je više od 8 sati u smeni ili druga smena istog dana.

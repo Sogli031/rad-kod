@@ -20,10 +20,12 @@ import com.rad.shifttracker.ai.GeminiTransport
 import com.rad.shifttracker.ai.HttpGeminiTransport
 import com.rad.shifttracker.ai.applyAiChanges
 import com.rad.shifttracker.ai.describeAiChange
+import com.rad.shifttracker.ai.LeaveOption
 import com.rad.shifttracker.ai.httpError
 import com.rad.shifttracker.ai.modelContent
 import com.rad.shifttracker.ai.networkError
 import com.rad.shifttracker.ai.parseAiChanges
+import com.rad.shifttracker.ai.rankBalanced
 import com.rad.shifttracker.repo.populateMonthsAhead
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
@@ -224,6 +226,26 @@ class AiAssistantTest {
 
         assertTrue(tools.execute("planer_godisnjeg", JSONObject().put("dana", 0)).has("greska"))
         assertTrue(tools.execute("planer_godisnjeg", JSONObject().put("dana", 2).put("od", "2026-01-01")).has("greska"))
+    }
+
+    @Test
+    fun `balans bira vise slobodnih dana samo kad gubitak nije mnogo veci`() {
+        fun option(day: Int, freeDays: Long, change: Double?) = LeaveOption(
+            from = LocalDate.of(2026, 12, day),
+            to = LocalDate.of(2026, 12, day),
+            vacationDays = 3,
+            freeFrom = LocalDate.of(2026, 12, day),
+            freeTo = LocalDate.of(2026, 12, day).plusDays(freeDays - 1),
+            holidays = emptyList(),
+            netPayChange = change
+        )
+        val long = option(1, 9, -3_000.0)
+        val short = option(2, 5, -2_500.0)
+        val cheap = option(3, 5, -500.0)
+        val unknown = option(4, 9, null)
+
+        // 9 dana za 3.000 din pobeđuje 5 dana za 2.500, ali 5 dana za 500 din pobeđuje oba.
+        assertEquals(listOf(cheap, long, unknown, short), rankBalanced(listOf(short, long, cheap, unknown)))
     }
 
     private fun candidate(parts: JSONArray) = JSONObject().put(

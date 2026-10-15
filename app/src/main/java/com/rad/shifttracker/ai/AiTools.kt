@@ -204,8 +204,12 @@ private fun leavePlanParams() = JSONObject()
             .put("do", JSONObject().put("type", "string").put("description", "kraj perioda GGGG-MM-DD, podrazumevano godinu dana od početka"))
             .put(
                 "cilj",
-                JSONObject().put("type", "string").put("enum", JSONArray(listOf("spajanje", "plata")))
-                    .put("description", "spajanje = najviše uzastopnih slobodnih dana (podrazumevano), plata = najmanji gubitak na plati")
+                JSONObject().put("type", "string").put("enum", JSONArray(listOf("balans", "spajanje", "plata")))
+                    .put(
+                        "description",
+                        "balans = odnos slobodnih dana i gubitka na plati (podrazumevano), spajanje = najviše uzastopnih " +
+                            "slobodnih dana, plata = najmanji gubitak na plati"
+                    )
             )
             .put("broj_predloga", JSONObject().put("type", "integer").put("description", "1–5, podrazumevano 3"))
     )

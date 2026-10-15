@@ -23,8 +23,8 @@ import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.smene.getHolidayName
 import com.rad.shifttracker.smene.isSerbianHoliday
 
-/** Šta je korisniku važnije kad bira termin godišnjeg. */
-internal enum class LeaveGoal { MOST_DAYS, LEAST_LOSS }
+/** Šta je korisniku važnije kad bira termin godišnjeg; podrazumevano je balans između dana i plate. */
+internal enum class LeaveGoal { BALANCED, MOST_DAYS, LEAST_LOSS }
 
 /**
  * Jedan termin godišnjeg: [from]–[to] je opseg koji se upisuje kao godišnji (troši [vacationDays]
@@ -68,6 +68,7 @@ internal class LeavePlanner(private val repo: ShiftRepository) {
             LeaveGoal.LEAST_LOSS -> priced.sortedWith(
                 compareBy<LeaveOption> { lossOrMax(it) }.thenByDescending { it.freeDays }.thenBy { it.from }
             )
+            LeaveGoal.BALANCED -> rankBalanced(priced)
         }
         return withoutOverlap(sorted, limit)
     }
@@ -174,6 +175,26 @@ private fun withoutOverlap(sorted: List<LeaveOption>, limit: Int): List<LeaveOpt
     return chosen
 }
 
+/**
+ * Balans: slobodni dani i gubitak na plati vrede podjednako. Oba se mere prema najboljem, odnosno
+ * najgorem terminu među ponuđenima (0–1), pa termin sa 9 dana i malo većim gubitkom može da pobedi
+ * termin sa 5 dana, ali ne i onaj koji košta duplo više. Termin bez izračunate plate vodi se kao najskuplji.
+ */
+internal fun rankBalanced(options: List<LeaveOption>): List<LeaveOption> {
+    val maxFree = options.maxOfOrNull { it.freeDays }?.coerceAtLeast(1) ?: return options
+    val maxLoss = options.mapNotNull { it.netPayChange }.maxOfOrNull { (-it).coerceAtLeast(0.0) } ?: 0.0
+    fun lossShare(option: LeaveOption): Double {
+        if (maxLoss <= 0.0) return 0.0
+        val change = option.netPayChange ?: return 1.0
+        return (-change).coerceAtLeast(0.0) / maxLoss
+    }
+    return options.sortedWith(
+        compareByDescending<LeaveOption> { it.freeDays.toDouble() / maxFree - lossShare(it) }
+            .thenByDescending { it.freeDays }
+            .thenBy { it.from }
+    )
+}
+
 private fun lossOrMax(option: LeaveOption): Double = option.netPayChange?.let { -it } ?: Double.MAX_VALUE
 
 /** Promena neto plate po terminu: godišnji se upisuje u kopiju podataka i plata se poredi sa sadašnjom. */
@@ -220,14 +241,18 @@ internal fun planLeave(repo: ShiftRepository, args: JSONObject, today: LocalDate
     require(!to.isBefore(from)) { "'do' je pre 'od'" }
     require(!from.isBefore(today)) { "period ne može da počne pre današnjeg dana" }
     require(ChronoUnit.DAYS.between(from, to) <= MAX_PERIOD_DAYS) { "period je duži od $MAX_PERIOD_DAYS dana" }
-    val goal = if (args.optString("cilj") == "plata") LeaveGoal.LEAST_LOSS else LeaveGoal.MOST_DAYS
+    val goal = when (args.optString("cilj")) {
+        "plata" -> LeaveGoal.LEAST_LOSS
+        "spajanje" -> LeaveGoal.MOST_DAYS
+        else -> LeaveGoal.BALANCED
+    }
     val limit = args.optInt("broj_predloga", DEFAULT_SUGGESTIONS).coerceIn(1, MAX_SUGGESTIONS)
 
     val options = LeavePlanner(repo).plan(days, from..to, goal, limit)
     val result = JSONObject()
         .put("dana_godisnjeg", days)
         .put("period", "$from – $to")
-        .put("cilj", if (goal == LeaveGoal.LEAST_LOSS) "najmanji gubitak na plati" else "najviše uzastopnih slobodnih dana")
+        .put("cilj", GOAL_TEXT.getValue(goal))
     if (options.isEmpty()) {
         return result.put("predlozi", JSONArray())
             .put("napomena", "nema termina: nema dovoljno godišnjeg u tom periodu ili ga prekidaju radni dani iz rasporeda")
@@ -260,6 +285,12 @@ private fun dayText(date: LocalDate): String =
 
 private fun parsePlanDate(text: String, field: String): LocalDate =
     runCatching { LocalDate.parse(text) }.getOrElse { throw IllegalArgumentException("'$field' mora biti datum GGGG-MM-DD", it) }
+
+private val GOAL_TEXT = mapOf(
+    LeaveGoal.BALANCED to "balans između slobodnih dana i plate",
+    LeaveGoal.MOST_DAYS to "najviše uzastopnih slobodnih dana",
+    LeaveGoal.LEAST_LOSS to "najmanji gubitak na plati"
+)
 
 /** Koliko termina se ceni (kopija podataka po terminu), po svakom od dva redosleda. */
 private const val PRICED_POOL = 8
