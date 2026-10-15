@@ -14,6 +14,7 @@ import com.rad.shifttracker.repo.getSummary
 import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.repo.importFromJson
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillSettings
 
 /**
  * Alati koje AI poziva. Svi iznosi i sati dolaze iz postojećih obračuna aplikacije, a AI ih samo
@@ -45,6 +46,14 @@ internal class AiTools(private val repo: ShiftRepository, private val today: Loc
         )
         .put(
             function(
+                "predlozi_popunu",
+                "Predlaže auto-popunu rasporeda (kao dugme „Popuni“) od danas nadalje; korisnik je potvrđuje dugmetom. " +
+                    "Vraća kako bi izgledalo narednih 14 dana.",
+                autoFillParams()
+            )
+        )
+        .put(
+            function(
                 "sta_ako",
                 "Izračunava kako bi se plata i sati promenili sa datim izmenama, bez upisa. Za pitanja tipa „koliko ću dobiti ako…“.",
                 changesParams(withSummary = false)
@@ -65,6 +74,7 @@ internal class AiTools(private val repo: ShiftRepository, private val today: Loc
             "godisnji" -> vacation()
             "planer_godisnjeg" -> planLeave(repo, args, today)
             "sta_ako" -> whatIf(parseAiChanges(args.optJSONArray("izmene"), today))
+            "predlozi_popunu" -> proposeFill(parseAiAutoFill(args, today), args.optString("opis"))
             "predlozi_izmene" -> propose(parseAiChanges(args.optJSONArray("izmene"), today), args.optString("opis"))
             else -> error("nepoznat alat '$name'")
         }
@@ -111,6 +121,14 @@ internal class AiTools(private val repo: ShiftRepository, private val today: Loc
             .put("upisano_dana_u_proracunu", result.writtenDays)
             .put("preskoceno", JSONArray(result.skipped))
             .put("meseci", comparison)
+    }
+
+    private fun proposeFill(settings: ShiftFillSettings, summary: String): JSONObject {
+        proposal = AiProposal(emptyList(), summary, settings)
+        return JSONObject()
+            .put("status", "prikazano korisniku na potvrdu; nije upisano")
+            .put("popuna", describeAiAutoFill(settings))
+            .put("narednih_14_dana", autoFillPreview(settings, today))
     }
 
     private fun propose(changes: List<AiChange>, summary: String): JSONObject {

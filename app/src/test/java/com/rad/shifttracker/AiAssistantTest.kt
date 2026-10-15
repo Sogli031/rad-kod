@@ -24,10 +24,13 @@ import com.rad.shifttracker.ai.LeaveOption
 import com.rad.shifttracker.ai.httpError
 import com.rad.shifttracker.ai.modelContent
 import com.rad.shifttracker.ai.networkError
+import com.rad.shifttracker.ai.parseAiAutoFill
 import com.rad.shifttracker.ai.parseAiChanges
 import com.rad.shifttracker.ai.rankBalanced
 import com.rad.shifttracker.repo.populateMonthsAhead
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillMode
+import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.AI_CAPABILITIES
 
@@ -250,10 +253,54 @@ class AiAssistantTest {
     }
 
     @Test
-    fun `uvod u AI prozoru nabraja sve sto AI ume, i planer godisnjeg`() {
+    fun `uvod u AI prozoru prvo nudi auto-popunu pa upis`() {
         val titles = AI_CAPABILITIES.map { it.first }
-        assertEquals(listOf("Plata i sati", "Šta ako", "Planer godišnjeg", "Upis u kalendar"), titles)
+        assertEquals(listOf("Auto-popuna", "Upis u kalendar"), titles)
         assertTrue(AI_CAPABILITIES.all { (_, example) -> example.isNotBlank() })
+    }
+
+    @Test
+    fun `auto-popuna iz razgovora daje ista podesavanja kao Popuni`() {
+        val three = parseAiAutoFill(JSONObject().put("rezim", "trobrigada").put("datum", "2026-10-21").put("smena", 2), today)
+        assertEquals(ShiftFillMode.THREE_BRIGADE, three.mode)
+        assertEquals(LocalDate.of(2026, 10, 19), three.anchorDate)
+        assertEquals(Shift.SECOND, three.selectedShift)
+
+        val one = parseAiAutoFill(JSONObject().put("rezim", "jedna_smena"), today)
+        assertEquals(ShiftFillSettings(ShiftFillMode.ONE_SHIFT, today, Shift.FIRST), one)
+
+        val four = parseAiAutoFill(
+            JSONObject().put("rezim", "cetvorobrigada").put("datum", "2026-10-20").put("smena", 3).put("dan_u_bloku", 2),
+            today
+        )
+        assertEquals(ShiftScheduler().getFourBrigadeCycleStartIndex(Shift.THIRD, 1), four.cycleDayIndex)
+        assertEquals(Shift.THIRD, ShiftScheduler().calculateShiftForDate(LocalDate.of(2026, 10, 20), four))
+    }
+
+    @Test
+    fun `auto-popuna se samo predlaze i javlja pogresan unos`() {
+        val repo = testRepository()
+        val tools = AiTools(repo, today)
+        val result = tools.execute(
+            "predlozi_popunu",
+            JSONObject().put("rezim", "prva_druga").put("datum", "2026-10-19").put("smena", 1).put("opis", "Prva/druga")
+        )
+        assertEquals(14, result.getJSONArray("narednih_14_dana").length())
+        assertEquals("2026-10-19 S1", result.getJSONArray("narednih_14_dana").getString(4))
+        assertEquals("2026-10-26 S2", result.getJSONArray("narednih_14_dana").getString(11))
+        assertEquals(ShiftFillMode.FIRST_SECOND, tools.proposal?.fill?.mode)
+        assertNull(repo.get(2026, 10, 19))
+
+        val cases = listOf(
+            JSONObject().put("rezim", "pet_smena") to "nepoznat 'rezim'",
+            JSONObject().put("rezim", "trobrigada").put("smena", 1) to "'datum'",
+            JSONObject().put("rezim", "prva_druga").put("datum", "2026-10-19").put("smena", 3) to "1 ili 2",
+            JSONObject().put("rezim", "trobrigada").put("datum", "2026-10-17").put("smena", 1) to "radni dan"
+        )
+        for ((args, expected) in cases) {
+            val error = AiTools(repo, today).execute("predlozi_popunu", args.put("opis", "x"))
+            assertTrue(error.toString(), error.optString("greska").contains(expected))
+        }
     }
 
     private fun candidate(parts: JSONArray) = JSONObject().put(

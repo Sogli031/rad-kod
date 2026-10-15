@@ -113,6 +113,7 @@ internal fun MainDialogs(
             repo = data.repo,
             today = data.today,
             onApply = data.actions::applyAiChanges,
+            onAutoFill = { settings -> data.actions.populateAutoFill(data.scheduler, data.today, settings) },
             onDismiss = onDismiss
         )
 

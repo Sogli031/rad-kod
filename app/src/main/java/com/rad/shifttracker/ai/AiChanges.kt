@@ -9,6 +9,7 @@ import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.applyAbsenceRange
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.ShiftScheduler
 
 /** Vrsta izmene koju AI predlaže. */
@@ -29,8 +30,8 @@ internal data class AiChange(
     val hours2: Int = 0
 )
 
-/** Izmene koje čekaju potvrdu korisnika, sa AI-jevim kratkim opisom. */
-internal data class AiProposal(val changes: List<AiChange>, val summary: String)
+/** Izmene (ili popuna rasporeda, [fill]) koje čekaju potvrdu korisnika, sa AI-jevim kratkim opisom. */
+internal data class AiProposal(val changes: List<AiChange>, val summary: String, val fill: ShiftFillSettings? = null)
 
 /** Rezultat upisa potvrđenih izmena. */
 internal data class AiApplyResult(val writtenDays: Int, val skipped: List<String>)

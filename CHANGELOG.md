@@ -4,7 +4,8 @@ Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
 ## [14.1] - 2026-10-15
-- Na početku AI prozora više nema primera „Koliko mi je ostalo godišnjeg?“ (AI i dalje odgovara na to pitanje).
+- **Auto-popuna preko AI-ja:** napišeš koju vrstu smena radiš (jedna smena, prva/druga, „radim tri smene“, „radim četiri smene“) i koju smenu imaš kog dana, npr. „radim tri smene, u ponedeljak 19. sam druga“, i AI predloži popunu rasporeda od danas nadalje, isto kao „Popuni“. Upisuje se tek na „Upiši“.
+- Na početku AI prozora su samo dva primera, auto-popuna i upis u kalendar, i služe samo za čitanje (dodir više ne upisuje primer u polje). AI i dalje odgovara i na pitanja o plati, „šta ako“ i planer godišnjeg.
 
 ## [14.0] - 2026-10-15
 - **Planer godišnjeg u AI-ju:** pitaš npr. „kad je najbolje da uzmem 5 dana godišnjeg?“. Aplikacija proba svaki termin u periodu, spaja godišnji sa vikendima, praznicima i slobodnim danima iz rasporeda i za najbolje termine računa promenu neto plate (nad kopijom podataka). Podrazumevano traži balans između broja slobodnih dana i gubitka na plati; može i samo „što više dana“ ili samo „što manje gubitka“. Predlog se upisuje tek na „Upiši“.

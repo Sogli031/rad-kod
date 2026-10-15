@@ -145,6 +145,9 @@ internal fun systemPrompt(today: LocalDate): String {
         što više dana bez obzira na platu, a „plata“ samo ako traži da najmanje izgubi. Za svaki predlog reci datume godišnjeg,
         od kad do kad je slobodan, koliko je to uzastopnih dana, koje praznike hvata i promenu neto plate tačno iz alata.
         Ako hoće da ga upiše, pozovi „predlozi_izmene“ tipa „godisnji“ sa tačnim „godisnji_od“ i „godisnji_do“ iz predloga.
+        Kad korisnik kaže koju vrstu smena radi (jedna smena, prva/druga, „radim tri smene“ = trobrigada, „četiri smene“ =
+        četvorobrigada) i koju smenu ima kog dana, pozovi „predlozi_popunu“ da se raspored sam popuni od danas nadalje; ako ne zna
+        dan ili smenu (osim za jednu smenu), pitaj kratko. Za četvorobrigadu pitaj i da li je to prvi ili drugi dan te smene.
         Smene: 1 = prva, 2 = druga, 3 = treća. Prekovremeno je više od 8 sati u smeni ili druga smena istog dana.
         Datum bez godine je najbliži takav datum od danas. Ako nešto nije jasno (koji dan, koja smena), pitaj kratko.
         Ako alat vrati „greska“, ispravi poziv ili kaži korisniku šta ne može.

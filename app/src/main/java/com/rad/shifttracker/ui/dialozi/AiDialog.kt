@@ -1,7 +1,6 @@
 package com.rad.shifttracker.ui.dialozi
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -48,8 +46,10 @@ import com.rad.shifttracker.ai.AiChange
 import com.rad.shifttracker.ai.AiException
 import com.rad.shifttracker.ai.AiProposal
 import com.rad.shifttracker.ai.AiSession
+import com.rad.shifttracker.ai.describeAiAutoFill
 import com.rad.shifttracker.ai.describeAiChange
 import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.RoundedButton
@@ -98,9 +98,16 @@ internal class AiChatState(private val session: AiSession, private val scope: Co
         }
     }
 
-    fun confirm(apply: (List<AiChange>) -> AiApplyResult) {
+    fun confirm(apply: (List<AiChange>) -> AiApplyResult, autoFill: (ShiftFillSettings) -> Unit) {
         val current = proposal ?: return
         proposal = null
+        current.fill?.let { settings ->
+            autoFill(settings)
+            val text = "Raspored je popunjen od danas nadalje (${describeAiAutoFill(settings)})"
+            messages += AiMessage.Info(text)
+            session.noteForNextMessage("Korisnik je potvrdio popunu; $text")
+            return
+        }
         val result = apply(current.changes)
         val text = buildString {
             append("Upisano dana: ${result.writtenDays}")
@@ -131,6 +138,7 @@ internal fun AiDialog(
     repo: ShiftRepository,
     today: LocalDate,
     onApply: (List<AiChange>) -> AiApplyResult,
+    onAutoFill: (ShiftFillSettings) -> Unit,
     onDismiss: () -> Unit
 ) {
     var input by rememberSaveable { mutableStateOf("") }
@@ -153,7 +161,7 @@ internal fun AiDialog(
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             if (chat.messages.isEmpty() && !chat.busy) {
-                item { AiIntroCard(onExample = { input = it }) }
+                item { AiIntroCard() }
             }
             items(chat.messages) { message -> AiMessageRow(message) }
             if (chat.busy) {
@@ -163,7 +171,7 @@ internal fun AiDialog(
         chat.proposal?.let { proposal ->
             AiProposalCard(
                 proposal = proposal,
-                onConfirm = { chat.confirm(onApply) },
+                onConfirm = { chat.confirm(onApply, onAutoFill) },
                 onDecline = chat::decline
             )
         }
@@ -235,9 +243,9 @@ private fun AiMessageRow(message: AiMessage) {
     }
 }
 
-/** Šta AI ume, sa primerima pitanja; dodir na primer ga upisuje u polje. */
+/** Šta AI ume, sa primerima pitanja (samo za čitanje). */
 @Composable
-private fun AiIntroCard(onExample: (String) -> Unit) {
+private fun AiIntroCard() {
     val scheme = MaterialTheme.colorScheme
     PopupCard {
         Text(text = AI_INTRO_TEXT, color = scheme.onSurface, style = MaterialTheme.typography.bodyMedium)
@@ -245,13 +253,11 @@ private fun AiIntroCard(onExample: (String) -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onExample(example) }
                     .padding(vertical = Spacing.xxs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
             ) {
                 SectionLabel(text = title)
-                Text(text = "„$example“", color = scheme.primary, style = MaterialTheme.typography.bodyMedium)
+                Text(text = "„$example“", color = scheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             }
         }
         Text(text = AI_INTRO_NOTE, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -273,6 +279,9 @@ private fun AiProposalCard(proposal: AiProposal, onConfirm: () -> Unit, onDeclin
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         proposal.changes.forEach { change ->
             Text(text = describeAiChange(change), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+        }
+        proposal.fill?.let { settings ->
+            Text(text = describeAiAutoFill(settings), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             RoundedButton(
@@ -300,14 +309,12 @@ internal const val AI_DECLINE_LABEL = "Otkaži"
 private const val AI_SEND_LABEL = "Pošalji"
 private const val AI_THINKING_TEXT = "Razmišljam…"
 private const val AI_PROPOSAL_TITLE = "Izmene"
-private const val AI_INTRO_TEXT = "Pitaj običnim rečima. Iznose računa aplikacija, AI ih samo prepričava. Dodirni primer da ga upišeš:"
+private const val AI_INTRO_TEXT = "Piši običnim rečima, na primer:"
 private const val AI_INTRO_NOTE = "Ništa se ne upisuje u kalendar bez tvoje potvrde. Google-u idu samo brojevi i datumi, bez imena i računa."
 
-/** Šta AI ume (naslov → primer pitanja), redom kao alati u [com.rad.shifttracker.ai.AiTools]. */
+/** Primeri u uvodu AI prozora (naslov → primer pitanja). */
 internal val AI_CAPABILITIES = listOf(
-    "Plata i sati" to "Koliko ću dobiti za novembar?",
-    "Šta ako" to "Koliko više dobijam ako radim subotu 14.?",
-    "Planer godišnjeg" to "Kad je najbolje da uzmem 5 dana godišnjeg?",
+    "Auto-popuna" to "Radim tri smene, u ponedeljak 19. sam druga",
     "Upis u kalendar" to "Upiši mi bolovanje od 3. do 6. novembra"
 )
 private const val AI_INPUT_MAX_LINES = 4
