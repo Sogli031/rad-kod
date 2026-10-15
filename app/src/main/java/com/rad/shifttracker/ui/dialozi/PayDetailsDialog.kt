@@ -16,7 +16,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.rad.shifttracker.ui.components.AutoSizeText
 import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
-import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
@@ -95,13 +94,14 @@ internal fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Month
 
 @Composable
 private fun AdvancePaymentRow(
+    label: String,
     advancePaymentNet: Double,
     advancePrediction: AdvancePaymentPrediction?
 ) {
     if (advancePaymentNet > 0.0) {
-        CompactMoneyRow(FINAL_PAYMENT_ADVANCE_LABEL, advancePaymentNet, MaterialTheme.extendedColors.success)
+        CompactMoneyRow(label, advancePaymentNet, MaterialTheme.extendedColors.success)
     } else {
-        CompactInfoRow(FINAL_PAYMENT_ADVANCE_LABEL, ADVANCE_NOT_PAID_TEXT, MaterialTheme.colorScheme.onSurfaceVariant)
+        CompactInfoRow(label, ADVANCE_NOT_PAID_TEXT, MaterialTheme.colorScheme.onSurfaceVariant)
     }
     AdvanceMinimumText(advancePrediction = advancePrediction)
 }
@@ -122,6 +122,7 @@ private fun PaymentRows(
     }
     CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
     AdvancePaymentRow(
+        label = payDetailsAdvanceLabel(monthlyReceipt),
         advancePaymentNet = finalPayment.advancePaymentNet,
         advancePrediction = advancePrediction
     )

@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.2] - 2026-10-15
+- U isplati piše i mesec akontacije, npr. za oktobar „Akontacija u Novembru“ (isto kao „Ukupno za isplatu u Novembru“).
+
 ## [14.1] - 2026-10-15
 - **Auto-popuna preko AI-ja:** napišeš koju vrstu smena radiš (jedna smena, prva/druga, „radim tri smene“, „radim četiri smene“) i koju smenu imaš kog dana, npr. „radim tri smene, u ponedeljak 19. sam druga“, i AI predloži popunu rasporeda od danas nadalje, isto kao „Popuni“. Upisuje se tek na „Upiši“.
 - **Cela sedmica jednom rečenicom:** „sledeće sedmice radim treću“ upisuje treću smenu od ponedeljka do petka samo te sedmice; vikend, praznici, bolovanje i godišnji se preskaču. Upisuje se tek na „Upiši“.

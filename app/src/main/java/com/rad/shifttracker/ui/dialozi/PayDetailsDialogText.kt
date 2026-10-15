@@ -8,6 +8,7 @@ import com.rad.shifttracker.osnova.HOURLY_VALUE_2024
 import com.rad.shifttracker.osnova.HOURLY_VALUE_BEFORE_2024
 import com.rad.shifttracker.osnova.HOURLY_VALUE_FROM_JANUARY_2026
 import com.rad.shifttracker.osnova.MONTH_NAMES
+import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.smene.MonthKey
 
@@ -52,6 +53,11 @@ internal fun srMoney(value: Double): String {
 internal fun signedSrMoney(value: Double): String {
     val prefix = if (value < 0.0) "−" else "+"
     return prefix + srMoney(kotlin.math.abs(value))
+}
+
+/** „Akontacija u Novembru“: akontacija stiže u mesecu isplate, kao i ostatak plate. */
+internal fun payDetailsAdvanceLabel(receipt: MonthlyReceipt): String {
+    return "$FINAL_PAYMENT_ADVANCE_LABEL u ${monthLocativeText(receipt.paymentMonth)}"
 }
 
 /** „Ukupno za isplatu u Novembru“: mesec isplate u lokativu. */
