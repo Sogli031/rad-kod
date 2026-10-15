@@ -30,6 +30,9 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        # Podrazumevani paket 'tools' više ne postoji u SDK-u (sdkmanager pada); ostalo instalira sledeći korak.
+        with:
+          packages: platform-tools
 
       - name: Install SDK packages
         run: |
