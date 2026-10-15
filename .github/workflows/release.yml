@@ -1,0 +1,203 @@
+name: Release
+
+# Isto što i release.ps1, ali bez ovog računara: ključ za potpisivanje i Gemini ključ dolaze iz
+# GitHub Secrets. Pokreće se push-om taga vX.Y (X.Y = versionName); ručno pokretanje bez
+# "publish" samo proverava build i potpis.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Objavi release na Sogli031/rad'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SHA1: 1ba8c0aab7cd5be3af2c1099443d5c6375b06b55
+  PUBLIC_REPO: Sogli031/rad
+  BUILD_TOOLS: '36.0.0'
+
+jobs:
+  # Snimci su snimljeni na Windows-u (Linux renderer se razlikuje u par piksela), pa se
+  # verifyRoborazziDebug pušta tamo, kao u android-build.yml. Ključevi ovde nisu potrebni.
+  screenshots:
+    runs-on: windows-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Snimci ekrana (Roborazzi)
+        shell: bash
+        run: ./gradlew verifyRoborazziDebug -PallowDebugSigning=true --no-daemon
+
+      - name: Upload razlike
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-diff
+          path: app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+
+  release:
+    needs: screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Verzija i beleške iz CHANGELOG.md
+        id: version
+        run: |
+          version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          if [ -z "$version" ]; then echo "::error::versionName nije nađen"; exit 1; fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME ne odgovara versionName $version"; exit 1
+          fi
+          # Odeljak "## [verzija]" do sledećeg "## [".
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > "$RUNNER_TEMP/notes.md"
+          if [ ! -s "$RUNNER_TEMP/notes.md" ]; then
+            echo "::error::CHANGELOG.md nema odeljak za verziju $version"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;$BUILD_TOOLS"
+
+      # ../keystore/ kao na računaru (Desktop\programi\keystore): signing.gradle, release.jks,
+      # keystore.properties. Tajne idu kroz env i nikad se ne štampaju.
+      - name: Ključ za potpisivanje i local.properties
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD GEMINI_API_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::Nedostaje tajna za $name"; exit 1; fi
+          done
+          ks="$GITHUB_WORKSPACE/../keystore"
+          mkdir -p "$ks"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$ks/release.jks"
+          {
+            echo "storeFile=release.jks"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > "$ks/keystore.properties"
+          printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY" > local.properties
+          cat > "$ks/signing.gradle" <<'EOF'
+          // Zajednički potpis za sve Android projekte u Desktop\programi.
+          // Ključ se upisuje u "debug" signingConfig, pa njime idu i debug i release
+          // build-ovi (release u projektima koristi signingConfigs.getByName("debug")).
+          // Uključuje se iz app/build.gradle(.kts) svakog projekta.
+          def ksDir = buildscript.sourceFile.parentFile
+          def propsFile = new File(ksDir, 'keystore.properties')
+
+          if (propsFile.exists()) {
+              def props = new Properties()
+              propsFile.withInputStream { props.load(it) }
+              def jks = new File(props.getProperty('storeFile'))
+              if (!jks.absolute) jks = new File(ksDir, props.getProperty('storeFile'))
+
+              android.signingConfigs.getByName('debug') {
+                  storeFile jks
+                  storePassword props.getProperty('storePassword')
+                  keyAlias props.getProperty('keyAlias')
+                  keyPassword props.getProperty('keyPassword')
+              }
+          } else {
+              logger.warn("Nema ${propsFile}, potpisuje se podrazumevanim debug ključem.")
+          }
+          EOF
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Bez -PallowDebugSigning: ako ključa nema, build pada umesto da potpiše debug ključem.
+      - name: Testovi, detekt, lint, pokrivenost, assembleRelease
+        run: ./gradlew testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Provera potpisa i 16 KB poravnanja
+        id: verify
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          tools="$ANDROID_HOME/build-tools/$BUILD_TOOLS"
+          certs=$("$tools/apksigner" verify --print-certs "$apk")
+          sha1=$(printf '%s\n' "$certs" | sed -n 's/.*SHA-1 digest: \([0-9a-f]*\).*/\1/p' | head -n 1)
+          if [ "$sha1" != "$EXPECTED_SHA1" ]; then
+            echo "::error::Pogrešan potpisni ključ: $sha1"; exit 1
+          fi
+          "$tools/zipalign" -c -P 16 4 "$apk" || { echo "::error::APK nije poravnat na 16 KB"; exit 1; }
+          mkdir -p release-out
+          cp "$apk" release-out/rad.apk
+          cp app/build/outputs/mapping/release/mapping.txt "release-out/mapping-v${{ steps.version.outputs.version }}.txt"
+          sha256=$(sha256sum release-out/rad.apk | cut -d' ' -f1)
+          echo "APK SHA-256: $sha256  potpis SHA-1: $sha1"
+          printf '\n\nSHA-256 APK-a: `%s`\nSHA-1 sertifikata: `%s`\n' "$sha256" "$sha1" >> "$RUNNER_TEMP/notes.md"
+
+      # mapping.txt ostaje u privatnom repou (artefakt workflow-a), ne ide u javni release.
+      - name: Upload APK i mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: rad-v${{ steps.version.outputs.version }}
+          path: release-out/
+          retention-days: 90
+
+      - name: Release na Sogli031/rad
+        if: github.event_name == 'push' || inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.RAD_RELEASE_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "::error::Nedostaje tajna RAD_RELEASE_TOKEN"; exit 1; fi
+          # Jedini asset je rad.apk: releases/latest/download/rad.apk uvek vodi na najnoviju verziju,
+          # a provera ažuriranja u aplikaciji i Obtainium traže baš taj fajl.
+          gh release create "v$VERSION" release-out/rad.apk \
+            --repo "$PUBLIC_REPO" \
+            --title "Verzija $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md"
+
+      - name: Obriši ključ
+        if: always()
+        run: rm -rf "$GITHUB_WORKSPACE/../keystore" local.properties
