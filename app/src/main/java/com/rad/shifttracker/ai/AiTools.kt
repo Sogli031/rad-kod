@@ -37,6 +37,14 @@ internal class AiTools(private val repo: ShiftRepository, private val today: Loc
         .put(function("godisnji", "Stanje godišnjeg odmora danas: koliko dana je ostalo (stari i ovogodišnji).", objectParams()))
         .put(
             function(
+                "planer_godisnjeg",
+                "Nalazi najbolje termine za N dana godišnjeg: spaja ga sa vikendima, praznicima i slobodnim danima iz " +
+                    "rasporeda i za svaki termin računa koliko se menja neto plata. Ništa ne upisuje.",
+                leavePlanParams()
+            )
+        )
+        .put(
+            function(
                 "sta_ako",
                 "Izračunava kako bi se plata i sati promenili sa datim izmenama, bez upisa. Za pitanja tipa „koliko ću dobiti ako…“.",
                 changesParams(withSummary = false)
@@ -55,6 +63,7 @@ internal class AiTools(private val repo: ShiftRepository, private val today: Loc
         when (name) {
             "mesec" -> month(args.getInt("godina"), args.getInt("mesec"))
             "godisnji" -> vacation()
+            "planer_godisnjeg" -> planLeave(repo, args, today)
             "sta_ako" -> whatIf(parseAiChanges(args.optJSONArray("izmene"), today))
             "predlozi_izmene" -> propose(parseAiChanges(args.optJSONArray("izmene"), today), args.optString("opis"))
             else -> error("nepoznat alat '$name'")
@@ -184,6 +193,23 @@ private fun monthParams() = JSONObject()
             .put("mesec", JSONObject().put("type", "integer").put("description", "1–12"))
     )
     .put("required", JSONArray().put("godina").put("mesec"))
+
+private fun leavePlanParams() = JSONObject()
+    .put("type", "object")
+    .put(
+        "properties",
+        JSONObject()
+            .put("dana", JSONObject().put("type", "integer").put("description", "koliko dana godišnjeg želi da potroši"))
+            .put("od", JSONObject().put("type", "string").put("description", "početak perioda GGGG-MM-DD, podrazumevano sutra"))
+            .put("do", JSONObject().put("type", "string").put("description", "kraj perioda GGGG-MM-DD, podrazumevano godinu dana od početka"))
+            .put(
+                "cilj",
+                JSONObject().put("type", "string").put("enum", JSONArray(listOf("spajanje", "plata")))
+                    .put("description", "spajanje = najviše uzastopnih slobodnih dana (podrazumevano), plata = najmanji gubitak na plati")
+            )
+            .put("broj_predloga", JSONObject().put("type", "integer").put("description", "1–5, podrazumevano 3"))
+    )
+    .put("required", JSONArray().put("dana"))
 
 private fun changesParams(withSummary: Boolean): JSONObject {
     val change = JSONObject()

@@ -190,6 +190,42 @@ class AiAssistantTest {
         assertEquals(Shift.SICK, repo.get(2026, 11, 2)?.shift)
     }
 
+    @Test
+    fun `planer godisnjeg spaja godisnji sa vikendom i praznikom`() {
+        val repo = testRepository()
+        val result = AiTools(repo, today).execute(
+            "planer_godisnjeg",
+            JSONObject().put("dana", 2).put("od", "2026-11-01").put("do", "2026-11-30")
+        )
+
+        val best = result.getJSONArray("predlozi").getJSONObject(0)
+        // Pon 9. i uto 10. novembar: od subote 7. do Dana primirja u sredu 11. je pet slobodnih dana.
+        assertEquals("2026-11-09 (ponedeljak)", best.getString("godisnji_od"))
+        assertEquals("2026-11-10 (utorak)", best.getString("godisnji_do"))
+        assertEquals("2026-11-07 (subota)", best.getString("slobodno_od"))
+        assertEquals(5, best.getInt("uzastopno_slobodnih_dana"))
+        assertTrue(best.getJSONArray("praznici").getString(0).startsWith("Dan primirja"))
+        assertNull(repo.get(2026, 11, 9))
+    }
+
+    @Test
+    fun `planer godisnjeg ne nudi termine koji se preklapaju i javlja pogresan unos`() {
+        val tools = AiTools(testRepository(), today)
+        val result = tools.execute("planer_godisnjeg", JSONObject().put("dana", 3).put("broj_predloga", 5))
+        val options = result.getJSONArray("predlozi")
+        assertEquals(5, options.length())
+        val ranges = (0 until options.length()).map { index ->
+            val option = options.getJSONObject(index)
+            LocalDate.parse(option.getString("slobodno_od").take(10))..LocalDate.parse(option.getString("slobodno_do").take(10))
+        }
+        for (i in ranges.indices) for (j in i + 1 until ranges.size) {
+            assertTrue(ranges[i].endInclusive < ranges[j].start || ranges[j].endInclusive < ranges[i].start)
+        }
+
+        assertTrue(tools.execute("planer_godisnjeg", JSONObject().put("dana", 0)).has("greska"))
+        assertTrue(tools.execute("planer_godisnjeg", JSONObject().put("dana", 2).put("od", "2026-01-01")).has("greska"))
+    }
+
     private fun candidate(parts: JSONArray) = JSONObject().put(
         "candidates",
         JSONArray().put(JSONObject().put("content", JSONObject().put("role", "model").put("parts", parts)).put("finishReason", "STOP"))

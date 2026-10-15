@@ -9,6 +9,7 @@ Format: verzija (versionName) i datum GGGG-MM-DD.
 - **Upis samo uz potvrdu:** smene, slobodni dani, prekovremeno, bolovanje i godišnji se prikažu kao predlog i upisuju tek na „Upiši“.
 - **Jasne greške:** nema interneta, Google ne odgovara, ključ neispravan ili ograničen, potrošena besplatna kvota, preopterećen model (tada se sam proba rezervni), blokiran odgovor — uz HTTP kod i Google-ovu poruku.
 - Google-u se šalju samo brojevi i datumi iz aplikacije (bez imena, JMBG-a i računa).
+- **Planer godišnjeg u AI-ju:** pitaš npr. „kad da uzmem 5 dana godišnjeg da najviše spojim?“ ili „…a da najmanje izgubim na plati?“. Aplikacija proba svaki termin u periodu, spaja godišnji sa vikendima, praznicima i slobodnim danima iz rasporeda i za najbolje termine računa promenu neto plate (nad kopijom podataka). Predlog se upisuje tek na „Upiši“.
 
 ## [13.8] - 2026-10-15
 - **Bez zakočenja pri prevlačenju unazad (npr. sa novembra na oktobar):** tabela obračuna plate i akontacija ispod kalendara računaju se u pozadini zajedno sa ostalim podacima meseca, a ne u trenutku kad se susedni mesec iscrtava. Ranije je to kočilo baš pri prelasku ka mesecima koji već imaju platu.
