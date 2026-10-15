@@ -103,7 +103,10 @@ jobs:
       - name: Install SDK packages
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37" "build-tools;$BUILD_TOOLS"
+          # Ime platforme može imati i manju verziju (npr. android-37.0): uzima se ono koje SDK nudi.
+          platform=$(sdkmanager --list 2>/dev/null | grep -oE 'platforms;android-37(\.[0-9]+)?' | sort -V | tail -n 1)
+          if [ -z "$platform" ]; then sdkmanager --list 2>/dev/null | grep "platforms;android-3"; echo "::error::SDK ne nudi platformu android-37"; exit 1; fi
+          sdkmanager "platform-tools" "$platform" "build-tools;$BUILD_TOOLS"
 
       # ../keystore/ kao na računaru (Desktop\programi\keystore): signing.gradle, release.jks,
       # keystore.properties. Tajne idu kroz env i nikad se ne štampaju.
