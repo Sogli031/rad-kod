@@ -90,7 +90,7 @@ internal class MainViewModel(
     val state: StateFlow<MainMonthState?> = stateFlow.asStateFlow()
 
     /**
-     * Izabrani mesec i njegovi susedi (prethodni, sledeći), da prevlačenje meseca odmah pokaže
+     * Izabrani mesec i njegovi susedi (po dva sa svake strane), da prevlačenje meseca odmah pokaže
      * spreman ekran. Posle izabranog meseca susedi se računaju u pozadini; uz to se čuva još par
      * nedavno viđenih meseci sa istim podacima, pa je povratak nazad trenutan.
      */
@@ -103,12 +103,16 @@ internal class MainViewModel(
         viewModelScope.launch {
             combine(tick, monthFlow, todayFlow) { t, m, d -> MainStateKey(t, m, d) }.collectLatest { key ->
                 if (key == stateFlow.value?.key) return@collectLatest
-                val current = withContext(Dispatchers.Default) { compute(key) }
+                // Mesec na koji je ekran prevučen je obično već izračunat kao sused: isti objekat znači
+                // da se strana ne iscrtava ponovo baš kad korisnik kreće u sledeće prevlačenje.
+                val current = statesFlow.value[key.month]?.takeIf { it.key == key }
+                    ?: withContext(Dispatchers.Default) { compute(key) }
                 stateFlow.value = current
                 // Isti podaci (tick) i isti dan: ranije izračunati meseci ostaju važeći.
                 val cached = statesFlow.value.filterValues { it.key.tick == key.tick && it.key.today == key.today }
                 statesFlow.value = cached + (key.month to current)
-                for (offset in listOf(1L, -1L)) {
+                // Po dva meseca na svaku stranu, da je i brzo dvostruko prevlačenje odmah spremno.
+                for (offset in listOf(1L, -1L, 2L, -2L)) {
                     val neighbor = YearMonth.of(key.month.year, key.month.month).plusMonths(offset)
                     val neighborKey = key.copy(month = MonthKey(neighbor.year, neighbor.monthValue))
                     if (neighborKey.month in statesFlow.value) continue
@@ -184,4 +188,4 @@ private fun Map<MonthKey, MainMonthState>.nearest(center: MonthKey): Map<MonthKe
         .associate { it.key to it.value }
 }
 
-private const val MAX_CACHED_MONTHS = 5
+private const val MAX_CACHED_MONTHS = 7
