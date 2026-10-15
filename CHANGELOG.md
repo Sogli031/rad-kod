@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [13.8] - 2026-10-15
+- **Bez zakočenja pri prevlačenju unazad (npr. sa novembra na oktobar):** tabela obračuna plate i akontacija ispod kalendara računaju se u pozadini zajedno sa ostalim podacima meseca, a ne u trenutku kad se susedni mesec iscrtava. Ranije je to kočilo baš pri prelasku ka mesecima koji već imaju platu.
+
 ## [13.7] - 2026-10-15
 - **Glađe prevlačenje meseci:** mesec na koji se prevuče se ne računa i ne iscrtava ponovo (već je spreman), pa sledeće prevlačenje ne zakoči. Unapred se spremaju po dva meseca na svaku stranu, da i brzo dvostruko prevlačenje odmah ima podatke.
 

@@ -37,6 +37,8 @@ import com.rad.shifttracker.repo.getVacationBalanceSummary
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.obracun.MonthSummary
 import com.rad.shifttracker.repo.currentStatus
+import com.rad.shifttracker.ui.dialozi.PayDetailsExtras
+import com.rad.shifttracker.ui.dialozi.payDetailsExtras
 
 private const val KEY_YEAR = "calendar_year"
 private const val KEY_MONTH = "calendar_month"
@@ -58,7 +60,9 @@ internal data class MainMonthState(
     val payDetails: MonthlyPayDetails,
     val selectedMonthPayDetails: MonthlyPayDetails,
     val bloodDonationReminderStatus: BloodDonationReminderScheduleStatus,
-    val vacationSummary: VacationBalanceSummary
+    val vacationSummary: VacationBalanceSummary,
+    /** Tabela plate i akontacija ispod kalendara ([nextMonthReceipt]); null dok plata nije dostupna. */
+    val nextMonthPayExtras: PayDetailsExtras?
 )
 
 /** Ulaz od kog zavisi [MainMonthState]: izmena podataka, izabrani mesec i današnji dan. */
@@ -161,19 +165,21 @@ internal class MainViewModel(
         val monthlyReceipt = repo.getMonthlyReceipt(year, month)
         val payroll = monthlyReceipt.payrollMonth
         val selectedAsOf = vacationCardAsOfDate(year, month, key.today)
+        val nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue)
         return MainMonthState(
             key = key,
             summary = repo.getSummary(year, month),
             payBreakdown = repo.getNetPayBreakdown(year, month),
             monthlyReceipt = monthlyReceipt,
-            nextMonthReceipt = repo.getMonthlyReceipt(next.year, next.monthValue),
+            nextMonthReceipt = nextMonthReceipt,
             monthlyFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(year, month),
             nextMonthFinalPaymentBreakdown = repo.getMonthlyFinalPaymentBreakdown(next.year, next.monthValue),
             overtimeNetImpact = repo.getMonthlyOvertimeNetImpact(year, month),
             payDetails = repo.getMonthlyPayDetails(payroll.year, payroll.month),
             selectedMonthPayDetails = repo.getMonthlyPayDetails(year, month),
             bloodDonationReminderStatus = BloodDonationReminderScheduler.currentStatus(appContext, repo),
-            vacationSummary = repo.getVacationBalanceSummary(year, selectedAsOf)
+            vacationSummary = repo.getVacationBalanceSummary(year, selectedAsOf),
+            nextMonthPayExtras = repo.payDetailsExtras(nextMonthReceipt)
         )
     }
 }

@@ -299,7 +299,8 @@ private fun ShiftPayPane(ui: MainMonthState, repo: ShiftRepository, onOpenDialog
         monthlyReceipt = ui.nextMonthReceipt,
         monthlyFinalPaymentBreakdown = ui.nextMonthFinalPaymentBreakdown,
         payDetails = ui.selectedMonthPayDetails,
-        repo = repo
+        repo = repo,
+        extras = ui.nextMonthPayExtras
     )
 }
 

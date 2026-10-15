@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
 import com.rad.shifttracker.repo.ShiftRepository
+import com.rad.shifttracker.ui.rememberRepoValue
 import com.rad.shifttracker.ui.CenteredDialog
 import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
@@ -36,7 +37,11 @@ internal fun WorkHoursDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                PayrollMonthTable(monthlyReceipt = receipt, payDetails = payDetails, repo = repo)
+                PayrollMonthTable(
+                    monthlyReceipt = receipt,
+                    payDetails = payDetails,
+                    inputs = rememberRepoValue(repo, receipt.payrollMonth) { payrollTableInputs(receipt) }
+                )
             }
         } else {
             Text(

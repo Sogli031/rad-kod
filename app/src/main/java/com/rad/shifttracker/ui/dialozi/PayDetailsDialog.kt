@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.rad.shifttracker.ui.components.AutoSizeText
-import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.obracun.ADVANCE_NOT_PAID_TEXT
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_LABEL
 import com.rad.shifttracker.obracun.FINAL_PAYMENT_ADVANCE_WARNING_TEXT
@@ -23,8 +22,8 @@ import com.rad.shifttracker.obracun.FINAL_PAYMENT_DEDUCTIONS_LABEL
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyPayDetails
 import com.rad.shifttracker.obracun.MonthlyReceipt
+import com.rad.shifttracker.obracun.AdvancePaymentPrediction
 import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.ui.PopupCard
 import com.rad.shifttracker.ui.SectionLabel
 import com.rad.shifttracker.ui.Spacing
@@ -34,11 +33,6 @@ import com.rad.shifttracker.ui.PayAccuracyWarningsCard
 import com.rad.shifttracker.obracun.payAccuracyWarningTexts
 import com.rad.shifttracker.repo.isSeniorityConfiguredValue
 import com.rad.shifttracker.ui.rememberRepoValue
-import com.rad.shifttracker.repo.getNetPayBreakdown
-import com.rad.shifttracker.repo.getMonthlyOvertimeNetImpact
-import com.rad.shifttracker.repo.getSickLeaveNetDifference
-import com.rad.shifttracker.repo.getPaidLeaveNetDifference
-import com.rad.shifttracker.repo.getVacationNetDifference
 import com.rad.shifttracker.ui.TOTAL_CARD_UNAVAILABLE_TEXT
 
 /**
@@ -51,7 +45,9 @@ internal fun PayDetailsSections(
     monthlyReceipt: MonthlyReceipt,
     monthlyFinalPaymentBreakdown: MonthlyFinalPaymentBreakdown,
     payDetails: MonthlyPayDetails,
-    repo: ShiftRepository
+    repo: ShiftRepository,
+    // Glavni ekran ih dobija gotove iz pozadinskog računanja meseca, da prevlačenje ne čeka obračune.
+    extras: PayDetailsExtras? = rememberRepoValue(repo, monthlyReceipt.payrollMonth) { payDetailsExtras(monthlyReceipt) }
 ) {
     PayAccuracyWarningsCard(
         payAccuracyWarningTexts(payDetails, rememberRepoValue(repo) { isSeniorityConfiguredValue })
@@ -61,12 +57,12 @@ internal fun PayDetailsSections(
         PaymentRows(
             monthlyReceipt = monthlyReceipt,
             finalPayment = monthlyFinalPaymentBreakdown,
-            repo = repo
+            advancePrediction = extras?.advancePrediction
         )
     }
 
-    if (monthlyReceipt.isSalaryAvailable) {
-        PayrollMonthTable(monthlyReceipt = monthlyReceipt, payDetails = payDetails, repo = repo)
+    if (monthlyReceipt.isSalaryAvailable && extras != null) {
+        PayrollMonthTable(monthlyReceipt = monthlyReceipt, payDetails = payDetails, inputs = extras.table)
     }
 }
 
@@ -83,30 +79,16 @@ private fun PayDetailsSectionCard(
 
 /** Obračun plate meseca isplate kao tabela koja se sabira u neto platu (ispod isplate i u prozoru „Sati rada“). */
 @Composable
-internal fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: MonthlyPayDetails, repo: ShiftRepository) {
-    val payrollMonth = monthlyReceipt.payrollMonth
-    val year = payrollMonth.year
-    val month = payrollMonth.month
-    val payBreakdown = rememberRepoValue(repo, payrollMonth) { getNetPayBreakdown(year, month) }
-    val deficitNetLoss = rememberRepoValue(repo, payrollMonth) { getMonthlyOvertimeNetImpact(year, month).deficitNetLoss }
-    val sickLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getSickLeaveNetDifference(year, month) }
-    val vacationNetDifference = rememberRepoValue(repo, payrollMonth) { getVacationNetDifference(year, month) }
-    val paidLeaveNetDifference = rememberRepoValue(repo, payrollMonth) { getPaidLeaveNetDifference(year, month) }
-    // Procenat bolovanja po danima (davanje krvi je plaćeno odsustvo, nije bolovanje).
-    val sickPayRates = rememberRepoValue(repo, payrollMonth) {
-        getMonthRecords(year, month)
-            .filter { it.shift == Shift.SICK && !it.isPaidLeave && it.workHours > 0 }
-            .map { it.sickPayRate ?: CONFIG.pay.sickPayRate }
-    }
+internal fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: MonthlyPayDetails, inputs: PayrollTableInputs) {
     val table = payrollTable(
         payDetails = payDetails,
-        payBreakdown = payBreakdown,
+        payBreakdown = inputs.payBreakdown,
         netSalary = monthlyReceipt.salaryNetPay,
-        sickLeaveNetDifference = sickLeaveNetDifference,
-        vacationNetDifference = vacationNetDifference,
-        paidLeaveNetDifference = paidLeaveNetDifference,
-        sickPayRates = sickPayRates,
-        uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, deficitNetLoss)
+        sickLeaveNetDifference = inputs.sickLeaveNetDifference,
+        vacationNetDifference = inputs.vacationNetDifference,
+        paidLeaveNetDifference = inputs.paidLeaveNetDifference,
+        sickPayRates = inputs.sickPayRates,
+        uncoveredDeficitNetLoss = uncoveredDeficitNetLoss(payDetails, inputs.deficitNetLoss)
     )
     PayrollTableCards(title = "Obračun plate za ${payrollMonthNameText(monthlyReceipt)}", table = table)
 }
@@ -114,15 +96,14 @@ internal fun PayrollMonthTable(monthlyReceipt: MonthlyReceipt, payDetails: Month
 @Composable
 private fun AdvancePaymentRow(
     advancePaymentNet: Double,
-    monthlyReceipt: MonthlyReceipt,
-    repo: ShiftRepository
+    advancePrediction: AdvancePaymentPrediction?
 ) {
     if (advancePaymentNet > 0.0) {
         CompactMoneyRow(FINAL_PAYMENT_ADVANCE_LABEL, advancePaymentNet, MaterialTheme.extendedColors.success)
     } else {
         CompactInfoRow(FINAL_PAYMENT_ADVANCE_LABEL, ADVANCE_NOT_PAID_TEXT, MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    AdvanceMinimumText(monthlyReceipt = monthlyReceipt, repo = repo)
+    AdvanceMinimumText(advancePrediction = advancePrediction)
 }
 
 /**
@@ -133,7 +114,7 @@ private fun AdvancePaymentRow(
 private fun PaymentRows(
     monthlyReceipt: MonthlyReceipt,
     finalPayment: MonthlyFinalPaymentBreakdown,
-    repo: ShiftRepository
+    advancePrediction: AdvancePaymentPrediction?
 ) {
     if (!monthlyReceipt.isSalaryAvailable) {
         CompactInfoRow(payDetailsNetSalaryLabel(monthlyReceipt), TOTAL_CARD_UNAVAILABLE_TEXT, MaterialTheme.extendedColors.warning)
@@ -142,8 +123,7 @@ private fun PaymentRows(
     CompactMoneyRow(payDetailsNetSalaryLabel(monthlyReceipt), monthlyReceipt.salaryNetPay, MaterialTheme.colorScheme.primary)
     AdvancePaymentRow(
         advancePaymentNet = finalPayment.advancePaymentNet,
-        monthlyReceipt = monthlyReceipt,
-        repo = repo
+        advancePrediction = advancePrediction
     )
     if (finalPayment.deductionsNet > 0.0) {
         CompactInfoRow(
