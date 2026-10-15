@@ -29,6 +29,7 @@ import com.rad.shifttracker.ai.rankBalanced
 import com.rad.shifttracker.repo.populateMonthsAhead
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
+import com.rad.shifttracker.ui.dialozi.AI_CAPABILITIES
 
 class AiAssistantTest {
 
@@ -246,6 +247,13 @@ class AiAssistantTest {
 
         // 9 dana za 3.000 din pobeđuje 5 dana za 2.500, ali 5 dana za 500 din pobeđuje oba.
         assertEquals(listOf(cheap, long, unknown, short), rankBalanced(listOf(short, long, cheap, unknown)))
+    }
+
+    @Test
+    fun `uvod u AI prozoru nabraja sve sto AI ume, i planer godisnjeg`() {
+        val titles = AI_CAPABILITIES.map { it.first }
+        assertEquals(listOf("Plata i sati", "Šta ako", "Godišnji", "Planer godišnjeg", "Upis u kalendar"), titles)
+        assertTrue(AI_CAPABILITIES.all { (_, example) -> example.isNotBlank() })
     }
 
     private fun candidate(parts: JSONArray) = JSONObject().put(

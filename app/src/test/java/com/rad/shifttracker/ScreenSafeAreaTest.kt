@@ -98,7 +98,7 @@ class ScreenSafeAreaTest {
 
     @Test
     fun `bottom bar action dialogs do not provide custom popup heights`() {
-        listOf("AutoFillDialog.kt", "PayslipReaderDialog.kt")
+        listOf("AutoFillDialog.kt", "PayslipReaderDialog.kt", "AiDialog.kt")
             .forEach { fileName ->
                 val source = appSource(fileName)
 
