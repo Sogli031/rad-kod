@@ -65,7 +65,7 @@ class UiWritesThroughViewModelTest {
     @Test
     fun `upis kroz view model stize u repo i osvezava stanje`() {
         val repo = ShiftRepository()
-        val viewModel = MainViewModel(repo, ApplicationProvider.getApplicationContext(), SavedStateHandle(), LocalDate.of(2026, 10, 3))
+        val viewModel = mainDispatcher.track(MainViewModel(repo, ApplicationProvider.getApplicationContext(), SavedStateHandle(), LocalDate.of(2026, 10, 3)))
         var changes = 0
         repo.onChange { changes++ }
 
@@ -78,7 +78,7 @@ class UiWritesThroughViewModelTest {
     @Test
     fun `minuli rad upisuje samo polja izabranog nacina`() {
         val repo = ShiftRepository()
-        val viewModel = MainViewModel(repo, ApplicationProvider.getApplicationContext(), SavedStateHandle(), LocalDate.of(2026, 10, 3))
+        val viewModel = mainDispatcher.track(MainViewModel(repo, ApplicationProvider.getApplicationContext(), SavedStateHandle(), LocalDate.of(2026, 10, 3)))
         val settings = SenioritySettings(
             mode = SeniorityInputMode.PAYSLIP_PERCENT,
             increaseFactor = SeniorityIncreaseFactor.entries.first(),

@@ -3,7 +3,11 @@ package com.rad.shifttracker
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import java.time.LocalDate
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -37,7 +41,7 @@ class MainViewModelTest {
     val mainDispatcher = MainDispatcherRule()
 
     private fun viewModel(repo: ShiftRepository, saved: SavedStateHandle = SavedStateHandle()) =
-        MainViewModel(repo, ApplicationProvider.getApplicationContext(), saved, today)
+        mainDispatcher.track(MainViewModel(repo, ApplicationProvider.getApplicationContext(), saved, today))
 
     private fun MainViewModel.firstState(): MainMonthState = runBlocking {
         withTimeout(10_000) { state.filterNotNull().first() }
@@ -90,9 +94,21 @@ class MainViewModelTest {
     }
 }
 
-/** viewModelScope na test dispečeru: rezultat sa Dispatchers.Default stiže bez Android main looper-a. */
+/**
+ * viewModelScope na test dispečeru: rezultat sa Dispatchers.Default stiže bez Android main looper-a.
+ * ViewModel-i iz [track] se gase i čekaju pre resetMain: inače računanje sa Default niti posle kraja
+ * testa pokuša da se vrati na Main koji više ne postoji (nestabilan pad na sporijoj mašini).
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule : TestWatcher() {
+    private val viewModels = mutableListOf<ViewModel>()
+
+    fun <T : ViewModel> track(viewModel: T): T = viewModel.also { viewModels += it }
+
     override fun starting(description: Description) = Dispatchers.setMain(UnconfinedTestDispatcher())
-    override fun finished(description: Description) = Dispatchers.resetMain()
+    override fun finished(description: Description) {
+        runBlocking { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
+        viewModels.clear()
+        Dispatchers.resetMain()
+    }
 }
