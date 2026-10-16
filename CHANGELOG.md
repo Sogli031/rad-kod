@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.1] - 2026-10-16
+- Strelice „Do kog dana“ za bolovanje i godišnji idu po radnim danima i preskaču vikende i praznike.
+- Praznik unutar bolovanja ostaje praznik, ne upisuje se kao bolovanje.
+
 ## [15.0] - 2026-10-16
 - U prozoru dana „Razlika“ za bolovanje i godišnji obuhvata sve dane do izabranog „Do kog dana“ i menja se sa strelicama.
 

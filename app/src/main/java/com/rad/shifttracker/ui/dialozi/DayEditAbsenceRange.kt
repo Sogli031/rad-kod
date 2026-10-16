@@ -26,6 +26,7 @@ import com.rad.shifttracker.repo.ABSENCE_RANGE_MAX_DAYS
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.absenceRangeDates
 import com.rad.shifttracker.repo.absenceRangeNetDifference
+import com.rad.shifttracker.repo.nearestAbsenceWorkday
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.DataActions
@@ -101,8 +102,18 @@ internal fun rememberDayEditAbsenceRange(
         shift = shift,
         dates = dates,
         scheduler = scheduler,
-        onPrevious = { if (end.isAfter(start)) endEpoch -= 1 },
-        onNext = { if (end.isBefore(start.plusDays(ABSENCE_RANGE_MAX_DAYS))) endEpoch += 1 }
+        // Strelice idu po radnim danima (preskaču vikende i praznike), a ne dan po dan.
+        onPrevious = {
+            if (end.isAfter(start)) {
+                val previous = repo.nearestAbsenceWorkday(end, -1)?.takeIf { it.isAfter(start) } ?: start
+                endEpoch = previous.toEpochDay()
+            }
+        },
+        onNext = {
+            repo.nearestAbsenceWorkday(end, 1)
+                ?.takeIf { !it.isAfter(start.plusDays(ABSENCE_RANGE_MAX_DAYS)) }
+                ?.let { endEpoch = it.toEpochDay() }
+        }
     )
 }
 
@@ -122,7 +133,7 @@ internal fun rememberAbsenceRangeNetDifference(repo: ShiftRepository, range: Day
     return difference
 }
 
-/** Kraj bolovanja ili godišnjeg: strelice pomeraju dan po dan, i preko granice meseca. */
+/** Kraj bolovanja ili godišnjeg: strelice pomeraju po radnim danima, i preko granice meseca. */
 @Composable
 internal fun DayEditAbsenceUntilCard(range: DayEditAbsenceRange, shift: Shift) {
     val dateText = absenceUntilDateText(range.end, range.start)

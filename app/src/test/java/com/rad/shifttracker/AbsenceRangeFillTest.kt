@@ -8,6 +8,7 @@ import com.rad.shifttracker.repo.absenceRangeDates
 import com.rad.shifttracker.repo.absenceRangeNetDifference
 import com.rad.shifttracker.repo.applyAbsenceRange
 import com.rad.shifttracker.repo.exportJson
+import com.rad.shifttracker.repo.nearestAbsenceWorkday
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.absenceRangeCountText
@@ -29,6 +30,27 @@ class AbsenceRangeFillTest {
             assertEquals(0.65, repo.get(2026, month, day)!!.sickPayRate!!, 0.001)
         }
         assertEquals(null, repo.get(2026, 10, 31))
+    }
+
+    @Test
+    fun `bolovanje preko praznika ostavlja praznik`() {
+        val repo = testRepository()
+        // 10.11.2026 (uto) – 13.11.2026 (pet); 11.11. je praznik i ne postaje bolovanje.
+        val dates = scheduler.absenceRangeDates(repo, Shift.SICK, LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 13))
+
+        assertEquals(listOf(10, 12, 13), dates.map { it.dayOfMonth })
+        scheduler.applyAbsenceRange(repo, Shift.SICK, LocalDate.of(2026, 11, 10), LocalDate.of(2026, 11, 13), 0.65)
+        assertTrue(repo.get(2026, 11, 11)?.shift != Shift.SICK)
+    }
+
+    @Test
+    fun `strelice idu po radnim danima`() {
+        val repo = testRepository()
+        // Pet 06.11. -> pon 09.11.; uto 10.11. -> čet 12.11. (preko praznika 11.11.); nazad isto.
+        assertEquals(LocalDate.of(2026, 11, 9), repo.nearestAbsenceWorkday(LocalDate.of(2026, 11, 6), 1))
+        assertEquals(LocalDate.of(2026, 11, 12), repo.nearestAbsenceWorkday(LocalDate.of(2026, 11, 10), 1))
+        assertEquals(LocalDate.of(2026, 11, 10), repo.nearestAbsenceWorkday(LocalDate.of(2026, 11, 12), -1))
+        assertEquals(LocalDate.of(2026, 11, 6), repo.nearestAbsenceWorkday(LocalDate.of(2026, 11, 9), -1))
     }
 
     @Test

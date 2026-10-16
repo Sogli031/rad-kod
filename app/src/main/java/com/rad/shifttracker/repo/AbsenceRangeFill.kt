@@ -5,13 +5,14 @@ import java.time.LocalDate
 import java.time.YearMonth
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
+import com.rad.shifttracker.smene.isSerbianHoliday
 
 /** Najduži opseg „Do kog dana“ u prozoru dana. */
 internal const val ABSENCE_RANGE_MAX_DAYS = 365L
 
 /**
- * Radni dani bolovanja ili godišnjeg od [start] do [end], i preko granice meseca. Pravila su ista
- * kao u [applySickRange] (pon–pet) i [previewVacationRange] (bez vikenda, praznika i bolovanja).
+ * Radni dani bolovanja ili godišnjeg od [start] do [end], i preko granice meseca. Bolovanje: pon–pet
+ * bez praznika (praznik ostaje praznik); godišnji kao [previewVacationRange] (bez vikenda, praznika i bolovanja).
  */
 fun ShiftScheduler.absenceRangeDates(repo: ShiftRepository, shift: Shift, start: LocalDate, end: LocalDate): List<LocalDate> {
     if (end.isBefore(start)) return emptyList()
@@ -19,12 +20,26 @@ fun ShiftScheduler.absenceRangeDates(repo: ShiftRepository, shift: Shift, start:
         when (shift) {
             Shift.SICK -> (from..to)
                 .map { month.atDay(it) }
-                .filter { it.dayOfWeek.value <= DayOfWeek.FRIDAY.value }
+                .filter { repo.isAbsenceWorkday(it) }
             Shift.VACATION -> previewVacationRange(repo, month.year, month.monthValue, from, to).countedDates
             else -> emptyList()
         }
     }
 }
+
+/** Radni dan za opseg odsustva: pon–pet i nije praznik (ručno isključen praznik se računa kao radni). */
+internal fun ShiftRepository.isAbsenceWorkday(date: LocalDate): Boolean {
+    if (date.dayOfWeek.value > DayOfWeek.FRIDAY.value) return false
+    val holiday = get(date.year, date.monthValue, date.dayOfMonth)?.holidayOverride
+        ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)
+    return !holiday
+}
+
+/** Sledeći (step = 1) ili prethodni (step = -1) radni dan posle [from]; null posle [limit] dana traženja. */
+internal fun ShiftRepository.nearestAbsenceWorkday(from: LocalDate, step: Long, limit: Long = 31): LocalDate? =
+    generateSequence(from.plusDays(step)) { it.plusDays(step) }
+        .take(limit.toInt())
+        .firstOrNull { isAbsenceWorkday(it) }
 
 /**
  * Upisuje bolovanje ili godišnji od [start] do [end] (i preko granice meseca) i vraća broj
