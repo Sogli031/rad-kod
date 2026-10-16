@@ -12,8 +12,8 @@ Aplikacija „rad“ (Android, Kotlin/Compose), paket `com.rad.shifttracker`. Od
 ## Release
 - Release = push taga `vX.Y` (isti kao `versionName`), npr. `git tag vX.Y && git push origin vX.Y`.
   Posle svake nove verzije push-uj i njen tag.
-- `.github/workflows/release.yml` pušta testove, Roborazzi, detekt, lint, kover i `assembleRelease`,
-  proverava potpis (SHA-1 `1ba8c0aa…5b06b55`) i 16 KB poravnanje i objavljuje `rad.apk` na javnom
+- `.github/workflows/release.yml` pravi `assembleRelease` paralelno sa „Android build“-om (testovi, detekt,
+  lint, debug build) i objavljuje tek kad on prođe; Roborazzi i kover se u CI-ju ne puštaju. Proverava potpis (SHA-1 `1ba8c0aa…5b06b55`) i 16 KB poravnanje i objavljuje `rad.apk` na javnom
   `Sogli031/rad` sa beleškama iz CHANGELOG-a. Ključevi su u GitHub Secrets; nikad ih ne štampaj ni ne traži.
 - Aplikacija se ažurira tiho, pa se potpisni ključ ne menja i release ide samo sa ovog workflow-a
   (ili lokalno `release.ps1`).

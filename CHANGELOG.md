@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.7] - 2026-10-16
+- Nove verzije stižu brže: provere pred objavu su samo testovi, lint i build.
+
 ## [14.6] - 2026-10-16
 - Kad je Google preopterećen, popuna prema listi sačeka i ponovi AI izbor (do tri puta) umesto da odmah uzme lokalni predlog.
 - Ako AI ipak ne uspe, u pregledu piše zašto, npr. „AI nije dostupan: Google je trenutno preopterećen…“.

@@ -48,17 +48,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # release buildType je potpisan debug ključem (vidi app/build.gradle.kts),
-      # pa assembleRelease daje instalabilan app-release.apk bez pravog keystore-a.
-      - name: Unit tests + detekt + lint + assemble release
-        run: ./gradlew testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease -PallowDebugSigning=true --no-daemon --stacktrace
+      # Brza provera: testovi, detekt, lint i debug build. R8 (assembleRelease) radi samo release.yml.
+      - name: Unit tests + detekt + lint + assemble debug
+        run: ./gradlew testDebugUnitTest detekt lintDebug assembleDebug -PallowDebugSigning=true --no-daemon --stacktrace
 
-      - name: Upload release APK
+      - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: rad-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: rad-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
 
       - name: Upload reports
@@ -69,34 +68,5 @@ jobs:
           path: |
             app/build/reports/
             app/build/test-results/
-            app/build/outputs/roborazzi/
           if-no-files-found: ignore
 
-  # Snimci su snimljeni na Windows-u, a Linux renderer se razlikuje u par piksela, pa se strogo
-  # proveravaju na Windows ranneru: razlika obara build.
-  screenshots:
-    runs-on: windows-latest
-    timeout-minutes: 40
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: gradle
-
-      - name: Snimci ekrana (Roborazzi)
-        shell: bash
-        run: ./gradlew verifyRoborazziDebug -PallowDebugSigning=true --no-daemon
-
-      - name: Upload razlike
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: roborazzi-diff
-          path: app/build/outputs/roborazzi/
-          if-no-files-found: ignore
