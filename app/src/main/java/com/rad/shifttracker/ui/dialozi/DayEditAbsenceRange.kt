@@ -15,6 +15,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -22,6 +25,7 @@ import java.time.LocalDate
 import com.rad.shifttracker.repo.ABSENCE_RANGE_MAX_DAYS
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.absenceRangeDates
+import com.rad.shifttracker.repo.absenceRangeNetDifference
 import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.DataActions
@@ -60,7 +64,7 @@ internal class DayEditAbsenceRange(
     val end: LocalDate,
     val shift: Shift?,
     val dates: List<LocalDate>,
-    private val scheduler: ShiftScheduler,
+    val scheduler: ShiftScheduler,
     val onPrevious: () -> Unit,
     val onNext: () -> Unit
 ) {
@@ -100,6 +104,22 @@ internal fun rememberDayEditAbsenceRange(
         onPrevious = { if (end.isAfter(start)) endEpoch -= 1 },
         onNext = { if (end.isBefore(start.plusDays(ABSENCE_RANGE_MAX_DAYS))) endEpoch += 1 }
     )
+}
+
+/** Razlika za ostale dane opsega; računa se na kopiji, van glavne niti, posle svake promene kraja. */
+@Composable
+internal fun rememberAbsenceRangeNetDifference(repo: ShiftRepository, range: DayEditAbsenceRange, sickPayRate: Double): Double {
+    val difference by produceState(0.0, range.shift, range.end, sickPayRate) {
+        val shift = range.shift
+        value = if (shift == null) 0.0 else withContext(Dispatchers.Default) {
+            runCatching {
+                range.scheduler.absenceRangeNetDifference(
+                    repo, shift, range.start, range.end, if (shift == Shift.SICK) sickPayRate else null
+                )
+            }.getOrDefault(0.0)
+        }
+    }
+    return difference
 }
 
 /** Kraj bolovanja ili godišnjeg: strelice pomeraju dan po dan, i preko granice meseca. */

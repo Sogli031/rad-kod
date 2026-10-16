@@ -86,6 +86,7 @@ internal fun DayEditDialog(
     val savedNetDailyPay = remember(recordContentKey) { record?.let { repo.calculateEstimatedDailyWorkNetPay(it) } }
     val monthSummary = remember(year, month) { repo.getSummary(year, month) }
     val absenceRange = rememberDayEditAbsenceRange(repo, dayDate, form, record)
+    val rangeNetDifference = rememberAbsenceRangeNetDifference(repo, absenceRange, form.sickPayRate)
     val vacationValidation = remember(repo, absenceRange.dates, form.shift1, record) {
         if (form.shift1 == Shift.VACATION) {
             repo.validateVacationRequest(absenceRange.dates)
@@ -109,7 +110,11 @@ internal fun DayEditDialog(
             }
         }
     ) {
-        DayEditStatusHeader(estimatedNetDailyPay = estimatedNetDailyPay, savedNetDailyPay = savedNetDailyPay)
+        DayEditStatusHeader(
+            estimatedNetDailyPay = estimatedNetDailyPay,
+            savedNetDailyPay = savedNetDailyPay,
+            rangeNetDifference = rangeNetDifference
+        )
         holidayText?.let { text -> DayEditHolidayWarningStrip(text = text) }
         // Odmah ispod žute trake: praznik se isključuje za ovaj dan ako ga Valjaonica ne računa.
         // Ostaje vidljiv i kad je isključen (traka tada nestane), da se praznik može vratiti.

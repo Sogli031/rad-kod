@@ -57,19 +57,24 @@ import com.rad.shifttracker.ui.titleMediumEmphasized
 private const val DAY_EDIT_SHIFT_CHOICE_HEIGHT = 48
 private const val DISABLED_CHOICE_ALPHA = 0.45f
 
-/** Neto procena kao dva mirna reda (etiketa levo, iznos desno) — bez zelenog okvira. */
+/**
+ * Neto procena kao dva mirna reda (etiketa levo, iznos desno) — bez zelenog okvira.
+ * „Razlika“ uključuje i ostale dane opsega „Do kog dana“ ([rangeNetDifference]).
+ */
 @Composable
 internal fun DayEditStatusHeader(
     estimatedNetDailyPay: Double,
-    savedNetDailyPay: Double?
+    savedNetDailyPay: Double?,
+    rangeNetDifference: Double = 0.0
 ) {
+    val totalDifference = (savedNetDailyPay?.let { estimatedNetDailyPay - it } ?: 0.0) + rangeNetDifference
     val netDifferenceText = formatDayEditNetDifference(
-        savedNetPay = savedNetDailyPay,
-        currentNetPay = estimatedNetDailyPay,
+        savedNetPay = if (savedNetDailyPay != null || rangeNetDifference != 0.0) 0.0 else null,
+        currentNetPay = totalDifference,
         currency = CONFIG.pay.currency
     )
     val netDifferenceColor = when {
-        savedNetDailyPay != null && estimatedNetDailyPay - savedNetDailyPay < 0.0 -> MaterialTheme.colorScheme.error
+        totalDifference < 0.0 -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.extendedColors.success
     }
 

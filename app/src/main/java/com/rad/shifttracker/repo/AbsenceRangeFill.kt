@@ -67,3 +67,29 @@ private fun monthSegments(start: LocalDate, end: LocalDate): List<Triple<YearMon
     }
     return segments
 }
+
+/**
+ * Promena neto procene za dane posle [start] do [end] kad se upiše bolovanje ili godišnji, istom
+ * dnevnom procenom kao u prozoru dana. Računa se na kopiji podataka; [repo] se ne menja. Sam [start]
+ * nije uključen (njega prozor dana već računa iz unosa).
+ */
+fun ShiftScheduler.absenceRangeNetDifference(
+    repo: ShiftRepository,
+    shift: Shift,
+    start: LocalDate,
+    end: LocalDate,
+    sickPayRate: Double? = null
+): Double {
+    if (!end.isAfter(start)) return 0.0
+    val copy = ShiftRepository(repo.config, repo.clock)
+    if (!copy.importFromJson(repo.exportJson())) return 0.0
+    if (applyAbsenceRange(copy, shift, start, end, sickPayRate) == 0) return 0.0
+    return generateSequence(start.plusDays(1)) { it.plusDays(1) }
+        .takeWhile { !it.isAfter(end) }
+        .sumOf { date ->
+            val after = copy.get(date.year, date.monthValue, date.dayOfMonth)
+            val before = repo.get(date.year, date.monthValue, date.dayOfMonth)
+            (after?.let(copy::calculateEstimatedDailyWorkNetPay) ?: 0.0) -
+                (before?.let(repo::calculateEstimatedDailyWorkNetPay) ?: 0.0)
+        }
+}

@@ -2,9 +2,12 @@ package com.rad.shifttracker
 
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.rad.shifttracker.repo.absenceRangeDates
+import com.rad.shifttracker.repo.absenceRangeNetDifference
 import com.rad.shifttracker.repo.applyAbsenceRange
+import com.rad.shifttracker.repo.exportJson
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.absenceRangeCountText
@@ -26,6 +29,24 @@ class AbsenceRangeFillTest {
             assertEquals(0.65, repo.get(2026, month, day)!!.sickPayRate!!, 0.001)
         }
         assertEquals(null, repo.get(2026, 10, 31))
+    }
+
+    @Test
+    fun `razlika opsega raste sa danima i ne menja podatke`() {
+        val repo = testRepository()
+        // Rad pon 02.11. – pet 06.11.2026, pa bolovanje 65% od ponedeljka.
+        (2..6).forEach { repo.set(2026, 11, it, Shift.FIRST, 8) }
+        val start = LocalDate.of(2026, 11, 2)
+        val before = repo.exportJson()
+
+        val oneDay = scheduler.absenceRangeNetDifference(repo, Shift.SICK, start, start, 0.65)
+        val threeDays = scheduler.absenceRangeNetDifference(repo, Shift.SICK, start, start.plusDays(2), 0.65)
+        val fiveDays = scheduler.absenceRangeNetDifference(repo, Shift.SICK, start, start.plusDays(4), 0.65)
+
+        assertEquals(0.0, oneDay, 0.0)
+        assertTrue(threeDays < 0.0)
+        assertTrue(fiveDays < threeDays)
+        assertEquals(before, repo.exportJson())
     }
 
     @Test

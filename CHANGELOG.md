@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.0] - 2026-10-16
+- U prozoru dana „Razlika“ za bolovanje i godišnji obuhvata sve dane do izabranog „Do kog dana“ i menja se sa strelicama.
+
 ## [14.9] - 2026-10-16
 - AI dugme je privremeno sklonjeno iz donje trake.
 
