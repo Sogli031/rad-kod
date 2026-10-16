@@ -1,13 +1,9 @@
 package com.rad.shifttracker.ui.dialozi
 
 import com.rad.shifttracker.ui.DataActions
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,22 +16,24 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import com.rad.shifttracker.smene.MonthKey
 import com.rad.shifttracker.osnova.UI
 import com.rad.shifttracker.uvoz.FillAllResult
-import com.rad.shifttracker.uvoz.MonthFillResult
 import com.rad.shifttracker.listici.ParsedPayslip
 import com.rad.shifttracker.uvoz.fillableMonths
-import com.rad.shifttracker.uvoz.planMonthFromPayslip
+import com.rad.shifttracker.uvoz.planAiMonthFromPayslip
+import com.rad.shifttracker.uvoz.planAiFillBatch
+import com.rad.shifttracker.uvoz.PayslipFillProposal
+import com.rad.shifttracker.uvoz.PayslipFillBatch
+import com.rad.shifttracker.uvoz.applyReviewedFills
+import com.rad.shifttracker.uvoz.STALE_FILL_PROPOSAL_TEXT
 import com.rad.shifttracker.listici.runPayslipSafely
-import com.rad.shifttracker.uvoz.userEnteredDayCount
 import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.ui.FormErrorText
 import com.rad.shifttracker.ui.GlowButton
-import com.rad.shifttracker.ui.PopupCard
-import com.rad.shifttracker.ui.PopupDialog
 import com.rad.shifttracker.ui.RoundedButton
-import com.rad.shifttracker.ui.Spacing
 import com.rad.shifttracker.ui.extendedColors
 import com.rad.shifttracker.uvoz.PAYSLIP_UNEXPECTED_ERROR_TEXT
 import com.rad.shifttracker.smene.monthYearText
@@ -48,9 +46,8 @@ internal fun payslipMonthReplaceQuestionText(month: MonthKey, dayCount: Int): St
         "u ${monthYearText(month)} po listi?"
 
 /**
- * Dugme u „Listi“: raspored po sačuvanoj listi i šablonu smena upisuje se odmah, bez pregleda.
- * Kad mesec već ima tvojih upisa ([replace]), upisani dani se menjaju tek posle potvrde. Ako raspored
- * ne može da se nađe, mesec ostaje netaknut.
+ * Raspored se priprema na kopiji, pregleda i upisuje isključivo potvrdom „Upiši“.
+ * Ako raspored ne može da se nađe ili se podaci u međuvremenu promene, mesec ostaje netaknut.
  */
 @Composable
 internal fun PayslipMonthFillButton(
@@ -62,7 +59,7 @@ internal fun PayslipMonthFillButton(
 ) {
     val scope = rememberCoroutineScope()
     var isWorking by remember { mutableStateOf(false) }
-    var confirming by remember { mutableStateOf(false) }
+    var proposal by remember(payslip) { mutableStateOf<PayslipFillProposal?>(null) }
     var error by remember(payslip) { mutableStateOf<String?>(null) }
 
     fun start() {
@@ -70,18 +67,12 @@ internal fun PayslipMonthFillButton(
         error = null
         scope.launch {
             // Solver radi na kopiji podataka; greška ili nedostatak memorije daje poruku, mesec ostaje netaknut.
-            val outcome = withContext(Dispatchers.Default) {
-                runPayslipSafely { planMonthFromPayslip(repo, payslip) }
+            val outcome = withContext(Dispatchers.IO) {
+                runPayslipSafely { planAiMonthFromPayslip(repo, payslip) }
             }
             isWorking = false
-            when (outcome) {
-                is MonthFillResult.Success -> {
-                    actions.applyMonthFill(outcome)
-                    onFilled(outcome.month)
-                }
-                is MonthFillResult.Failure -> error = outcome.message
-                null -> error = PAYSLIP_UNEXPECTED_ERROR_TEXT
-            }
+            proposal = outcome?.first
+            error = outcome?.second ?: if (proposal == null) PAYSLIP_UNEXPECTED_ERROR_TEXT else null
         }
     }
 
@@ -93,26 +84,30 @@ internal fun PayslipMonthFillButton(
         },
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
+            .height(UI.buttonHeight.dp),
         textStyle = MaterialTheme.typography.labelLarge,
         onClick = {
             if (!isWorking) {
-                if (replace) confirming = true else start()
+                if (proposal == null) start()
             }
         }
     )
     error?.let { FormErrorText(message = it, style = MaterialTheme.typography.bodySmall, maxLines = 5) }
 
-    if (confirming) {
-        val dayCount = remember { userEnteredDayCount(repo, payslip.month) }
-        PayslipMonthReplaceDialog(
-            month = payslip.month,
-            dayCount = dayCount,
+    proposal?.let { ready ->
+        PayslipFillReviewDialog(
+            proposals = listOf(ready),
+            failures = emptyList(),
             onConfirm = {
-                confirming = false
-                start()
+                if (applyReviewedFills(repo, listOf(ready), actions::applyMonthFill)) {
+                    proposal = null
+                    onFilled(ready.result.month)
+                } else {
+                    proposal = null
+                    error = STALE_FILL_PROPOSAL_TEXT
+                }
             },
-            onDismiss = { confirming = false }
+            onDismiss = { proposal = null }
         )
     }
 }
@@ -126,8 +121,8 @@ internal fun fillAllStatusText(result: FillAllResult): String {
 }
 
 /**
- * Opcije: popunjava svaki mesec sa sačuvanom listom koji nema tvojih upisa, a časovi se ne slažu.
- * Mesec koji ne može da se složi ostaje netaknut i navodi se u statusu. Dugme se vidi samo dok ima šta da se popuni.
+ * Priprema sve mesece bez korisnikovih upisa. Zajednički pregled prethodi svakom upisu.
+ * Neuspeli meseci ostaju netaknuti i navode se u statusu.
  */
 @Composable
 internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
@@ -136,6 +131,8 @@ internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
     var months by remember { mutableStateOf<List<MonthKey>>(emptyList()) }
     var isWorking by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<FillAllResult?>(null) }
+    var batch by remember { mutableStateOf<PayslipFillBatch?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(refresh) {
         months = withContext(Dispatchers.Default) { runPayslipSafely { fillableMonths(repo) } }.orEmpty()
@@ -154,61 +151,37 @@ internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
                 if (!isWorking) {
                     isWorking = true
                     status = null
+                    error = null
                     val pending = months
                     scope.launch {
-                        val result = withContext(Dispatchers.Default) { runPayslipSafely { actions.fillAllMonths(pending) } }
+                        val result = withContext(Dispatchers.IO) {
+                            val context = currentCoroutineContext()
+                            runPayslipSafely { planAiFillBatch(repo, pending, checkCancelled = { context.ensureActive() }) }
+                        }
                         isWorking = false
-                        status = result ?: FillAllResult(emptyList(), pending.map { it to PAYSLIP_UNEXPECTED_ERROR_TEXT })
-                        refresh++
+                        if (result != null && result.proposals.isNotEmpty()) batch = result
+                        else status = FillAllResult(emptyList(), result?.failures ?: pending.map { it to PAYSLIP_UNEXPECTED_ERROR_TEXT })
                     }
                 }
             }
         )
     }
+    error?.let { FormErrorText(it) }
+    batch?.let { ready ->
+        PayslipFillReviewDialog(
+            proposals = ready.proposals,
+            failures = ready.failures,
+            onConfirm = {
+                if (applyReviewedFills(repo, ready.proposals, actions::applyMonthFill)) {
+                    status = FillAllResult(ready.proposals.map { it.result.month }, ready.failures)
+                    refresh++
+                } else error = STALE_FILL_PROPOSAL_TEXT
+                batch = null
+            },
+            onDismiss = { batch = null }
+        )
+    }
     status?.let { result ->
         ReaderText(fillAllStatusText(result), color = if (result.failed.isEmpty()) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.warning)
-    }
-}
-
-@Composable
-private fun PayslipMonthReplaceDialog(month: MonthKey, dayCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    PopupDialog(
-        title = "Zamena dana",
-        onDismiss = onDismiss
-    ) {
-        PopupCard {
-            Text(
-                text = payslipMonthReplaceQuestionText(month, dayCount),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
-        ) {
-            RoundedButton(
-                text = "Otkaži",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                bgColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                textColor = MaterialTheme.colorScheme.onSurface,
-                borderColor = MaterialTheme.colorScheme.outlineVariant,
-                textStyle = MaterialTheme.typography.labelLarge,
-                bold = true,
-                onClick = onDismiss
-            )
-            GlowButton(
-                text = "Zameni",
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                textStyle = MaterialTheme.typography.labelLarge,
-                onClick = onConfirm
-            )
-        }
     }
 }

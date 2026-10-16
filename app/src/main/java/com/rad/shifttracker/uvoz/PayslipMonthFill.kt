@@ -52,7 +52,11 @@ internal sealed interface MonthFillResult {
 }
 
 private const val DAY_HOURS = 8
-internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip): MonthFillResult {
+internal fun planMonthFromPayslip(
+    repo: ShiftRepository,
+    payslip: ParsedPayslip,
+    alternatives: MutableList<List<FillDay>>? = null
+): MonthFillResult {
     unknownHourItemsText(payslip)?.let { unknown ->
         return MonthFillResult.Failure("Lista ima stavke koje popunjavanje još ne ume da rasporedi: $unknown. Mesec nije menjan.")
     }
@@ -60,7 +64,7 @@ internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip)
         "Časovi na listi nisu u celim satima ili celim danima, pa ih ne mogu tačno rasporediti."
     )
     fundMismatchText(repo, payslip)?.let { return MonthFillResult.Failure(it) }
-    if (repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA) return planFourBrigadeMonth(repo, payslip, targets)
+    if (repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA) return planFourBrigadeMonth(repo, payslip, targets, alternatives)
     val calendar = buildFillCalendar(
         month = payslip.month,
         scheduledShift = { date -> repo.getScheduledShiftForDate(date) },
@@ -69,14 +73,12 @@ internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip)
         "Nije prepoznat tvoj raspored smena. Upiši bar dve nedelje smena (ili koristi „Popuni“), pa pokušaj ponovo."
     )
     val scratch = verificationCopy(repo)
-    var verified: PayslipReconciliation? = null
     var closest: List<PayslipCheckRow>? = null
     val diagnostics = FillDiagnostics()
-    val days = solveMonthFill(calendar, targets, fillHints(repo, payslip), diagnostics) { candidate ->
+    val days = solveMonthFill(calendar, targets, fillHints(repo, payslip), diagnostics, alternatives) { candidate ->
         val check = verifyMonthFill(scratch, payslip, targets, candidate)
         val mismatches = check.rows.filter { it.isHours && !it.matches }
         if (mismatches.isEmpty()) {
-            verified = check
             true
         } else {
             if (closest?.let { mismatches.size < it.size } != false) closest = mismatches
@@ -86,7 +88,7 @@ internal fun planMonthFromPayslip(repo: ShiftRepository, payslip: ParsedPayslip)
     return MonthFillResult.Success(
         month = payslip.month,
         days = days,
-        reconciliation = verified ?: verifyMonthFill(scratch, payslip, targets, days),
+        reconciliation = verifyMonthFill(scratch, payslip, targets, days),
         existingRecordCount = userEnteredDayCount(repo, payslip.month),
         absenceRoundingGross = targets.absenceRoundingGross
     )

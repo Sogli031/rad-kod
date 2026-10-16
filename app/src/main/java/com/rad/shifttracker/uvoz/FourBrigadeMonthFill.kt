@@ -44,8 +44,13 @@ internal const val FOUR_BRIGADE_NO_CYCLE_TEXT =
 private const val DAY_HOURS = 8
 private const val MINUTES_PER_HOUR = 60
 
-internal fun planFourBrigadeMonth(repo: ShiftRepository, payslip: ParsedPayslip, targets: FillTargets): MonthFillResult {
-    val days = bestFourBrigadeDays(repo, payslip, targets) ?: return MonthFillResult.Failure(
+internal fun planFourBrigadeMonth(
+    repo: ShiftRepository,
+    payslip: ParsedPayslip,
+    targets: FillTargets,
+    alternatives: MutableList<List<FillDay>>? = null
+): MonthFillResult {
+    val days = bestFourBrigadeDays(repo, payslip, targets, alternatives) ?: return MonthFillResult.Failure(
         fourBrigadeFailureText(repo, payslip.month)
     )
     val scratch = verificationCopy(repo)
@@ -66,10 +71,15 @@ private fun fourBrigadeFailureText(repo: ShiftRepository, month: MonthKey): Stri
     }
 
 /** Najverovatniji raspored meseca; null kad ciklus nije poznat ili blokovi odsustva ne staju u mesec. */
-internal fun bestFourBrigadeDays(repo: ShiftRepository, payslip: ParsedPayslip, targets: FillTargets): List<FillDay>? {
+internal fun bestFourBrigadeDays(
+    repo: ShiftRepository,
+    payslip: ParsedPayslip,
+    targets: FillTargets,
+    alternatives: MutableList<List<FillDay>>? = null
+): List<FillDay>? {
     val cycle = repo.fourBrigadeCycle() ?: return null
     val worked = payslip.items[DIFFICULT_WORK_CONDITIONS_CODE]?.hours?.toInt()
-    return FourBrigadeMonthSearch(payslip.month, cycle, targets, worked, fillHints(repo, payslip)).best()
+    return FourBrigadeMonthSearch(payslip.month, cycle, targets, worked, fillHints(repo, payslip)).best(alternatives)
 }
 
 /**
@@ -178,7 +188,7 @@ private class FourBrigadeMonthSearch(
     private fun coveredDays(run: List<LocalDate>): List<LocalDate> =
         dates.filter { it > run.first() && it < run.last() && !isWeekday(it) }
 
-    fun best(): List<FillDay>? {
+    fun best(alternatives: MutableList<List<FillDay>>? = null): List<FillDay>? {
         val runsPerBlock = targets.blocks.map { block ->
             dates.mapNotNull { weekdayRun(it, block.days) }.distinct().also { if (it.isEmpty()) return null }
         }
@@ -187,6 +197,7 @@ private class FourBrigadeMonthSearch(
         }
         val baseTotal = base.values.fold(Hours()) { sum, h -> sum + h }
         var best: Candidate? = null
+        val finalists = mutableListOf<Candidate>()
         fun consider(leave: Map<LocalDate, Int>) {
             val covered = targets.blocks.indices.flatMap { index ->
                 leave.filterValues { it == index }.keys.sorted().takeIf { it.isNotEmpty() }?.let(::coveredDays).orEmpty()
@@ -197,9 +208,8 @@ private class FourBrigadeMonthSearch(
                 for (date in leave.keys + covered) total = total - base.getValue(date)
                 val candidate = Candidate(leave, covered, alts, score(total), penalty(leave, alts))
                 val current = best
-                if (current == null || candidate.score < current.score ||
-                    (candidate.score == current.score && candidate.penalty < current.penalty)
-                ) {
+                if (alternatives != null) offerFinalist(finalists, candidate, current)
+                if (isBetter(candidate, current)) {
                     best = candidate
                 }
             }
@@ -216,7 +226,20 @@ private class FourBrigadeMonthSearch(
         }
         place(0, emptyMap())
         val chosen = best ?: return null
+        alternatives?.addAll(finalists.map { candidate -> dates.map { date -> fillDay(date, candidate) } }.distinct())
         return dates.map { date -> fillDay(date, chosen) }
+    }
+
+    private fun isBetter(candidate: Candidate, current: Candidate?): Boolean =
+        current == null || candidate.score < current.score ||
+            (candidate.score == current.score && candidate.penalty < current.penalty)
+
+    private fun offerFinalist(finalists: MutableList<Candidate>, candidate: Candidate, current: Candidate?) {
+        if (current != null && candidate.score > current.score) return
+        if (current == null || candidate.score < current.score) finalists.clear()
+        finalists.add(candidate)
+        finalists.sortBy { it.penalty }
+        if (finalists.size > 12) finalists.removeAt(finalists.lastIndex)
     }
 
     /** Prednost: odsustvo koje se nastavlja iz susednog meseca i što manje odstupanja od pravila za praznike. */

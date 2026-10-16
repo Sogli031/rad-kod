@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.3] - 2026-10-16
+- Popuna prema listi sada nudi pregled procenjenih datuma i upis tek posle potvrde „Upiši“, za jedan ili više meseci.
+- Gemini bira realističniji raspored među lokalno proverenim predlozima uz jače razmišljanje i kontekst susednih meseci; bez AI-ja ostaje lokalni predlog.
+- Sati se proveravaju obračunom aplikacije, odstupanja ostaju vidljiva, a promenjeni podaci poništavaju stari predlog.
+
 ## [14.2] - 2026-10-15
 - U isplati piše i mesec akontacije, npr. za oktobar „Akontacija u Novembru“ (isto kao „Ukupno za isplatu u Novembru“).
 

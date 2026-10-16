@@ -727,6 +727,7 @@ internal fun solveMonthFill(
     targets: FillTargets,
     hints: FillHints = FillHints(),
     diagnostics: FillDiagnostics? = null,
+    alternatives: MutableList<List<FillDay>>? = null,
     accept: (List<FillDay>) -> Boolean
 ): List<FillDay>? {
     val group = calendar.slots.filter { it.isGroupDay() }
@@ -750,9 +751,11 @@ internal fun solveMonthFill(
             anyCandidates = true
             val days = materialize(calendar, group, candidate, targets.blocks)
             if (tried.add(days) && accept(days)) {
-                best = days
-                bestCost = candidate.cost
-                break
+                if (best == null || candidate.cost < bestCost) {
+                    best = days
+                    bestCost = candidate.cost
+                }
+                if (!collectVerifiedAlternative(alternatives, days)) break
             }
         }
     }
@@ -763,6 +766,12 @@ internal fun solveMonthFill(
         }
     }
     return best
+}
+
+private fun collectVerifiedAlternative(alternatives: MutableList<List<FillDay>>?, days: List<FillDay>): Boolean {
+    if (alternatives == null) return false
+    if (days !in alternatives && alternatives.size < 12) alternatives.add(days)
+    return alternatives.size < 12
 }
 
 /** Zašto popuna nije uspela (za poruku korisniku); popunjava ga [solveMonthFill]. */
