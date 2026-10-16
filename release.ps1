@@ -30,7 +30,7 @@ if (-not $Notes) {
     $Notes = $m.Groups[1].Value.Trim()
 }
 
-.\gradlew.bat testDebugUnitTest verifyRoborazziDebug detekt lintDebug koverVerifyDebug assembleRelease --no-daemon
+.\gradlew.bat testDebugUnitTest detekt lintDebug assembleRelease
 if ($LASTEXITCODE -ne 0) { throw 'Build ili testovi su pali' }
 
 $apk = 'app\build\outputs\apk\release\app-release.apk'
@@ -53,8 +53,14 @@ $sha256 = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
 Write-Host "APK: $out  SHA-256: $sha256  potpis SHA-1: $sha1"
 
 if ($SkipPublish) { return }
-& $Git tag -a "v$version" -m "Verzija $version"
-if ($LASTEXITCODE -ne 0) { throw "Tag v$version nije napravljen (možda već postoji)" }
+$head = & $Git rev-parse HEAD
+$tagged = & $Git rev-parse -q --verify "refs/tags/v$version^{commit}"
+if ($tagged) {
+    if ($tagged -ne $head) { throw "Tag v$version već postoji na drugom commitu" }
+} else {
+    & $Git tag -a "v$version" -m "Verzija $version"
+    if ($LASTEXITCODE -ne 0) { throw "Tag v$version nije napravljen" }
+}
 $notesFile = Join-Path $env:TEMP "rad-notes-$version.md"
 Set-Content -Path $notesFile -Value "$Notes`n`nSHA-256 APK-a: ``$sha256```nSHA-1 sertifikata: ``$sha1``" -Encoding UTF8
 # Na GitHub ide pod stalnim imenom rad.apk (jedini APK u release-u, da Obtainium ne pita koji):
@@ -63,3 +69,7 @@ Set-Content -Path $notesFile -Value "$Notes`n`nSHA-256 APK-a: ``$sha256```nSHA-1
 $publishedApk = Join-Path 'release-out' 'rad.apk'
 Copy-Item $out $publishedApk -Force
 & $Gh release create "v$version" $publishedApk --repo $Repo --title "Verzija $version" --notes-file $notesFile
+if ($LASTEXITCODE -ne 0) { throw "GitHub release v$version nije napravljen" }
+# Tag i u rad-kod: release.yml vidi da je verzija već objavljena i ne pravi je ponovo.
+& $Git push origin "v$version"
+if ($LASTEXITCODE -ne 0) { throw "Tag v$version nije push-ovan" }

@@ -36,9 +36,24 @@ jobs:
     timeout-minutes: 5
     outputs:
       covered: ${{ steps.find.outputs.covered }}
+      published: ${{ steps.published.outputs.published }}
     steps:
+      # Na računaru se objavljuje lokalno (release.ps1), pa se tag push-uje posle; tada ovde nema šta da se radi.
+      - name: Već objavljeno lokalno?
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          published=false
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && gh release view "$GITHUB_REF_NAME" --repo "$PUBLIC_REPO" > /dev/null 2>&1; then
+            published=true
+            echo "$GITHUB_REF_NAME je već na $PUBLIC_REPO, release se preskače."
+          fi
+          echo "published=$published" >> "$GITHUB_OUTPUT"
+
       - name: Android build za ovaj commit
         id: find
+        if: steps.published.outputs.published != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -54,6 +69,7 @@ jobs:
 
   release:
     needs: ci
+    if: needs.ci.outputs.published != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 

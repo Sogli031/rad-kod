@@ -10,13 +10,15 @@ Aplikacija „rad“ (Android, Kotlin/Compose), paket `com.rad.shifttracker`. Od
   podataka (imena, JMBG, brojevi računa, mejlovi).
 
 ## Release
-- Release = push taga `vX.Y` (isti kao `versionName`), npr. `git tag vX.Y && git push origin vX.Y`.
-  Posle svake nove verzije push-uj i njen tag.
-- `.github/workflows/release.yml` pravi `assembleRelease` paralelno sa „Android build“-om (testovi, detekt,
-  lint, debug build) i objavljuje tek kad on prođe; Roborazzi i kover se u CI-ju ne puštaju. Proverava potpis (SHA-1 `1ba8c0aa…5b06b55`) i 16 KB poravnanje i objavljuje `rad.apk` na javnom
-  `Sogli031/rad` sa beleškama iz CHANGELOG-a. Ključevi su u GitHub Secrets; nikad ih ne štampaj ni ne traži.
-- Aplikacija se ažurira tiho, pa se potpisni ključ ne menja i release ide samo sa ovog workflow-a
-  (ili lokalno `release.ps1`).
+- Release se pravi **lokalno**: podigni verziju, commit + push na `main`, pa `.\release.ps1`.
+  Skripta pušta testove, detekt, lint i `assembleRelease`, proverava potpis (SHA-1 `1ba8c0aa…5b06b55`)
+  i 16 KB poravnanje, objavljuje `rad.apk` na javnom `Sogli031/rad` sa beleškama iz CHANGELOG-a i
+  na kraju push-uje tag `vX.Y` (isti kao `versionName`).
+- `.github/workflows/release.yml` je rezerva za cloud sesije bez ključa (samo push taga `vX.Y`): kad je
+  verzija već objavljena lokalno, preskače se (koristio se dok se radilo iz clouda).
+  Ključevi su u GitHub Secrets i `..\keystore`; nikad ih ne štampaj ni ne traži.
+- Aplikacija se ažurira tiho, pa se potpisni ključ ne menja i release ide samo preko `release.ps1`
+  (ili workflow-a).
 
 ## UI
 - Bez objašnjavajućih tekstova (hintova, opisa ispod naslova i dugmadi): samo naslovi, vrednosti,
