@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.9] - 2026-10-16
+- AI dugme je privremeno sklonjeno iz donje trake.
+
 ## [14.8] - 2026-10-16
 - Nove verzije se ponovo objavljuju direktno sa računara, pa stižu za par minuta.
 

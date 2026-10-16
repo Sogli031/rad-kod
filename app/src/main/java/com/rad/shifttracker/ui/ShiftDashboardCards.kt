@@ -152,12 +152,12 @@ internal fun BottomBar(
     val specs = bottomBarButtonSpecs()
     val buttons = listOf(
         BottomBarItem(specs.autoFill.icon, specs.autoFill.label, scheme.primary, scheme.primaryContainer, onAutoFill),
-        BottomBarItem(specs.ai.icon, specs.ai.label, scheme.onSurfaceVariant, null, onAi),
+        BottomBarItem(specs.ai.icon, specs.ai.label, scheme.onSurfaceVariant, null, onAi).takeIf { AI_BUTTON_VISIBLE },
         BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
         BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
         BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
         BottomBarItem(specs.deleteMonth.icon, specs.deleteMonth.label, scheme.error, null, onDeleteMonth)
-    )
+    ).filterNotNull()
 
     val perRow = if (LocalDensity.current.fontScale > WIDE_LAYOUT_FONT_SCALE) 3 else buttons.size
     Column(
@@ -249,6 +249,9 @@ internal data class BottomBarButtonLabels(
     val options: String,
     val deleteMonth: String
 )
+
+/** Privremeno sakriveno AI dugme u donjoj traci (kod i dijalog ostaju); true ga vraća. */
+internal const val AI_BUTTON_VISIBLE = false
 
 internal data class BottomBarButtonSpec(
     val icon: ImageVector,
