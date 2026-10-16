@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.5] - 2026-10-16
+- Nova verzija stiže brže: APK se pravi paralelno sa proverama, a objavljuje se tek kad sve provere prođu.
+
 ## [14.4] - 2026-10-16
 - „Popuni sve po listama“ može da se prekine dugmetom „Prekini popunu“.
 - AI bolje razlikuje izostanak od slobodnog dana i praznika u susednim mesecima.

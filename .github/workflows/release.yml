@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: release
@@ -27,9 +28,35 @@ env:
   BUILD_TOOLS: '36.0.0'
 
 jobs:
+  # Isti commit uz push na main proverava "Android build" (testovi, detekt, lint, kover, snimci).
+  # Kad taj build postoji, release ne ponavlja provere: pravi APK paralelno i pre objave čeka da
+  # Android build prođe. Bez njega (npr. tag na commitu koji nije na main) sve se proverava ovde.
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      covered: ${{ steps.find.outputs.covered }}
+    steps:
+      - name: Android build za ovaj commit
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          covered=false
+          # Push main-a i taga stižu skoro zajedno; run se ponekad pojavi tek posle par sekundi.
+          for i in $(seq 1 12); do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/android-build.yml/runs?head_sha=$GITHUB_SHA&event=push" --jq '.total_count')
+            if [ "${count:-0}" -gt 0 ]; then covered=true; break; fi
+            sleep 10
+          done
+          echo "Android build pokriva $GITHUB_SHA: $covered"
+          echo "covered=$covered" >> "$GITHUB_OUTPUT"
+
   # Snimci su snimljeni na Windows-u (Linux renderer se razlikuje u par piksela), pa se
   # verifyRoborazziDebug pušta tamo, kao u android-build.yml. Ključevi ovde nisu potrebni.
   screenshots:
+    needs: ci
+    if: needs.ci.outputs.covered != 'true'
     runs-on: windows-latest
     timeout-minutes: 40
 
@@ -57,7 +84,9 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    needs: screenshots
+    needs: [ci, screenshots]
+    # Snimci su preskočeni kad ih Android build već proverava.
+    if: always() && needs.ci.result == 'success' && (needs.screenshots.result == 'success' || needs.screenshots.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -92,7 +121,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+
+      - name: Set up Gradle (keš)
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -162,7 +193,12 @@ jobs:
 
       # Bez -PallowDebugSigning: ako ključa nema, build pada umesto da potpiše debug ključem.
       - name: Testovi, detekt, lint, pokrivenost, assembleRelease
+        if: needs.ci.outputs.covered != 'true'
         run: ./gradlew testDebugUnitTest detekt lintDebug koverVerifyDebug assembleRelease --no-daemon --stacktrace
+
+      - name: assembleRelease (provere radi Android build)
+        if: needs.ci.outputs.covered == 'true'
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Provera potpisa i 16 KB poravnanja
         id: verify
@@ -189,6 +225,23 @@ jobs:
           name: rad-v${{ steps.version.outputs.version }}
           path: release-out/
           retention-days: 90
+
+      # Objava samo ako je Android build za isti commit prošao (testovi, detekt, lint, kover, snimci).
+      - name: Čekaj Android build
+        if: needs.ci.outputs.covered == 'true'
+        timeout-minutes: 45
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while true; do
+            run=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/android-build.yml/runs?head_sha=$GITHUB_SHA&event=push"               --jq '.workflow_runs | sort_by(.created_at) | last | "\(.status) \(.conclusion) \(.html_url)"')
+            set -- $run
+            if [ "$1" = "completed" ]; then
+              if [ "$2" = "success" ]; then echo "Android build prošao: $3"; break; fi
+              echo "::error::Android build za ovaj commit nije prošao ($2): $3"; exit 1
+            fi
+            sleep 30
+          done
 
       - name: Release na Sogli031/rad
         if: github.event_name == 'push' || inputs.publish
