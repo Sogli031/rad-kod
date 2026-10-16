@@ -3,6 +3,11 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.4] - 2026-10-16
+- „Popuni sve po listama“ može da se prekine dugmetom „Prekini popunu“.
+- AI bolje razlikuje izostanak od slobodnog dana i praznika u susednim mesecima.
+- Gemini za popunu ima više vremena za odgovor; tačnost ima prednost nad brzinom.
+
 ## [14.3] - 2026-10-16
 - Popuna prema listi sada nudi pregled procenjenih datuma i upis tek posle potvrde „Upiši“, za jedan ili više meseci.
 - Gemini bira realističniji raspored među lokalno proverenim predlozima uz jače razmišljanje i kontekst susednih meseci; bez AI-ja ostaje lokalni predlog.

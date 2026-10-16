@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
@@ -40,10 +41,6 @@ import com.rad.shifttracker.smene.monthYearText
 
 internal const val PAYSLIP_MONTH_FILL_ACTION_LABEL = "Popuni iz liste"
 internal const val PAYSLIP_MONTH_REPLACE_ACTION_LABEL = "Zameni dane po listi"
-
-internal fun payslipMonthReplaceQuestionText(month: MonthKey, dayCount: Int): String =
-    "Zameniti $dayCount ${if (dayCount % 10 == 1 && dayCount % 100 != 11) "upisan dan" else "upisanih dana"} " +
-        "u ${monthYearText(month)} po listi?"
 
 /**
  * Raspored se priprema na kopiji, pregleda i upisuje isključivo potvrdom „Upiši“.
@@ -113,6 +110,7 @@ internal fun PayslipMonthFillButton(
 }
 
 internal const val PAYSLIP_FILL_ALL_LABEL = "Popuni sve po listama"
+internal const val PAYSLIP_FILL_CANCEL_LABEL = "Prekini popunu"
 
 internal fun fillAllStatusText(result: FillAllResult): String {
     val filled = "Popunjeno: ${result.filled.size}"
@@ -130,6 +128,7 @@ internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
     var refresh by remember { mutableStateOf(0) }
     var months by remember { mutableStateOf<List<MonthKey>>(emptyList()) }
     var isWorking by remember { mutableStateOf(false) }
+    var job by remember { mutableStateOf<Job?>(null) }
     var status by remember { mutableStateOf<FillAllResult?>(null) }
     var batch by remember { mutableStateOf<PayslipFillBatch?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -139,7 +138,7 @@ internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
     }
     if (months.isNotEmpty()) {
         RoundedButton(
-            text = if (isWorking) "Popunjavam..." else "$PAYSLIP_FILL_ALL_LABEL (${months.size})",
+            text = if (isWorking) PAYSLIP_FILL_CANCEL_LABEL else "$PAYSLIP_FILL_ALL_LABEL (${months.size})",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(UI.buttonHeight.dp),
@@ -148,17 +147,23 @@ internal fun PayslipFillAllButton(repo: ShiftRepository, actions: DataActions) {
             borderColor = MaterialTheme.colorScheme.outlineVariant,
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = {
-                if (!isWorking) {
+                if (isWorking) {
+                    // Prekid važi između meseci; ništa nije upisano, pa nema šta da se vraća.
+                    job?.cancel()
+                    job = null
+                    isWorking = false
+                } else {
                     isWorking = true
                     status = null
                     error = null
                     val pending = months
-                    scope.launch {
+                    job = scope.launch {
                         val result = withContext(Dispatchers.IO) {
                             val context = currentCoroutineContext()
                             runPayslipSafely { planAiFillBatch(repo, pending, checkCancelled = { context.ensureActive() }) }
                         }
                         isWorking = false
+                        job = null
                         if (result != null && result.proposals.isNotEmpty()) batch = result
                         else status = FillAllResult(emptyList(), result?.failures ?: pending.map { it to PAYSLIP_UNEXPECTED_ERROR_TEXT })
                     }

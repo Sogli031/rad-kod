@@ -23,6 +23,8 @@ import com.rad.shifttracker.uvoz.FillSelection
 import com.rad.shifttracker.uvoz.applyMonthFill
 import com.rad.shifttracker.uvoz.applyReviewedFills
 import com.rad.shifttracker.uvoz.fillRankingPayload
+import com.rad.shifttracker.uvoz.fillKindName
+import com.rad.shifttracker.repo.getScheduledShiftForDate
 import com.rad.shifttracker.uvoz.fillSourceState
 import com.rad.shifttracker.uvoz.planAiMonthFromPayslip
 import com.rad.shifttracker.uvoz.planAiFillBatch
@@ -101,12 +103,28 @@ class AiPayslipMonthFillTest {
                 is JSONObject -> value.keys().forEach { check(value.get(it)) }
                 is JSONArray -> (0 until value.length()).forEach { check(value.get(it)) }
                 is Number -> Unit
-                is String -> assertTrue(value, value.matches(Regex("\\d{4}-\\d{2}(-\\d{2})?")))
+                is String -> assertTrue(value, value.matches(Regex("\\d{4}-\\d{2}(-\\d{2})?")) ||
+                    value in FillDayKind.entries.map(::fillKindName))
                 else -> fail("Unexpected payload type: ${value.javaClass}")
             }
         }
         check(payload)
         assertEquals(setOf("month", "candidates", "knownDays", "donationDates", "adjacentLeaveKinds"), payload.keys().asSequence().toSet())
+    }
+
+    @Test
+    fun kindNamesAreUniqueAndOffDependsOnSchedule() {
+        assertEquals(FillDayKind.entries.size, FillDayKind.entries.map(::fillKindName).toSet().size)
+        val repo = repo()
+        val july = (1..31).map { java.time.LocalDate.of(2026, 7, it) }
+        val workDay = july.first { it.dayOfWeek.value <= 5 && repo.getScheduledShiftForDate(it) in Shift.workShifts() }
+        val freeDay = july.first { it.dayOfWeek.value >= 6 }
+        repo.set(2026, 7, workDay.dayOfMonth, Shift.OFF, 0)
+        repo.set(2026, 7, freeDay.dayOfMonth, Shift.OFF, 0)
+        val known = fillRankingPayload(repo, sample(), listOf(emptyList())).getJSONArray("knownDays")
+        val kinds = (0 until known.length()).associate { known.getJSONArray(it).getString(0) to known.getJSONArray(it).getString(1) }
+        assertEquals("absent", kinds[workDay.toString()])
+        assertNotEquals("absent", kinds[freeDay.toString()])
     }
 
     private fun payload() = JSONObject().put("candidates", JSONArray().put(JSONObject()).put(JSONObject()))

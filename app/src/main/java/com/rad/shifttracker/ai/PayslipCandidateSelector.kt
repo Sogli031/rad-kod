@@ -53,15 +53,15 @@ private val RANKING_PROMPT = """
     Return only {"candidateId": integer}. Never calculate hours, money or create or modify a schedule.
     Monthly payroll totals do not establish actual dates. Do not infer certainty or invent personal facts.
     Each candidate has id and days: [ISO date, kind, shift, hours, templateShift].
-    Kind codes: 0 work, 1 vacation, 2 paid leave, 3 sick leave, 4 absent, 5 paid holiday off,
-    6 holiday work, 7 weekend work, 8 cycle off. Shift 0 means no shift; 1/2/3 are work shifts.
+    kind is a self-describing name (work, vacation, paid_leave, sick, absent, holiday_off,
+    holiday_work, weekend_work, cycle_off). Shift 0 means no shift; 1/2/3 are work shifts.
     knownDays contains existing entries in the target month and its two adjacent months:
     [ISO date, kind, shift, hours, templateShift]. They can include previous inferred fills;
     use them as contextual hints, never as proof of actual dates.
     Prefer agreement with confirmed dates, continuation of actual leave at month boundaries,
     contiguous leave blocks, fewer isolated shift changes, and coherent overtime runs.
     donationDates are actual blood donation dates; paid leave near them is preferable when applicable.
-    adjacentLeaveKinds is [previous month kinds, next month kinds] from payroll totals, a weak hint only.
+    adjacentLeaveKinds is [previous month kind names, next month kind names] from payroll totals, a weak hint only.
     Do not prefer evenly scattered unusual days solely for visual symmetry. Do not invent a seasonal
     vacation preference or new work rules. When evidence is tied choose the smallest candidate id.
 """.trimIndent()

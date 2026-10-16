@@ -34,7 +34,8 @@ internal fun interface GeminiTransport {
 internal class HttpGeminiTransport(
     private val apiKey: String,
     private val packageName: String,
-    private val certSha1: String = SIGNING_CERT_SHA1
+    private val certSha1: String = SIGNING_CERT_SHA1,
+    private val readTimeoutMs: Int = READ_TIMEOUT_MS
 ) : GeminiTransport {
 
     override fun post(model: String, body: JSONObject): JSONObject {
@@ -43,7 +44,7 @@ internal class HttpGeminiTransport(
             (URL("$GEMINI_BASE_URL/$model:generateContent").openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = CONNECT_TIMEOUT_MS
-                readTimeout = READ_TIMEOUT_MS
+                readTimeout = readTimeoutMs
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 setRequestProperty("x-goog-api-key", apiKey)
@@ -51,7 +52,7 @@ internal class HttpGeminiTransport(
                 setRequestProperty("X-Android-Cert", certSha1)
             }
         } catch (e: IOException) {
-            throw networkError(e)
+            throw networkError(e, readTimeoutMs)
         }
         try {
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
@@ -67,7 +68,7 @@ internal class HttpGeminiTransport(
         } catch (e: AiException) {
             throw e
         } catch (e: IOException) {
-            throw networkError(e)
+            throw networkError(e, readTimeoutMs)
         } finally {
             connection.disconnect()
         }
@@ -75,10 +76,10 @@ internal class HttpGeminiTransport(
 }
 
 /** Greška mreže, pre nego što je Google uopšte odgovorio. */
-internal fun networkError(e: IOException): AiException = when (e) {
+internal fun networkError(e: IOException, readTimeoutMs: Int = READ_TIMEOUT_MS): AiException = when (e) {
     is UnknownHostException -> AiException("Nema interneta", "Google server nije pronađen (${e.message ?: "DNS"})", e)
     is ConnectException -> AiException("Nema veze sa Google serverom", e.message, e)
-    is SocketTimeoutException -> AiException("Google nije odgovorio na vreme", "Prekid posle ${READ_TIMEOUT_MS / MS_PER_SECOND} s", e)
+    is SocketTimeoutException -> AiException("Google nije odgovorio na vreme", "Prekid posle ${readTimeoutMs / MS_PER_SECOND} s", e)
     is SSLException -> AiException("Bezbedna veza nije uspela", e.message, e)
     else -> AiException("Greška mreže", "${e.javaClass.simpleName}: ${e.message}", e)
 }

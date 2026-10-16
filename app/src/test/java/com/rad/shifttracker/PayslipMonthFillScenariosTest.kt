@@ -31,7 +31,6 @@ import com.rad.shifttracker.uvoz.bloodDonationLeaveStarts
 import com.rad.shifttracker.uvoz.fillFailureText
 import com.rad.shifttracker.repo.recordBloodDonation
 import com.rad.shifttracker.smene.DayRecordSource
-import com.rad.shifttracker.ui.dialozi.payslipMonthReplaceQuestionText
 
 class PayslipMonthFillScenariosTest {
 
@@ -275,13 +274,5 @@ class PayslipMonthFillScenariosTest {
         val holidays = fillFailureText(month, FillDiagnostics().apply { noSpecialCombination = true }, null)
         assertTrue(holidays, holidays.contains("praznik"))
         assertTrue(fillFailureText(month, FillDiagnostics(), null).endsWith("Mesec nije menjan."))
-    }
-
-    @Test
-    fun replaceQuestionUsesTheRightWordForm() {
-        assertTrue(payslipMonthReplaceQuestionText(MonthKey(2026, 8), 1).contains("1 upisan dan"))
-        assertTrue(payslipMonthReplaceQuestionText(MonthKey(2026, 8), 21).contains("21 upisan dan"))
-        assertTrue(payslipMonthReplaceQuestionText(MonthKey(2026, 8), 11).contains("11 upisanih dana"))
-        assertTrue(payslipMonthReplaceQuestionText(MonthKey(2026, 8), 5).contains("5 upisanih dana"))
     }
 }

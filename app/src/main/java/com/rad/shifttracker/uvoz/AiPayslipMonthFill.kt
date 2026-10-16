@@ -1,5 +1,6 @@
 package com.rad.shifttracker.uvoz
 
+import java.time.DayOfWeek
 import java.time.YearMonth
 import java.security.MessageDigest
 import java.util.concurrent.CancellationException
@@ -17,8 +18,13 @@ import com.rad.shifttracker.repo.ShiftRepository
 import com.rad.shifttracker.repo.bloodDonationHistory
 import com.rad.shifttracker.repo.exportCloudBackupJson
 import com.rad.shifttracker.repo.getSavedPayslip
+import com.rad.shifttracker.repo.brigadeTypeValue
+import com.rad.shifttracker.repo.getScheduledShiftForDate
 import com.rad.shifttracker.smene.MonthKey
+import com.rad.shifttracker.smene.BrigadeType
+import com.rad.shifttracker.smene.DayRecord
 import com.rad.shifttracker.smene.Shift
+import com.rad.shifttracker.smene.isSerbianHoliday
 
 internal enum class FillSelection { LOCAL, AI, FALLBACK }
 
@@ -35,6 +41,11 @@ internal data class PayslipFillBatch(
     val failures: List<Pair<MonthKey, String>>
 )
 
+/** Tačnost ispred brzine: rok samo štiti od prekinute veze, a ne skraćuje razmišljanje modela. */
+private fun defaultPayslipSelector(): PayslipCandidateSelector = GeminiPayslipCandidateSelector(
+    HttpGeminiTransport(BuildConfig.GEMINI_API_KEY, BuildConfig.APPLICATION_ID, readTimeoutMs = AI_FILL_TIMEOUT_MS)
+)
+
 internal fun fillSourceState(repo: ShiftRepository): String = MessageDigest.getInstance("SHA-256")
     .digest(repo.exportCloudBackupJson(null).toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
@@ -42,9 +53,7 @@ internal fun fillSourceState(repo: ShiftRepository): String = MessageDigest.getI
 internal fun planAiMonthFromPayslip(
     repo: ShiftRepository,
     payslip: ParsedPayslip,
-    selector: PayslipCandidateSelector = GeminiPayslipCandidateSelector(
-        HttpGeminiTransport(BuildConfig.GEMINI_API_KEY, BuildConfig.APPLICATION_ID)
-    )
+    selector: PayslipCandidateSelector = defaultPayslipSelector()
 ): Pair<PayslipFillProposal?, String?> {
     val sourceState = fillSourceState(repo)
     val snapshot = verificationCopy(repo)
@@ -96,9 +105,7 @@ private fun preservesHourChecks(baseline: PayslipReconciliation, candidate: Pays
 internal fun planAiFillBatch(
     repo: ShiftRepository,
     months: List<MonthKey>,
-    selector: PayslipCandidateSelector = GeminiPayslipCandidateSelector(
-        HttpGeminiTransport(BuildConfig.GEMINI_API_KEY, BuildConfig.APPLICATION_ID)
-    ),
+    selector: PayslipCandidateSelector = defaultPayslipSelector(),
     checkCancelled: () -> Unit = {}
 ): PayslipFillBatch {
     val proposals = mutableListOf<PayslipFillProposal>()
@@ -152,7 +159,7 @@ internal fun fillRankingPayload(repo: ShiftRepository, payslip: ParsedPayslip, c
                 record.shift == Shift.VACATION -> FillDayKind.VACATION
                 record.isPaidLeave -> FillDayKind.PAID_LEAVE
                 record.shift == Shift.SICK -> FillDayKind.SICK
-                record.shift == Shift.OFF -> FillDayKind.ABSENT
+                record.shift == Shift.OFF -> offDayKind(repo, record)
                 else -> FillDayKind.WORK
             }
             known.put(dayNumbers(FillDay(record.date, kind, record.shift, record.workHours)))
@@ -168,11 +175,35 @@ internal fun fillRankingPayload(repo: ShiftRepository, payslip: ParsedPayslip, c
         .put("donationDates", JSONArray(repo.bloodDonationHistory.filter {
             it >= target.atDay(1).minusDays(7) && it <= target.atEndOfMonth()
         }.sorted().map { it.toString() }))
-        .put("adjacentLeaveKinds", JSONArray().put(JSONArray(hints.continuesFromPrevious.map { it.ordinal }))
-            .put(JSONArray(hints.continuesIntoNext.map { it.ordinal })))
+        .put("adjacentLeaveKinds", JSONArray().put(JSONArray(hints.continuesFromPrevious.map(::fillKindName)))
+            .put(JSONArray(hints.continuesIntoNext.map(::fillKindName))))
 }
 
-private fun dayNumbers(day: FillDay) = JSONArray().put(day.date.toString()).put(day.kind.ordinal)
+/** Slobodan upis je izostanak samo na dan kad je po rasporedu trebalo raditi. */
+private fun offDayKind(repo: ShiftRepository, record: DayRecord): FillDayKind {
+    val date = record.date
+    if (record.holidayOverride ?: isSerbianHoliday(date.year, date.monthValue, date.dayOfMonth)) return FillDayKind.HOLIDAY_OFF
+    val scheduled = repo.getScheduledShiftForDate(date) in Shift.workShifts()
+    val workDay = if (repo.brigadeTypeValue == BrigadeType.CETVOROBRIGADA) scheduled
+    else scheduled && date.dayOfWeek.value <= DayOfWeek.FRIDAY.value
+    return if (workDay) FillDayKind.ABSENT else FillDayKind.CYCLE_OFF
+}
+
+/** Ime umesto rednog broja: promena redosleda u [FillDayKind] ne menja značenje za AI. */
+internal fun fillKindName(kind: FillDayKind): String = when (kind) {
+    FillDayKind.WORK -> "work"
+    FillDayKind.VACATION -> "vacation"
+    FillDayKind.PAID_LEAVE -> "paid_leave"
+    FillDayKind.SICK -> "sick"
+    FillDayKind.ABSENT -> "absent"
+    FillDayKind.HOLIDAY_OFF -> "holiday_off"
+    FillDayKind.HOLIDAY_WORK -> "holiday_work"
+    FillDayKind.WEEKEND_WORK -> "weekend_work"
+    FillDayKind.CYCLE_OFF -> "cycle_off"
+}
+
+private fun dayNumbers(day: FillDay) = JSONArray().put(day.date.toString()).put(fillKindName(day.kind))
     .put(day.shift?.takeIf { it in Shift.workShifts() }?.value ?: 0).put(day.hours).put(day.templateShift?.value ?: 0)
 
 private const val MAX_AI_FILL_CANDIDATES = 12
+private const val AI_FILL_TIMEOUT_MS = 180_000
