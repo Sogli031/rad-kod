@@ -7,6 +7,7 @@ import java.util.concurrent.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 import com.rad.shifttracker.BuildConfig
+import com.rad.shifttracker.ai.AiException
 import com.rad.shifttracker.ai.GeminiPayslipCandidateSelector
 import com.rad.shifttracker.ai.HttpGeminiTransport
 import com.rad.shifttracker.ai.PayslipCandidateSelector
@@ -33,7 +34,9 @@ internal data class PayslipFillProposal(
     val result: MonthFillResult.Success,
     val selection: FillSelection,
     val candidateCount: Int,
-    val sourceState: String
+    val sourceState: String,
+    /** Zašto AI nije izabrao (npr. Google preopterećen); null kad je izabrao ili nije ni pitan. */
+    val aiError: String? = null
 )
 
 internal data class PayslipFillBatch(
@@ -72,11 +75,15 @@ internal fun planAiMonthFromPayslip(
         val check = verifyMonthFill(scratch, payslip, targets, days)
         preservesHourChecks(baseline.reconciliation, check)
     }.take(MAX_AI_FILL_CANDIDATES)
+    var aiError: String? = null
     val selectedId = if (candidates.size > 1) {
         try {
             selector.select(fillRankingPayload(snapshot, payslip, candidates))
         } catch (error: CancellationException) {
             throw error
+        } catch (error: AiException) {
+            aiError = error.title
+            null
         } catch (_: Exception) {
             null
         }
@@ -91,7 +98,8 @@ internal fun planAiMonthFromPayslip(
     val verified = verifyMonthFill(scratch, payslip, targets, selectedDays)
     if (!preservesHourChecks(baseline.reconciliation, verified)) return null to "Predlog nije prošao proveru sati."
     val result = baseline.copy(days = selectedDays, reconciliation = verified)
-    return PayslipFillProposal(result, selection, candidates.size, sourceState) to null
+    return PayslipFillProposal(result, selection, candidates.size, sourceState,
+        if (selection == FillSelection.FALLBACK) aiError ?: "neispravan odgovor" else null) to null
 }
 
 private fun preservesHourChecks(baseline: PayslipReconciliation, candidate: PayslipReconciliation): Boolean {

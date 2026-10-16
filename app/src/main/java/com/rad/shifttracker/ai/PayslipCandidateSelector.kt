@@ -3,13 +3,20 @@ package com.rad.shifttracker.ai
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** AI bira samo broj već proverenog rasporeda. Ne dobija listu, iznose ni identitet radnika. */
+/**
+ * AI bira samo broj već proverenog rasporeda. Ne dobija listu, iznose ni identitet radnika.
+ * null = AI je odgovorio, ali neispravno; [AiException] = AI nije dostupan (razlog u naslovu).
+ */
 internal fun interface PayslipCandidateSelector {
     fun select(payload: JSONObject): Int?
 }
 
-internal class GeminiPayslipCandidateSelector(private val transport: GeminiTransport) : PayslipCandidateSelector {
+internal class GeminiPayslipCandidateSelector(
+    private val transport: GeminiTransport,
+    private val pause: (Long) -> Unit = { Thread.sleep(it) }
+) : PayslipCandidateSelector {
     override fun select(payload: JSONObject): Int? {
+        val count = payload.getJSONArray("candidates").length()
         val body = JSONObject()
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", RANKING_PROMPT))))
             .put("contents", JSONArray().put(JSONObject().put("role", "user")
@@ -19,34 +26,48 @@ internal class GeminiPayslipCandidateSelector(private val transport: GeminiTrans
                 .put("responseMimeType", "application/json")
                 .put("responseJsonSchema", JSONObject().put("type", "object")
                     .put("properties", JSONObject().put("candidateId", JSONObject().put("type", "integer")
-                        .put("minimum", 0).put("maximum", payload.getJSONArray("candidates").length() - 1)))
+                        .put("minimum", 0).put("maximum", count - 1)))
                     .put("required", JSONArray().put("candidateId"))
                     .put("additionalProperties", false)))
-        // Rezervni modeli za ovaj zahtev moraju takođe podržavati thinkingLevel=high.
-        for (model in AI_MODELS.filter { it.startsWith("gemini-3") }) {
-            try {
-                val response = transport.post(model, body)
-                val candidate = response.optJSONArray("candidates")?.optJSONObject(0) ?: return null
-                if (candidate.optString("finishReason") != "STOP") return null
-                val parts = modelContent(response).getJSONArray("parts")
-                val text = (0 until parts.length()).mapNotNull { index ->
-                    parts.optJSONObject(index)?.takeUnless { it.optBoolean("thought") }?.optString("text")
-                }.joinToString("")
-                val result = JSONObject(text)
-                if (result.length() != 1) return null
-                val id = result.opt("candidateId")
-                return (id as? Number)?.let { number ->
-                    number.toInt().takeIf { it.toDouble() == number.toDouble() && it in 0 until payload.getJSONArray("candidates").length() }
+        var lastError: AiException? = null
+        // Google često kratko vraća 503 (preopterećen) za sve modele: tačnost ima prednost, pa se čeka i ponavlja.
+        for (delay in RETRY_DELAYS_MS) {
+            if (delay > 0) pause(delay)
+            // Rezervni modeli za ovaj zahtev moraju takođe podržavati thinkingLevel=high.
+            for (model in AI_MODELS.filter { it.startsWith("gemini-3") }) {
+                val response = try {
+                    transport.post(model, body)
+                } catch (error: AiException) {
+                    // 404: model ne postoji; 5xx: preopterećen ili greška servera. Ostalo (ključ, kvota) ne prolazi ponavljanjem.
+                    if (error.httpCode != 404 && error.httpCode < 500) throw error
+                    lastError = error
+                    continue
                 }
-            } catch (error: AiException) {
-                if (error.httpCode != 404 && error.httpCode < 500) return null
-            } catch (_: org.json.JSONException) {
-                return null
+                return candidateId(response, count)
             }
         }
-        return null
+        throw lastError ?: AiException("Model nije dostupan")
+    }
+
+    private fun candidateId(response: JSONObject, count: Int): Int? = try {
+        val candidate = response.optJSONArray("candidates")?.optJSONObject(0)
+        if (candidate == null || candidate.optString("finishReason") != "STOP") null else {
+            val parts = modelContent(response).getJSONArray("parts")
+            val text = (0 until parts.length()).mapNotNull { index ->
+                parts.optJSONObject(index)?.takeUnless { it.optBoolean("thought") }?.optString("text")
+            }.joinToString("")
+            val result = JSONObject(text)
+            val id = result.opt("candidateId")
+            if (result.length() != 1) null else (id as? Number)?.let { number ->
+                number.toInt().takeIf { it.toDouble() == number.toDouble() && it in 0 until count }
+            }
+        }
+    } catch (_: org.json.JSONException) {
+        null
     }
 }
+
+private val RETRY_DELAYS_MS = listOf(0L, 5_000L, 15_000L, 30_000L)
 
 private val RANKING_PROMPT = """
     Choose the most plausible estimated monthly shift schedule from candidates already checked by the application.

@@ -20,6 +20,7 @@ import com.rad.shifttracker.smene.ShiftFillMode
 import com.rad.shifttracker.smene.ShiftFillSettings
 import com.rad.shifttracker.smene.Shift
 import com.rad.shifttracker.uvoz.FillSelection
+import com.rad.shifttracker.ui.dialozi.fillSelectionStatus
 import com.rad.shifttracker.uvoz.applyMonthFill
 import com.rad.shifttracker.uvoz.applyReviewedFills
 import com.rad.shifttracker.uvoz.fillRankingPayload
@@ -156,13 +157,43 @@ class AiPayslipMonthFillTest {
             calls++
             if (calls == 1) throw AiException("Nema modela", httpCode = 404)
             response("{\"candidateId\":0}")
-        })
+        }, pause = {})
         assertEquals(0, selector.select(payload()))
         assertEquals(2, calls)
         calls = 0
-        val limited = GeminiPayslipCandidateSelector(GeminiTransport { _, _ -> calls++; throw AiException("Limit", httpCode = 429) })
-        assertNull(limited.select(payload()))
+        val limited = GeminiPayslipCandidateSelector(GeminiTransport { _, _ -> calls++; throw AiException("Limit", httpCode = 429) }, pause = {})
+        assertEquals("Limit", assertThrows(AiException::class.java) { limited.select(payload()) }.title)
         assertEquals(1, calls)
+    }
+
+    @Test
+    fun overloadedGoogleIsRetriedWithPausesBeforeGivingUp() {
+        val pauses = mutableListOf<Long>()
+        var calls = 0
+        val recovers = GeminiPayslipCandidateSelector(GeminiTransport { _, _ ->
+            calls++
+            if (calls <= 2) throw AiException("Preopterećen", httpCode = 503)
+            response("{\"candidateId\":1}")
+        }, pause = { pauses.add(it) })
+        assertEquals(1, recovers.select(payload()))
+        assertEquals(1, pauses.size)
+
+        pauses.clear()
+        val down = GeminiPayslipCandidateSelector(GeminiTransport { _, _ -> throw AiException("Preopterećen", httpCode = 503) },
+            pause = { pauses.add(it) })
+        assertEquals("Preopterećen", assertThrows(AiException::class.java) { down.select(payload()) }.title)
+        assertEquals(3, pauses.size)
+        assertTrue(pauses.zipWithNext().all { (a, b) -> b > a })
+    }
+
+    @Test
+    fun fallbackShowsWhyAiWasUnavailable() {
+        val proposal = planAiMonthFromPayslip(repo(), sample(), PayslipCandidateSelector {
+            throw AiException("Google je trenutno preopterećen, probaj za minut", httpCode = 503)
+        }).first!!
+        assertEquals(FillSelection.FALLBACK, proposal.selection)
+        assertEquals("AI nije dostupan: Google je trenutno preopterećen, probaj za minut · lokalni predlog",
+            fillSelectionStatus(proposal))
     }
 
     @Test

@@ -79,7 +79,7 @@ internal fun PayslipFillReviewDialog(
 internal fun fillSelectionStatus(proposal: PayslipFillProposal): String = when (proposal.selection) {
     FillSelection.AI -> "AI predlog"
     FillSelection.LOCAL -> "Lokalni predlog"
-    FillSelection.FALLBACK -> "AI nije dostupan · lokalni predlog"
+    FillSelection.FALLBACK -> proposal.aiError?.let { "AI nije dostupan: $it · lokalni predlog" } ?: "AI nije dostupan · lokalni predlog"
 }
 
 internal fun fillDayReviewText(day: FillDay): String {

@@ -3,6 +3,10 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [14.6] - 2026-10-16
+- Kad je Google preopterećen, popuna prema listi sačeka i ponovi AI izbor (do tri puta) umesto da odmah uzme lokalni predlog.
+- Ako AI ipak ne uspe, u pregledu piše zašto, npr. „AI nije dostupan: Google je trenutno preopterećen…“.
+
 ## [14.5] - 2026-10-16
 - Nova verzija stiže brže: APK se pravi paralelno sa proverama, a objavljuje se tek kad sve provere prođu.
 
