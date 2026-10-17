@@ -93,16 +93,22 @@ internal fun driveUploadAccount(context: Context): DriveUploadAccountResult {
             .filter { it.name !in seen }
             .forEach(::add)
     }
-    for (account in candidates) {
+    for ((index, account) in candidates.withIndex()) {
         try {
             GoogleAuthUtil.getToken(context, account, DRIVE_FILE_TOKEN_SCOPE)
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}/${candidates.size} ima dozvolu")
             return DriveUploadAccountResult.Ready(account)
         } catch (e: UserRecoverableAuthException) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1} traži dozvolu")
             if (consentIntent == null) consentIntent = e.intent
             continue
+        } catch (e: GoogleAuthException) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}: ${e.javaClass.simpleName}")
+            continue
+        } catch (e: java.io.IOException) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}: ${e.javaClass.simpleName}")
+            continue
         }
-        catch (_: GoogleAuthException) { continue }
-        catch (_: java.io.IOException) { continue }
     }
     return consentIntent?.let { DriveUploadAccountResult.NeedsConsent(it) }
         ?: DriveUploadAccountResult.NoAccount
@@ -128,11 +134,20 @@ private const val LATEST_SEARCH_MONTHS = 3L
  * intent za Google ekran. Radi mrežu — zvati van glavne niti.
  */
 internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Intent? = synchronized(UPLOAD_LOCK) {
-    if (gmailPayslipAccount(context) == null) return null
+    if (gmailPayslipAccount(context) == null) {
+        Log.w(SIDE_RUN_LOG_TAG, "Drive: Gmail nije povezan")
+        return null
+    }
     val driveAccount = when (val result = driveUploadAccount(context)) {
         is DriveUploadAccountResult.Ready -> result.account
-        is DriveUploadAccountResult.NeedsConsent -> return result.intent
-        DriveUploadAccountResult.NoAccount -> return null
+        is DriveUploadAccountResult.NeedsConsent -> {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: treba dozvola")
+            return result.intent
+        }
+        DriveUploadAccountResult.NoAccount -> {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: nijedan nalog nema dozvolu")
+            return null
+        }
     }
     // Stari zapis „poslatih“ poruka više ne treba.
     drivePayslipPrefs(context).edit().clear().apply()
