@@ -156,8 +156,8 @@ internal fun BottomBar(
         BottomBarItem(specs.ai.icon, specs.ai.label, scheme.onSurfaceVariant, null, onAi).takeIf { AI_BUTTON_VISIBLE },
         BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
         BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
-        BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
         BottomBarItem(specs.yearOverview.icon, specs.yearOverview.label, scheme.onSurfaceVariant, null, onYearOverview),
+        BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
         BottomBarItem(specs.deleteMonth.icon, specs.deleteMonth.label, scheme.error, null, onDeleteMonth)
     ).filterNotNull()
 

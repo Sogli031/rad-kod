@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [16.7] - 2026-10-17
+- U donjoj traci „Opcije“ su sada pored „Briši“, a „Pregled“ ispred njih.
+
 ## [16.6] - 2026-10-17
 - **Godišnji pregled:** novo dugme „Pregled“ u donjoj traci, pored „Briši“. Za izabranu godinu pokazuje ukupnu neto platu, stubiće po mesecima, prosek i najbolji mesec, sate rada, prekovremeno, noćni rad, nedelju, dane bolovanja i godišnjeg, i razliku prema prošloj godini za iste mesece. Strelicama se menja godina.
 
