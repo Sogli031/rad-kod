@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.3] - 2026-10-17
+- **Prevoz po danu iz uplaćenog iznosa:** kad prevoz pređe neoporezivi deo, bruto na listi se uvećava za porez i doprinose (npr. 7.802 za 20 dana), a na račun stiže manje (7.600 = 20 × 380). Aplikacija sada deli „Ukupno uplaćeno“, pa pokazuje 380 umesto 390,10 / 382,07 / 393,02. Posle ažuriranja obračuni prevoza za proteklih 6 meseci se ponovo pročitaju.
+
 ## [15.2] - 2026-10-16
 - **Prevoz po mesecu:** svaki mesec rada računa prevoz po svom obračunu prevoza (npr. avgust 4 dana × 380 = 1.520, kao na listi), a ne po najnovijem iznosu po danu za sve mesece. Mesec bez obračuna (tekući) koristi najnoviji iznos. Posle ažuriranja aplikacija jednom povuče obračune prevoza za proteklih 6 meseci.
 - Obračun prevoza sa više redova „PREVOZ“ sabira sve redove (ranije se čitao samo prvi).

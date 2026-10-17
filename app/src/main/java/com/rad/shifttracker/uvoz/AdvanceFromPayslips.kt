@@ -44,7 +44,8 @@ import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
 private const val SIDE_RUN_CHECK_PREFS = "rad_advance_check_prefs"
 private const val KEY_TRANSPORT_WORK_MONTH = "transport_work_month"
 private const val KEY_LAST_CHECK_MILLIS = "last_check_millis"
-private const val KEY_TRANSPORT_HISTORY_FILLED = "transport_history_filled"
+// v2: ponovo posle 15.3, kad se prevoz po danu računa iz uplaćenog umesto iz bruto iznosa.
+private const val KEY_TRANSPORT_HISTORY_FILLED = "transport_history_filled_v2"
 private const val TRANSPORT_HISTORY_MONTHS = 6L
 private const val KEY_LAST_FULL_CHECK_MILLIS = "last_full_check_millis"
 private const val KEY_CONFIRMED_ADVANCE_MONTHS = "confirmed_advance_payment_months"

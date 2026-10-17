@@ -186,13 +186,14 @@ internal fun parsePayslip(lines: List<String>): PayslipParseResult {
     val runLabel = (header as? PayslipPayBaseResult.Success)?.runLabel ?: findRunLabel(trimmed)
     val items = parseItems(trimmed)
     payslipSideRunKind(trimmed, items)?.let { kind ->
+        val paidNet = trimmed.findGroup(PAID_TOTAL_REGEX)?.toPayslipDecimal()
         return PayslipParseResult.SideRun(
             kind = kind,
             month = month,
             runLabel = runLabel,
-            paidNet = trimmed.findGroup(PAID_TOTAL_REGEX)?.toPayslipDecimal(),
+            paidNet = paidNet,
             paymentMonth = parsePaymentMonth(trimmed),
-            transportDaily = if (kind == PayslipSideRunKind.TRANSPORT) parseTransportDaily(trimmed) else null
+            transportDaily = if (kind == PayslipSideRunKind.TRANSPORT) parseTransportDaily(trimmed, paidNet) else null
         )
     }
     return PayslipParseResult.Success(
@@ -304,14 +305,17 @@ private fun parsePaymentMonth(lines: List<String>): MonthKey? {
 
 /** Prevoz po danu = iznos / (časovi / 8): za 08/2026 4320 / (144 / 8) = 240. */
 /**
- * Prevoz po danu: zbir iznosa / zbir dana (časovi / 8) iz svih redova „PREVOZ PRV“ — obračun može
- * imati više redova (npr. dve cene u mesecu). Red ponovljen do znaka (tabela na drugoj strani) se broji jednom.
+ * Prevoz po danu: uplaćeno / dani (zbir časova iz svih redova „PREVOZ PRV“ / 8). Uplaćeno, a ne bruto:
+ * kad prevoz pređe neoporezivi deo, bruto se uvećava za porez i doprinose (06/2026: 160 č., bruto
+ * 7.802, uplaćeno 7.600 = 20 × 380), a na račun stiže isti iznos po danu. Bez „Ukupno uplaćeno“
+ * se uzima zbir bruto iznosa. Red ponovljen do znaka (tabela na drugoj strani) se broji jednom.
  */
-private fun parseTransportDaily(lines: List<String>): BigDecimal? {
+private fun parseTransportDaily(lines: List<String>, paidNet: BigDecimal?): BigDecimal? {
     val rows = lines.distinct().mapNotNull { TRANSPORT_ITEM_REGEX.matchEntire(it)?.groupValues }
     if (rows.isEmpty()) return null
     val hours = rows.fold(BigDecimal.ZERO) { sum, row -> sum + BigDecimal(row[1]) }
-    val amount = rows.fold(BigDecimal.ZERO) { sum, row -> sum + (row[2].toPayslipDecimal() ?: return null) }
+    val amount = paidNet?.takeIf { it.signum() > 0 }
+        ?: rows.fold(BigDecimal.ZERO) { sum, row -> sum + (row[2].toPayslipDecimal() ?: return null) }
     val days = hours.divide(BigDecimal(VACATION_HOURS_PER_DAY.toInt()), 4, java.math.RoundingMode.HALF_UP)
     if (days.signum() <= 0 || amount.signum() <= 0) return null
     return amount.divide(days, 2, java.math.RoundingMode.HALF_UP)

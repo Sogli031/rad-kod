@@ -115,9 +115,29 @@ class AdvanceFromPayslipsTest {
         val run = side(transportAugust)
         assertEquals(PayslipSideRunKind.TRANSPORT, run.kind)
         assertEquals(BigDecimal("240.00"), run.transportDaily)
-        val spaced = transportAugust.map { if (it.startsWith("PREVOZ")) "PREVOZ PRV 104.0 3,120.00" else it }
+        val spaced = transportRun("08/2026", "15.09.2026", "PREVOZ PRV 104.0 3,120.00", "3,120.00")
         assertEquals(BigDecimal("240.00"), side(spaced).transportDaily)
     }
+
+    @Test
+    fun transportDailyIsWhatWasPaidNotGrossedUpGross() {
+        // Kolegini obračuni: preko neoporezivog dela bruto raste (porez i doprinosi), a na račun stiže 380 po danu.
+        assertEquals(BigDecimal("380.00"), side(transportRun("06/2026", "15.07.2026", "PRV PREVOZ 160.0 7802", "7,600.00")).transportDaily)
+        assertEquals(BigDecimal("380.00"), side(transportRun("07/2026", "14.08.2026", "PRV PREVOZ 128.0 6113.11", "6,080.00")).transportDaily)
+        assertEquals(BigDecimal("380.00"), side(transportRun("05/2026", "15.06.2026", "PRV PREVOZ 80.0 3800", "3,800.00")).transportDaily)
+        // Bez „Ukupno uplaćeno“ ostaje bruto.
+        val noPaid = transportRun("06/2026", "15.07.2026", "PRV PREVOZ 160.0 7802", "7,600.00").filterNot { it.startsWith("Ukupno uplaćeno") }
+        assertEquals(BigDecimal("390.10"), side(noPaid).transportDaily)
+    }
+
+    /** Obračun prevoza za [month] („MM/GGGG“) sa redom [line] i „Ukupno uplaćeno“ [paid]. */
+    private fun transportRun(month: String, paymentDate: String, line: String, paid: String) = """
+        OBRAČUN ZARADE I NAKNADE ZARADE ZA MESEC $month rb.1
+        Datum isplate : $paymentDate
+        Oznaka i vrsta rada ČASOVI% RADA BRUTO IZNOS
+        $line
+        Ukupno uplaćeno $paid
+    """.trimIndent().lines()
 
     @Test
     fun regressAndUnknownRunsAreSideRuns() {
@@ -179,15 +199,8 @@ class AdvanceFromPayslipsTest {
     @Test
     fun eachWorkMonthKeepsItsOwnTransportDaily() {
         // Obračun prevoza za 08/2026 kakav stiže (32 časa, 1.520) i za 09/2026 sa drugim iznosom po danu.
-        val august = transportAugust.map { if (it.startsWith("PREVOZ")) "PRV PREVOZ 32.0 1520" else it }
-        val september = transportAugust.map {
-            when {
-                it.startsWith("OBRAČUN") -> "OBRAČUN ZARADE I NAKNADE ZARADE ZA MESEC 09/2026 rb.1"
-                it.startsWith("Datum isplate") -> "Datum isplate : 15.10.2026"
-                it.startsWith("PREVOZ") -> "PRV PREVOZ 176.0 8,646.44"
-                else -> it
-            }
-        }
+        val august = transportRun("08/2026", "15.09.2026", "PRV PREVOZ 32.0 1520", "1,520.00")
+        val september = transportRun("09/2026", "15.10.2026", "PRV PREVOZ 176.0 8,646.44", "8,646.44")
         val repo = testRepository()
         applySideRuns(repo, listOf(side(september)))
         applySideRuns(repo, listOf(side(august)))
@@ -195,6 +208,7 @@ class AdvanceFromPayslipsTest {
         assertEquals(BigDecimal("380.00"), side(august).transportDaily)
         // Dva reda prevoza (npr. dve cene u mesecu) se sabiraju, a ponovljen red se broji jednom.
         val twoRows = august.flatMap { if (it.startsWith("PRV PREVOZ")) listOf(it, "PRV PREVOZ 8.0 400", it) else listOf(it) }
+            .map { if (it.startsWith("Ukupno uplaćeno")) "Ukupno uplaćeno 1,920.00" else it }
         assertEquals(BigDecimal("384.00"), side(twoRows).transportDaily)
         // Plata za avgust (isplata u septembru) računa prevoz po avgustovskom obračunu, septembar po svom.
         assertEquals(380.0, repo.getMonthlyReceipt(2026, 9).transportDailyAmount, 0.001)
