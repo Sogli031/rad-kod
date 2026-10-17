@@ -57,14 +57,19 @@ private val UPLOAD_LOCK = Any()
 
 private val RUN_LABEL_REGEX = Regex("""rb\.\d+""")
 
+private const val DRIVE_TARGET_EMAIL = "glisiccborko@gmail.com"
+
 /**
- * Vraća prvi Google nalog na uređaju koji ima Drive dozvolu (`drive.file`). Redom: Gmail nalog za
- * liste, backup nalog, pa bilo koji drugi Google nalog. Ako nijedan nema dozvolu, null.
+ * Vraća Google nalog za Drive upload. Prvo pokušava ciljni nalog ([DRIVE_TARGET_EMAIL]),
+ * pa Gmail nalog za liste, backup nalog i na kraju bilo koji drugi na uređaju.
  */
 private fun driveUploadAccount(context: Context): Account? {
     val candidates = buildList {
-        gmailPayslipAccount(context)?.let(::add)
-        backupAccountEmail(context)?.let { add(Account(it, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)) }
+        add(Account(DRIVE_TARGET_EMAIL, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE))
+        gmailPayslipAccount(context)?.let { if (it.name != DRIVE_TARGET_EMAIL) add(it) }
+        backupAccountEmail(context)?.let { email ->
+            if (none { it.name == email }) add(Account(email, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE))
+        }
         val seen = map { it.name }.toSet()
         AccountManager.get(context).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)
             .filter { it.name !in seen }
