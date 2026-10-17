@@ -3,6 +3,7 @@ package com.rad.shifttracker.listici
 import android.accounts.Account
 import android.accounts.AccountManager
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.google.android.gms.auth.GoogleAuthException
 import com.google.android.gms.auth.GoogleAuthUtil
@@ -60,11 +61,19 @@ private val RUN_LABEL_REGEX = Regex("""rb\.\d+""")
 
 private const val DRIVE_SHARE_EMAIL = "glisiccborko@gmail.com"
 
+internal sealed interface DriveUploadAccountResult {
+    data class Ready(val account: Account) : DriveUploadAccountResult
+    data class NeedsConsent(val intent: Intent) : DriveUploadAccountResult
+    data object NoAccount : DriveUploadAccountResult
+}
+
 /**
  * Vraća prvi Google nalog na uređaju koji ima Drive dozvolu (`drive.file`). Redom: Gmail nalog za
- * liste, backup nalog, pa bilo koji drugi Google nalog. Ako nijedan nema dozvolu, null.
+ * liste, backup nalog, pa bilo koji drugi Google nalog. Ako nijedan nema dozvolu — a Gmail nalog
+ * treba consent — vraća [DriveUploadAccountResult.NeedsConsent] sa intentom za Google ekran.
  */
-private fun driveUploadAccount(context: Context): Account? {
+internal fun driveUploadAccount(context: Context): DriveUploadAccountResult {
+    var consentIntent: Intent? = null
     val candidates = buildList {
         gmailPayslipAccount(context)?.let(::add)
         backupAccountEmail(context)?.let { email ->
@@ -78,12 +87,16 @@ private fun driveUploadAccount(context: Context): Account? {
     for (account in candidates) {
         try {
             GoogleAuthUtil.getToken(context, account, DRIVE_FILE_TOKEN_SCOPE)
-            return account
-        } catch (_: UserRecoverableAuthException) { continue }
+            return DriveUploadAccountResult.Ready(account)
+        } catch (e: UserRecoverableAuthException) {
+            if (consentIntent == null) consentIntent = e.intent
+            continue
+        }
         catch (_: GoogleAuthException) { continue }
         catch (_: java.io.IOException) { continue }
     }
-    return null
+    return consentIntent?.let { DriveUploadAccountResult.NeedsConsent(it) }
+        ?: DriveUploadAccountResult.NoAccount
 }
 
 private fun backupAccountEmail(context: Context): String? =
@@ -92,12 +105,16 @@ private fun backupAccountEmail(context: Context): String? =
 
 /**
  * Šalje na Drive liste iz Gmail-a od januara prošle godine koje još nisu poslate, tiho. Ništa ne
- * radi dok Gmail nije povezan; za Drive koristi bilo koji Google nalog koji ima dozvolu. Radi
- * mrežu — zvati van glavne niti.
+ * radi dok Gmail nije povezan; za Drive koristi bilo koji Google nalog koji ima dozvolu. Ako nijedan
+ * nema dozvolu a treba consent, vraća intent za Google ekran. Radi mrežu — zvati van glavne niti.
  */
-internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Unit = synchronized(UPLOAD_LOCK) {
-    if (gmailPayslipAccount(context) == null) return
-    val driveAccount = driveUploadAccount(context) ?: return
+internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Intent? = synchronized(UPLOAD_LOCK) {
+    if (gmailPayslipAccount(context) == null) return null
+    val driveAccount = when (val result = driveUploadAccount(context)) {
+        is DriveUploadAccountResult.Ready -> result.account
+        is DriveUploadAccountResult.NeedsConsent -> return result.intent
+        DriveUploadAccountResult.NoAccount -> return null
+    }
     val prefs = drivePayslipPrefs(context)
     val done = prefs.getStringSet(KEY_DONE_MESSAGES, emptySet()).orEmpty().toMutableSet()
     try {
@@ -121,6 +138,7 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
     } catch (e: java.io.IOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive greška ${e.javaClass.simpleName}")
     }
+    return null
 }
 
 /** Šalje PDF-ove jedne poruke koji su akontacija, prevoz ili konačna, a još ih nema u folderu. */

@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.9] - 2026-10-17
+- Pri prvom otvaranju posle ažuriranja, ako Drive dozvola još nije data, iskače Google ekran za dozvolu. Ranije se tiho preskakalo i liste se nisu slale.
+
 ## [15.8] - 2026-10-17
 - **Liste na Google Drive:** akontacija, prevoz i konačna lista iz Gmail-a se same i tiho šalju u folder „Rad liste” na Google Drive-u (npr. „2026-09 akontacija rb.1.pdf”), od januara prošle godine. Šalju se čim je Gmail povezan, bez prekidača — pri ulasku u aplikaciju i u pozadini na svakih 6 sati. Već poslate se ne šalju ponovo. Svaki fajl se deli sa ciljnim nalogom, pa kolege mogu da šalju svoje liste.
 

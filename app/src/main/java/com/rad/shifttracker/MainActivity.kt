@@ -1,5 +1,6 @@
 ﻿package com.rad.shifttracker
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -8,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +39,11 @@ import com.rad.shifttracker.repo.reschedule
 class MainActivity : ComponentActivity() {
     private lateinit var repo: ShiftRepository
     private lateinit var backup: GoogleDriveBackup
+    private val driveConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (it.resultCode == RESULT_OK) checkSideRunsOnEntry()
+    }
     internal companion object {
         /** Jedna provera obračuna u isto vreme, i kad se otvori nova instanca aktivnosti. */
         val advanceCheckRunning = AtomicBoolean(false)
@@ -122,13 +129,24 @@ class MainActivity : ComponentActivity() {
                     Log.w(SIDE_RUN_LOG_TAG, "provera konačne liste pukla", e)
                 }
                 try {
-                    uploadPayslipsToDrive(context)
+                    val consentIntent = uploadPayslipsToDrive(context)
+                    if (consentIntent != null) {
+                        withContext(Dispatchers.Main) { launchDriveConsent(consentIntent) }
+                    }
                 } catch (e: Exception) {
                     Log.w(SIDE_RUN_LOG_TAG, "slanje lista na Drive puklo", e)
                 }
             } finally {
                 advanceCheckRunning.set(false)
             }
+        }
+    }
+
+    private fun launchDriveConsent(intent: Intent) {
+        try {
+            driveConsentLauncher.launch(intent)
+        } catch (e: Exception) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive consent: ${e.javaClass.simpleName}")
         }
     }
 
