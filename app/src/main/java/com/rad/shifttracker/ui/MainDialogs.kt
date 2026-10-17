@@ -77,7 +77,7 @@ private fun MainStatDialog(state: DialogState, data: MainDialogData, onDismiss: 
             actions = data.actions,
             onDismiss = onDismiss
         )
-        DialogState.Transport -> TransportDialog(repo = data.repo, onDismiss = onDismiss)
+        DialogState.Transport -> TransportDialog(daily = data.salaryDetailsReceipt.transportDailyAmount, onDismiss = onDismiss)
         else -> Unit
     }
 }

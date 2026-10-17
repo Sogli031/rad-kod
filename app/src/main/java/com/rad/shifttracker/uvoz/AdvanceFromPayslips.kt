@@ -19,10 +19,14 @@ import com.rad.shifttracker.repo.recordRegressFromPayslip
 import com.rad.shifttracker.repo.transportDailyAmountValue
 import com.rad.shifttracker.listici.GmailSideRunsResult
 import com.rad.shifttracker.listici.PayslipParseResult
+import com.rad.shifttracker.listici.PayslipSideRunKind
 import com.rad.shifttracker.listici.advanceTotalsByPaymentMonth
 import com.rad.shifttracker.listici.findSideRunsInGmail
 import com.rad.shifttracker.listici.hasGmailPayslipAccess
-import com.rad.shifttracker.listici.latestTransportDaily
+import com.rad.shifttracker.listici.transportDailyByWorkMonth
+import com.rad.shifttracker.repo.latestTransportMonthValue
+import com.rad.shifttracker.repo.recordTransportDailyFromPayslip
+import com.rad.shifttracker.repo.transportDailyForMonth
 import com.rad.shifttracker.listici.latestTransportRun
 import com.rad.shifttracker.listici.payslipResultDiagnosticText
 import com.rad.shifttracker.listici.regressTotalsByMonth
@@ -40,6 +44,8 @@ import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
 private const val SIDE_RUN_CHECK_PREFS = "rad_advance_check_prefs"
 private const val KEY_TRANSPORT_WORK_MONTH = "transport_work_month"
 private const val KEY_LAST_CHECK_MILLIS = "last_check_millis"
+private const val KEY_TRANSPORT_HISTORY_FILLED = "transport_history_filled"
+private const val TRANSPORT_HISTORY_MONTHS = 6L
 private const val KEY_LAST_FULL_CHECK_MILLIS = "last_full_check_millis"
 private const val KEY_CONFIRMED_ADVANCE_MONTHS = "confirmed_advance_payment_months"
 private const val SIDE_RUN_CHECK_INTERVAL_MS = 30 * 60 * 1000L
@@ -106,6 +112,7 @@ internal fun runSideRunCheckOnEntry(context: Context, repo: ShiftRepository, tod
     val confirmed = prefs.getStringSet(KEY_CONFIRMED_ADVANCE_MONTHS, emptySet()).orEmpty()
         .mapNotNull(::parseMonthKeyOrNull).toSet()
     val lastFullCheck = prefs.getLong(KEY_LAST_FULL_CHECK_MILLIS, 0L)
+    fillTransportHistoryOnce(context, repo, today)
     val needed = sideRunCheckNeeded(today, transportWorkMonth, confirmed, lastFullCheck)
     Log.i(
         SIDE_RUN_LOG_TAG,
@@ -141,6 +148,21 @@ internal fun runSideRunCheckOnEntry(context: Context, repo: ShiftRepository, tod
         prefs.edit().putStringSet(KEY_CONFIRMED_ADVANCE_MONTHS, stored).apply()
     }
 }
+/**
+ * Jednom po instalaciji: obračuni prevoza za proteklih [TRANSPORT_HISTORY_MONTHS] meseci rada, da
+ * svaki mesec ima svoj prevoz po danu (ranije je postojao samo jedan iznos za sve mesece). Ostali
+ * obračuni (akontacija, regres) se ovde ne diraju. Ponavlja se dok pretraga ne uspe.
+ */
+private fun fillTransportHistoryOnce(context: Context, repo: ShiftRepository, today: LocalDate) {
+    val prefs = context.getSharedPreferences(SIDE_RUN_CHECK_PREFS, Context.MODE_PRIVATE)
+    if (prefs.getBoolean(KEY_TRANSPORT_HISTORY_FILLED, false)) return
+    val current = YearMonth.from(today)
+    val months = (TRANSPORT_HISTORY_MONTHS downTo 1L).map { current.minusMonths(it) }.map { MonthKey(it.year, it.monthValue) }
+    val collected = collectSideRuns(context, months)
+    applySideRuns(repo, collected.runs.filter { it.kind == PayslipSideRunKind.TRANSPORT })
+    if (!collected.gmailFailed) prefs.edit().putBoolean(KEY_TRANSPORT_HISTORY_FILLED, true).apply()
+}
+
 /**
  * Do 10.8 je prevoz po danu podrazumevano bio 240, pa su ga imali i oni koji prevoz ne dobijaju.
  * Ako obračun prevoza nikad nije primenjen na ovoj instalaciji, ta stara vrednost se vraća na 0;
@@ -224,7 +246,10 @@ internal fun applySideRuns(
         val old = repo.getMonthlyNetAdjustments(paymentMonth.year, paymentMonth.month).advancePaymentNet
         if (repo.recordAdvancePaymentFromPayslip(paymentMonth, amount)) onAdvanceChanged(paymentMonth, old, amount)
     }
-    latestTransportDaily(runs)?.let { daily ->
+    // Svaki mesec rada pamti svoj prevoz; za mesece bez obračuna važi najnoviji mesec.
+    for ((month, daily) in transportDailyByWorkMonth(runs)) repo.recordTransportDailyFromPayslip(month, daily)
+    repo.latestTransportMonthValue?.let { latest ->
+        val daily = repo.transportDailyForMonth(latest)
         val old = repo.transportDailyAmountValue
         if (kotlin.math.abs(old - daily) >= 0.005) {
             repo.transportDailyAmountValue = daily

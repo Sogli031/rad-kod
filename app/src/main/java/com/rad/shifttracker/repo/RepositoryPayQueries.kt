@@ -366,7 +366,7 @@ internal class RepositoryPayQueries(
             currentMonthRegressNet = paymentMonthRegressNetPay,
             isSalaryAvailable = salaryAvailable,
             transportEligibleDays = if (salaryAvailable) calculateTransportEligibleDays(salaryRecords) else 0,
-            transportDailyAmount = payState.transportDailyAmount
+            transportDailyAmount = payState.transportDailyFor(salaryMonth)
         )
     }
 

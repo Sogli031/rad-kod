@@ -53,6 +53,8 @@ internal data class ShiftRepositorySnapshot(
     val foodPerDayChanges: Map<MonthKey, Double> = emptyMap(),
     /** Neto regres od meseca, sa obračuna regresa. */
     val regressNetChanges: Map<MonthKey, Double> = emptyMap(),
+    /** Prevoz po danu po mesecu rada, sa obračuna prevoza (iznos se menja od meseca do meseca). */
+    val transportDailyByMonth: Map<MonthKey, Double> = emptyMap(),
     /**
      * Meseci koje je korisnik izričito obrisao (tombstone). Bez ovoga bi
      * spajanje sa arhivom u oblaku vratilo obrisani najstariji mesec —

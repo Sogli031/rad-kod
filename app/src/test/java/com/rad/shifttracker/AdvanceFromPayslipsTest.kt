@@ -38,6 +38,7 @@ import com.rad.shifttracker.repo.getMonthlyNetAdjustments
 import com.rad.shifttracker.repo.getRegressNetForMonth
 import com.rad.shifttracker.repo.setMonthlyAdvancePaymentNet
 import com.rad.shifttracker.repo.transportDailyAmountValue
+import com.rad.shifttracker.repo.getMonthlyReceipt
 import com.rad.shifttracker.osnova.formatMoney2
 import com.rad.shifttracker.smene.monthYearText
 
@@ -173,6 +174,31 @@ class AdvanceFromPayslipsTest {
         assertEquals(0.0, repo.getMonthlyNetAdjustments(2026, 8).advancePaymentNet, 0.001)
         assertEquals(240.0, repo.transportDailyAmountValue, 0.001)
         assertEquals(listOf(september), changed)
+    }
+
+    @Test
+    fun eachWorkMonthKeepsItsOwnTransportDaily() {
+        // Obračun prevoza za 08/2026 kakav stiže (32 časa, 1.520) i za 09/2026 sa drugim iznosom po danu.
+        val august = transportAugust.map { if (it.startsWith("PREVOZ")) "PRV PREVOZ 32.0 1520" else it }
+        val september = transportAugust.map {
+            when {
+                it.startsWith("OBRAČUN") -> "OBRAČUN ZARADE I NAKNADE ZARADE ZA MESEC 09/2026 rb.1"
+                it.startsWith("Datum isplate") -> "Datum isplate : 15.10.2026"
+                it.startsWith("PREVOZ") -> "PRV PREVOZ 176.0 8,646.44"
+                else -> it
+            }
+        }
+        val repo = testRepository()
+        applySideRuns(repo, listOf(side(september)))
+        applySideRuns(repo, listOf(side(august)))
+
+        assertEquals(BigDecimal("380.00"), side(august).transportDaily)
+        // Plata za avgust (isplata u septembru) računa prevoz po avgustovskom obračunu, septembar po svom.
+        assertEquals(380.0, repo.getMonthlyReceipt(2026, 9).transportDailyAmount, 0.001)
+        assertEquals(393.02, repo.getMonthlyReceipt(2026, 10).transportDailyAmount, 0.001)
+        // Kasnije učitan stariji obračun ne vraća iznos za mesece bez obračuna na stari.
+        assertEquals(393.02, repo.transportDailyAmountValue, 0.001)
+        assertEquals(393.02, repo.getMonthlyReceipt(2026, 12).transportDailyAmount, 0.001)
     }
 
     @Test

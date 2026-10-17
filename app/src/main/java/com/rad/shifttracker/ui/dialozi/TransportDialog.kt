@@ -6,16 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextAlign
 import com.rad.shifttracker.osnova.CONFIG
 import com.rad.shifttracker.osnova.formatMoney2
-import com.rad.shifttracker.repo.ShiftRepository
-import com.rad.shifttracker.repo.transportDailyAmountValue
 import com.rad.shifttracker.ui.CenteredDialog
 import com.rad.shifttracker.ui.extendedColors
-import com.rad.shifttracker.ui.rememberRepoValue
 
-/** Prevoz po danu iz obračuna prevoza, samo prikaz (stavka „Prevoz“ postoji tek kad je učitan). */
+/**
+ * Prevoz po danu za prikazan mesec rada ([daily] iz obračuna prevoza tog meseca, inače najnoviji),
+ * samo prikaz (stavka „Prevoz“ postoji tek kad je učitan).
+ */
 @Composable
-internal fun TransportDialog(repo: ShiftRepository, onDismiss: () -> Unit) {
-    val daily = rememberRepoValue(repo) { transportDailyAmountValue }
+internal fun TransportDialog(daily: Double, onDismiss: () -> Unit) {
     CenteredDialog(title = "Prevoz", onDismiss = onDismiss) {
         Text(
             text = "${formatMoney2(daily)} ${CONFIG.pay.currency}",

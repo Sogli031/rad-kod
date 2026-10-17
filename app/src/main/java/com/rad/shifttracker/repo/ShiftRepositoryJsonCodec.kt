@@ -20,6 +20,7 @@ import com.rad.shifttracker.data.storage.BloodDonationLeaveJsonCodec
 import com.rad.shifttracker.data.storage.JsonWriter
 import com.rad.shifttracker.data.storage.KnownPayBaseAnchorsJsonCodec
 import com.rad.shifttracker.data.storage.RegressNetChangesJsonCodec
+import com.rad.shifttracker.data.storage.TransportDailyByMonthJsonCodec
 import com.rad.shifttracker.data.storage.SCHEMA_VERSION_KEY
 import com.rad.shifttracker.data.storage.SavedPayslipsJsonCodec
 import com.rad.shifttracker.data.storage.SchemaMigrations
@@ -95,6 +96,7 @@ internal class ShiftRepositoryJsonCodec(
             data[FOOD_PER_DAY_CHANGES_KEY] = buildFoodPerDayChangesMap(snapshot.foodPerDayChanges)
         }
         RegressNetChangesJsonCodec.write(snapshot.regressNetChanges, data)
+        TransportDailyByMonthJsonCodec.write(snapshot.transportDailyByMonth, data)
         data[SICK_PAY_BASE_HOURLY_KEY] = snapshot.sickPayBaseHourly
         data[DEFAULT_PAY_BASE_SELECTION_MODE_KEY] = snapshot.defaultPayBaseSelectionMode.name
         KnownPayBaseAnchorsJsonCodec.write(snapshot.knownPayBaseAnchors, data)
@@ -270,6 +272,7 @@ internal class ShiftRepositoryJsonCodec(
             hourlyValueChanges = parsedHourlyValueChanges,
             foodPerDayChanges = parsedFoodPerDayChanges,
             regressNetChanges = RegressNetChangesJsonCodec.read(json),
+            transportDailyByMonth = TransportDailyByMonthJsonCodec.read(json),
             employeeContributionsPercent = parsedEmployeeContributionsPercent,
             taxRelief = parsedTaxRelief,
             taxPercent = parsedTaxPercent,
@@ -515,7 +518,8 @@ internal class ShiftRepositoryJsonCodec(
             MONTHLY_NET_ADJUSTMENTS_KEY,
             PAY_COEFFICIENT_KEY,
             HOURLY_VALUE_CHANGES_KEY,
-            RegressNetChangesJsonCodec.KEY,
+            RegressNetChangesJsonCodec.key,
+            TransportDailyByMonthJsonCodec.key,
             GROSS_HOURLY_RATE_KEY,
             SICK_PAY_BASE_HOURLY_KEY,
             DEFAULT_PAY_BASE_SELECTION_MODE_KEY,

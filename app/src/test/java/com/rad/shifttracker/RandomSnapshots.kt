@@ -97,6 +97,7 @@ internal fun randomSnapshot(random: Random): ShiftRepositorySnapshot {
         records = randomRecords(random),
         foodPerDayChanges = randomMap(random.nextInt(0, 4), ::month) { random.nextInt(0, 1_000_000) / 100.0 },
         regressNetChanges = randomMap(random.nextInt(0, 3), ::month) { positive() },
+        transportDailyByMonth = randomMap(random.nextInt(0, 3), ::month) { positive() },
         deletedMonths = List(random.nextInt(0, 4)) { month() }.distinct().sorted(),
         deletedHourlyValueMonths = List(random.nextInt(0, 4)) { month() }.distinct().sorted(),
         mainPaySalaryOnly = random.nextBoolean(),

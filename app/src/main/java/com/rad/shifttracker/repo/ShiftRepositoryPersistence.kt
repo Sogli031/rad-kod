@@ -34,6 +34,7 @@ internal fun ShiftRepository.buildSnapshotUnsafe(): ShiftRepositorySnapshot {
         foodPerDay = payState.foodPerDay,
         foodPerDayChanges = payState.foodPerDayChanges.toMap(),
         regressNetChanges = payState.regressNetChanges.toMap(),
+        transportDailyByMonth = payState.transportDailyByMonth.toMap(),
         transportDailyAmount = payState.transportDailyAmount,
         notificationAccessPromptSuppressed = notificationAccessPromptSuppressedState,
         mainPaySalaryOnly = mainPaySalaryOnlyState,
@@ -339,6 +340,7 @@ internal fun ShiftRepository.applySnapshotUnsafe(snapshot: ShiftRepositorySnapsh
     payState.hourlyValueChanges.clear()
     payState.hourlyValueChanges.putAll(snapshot.hourlyValueChanges)
     payState.restoreRegressNetChanges(snapshot.regressNetChanges)
+    payState.restoreTransportDailyByMonth(snapshot.transportDailyByMonth)
     restoreMealPriceHistoryUnsafe(snapshot)
     payState.sickPayBaseHourly = if (snapshot.sickPayBaseHourly.isFinite()) {
         snapshot.sickPayBaseHourly.coerceIn(0.0, MAX_BASE_PAY)

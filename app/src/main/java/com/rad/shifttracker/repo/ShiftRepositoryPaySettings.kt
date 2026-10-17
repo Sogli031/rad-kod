@@ -391,3 +391,29 @@ internal fun PayBaseSelectionMode.toGlobalPayBaseSelectionMode(): PayBaseSelecti
         PayBaseSelectionMode.DEFAULT_VALUES -> PayBaseSelectionMode.CALCULATED_PREVIOUS_12_MONTHS
     }
 }
+
+/**
+ * Prevoz po danu sa obračuna prevoza za mesec rada [month]. Najnoviji poznati mesec postaje i
+ * iznos za mesece bez svog obračuna ([transportDailyAmountValue]). Vraća true ako se nešto promenilo.
+ */
+fun ShiftRepository.recordTransportDailyFromPayslip(month: MonthKey, daily: Double): Boolean {
+    if (month.year <= 0 || month.month !in 1..12 || !daily.isFinite() || daily <= 0.0) return false
+    val value = daily.coerceAtMost(MAX_TRANSPORT_PER_DAY)
+    val changed = synchronized(lock) {
+        val stored = payState.transportDailyByMonth[month]
+        if (stored != null && kotlin.math.abs(stored - value) < TRANSPORT_SAME_AMOUNT_TOLERANCE) return@synchronized false
+        payState.transportDailyByMonth[month] = value
+        true
+    }
+    if (changed) notifyChange()
+    return changed
+}
+
+/** Mesec rada najnovijeg upisanog obračuna prevoza, ili null. */
+val ShiftRepository.latestTransportMonthValue: MonthKey?
+    get() = synchronized(lock) { payState.transportDailyByMonth.lastEntry()?.key }
+
+/** Prevoz po danu za mesec rada: iz obračuna tog meseca, inače najnoviji poznat. */
+fun ShiftRepository.transportDailyForMonth(month: MonthKey): Double = synchronized(lock) { payState.transportDailyFor(month) }
+
+private const val TRANSPORT_SAME_AMOUNT_TOLERANCE = 0.005

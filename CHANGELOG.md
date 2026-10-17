@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.2] - 2026-10-16
+- **Prevoz po mesecu:** svaki mesec rada računa prevoz po svom obračunu prevoza (npr. avgust 4 dana × 380 = 1.520, kao na listi), a ne po najnovijem iznosu po danu za sve mesece. Mesec bez obračuna (tekući) koristi najnoviji iznos. Posle ažuriranja aplikacija jednom povuče obračune prevoza za proteklih 6 meseci.
+
 ## [15.1] - 2026-10-16
 - Strelice „Do kog dana“ za bolovanje i godišnji idu po radnim danima i preskaču vikende i praznike.
 - Praznik unutar bolovanja ostaje praznik, ne upisuje se kao bolovanje.

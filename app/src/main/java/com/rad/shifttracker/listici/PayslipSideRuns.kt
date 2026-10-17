@@ -44,6 +44,12 @@ internal fun latestTransportRun(runs: List<PayslipParseResult.SideRun>): Payslip
     runs.filter { it.kind == PayslipSideRunKind.TRANSPORT && (it.transportDaily?.signum() ?: 0) > 0 }
         .maxWithOrNull(compareBy<PayslipParseResult.SideRun> { it.month }.thenBy { payslipRunNumber(it.runLabel) })
 
+/** Prevoz po danu po mesecu rada; za isti mesec važi kasniji obračun (veći rb.). */
+internal fun transportDailyByWorkMonth(runs: List<PayslipParseResult.SideRun>): Map<MonthKey, Double> =
+    runs.filter { it.kind == PayslipSideRunKind.TRANSPORT && (it.transportDaily?.signum() ?: 0) > 0 }
+        .groupBy { it.month }
+        .mapValues { (_, group) -> group.maxBy { payslipRunNumber(it.runLabel) }.transportDaily?.toDouble() ?: 0.0 }
+
 /** Prevoz po danu iz najnovijeg obračuna prevoza. */
 internal fun latestTransportDaily(runs: List<PayslipParseResult.SideRun>): Double? =
     latestTransportRun(runs)?.transportDaily?.toDouble()

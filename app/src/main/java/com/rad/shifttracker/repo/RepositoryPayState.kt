@@ -33,7 +33,11 @@ internal class RepositoryPayState(config: AppConfig) {
     val foodPerDayChanges = DEFAULT_MEAL_PRICE_PERIODS.associateTo(mutableMapOf()) { period ->
         MonthKey(period.validFrom.year, period.validFrom.monthValue) to period.netAmountPerMeal.toDouble()
     }
+    /** Prevoz po danu iz najnovijeg obračuna prevoza; važi za mesece rada bez svog obračuna. */
     var transportDailyAmount = config.pay.transportPerWorkDay
+
+    /** Prevoz po danu po mesecu rada, sa obračuna prevoza tog meseca (avgust 380, septembar 393,02...). */
+    val transportDailyByMonth = TreeMap<MonthKey, Double>()
     var employeeContributionsPercent = config.pay.defaultEmployeeContributionsPercent
     var taxRelief = config.pay.defaultTaxRelief
     var taxPercent = config.pay.defaultTaxPercent
@@ -84,6 +88,14 @@ internal class RepositoryPayState(config: AppConfig) {
         regressNetChanges.clear()
         regressNetChanges.putAll(changes.filterValues { it.isFinite() && it > 0.0 })
     }
+
+    fun restoreTransportDailyByMonth(values: Map<MonthKey, Double>) {
+        transportDailyByMonth.clear()
+        transportDailyByMonth.putAll(values.filterValues { it.isFinite() && it > 0.0 })
+    }
+
+    /** Prevoz po danu za mesec rada: iz obračuna tog meseca, inače najnoviji poznat. */
+    fun transportDailyFor(month: MonthKey): Double = transportDailyByMonth[month] ?: transportDailyAmount
 
     fun regressNetForMonth(month: MonthKey): Double = regressNetChanges.floorEntry(month)?.value ?: DEFAULT_REGRESS_NET
 

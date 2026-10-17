@@ -117,6 +117,7 @@ internal object CloudArchiveMerger {
             deletedPayslipMonths = deletedPayslipMonths,
             hourlyValueChanges = hourlyValueChanges,
             regressNetChanges = archive.regressNetChanges + current.regressNetChanges,
+            transportDailyByMonth = archive.transportDailyByMonth + current.transportDailyByMonth,
             deletedHourlyValueMonths = deletedHourlyValueMonths,
             lastBloodDonationDate = bloodSource.lastBloodDonationDate,
             bloodDonationCount = bloodSource.bloodDonationCount,
