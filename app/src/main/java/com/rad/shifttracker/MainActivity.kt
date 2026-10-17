@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.uvoz.GmailImportRunner
 import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
-import com.rad.shifttracker.listici.uploadPayslipsToDrive
+import com.rad.shifttracker.listici.drivePayslipConsentIntent
 import com.rad.shifttracker.uvoz.runFinalPayslipCheckOnEntry
 import com.rad.shifttracker.uvoz.runSideRunCheckOnEntry
 import com.rad.shifttracker.repo.ShiftRepository
@@ -118,6 +118,17 @@ class MainActivity : ComponentActivity() {
         val context = applicationContext
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                // Drive ide prvo i van aktivnosti: provere ispod traju, a aplikacija se često odmah zatvori.
+                try {
+                    val consentIntent = drivePayslipConsentIntent(context)
+                    if (consentIntent != null) {
+                        withContext(Dispatchers.Main) { launchDriveConsent(consentIntent) }
+                    } else {
+                        DrivePayslipWorker.enqueue(context)
+                    }
+                } catch (e: Exception) {
+                    Log.w(SIDE_RUN_LOG_TAG, "slanje lista na Drive puklo", e)
+                }
                 try {
                     runSideRunCheckOnEntry(context, repo)
                 } catch (e: Exception) {
@@ -127,14 +138,6 @@ class MainActivity : ComponentActivity() {
                     runFinalPayslipCheckOnEntry(context, repo)
                 } catch (e: Exception) {
                     Log.w(SIDE_RUN_LOG_TAG, "provera konačne liste pukla", e)
-                }
-                try {
-                    val consentIntent = uploadPayslipsToDrive(context)
-                    if (consentIntent != null) {
-                        withContext(Dispatchers.Main) { launchDriveConsent(consentIntent) }
-                    }
-                } catch (e: Exception) {
-                    Log.w(SIDE_RUN_LOG_TAG, "slanje lista na Drive puklo", e)
                 }
             } finally {
                 advanceCheckRunning.set(false)

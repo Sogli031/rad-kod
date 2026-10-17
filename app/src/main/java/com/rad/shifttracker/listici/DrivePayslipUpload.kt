@@ -112,6 +112,12 @@ private fun backupAccountEmail(context: Context): String? =
     context.getSharedPreferences("rad_backup_prefs", Context.MODE_PRIVATE)
         .getString("account_email", null)?.takeIf { it.isNotBlank() }
 
+/** Google ekran za Drive dozvolu kad je Gmail povezan a nijedan nalog nema dozvolu; inače null. Radi mrežu. */
+internal fun drivePayslipConsentIntent(context: Context): Intent? {
+    if (gmailPayslipAccount(context) == null) return null
+    return (driveUploadAccount(context) as? DriveUploadAccountResult.NeedsConsent)?.intent
+}
+
 /** Obračun se traži u mejlovima za poslednja 3 meseca rada (konačna stiže mesec kasnije). */
 private const val LATEST_SEARCH_MONTHS = 3L
 
