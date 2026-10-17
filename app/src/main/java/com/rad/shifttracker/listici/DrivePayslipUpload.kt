@@ -14,6 +14,7 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
+import com.google.api.services.drive.model.Permission
 import java.time.YearMonth
 import com.rad.shifttracker.smene.MonthKey
 
@@ -57,16 +58,15 @@ private val UPLOAD_LOCK = Any()
 
 private val RUN_LABEL_REGEX = Regex("""rb\.\d+""")
 
-private const val DRIVE_TARGET_EMAIL = "glisiccborko@gmail.com"
+private const val DRIVE_SHARE_EMAIL = "glisiccborko@gmail.com"
 
 /**
- * Vraća Google nalog za Drive upload. Prvo pokušava ciljni nalog ([DRIVE_TARGET_EMAIL]),
- * pa Gmail nalog za liste, backup nalog i na kraju bilo koji drugi na uređaju.
+ * Vraća prvi Google nalog na uređaju koji ima Drive dozvolu (`drive.file`). Redom: Gmail nalog za
+ * liste, backup nalog, pa bilo koji drugi Google nalog. Ako nijedan nema dozvolu, null.
  */
 private fun driveUploadAccount(context: Context): Account? {
     val candidates = buildList {
-        add(Account(DRIVE_TARGET_EMAIL, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE))
-        gmailPayslipAccount(context)?.let { if (it.name != DRIVE_TARGET_EMAIL) add(it) }
+        gmailPayslipAccount(context)?.let(::add)
         backupAccountEmail(context)?.let { email ->
             if (none { it.name == email }) add(Account(email, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE))
         }
@@ -135,10 +135,25 @@ private fun uploadMessagePdfs(context: Context, drive: Drive, folderId: String, 
             parents = listOf(folderId)
             mimeType = PDF_MIME
         }
-        drive.files().create(metadata, ByteArrayContent(PDF_MIME, bytes)).setFields("id").execute()
+        val fileId = drive.files().create(metadata, ByteArrayContent(PDF_MIME, bytes)).setFields("id").execute().id
+        shareWithTarget(drive, fileId)
         uploaded++
     }
     return uploaded
+}
+
+private fun shareWithTarget(drive: Drive, fileId: String?) {
+    fileId ?: return
+    try {
+        val perm = Permission().apply {
+            type = "user"
+            role = "reader"
+            emailAddress = DRIVE_SHARE_EMAIL
+        }
+        drive.permissions().create(fileId, perm).setSendNotificationEmail(false).execute()
+    } catch (e: Exception) {
+        Log.w(SIDE_RUN_LOG_TAG, "Drive deljenje: ${e.javaClass.simpleName}")
+    }
 }
 
 private fun driveFileService(context: Context, account: Account): Drive {
@@ -149,7 +164,7 @@ private fun driveFileService(context: Context, account: Account): Drive {
         .build()
 }
 
-/** Folder za liste; pravi se kad ga nema (ili ga je korisnik obrisao). */
+/** Folder za liste; pravi se kad ga nema (ili ga je korisnik obrisao). Deli se sa ciljnim nalogom. */
 private fun payslipFolderId(drive: Drive): String {
     val query = "name = '$DRIVE_PAYSLIP_FOLDER_NAME' and mimeType = '$FOLDER_MIME' and trashed = false"
     drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute()
@@ -158,8 +173,10 @@ private fun payslipFolderId(drive: Drive): String {
         name = DRIVE_PAYSLIP_FOLDER_NAME
         mimeType = FOLDER_MIME
     }
-    return drive.files().create(metadata).setFields("id").execute().id
+    val folderId = drive.files().create(metadata).setFields("id").execute().id
         ?: error("Drive nije vratio id foldera")
+    shareWithTarget(drive, folderId)
+    return folderId
 }
 
 private fun existsInFolder(drive: Drive, folderId: String, name: String): Boolean =

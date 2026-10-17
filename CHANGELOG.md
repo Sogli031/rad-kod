@@ -3,8 +3,8 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
-## [15.7] - 2026-10-17
-- Liste na Drive idu prvo na ciljni nalog (glisiccborko), pa tek onda na Gmail ili backup nalog.
+## [15.8] - 2026-10-17
+- Liste na Drive se automatski dele sa ciljnim nalogom: svaki uploadovan fajl i folder „Rad liste" se dele, pa kolege mogu da šalju svoje liste koje se pojavljuju u „Deljeno sa mnom".
 
 ## [15.6] - 2026-10-17
 - Liste na Drive idu preko bilo kog Google naloga na uređaju: Gmail nalog, backup nalog ili bilo koji drugi. Bez dijaloga za dozvolu — tiho šalje ako nalog ima pristup.
