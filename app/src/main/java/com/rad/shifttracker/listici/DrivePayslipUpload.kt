@@ -140,6 +140,7 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
         val drive = driveFileService(context, driveAccount)
         val folderId = payslipFolderId(drive)
         val inFolder = folderFileNames(drive, folderId).toMutableSet()
+        Log.w(SIDE_RUN_LOG_TAG, "Drive: u folderu ${inFolder.size} fajlova")
         val found = mutableSetOf<DrivePayslipKind>()
         var uploaded = 0
         val start = today.minusMonths(LATEST_SEARCH_MONTHS)
@@ -153,6 +154,7 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             uploaded += uploadLatestPdfs(context, drive, folderId, messageId, pdfs, found, inFolder)
             found.size < DrivePayslipKind.entries.size
         }
+        Log.w(SIDE_RUN_LOG_TAG, "Drive: nađeno $found, poslato $uploaded")
         Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista (nalog: ${driveAccount.name})")
     } catch (e: GoogleAuthIOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive dozvola: ${e.javaClass.simpleName}")
@@ -182,12 +184,16 @@ private fun uploadLatestPdfs(
         val kind = drivePayslipKind(result) ?: continue
         if (!found.add(kind)) continue
         val name = drivePayslipFileName(result) ?: continue
-        if (name in inFolder) continue
+        if (name in inFolder) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: $name već postoji")
+            continue
+        }
         // Greška na jednoj listi ne prekida ostale; ponovo se pokušava pri sledećoj proveri.
         try {
             uploadPdf(drive, folderId, name, bytes)
             inFolder += name
             uploaded++
+            Log.w(SIDE_RUN_LOG_TAG, "Drive: poslato $name")
         } catch (e: GoogleAuthIOException) {
             throw e
         } catch (e: Exception) {
@@ -232,8 +238,9 @@ private fun driveFileService(context: Context, account: Account): Drive {
 /** Folder za liste; pravi se kad ga nema (ili ga je korisnik obrisao). Deli se sa ciljnim nalogom. */
 private fun payslipFolderId(drive: Drive): String {
     val query = "name = '$DRIVE_PAYSLIP_FOLDER_NAME' and mimeType = '$FOLDER_MIME' and trashed = false"
-    drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute()
-        .files.orEmpty().firstOrNull()?.id?.let { return it }
+    val folders = drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute().files.orEmpty()
+    if (folders.size > 1) Log.w(SIDE_RUN_LOG_TAG, "Drive: ${folders.size} foldera $DRIVE_PAYSLIP_FOLDER_NAME")
+    folders.firstOrNull()?.id?.let { return it }
     val metadata = com.google.api.services.drive.model.File().apply {
         name = DRIVE_PAYSLIP_FOLDER_NAME
         mimeType = FOLDER_MIME

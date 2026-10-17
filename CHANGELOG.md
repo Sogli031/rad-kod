@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [16.3] - 2026-10-17
+- Slanje lista na Drive beleži u log šta je poslato i šta već postoji (za proveru kad lista ne stigne).
+
 ## [16.2] - 2026-10-17
 - Slanje lista na Drive kreće odmah pri ulasku i završava se i kad se aplikacija odmah zatvori. Ranije se prekidalo ako je aplikacija zatvorena za par sekundi, pa je stizala najviše jedna lista.
 
