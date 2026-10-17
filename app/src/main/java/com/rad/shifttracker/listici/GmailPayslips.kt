@@ -389,7 +389,15 @@ internal fun forEachGmailPayslipMessage(
     val cache = GmailPayslipCache.open(context)
     val refs = gmailMessageRefs(gmail, gmailPayslipRangeQuery(from, until), MAX_GMAIL_RANGE_MESSAGES)
     for (ref in refs.filterNot { skip(it.id) }) {
-        val pdfs = gmailPdfAttachments(gmail, listOf(ref), cache).map { GmailPdfFile(it.fileName, downloadGmailAttachment(gmail, it)) }
+        // Mejl koji ni posle ponavljanja ne može da se preuzme se preskače, ostali idu dalje.
+        val pdfs = try {
+            gmailPdfAttachments(gmail, listOf(ref), cache).map { GmailPdfFile(it.fileName, downloadGmailAttachment(gmail, it)) }
+        } catch (e: GoogleAuthIOException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            Log.w(SIDE_RUN_LOG_TAG, "Gmail poruka ${ref.id}: ${e.javaClass.simpleName}")
+            continue
+        }
         onMessage(ref.id, pdfs)
     }
     return true

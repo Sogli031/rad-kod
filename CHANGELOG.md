@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [16.0] - 2026-10-17
+- Slanje lista na Drive više ne staje na prvoj grešci: lista koja ne uspe preskače se i šalje pri sledećoj proveri, a ostale (akontacija, prevoz, konačna) idu dalje.
+
 ## [15.9] - 2026-10-17
 - Pri prvom otvaranju posle ažuriranja, ako Drive dozvola još nije data, iskače Google ekran za dozvolu. Ranije se tiho preskakalo i liste se nisu slale.
 

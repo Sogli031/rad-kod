@@ -128,7 +128,15 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             skip = { it in done }
         ) { messageId, pdfs ->
             if (pdfs.any { it.bytes == null }) return@forEachGmailPayslipMessage
-            uploaded += uploadMessagePdfs(context, drive, folderId, pdfs)
+            // Greška na jednoj poruci ne prekida ostale; poruka ostaje neobrađena za sledeći put.
+            try {
+                uploaded += uploadMessagePdfs(context, drive, folderId, pdfs)
+            } catch (e: GoogleAuthIOException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(SIDE_RUN_LOG_TAG, "Drive upload za poruku $messageId: ${e.javaClass.simpleName}")
+                return@forEachGmailPayslipMessage
+            }
             done += messageId
             prefs.edit().putStringSet(KEY_DONE_MESSAGES, done.toSet()).apply()
         }
