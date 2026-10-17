@@ -144,24 +144,7 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             until = MonthKey(today.year, today.monthValue),
             skip = { false }
         ) { messageId, pdfs ->
-            for (pdf in pdfs) {
-                val bytes = pdf.bytes ?: continue
-                val result = readPayslip(context, bytes)
-                val kind = drivePayslipKind(result) ?: continue
-                if (!found.add(kind)) continue
-                val name = drivePayslipFileName(result) ?: continue
-                if (name in inFolder) continue
-                // Greška na jednoj listi ne prekida ostale; ponovo se pokušava pri sledećoj proveri.
-                try {
-                    uploadPdf(drive, folderId, name, bytes)
-                    inFolder += name
-                    uploaded++
-                } catch (e: GoogleAuthIOException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(SIDE_RUN_LOG_TAG, "Drive upload za poruku $messageId: ${e.javaClass.simpleName}")
-                }
-            }
+            uploaded += uploadLatestPdfs(context, drive, folderId, messageId, pdfs, found, inFolder)
             found.size < DrivePayslipKind.entries.size
         }
         Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista (nalog: ${driveAccount.name})")
@@ -171,6 +154,41 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
         Log.w(SIDE_RUN_LOG_TAG, "Drive greška ${e.javaClass.simpleName}")
     }
     return null
+}
+
+/**
+ * Šalje PDF-ove poruke čija vrsta još nije u [found] (novija lista iste vrste ima prednost), a
+ * nema ih u [inFolder]. Vraća broj poslatih.
+ */
+private fun uploadLatestPdfs(
+    context: Context,
+    drive: Drive,
+    folderId: String,
+    messageId: String,
+    pdfs: List<GmailPdfFile>,
+    found: MutableSet<DrivePayslipKind>,
+    inFolder: MutableSet<String>
+): Int {
+    var uploaded = 0
+    for (pdf in pdfs) {
+        val bytes = pdf.bytes ?: continue
+        val result = readPayslip(context, bytes)
+        val kind = drivePayslipKind(result) ?: continue
+        if (!found.add(kind)) continue
+        val name = drivePayslipFileName(result) ?: continue
+        if (name in inFolder) continue
+        // Greška na jednoj listi ne prekida ostale; ponovo se pokušava pri sledećoj proveri.
+        try {
+            uploadPdf(drive, folderId, name, bytes)
+            inFolder += name
+            uploaded++
+        } catch (e: GoogleAuthIOException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(SIDE_RUN_LOG_TAG, "Drive upload za poruku $messageId: ${e.javaClass.simpleName}")
+        }
+    }
+    return uploaded
 }
 
 private fun uploadPdf(drive: Drive, folderId: String, name: String, bytes: ByteArray) {
