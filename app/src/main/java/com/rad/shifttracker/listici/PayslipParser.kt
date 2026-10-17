@@ -303,10 +303,16 @@ private fun parsePaymentMonth(lines: List<String>): MonthKey? {
 }
 
 /** Prevoz po danu = iznos / (časovi / 8): za 08/2026 4320 / (144 / 8) = 240. */
+/**
+ * Prevoz po danu: zbir iznosa / zbir dana (časovi / 8) iz svih redova „PREVOZ PRV“ — obračun može
+ * imati više redova (npr. dve cene u mesecu). Red ponovljen do znaka (tabela na drugoj strani) se broji jednom.
+ */
 private fun parseTransportDaily(lines: List<String>): BigDecimal? {
-    val groups = lines.firstNotNullOfOrNull { TRANSPORT_ITEM_REGEX.matchEntire(it) }?.groupValues ?: return null
-    val days = BigDecimal(groups[1]).divide(BigDecimal(VACATION_HOURS_PER_DAY.toInt()), 4, java.math.RoundingMode.HALF_UP)
-    val amount = groups[2].toPayslipDecimal() ?: return null
+    val rows = lines.distinct().mapNotNull { TRANSPORT_ITEM_REGEX.matchEntire(it)?.groupValues }
+    if (rows.isEmpty()) return null
+    val hours = rows.fold(BigDecimal.ZERO) { sum, row -> sum + BigDecimal(row[1]) }
+    val amount = rows.fold(BigDecimal.ZERO) { sum, row -> sum + (row[2].toPayslipDecimal() ?: return null) }
+    val days = hours.divide(BigDecimal(VACATION_HOURS_PER_DAY.toInt()), 4, java.math.RoundingMode.HALF_UP)
     if (days.signum() <= 0 || amount.signum() <= 0) return null
     return amount.divide(days, 2, java.math.RoundingMode.HALF_UP)
 }

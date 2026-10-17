@@ -193,6 +193,9 @@ class AdvanceFromPayslipsTest {
         applySideRuns(repo, listOf(side(august)))
 
         assertEquals(BigDecimal("380.00"), side(august).transportDaily)
+        // Dva reda prevoza (npr. dve cene u mesecu) se sabiraju, a ponovljen red se broji jednom.
+        val twoRows = august.flatMap { if (it.startsWith("PRV PREVOZ")) listOf(it, "PRV PREVOZ 8.0 400", it) else listOf(it) }
+        assertEquals(BigDecimal("384.00"), side(twoRows).transportDaily)
         // Plata za avgust (isplata u septembru) računa prevoz po avgustovskom obračunu, septembar po svom.
         assertEquals(380.0, repo.getMonthlyReceipt(2026, 9).transportDailyAmount, 0.001)
         assertEquals(393.02, repo.getMonthlyReceipt(2026, 10).transportDailyAmount, 0.001)
