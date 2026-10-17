@@ -4,16 +4,7 @@ Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
 ## [15.8] - 2026-10-17
-- Liste na Drive se automatski dele sa ciljnim nalogom: svaki uploadovan fajl i folder „Rad liste" se dele, pa kolege mogu da šalju svoje liste koje se pojavljuju u „Deljeno sa mnom".
-
-## [15.6] - 2026-10-17
-- Liste na Drive idu preko bilo kog Google naloga na uređaju: Gmail nalog, backup nalog ili bilo koji drugi. Bez dijaloga za dozvolu — tiho šalje ako nalog ima pristup.
-
-## [15.5] - 2026-10-17
-- Liste na Google Drive idu same i tiho, bez prekidača u Opcijama: čim je Gmail povezan, akontacija, prevoz i konačna lista odlaze u folder „Rad liste“. Ko je Gmail povezao ranije, jednom dobija Google ekran za dozvolu za Drive; novo povezivanje Gmail-a odmah traži i Drive.
-
-## [15.4] - 2026-10-17
-- **Liste na Google Drive:** u Opcijama → „Liste iz Gmail-a“ novi prekidač „Liste na Google Drive“. Kad se uključi (uz Google dozvolu), akontacija, prevoz i konačna lista iz Gmail-a se same šalju u folder „Rad liste“ na Drive-u istog naloga (npr. „2026-09 akontacija rb.1.pdf“), od januara prošle godine. Nove liste se šalju pri ulasku u aplikaciju i u pozadinskoj proveri; već poslate se ne šalju ponovo.
+- **Liste na Google Drive:** akontacija, prevoz i konačna lista iz Gmail-a se same i tiho šalju u folder „Rad liste” na Google Drive-u (npr. „2026-09 akontacija rb.1.pdf”), od januara prošle godine. Šalju se čim je Gmail povezan, bez prekidača — pri ulasku u aplikaciju i u pozadini na svakih 6 sati. Već poslate se ne šalju ponovo. Svaki fajl se deli sa ciljnim nalogom, pa kolege mogu da šalju svoje liste.
 
 ## [15.3] - 2026-10-17
 - **Prevoz po danu iz uplaćenog iznosa:** kad prevoz pređe neoporezivi deo, bruto na listi se uvećava za porez i doprinose (npr. 7.802 za 20 dana), a na račun stiže manje (7.600 = 20 × 380). Aplikacija sada deli „Ukupno uplaćeno“, pa pokazuje 380 umesto 390,10 / 382,07 / 393,02. Posle ažuriranja obračuni prevoza za proteklih 6 meseci se ponovo pročitaju.
