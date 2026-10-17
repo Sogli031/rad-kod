@@ -21,7 +21,7 @@ if (-not $Folder) {
         ForEach-Object { ($_ -split "`t")[0] } | Select-Object -First 1
     if (-not $device) { throw 'Telefon nije na adb-u' }
     Get-ChildItem $work -Filter *.pdf | Remove-Item -Confirm:$false
-    # Imena lista: „081262_230671_Prezime Ime.pdf“, „07126p_229509_…pdf“.
+    # Imena lista: „MMRGGx_brojradnika_Prezime Ime.pdf“ (x = p za prevoz).
     $files = & $adb -s $device shell 'ls /sdcard/Download/' | ForEach-Object { $_.Trim() } |
         Where-Object { $_ -match '^[0-9]{5}[0-9a-z]_[0-9]+_.*\.pdf$' }
     foreach ($f in $files) { & $adb -s $device pull "/sdcard/Download/$f" (Join-Path $work $f) 2>&1 | Out-Null }
