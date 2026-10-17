@@ -93,22 +93,16 @@ internal fun driveUploadAccount(context: Context): DriveUploadAccountResult {
             .filter { it.name !in seen }
             .forEach(::add)
     }
-    for ((index, account) in candidates.withIndex()) {
+    for (account in candidates) {
         try {
             GoogleAuthUtil.getToken(context, account, DRIVE_FILE_TOKEN_SCOPE)
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}/${candidates.size} ima dozvolu")
             return DriveUploadAccountResult.Ready(account)
         } catch (e: UserRecoverableAuthException) {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1} traži dozvolu")
             if (consentIntent == null) consentIntent = e.intent
             continue
-        } catch (e: GoogleAuthException) {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}: ${e.javaClass.simpleName}")
-            continue
-        } catch (e: java.io.IOException) {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: nalog ${index + 1}: ${e.javaClass.simpleName}")
-            continue
         }
+        catch (_: GoogleAuthException) { continue }
+        catch (_: java.io.IOException) { continue }
     }
     return consentIntent?.let { DriveUploadAccountResult.NeedsConsent(it) }
         ?: DriveUploadAccountResult.NoAccount
@@ -134,20 +128,11 @@ private const val LATEST_SEARCH_MONTHS = 3L
  * intent za Google ekran. Radi mrežu — zvati van glavne niti.
  */
 internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Intent? = synchronized(UPLOAD_LOCK) {
-    if (gmailPayslipAccount(context) == null) {
-        Log.w(SIDE_RUN_LOG_TAG, "Drive: Gmail nije povezan")
-        return null
-    }
+    if (gmailPayslipAccount(context) == null) return null
     val driveAccount = when (val result = driveUploadAccount(context)) {
         is DriveUploadAccountResult.Ready -> result.account
-        is DriveUploadAccountResult.NeedsConsent -> {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: treba dozvola")
-            return result.intent
-        }
-        DriveUploadAccountResult.NoAccount -> {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: nijedan nalog nema dozvolu")
-            return null
-        }
+        is DriveUploadAccountResult.NeedsConsent -> return result.intent
+        DriveUploadAccountResult.NoAccount -> return null
     }
     // Stari zapis „poslatih“ poruka više ne treba.
     drivePayslipPrefs(context).edit().clear().apply()
@@ -155,7 +140,6 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
         val drive = driveFileService(context, driveAccount)
         val folderId = payslipFolderId(drive)
         val inFolder = folderFileNames(drive, folderId).toMutableSet()
-        Log.w(SIDE_RUN_LOG_TAG, "Drive: u folderu ${inFolder.size} fajlova")
         val found = mutableSetOf<DrivePayslipKind>()
         var uploaded = 0
         val start = today.minusMonths(LATEST_SEARCH_MONTHS)
@@ -169,7 +153,6 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             uploaded += uploadLatestPdfs(context, drive, folderId, messageId, pdfs, found, inFolder)
             found.size < DrivePayslipKind.entries.size
         }
-        Log.w(SIDE_RUN_LOG_TAG, "Drive: nađeno $found, poslato $uploaded")
         Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista (nalog: ${driveAccount.name})")
     } catch (e: GoogleAuthIOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive dozvola: ${e.javaClass.simpleName}")
@@ -199,16 +182,12 @@ private fun uploadLatestPdfs(
         val kind = drivePayslipKind(result) ?: continue
         if (!found.add(kind)) continue
         val name = drivePayslipFileName(result) ?: continue
-        if (name in inFolder) {
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: $name već postoji")
-            continue
-        }
+        if (name in inFolder) continue
         // Greška na jednoj listi ne prekida ostale; ponovo se pokušava pri sledećoj proveri.
         try {
             uploadPdf(drive, folderId, name, bytes)
             inFolder += name
             uploaded++
-            Log.w(SIDE_RUN_LOG_TAG, "Drive: poslato $name")
         } catch (e: GoogleAuthIOException) {
             throw e
         } catch (e: Exception) {
@@ -253,9 +232,8 @@ private fun driveFileService(context: Context, account: Account): Drive {
 /** Folder za liste; pravi se kad ga nema (ili ga je korisnik obrisao). Deli se sa ciljnim nalogom. */
 private fun payslipFolderId(drive: Drive): String {
     val query = "name = '$DRIVE_PAYSLIP_FOLDER_NAME' and mimeType = '$FOLDER_MIME' and trashed = false"
-    val folders = drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute().files.orEmpty()
-    if (folders.size > 1) Log.w(SIDE_RUN_LOG_TAG, "Drive: ${folders.size} foldera $DRIVE_PAYSLIP_FOLDER_NAME")
-    folders.firstOrNull()?.id?.let { return it }
+    drive.files().list().setQ(query).setSpaces("drive").setFields("files(id)").execute()
+        .files.orEmpty().firstOrNull()?.id?.let { return it }
     val metadata = com.google.api.services.drive.model.File().apply {
         name = DRIVE_PAYSLIP_FOLDER_NAME
         mimeType = FOLDER_MIME

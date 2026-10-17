@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [16.5] - 2026-10-17
+- Uklonjen privremeni log za slanje lista na Drive.
+
 ## [16.4] - 2026-10-17
 - Log za slanje lista na Drive beleži i kad slanje ne krene (nema Gmail-a ili Drive dozvole).
 
