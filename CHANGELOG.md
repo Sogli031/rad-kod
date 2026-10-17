@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.5] - 2026-10-17
+- Liste na Google Drive idu same i tiho, bez prekidača u Opcijama: čim je Gmail povezan, akontacija, prevoz i konačna lista odlaze u folder „Rad liste“. Ko je Gmail povezao ranije, jednom dobija Google ekran za dozvolu za Drive; novo povezivanje Gmail-a odmah traži i Drive.
+
 ## [15.4] - 2026-10-17
 - **Liste na Google Drive:** u Opcijama → „Liste iz Gmail-a“ novi prekidač „Liste na Google Drive“. Kad se uključi (uz Google dozvolu), akontacija, prevoz i konačna lista iz Gmail-a se same šalju u folder „Rad liste“ na Drive-u istog naloga (npr. „2026-09 akontacija rb.1.pdf“), od januara prošle godine. Nove liste se šalju pri ulasku u aplikaciju i u pozadinskoj proveri; već poslate se ne šalju ponovo.
 

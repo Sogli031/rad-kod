@@ -13,6 +13,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIO
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.drive.DriveScopes
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.GmailScopes
 import com.google.api.services.gmail.model.MessagePart
@@ -43,7 +44,8 @@ private const val MAX_GMAIL_ATTACHMENT_BYTES = 1024 * 1024
 /** Listić za mesec stiže narednih meseci (ispravke rb.2, rb.3...), pa se gleda prozor od 3 meseca. */
 private const val GMAIL_SEARCH_MONTHS = 3L
 
-private const val GMAIL_TOKEN_SCOPE = "oauth2:${GmailScopes.GMAIL_READONLY}"
+/** Uz čitanje mejla odmah i Drive (`drive.file`), da liste idu na Drive bez posebne dozvole. */
+private const val GMAIL_TOKEN_SCOPE = "oauth2:${GmailScopes.GMAIL_READONLY} ${DriveScopes.DRIVE_FILE}"
 
 private const val GMAIL_PREFS_NAME = "rad_gmail_payslip_prefs"
 private const val KEY_GMAIL_ACCOUNT = "account_email"

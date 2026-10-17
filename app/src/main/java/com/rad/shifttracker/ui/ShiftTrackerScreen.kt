@@ -46,6 +46,7 @@ import com.rad.shifttracker.smene.ShiftScheduler
 import com.rad.shifttracker.ui.dialozi.BackupSignInPromptHost
 import com.rad.shifttracker.ui.dialozi.UpdatePromptHost
 import com.rad.shifttracker.ui.dialozi.SideRunMessagesDialog
+import com.rad.shifttracker.ui.dialozi.DrivePayslipConsentOnce
 import com.rad.shifttracker.ui.dialozi.rememberDriveBackupSignIn
 import com.rad.shifttracker.ui.dialozi.takeGmailUpdateIntro
 import com.rad.shifttracker.repo.reschedule
@@ -121,6 +122,7 @@ fun ShiftTrackerScreen(repo: ShiftRepository, backup: com.rad.shifttracker.data.
         vacationCardAsOfDate(currentYear, currentMonth, today)
     }
     val scheduler = remember { ShiftScheduler() }
+    DrivePayslipConsentOnce()
 
     // Otvoren dijalog preživljava rotaciju; DayEdit obnavlja zapis iz repo-a.
     var dialogState by rememberSaveable(

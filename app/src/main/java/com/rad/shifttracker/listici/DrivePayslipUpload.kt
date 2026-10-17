@@ -17,17 +17,15 @@ import java.time.YearMonth
 import com.rad.shifttracker.smene.MonthKey
 
 /**
- * Liste iz Gmail-a (akontacija, prevoz, konačna) se same šalju u folder [DRIVE_PAYSLIP_FOLDER_NAME]
- * na Google Drive-u istog naloga. Dozvola je samo `drive.file`: aplikacija vidi samo fajlove koje je
- * sama napravila. Poruka čiji su svi prilozi poslati se pamti i više se ne preuzima.
+ * Liste iz Gmail-a (akontacija, prevoz, konačna) se same i tiho šalju u folder
+ * [DRIVE_PAYSLIP_FOLDER_NAME] na Google Drive-u istog naloga. Dozvola je samo `drive.file`:
+ * aplikacija vidi samo fajlove koje je sama napravila. Poruka čiji su svi prilozi poslati se pamti i više se ne preuzima.
  */
-internal const val DRIVE_PAYSLIP_SWITCH_LABEL = "Liste na Google Drive"
 internal const val DRIVE_PAYSLIP_FOLDER_NAME = "Rad liste"
 
 private const val DRIVE_PAYSLIP_PREFS_NAME = "rad_drive_payslip_prefs"
-private const val KEY_ENABLED = "enabled"
 private const val KEY_DONE_MESSAGES = "done_messages"
-private const val KEY_LAST_ERROR = "last_error"
+private const val KEY_CONSENT_ASKED = "consent_asked"
 private const val DRIVE_FILE_TOKEN_SCOPE = "oauth2:${DriveScopes.DRIVE_FILE}"
 private const val FOLDER_MIME = "application/vnd.google-apps.folder"
 private const val PDF_MIME = "application/pdf"
@@ -35,16 +33,13 @@ private const val PDF_MIME = "application/pdf"
 private fun drivePayslipPrefs(context: Context) =
     context.getSharedPreferences(DRIVE_PAYSLIP_PREFS_NAME, Context.MODE_PRIVATE)
 
-internal fun isDrivePayslipUploadEnabled(context: Context): Boolean =
-    drivePayslipPrefs(context).getBoolean(KEY_ENABLED, false)
+/** Google dozvola za Drive se traži najviše jednom; ako je korisnik odbije, više se ne nudi. */
+internal fun wasDrivePayslipConsentAsked(context: Context): Boolean =
+    drivePayslipPrefs(context).getBoolean(KEY_CONSENT_ASKED, false)
 
-internal fun setDrivePayslipUploadEnabled(context: Context, enabled: Boolean) {
-    drivePayslipPrefs(context).edit().putBoolean(KEY_ENABLED, enabled).remove(KEY_LAST_ERROR).apply()
+internal fun markDrivePayslipConsentAsked(context: Context) {
+    drivePayslipPrefs(context).edit().putBoolean(KEY_CONSENT_ASKED, true).apply()
 }
-
-/** Poslednja greška slanja (prikazuje se u Opcijama), ili null. */
-internal fun drivePayslipUploadError(context: Context): String? =
-    drivePayslipPrefs(context).getString(KEY_LAST_ERROR, null)
 
 /**
  * Proverava Drive dozvolu (`drive.file`) za Gmail nalog sa listama. Radi mrežu — zvati van glavne
@@ -89,15 +84,14 @@ private val UPLOAD_LOCK = Any()
 private val RUN_LABEL_REGEX = Regex("""rb\.\d+""")
 
 /**
- * Šalje na Drive liste iz Gmail-a od januara prošle godine koje još nisu poslate. Ništa ne radi
- * dok slanje nije uključeno ili Gmail nije povezan. Radi mrežu — zvati van glavne niti.
+ * Šalje na Drive liste iz Gmail-a od januara prošle godine koje još nisu poslate, tiho. Ništa ne
+ * radi dok Gmail nije povezan; bez Drive dozvole samo zapiše u log. Radi mrežu — zvati van glavne niti.
  */
 internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Unit = synchronized(UPLOAD_LOCK) {
-    if (!isDrivePayslipUploadEnabled(context)) return
     val account = gmailPayslipAccount(context) ?: return
     val prefs = drivePayslipPrefs(context)
     val done = prefs.getStringSet(KEY_DONE_MESSAGES, emptySet()).orEmpty().toMutableSet()
-    val error = try {
+    try {
         val drive = driveFileService(context, account)
         val folderId = payslipFolderId(drive)
         var uploaded = 0
@@ -114,15 +108,11 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             prefs.edit().putStringSet(KEY_DONE_MESSAGES, done.toSet()).apply()
         }
         Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista")
-        null
     } catch (e: GoogleAuthIOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive dozvola: ${e.javaClass.simpleName}")
-        "Nema dozvole za Google Drive"
     } catch (e: java.io.IOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive greška ${e.javaClass.simpleName}")
-        "Slanje na Google Drive nije uspelo"
     }
-    prefs.edit().apply { if (error != null) putString(KEY_LAST_ERROR, error) else remove(KEY_LAST_ERROR) }.apply()
 }
 
 /** Šalje PDF-ove jedne poruke koji su akontacija, prevoz ili konačna, a još ih nema u folderu. */
