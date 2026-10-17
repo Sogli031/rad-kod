@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.rad.shifttracker.krv.BloodDonationReminderScheduler
 import com.rad.shifttracker.uvoz.GmailImportRunner
 import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
+import com.rad.shifttracker.listici.uploadPayslipsToDrive
 import com.rad.shifttracker.uvoz.runFinalPayslipCheckOnEntry
 import com.rad.shifttracker.uvoz.runSideRunCheckOnEntry
 import com.rad.shifttracker.repo.ShiftRepository
@@ -119,6 +120,11 @@ class MainActivity : ComponentActivity() {
                     runFinalPayslipCheckOnEntry(context, repo)
                 } catch (e: Exception) {
                     Log.w(SIDE_RUN_LOG_TAG, "provera konačne liste pukla", e)
+                }
+                try {
+                    uploadPayslipsToDrive(context)
+                } catch (e: Exception) {
+                    Log.w(SIDE_RUN_LOG_TAG, "slanje lista na Drive puklo", e)
                 }
             } finally {
                 advanceCheckRunning.set(false)

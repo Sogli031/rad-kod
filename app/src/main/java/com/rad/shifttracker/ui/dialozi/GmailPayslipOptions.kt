@@ -150,6 +150,7 @@ internal fun GmailPayslipSettingsSection(repo: ShiftRepository, actions: DataAct
             textStyle = MaterialTheme.typography.labelLarge,
             onClick = connector.connect
         )
+        if (accountEmail != null) DrivePayslipUploadSwitch()
         RoundedButton(
             text = PAYSLIP_RECHECK_LABEL,
             modifier = Modifier

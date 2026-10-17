@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.4] - 2026-10-17
+- **Liste na Google Drive:** u Opcijama → „Liste iz Gmail-a“ novi prekidač „Liste na Google Drive“. Kad se uključi (uz Google dozvolu), akontacija, prevoz i konačna lista iz Gmail-a se same šalju u folder „Rad liste“ na Drive-u istog naloga (npr. „2026-09 akontacija rb.1.pdf“), od januara prošle godine. Nove liste se šalju pri ulasku u aplikaciju i u pozadinskoj proveri; već poslate se ne šalju ponovo.
+
 ## [15.3] - 2026-10-17
 - **Prevoz po danu iz uplaćenog iznosa:** kad prevoz pređe neoporezivi deo, bruto na listi se uvećava za porez i doprinose (npr. 7.802 za 20 dana), a na račun stiže manje (7.600 = 20 × 380). Aplikacija sada deli „Ukupno uplaćeno“, pa pokazuje 380 umesto 390,10 / 382,07 / 393,02. Posle ažuriranja obračuni prevoza za proteklih 6 meseci se ponovo pročitaju.
 

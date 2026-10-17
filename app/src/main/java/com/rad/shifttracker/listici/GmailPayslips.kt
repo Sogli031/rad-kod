@@ -366,3 +366,29 @@ private fun pdfParts(part: MessagePart?): List<MessagePart> {
 }
 
 internal const val SIDE_RUN_LOG_TAG = "RadObracuni"
+
+/** PDF prilog jednog mejla sa listama; [bytes] je null kad prilog nije mogao da se preuzme. */
+internal class GmailPdfFile(val fileName: String, val bytes: ByteArray?)
+
+/**
+ * Mejlovi sa listama za mesece rada [from]..[until] (najnoviji prvi), bez onih za koje [skip] kaže
+ * da su već obrađeni; [onMessage] dobija sve PDF priloge jedne poruke. Vraća false kad Gmail nije
+ * povezan. Radi mrežu — zvati van glavne niti.
+ */
+internal fun forEachGmailPayslipMessage(
+    context: Context,
+    from: MonthKey,
+    until: MonthKey,
+    skip: (messageId: String) -> Boolean,
+    onMessage: (messageId: String, pdfs: List<GmailPdfFile>) -> Unit
+): Boolean {
+    val account = gmailPayslipAccount(context) ?: return false
+    val gmail = gmailService(context, account)
+    val cache = GmailPayslipCache.open(context)
+    val refs = gmailMessageRefs(gmail, gmailPayslipRangeQuery(from, until), MAX_GMAIL_RANGE_MESSAGES)
+    for (ref in refs.filterNot { skip(it.id) }) {
+        val pdfs = gmailPdfAttachments(gmail, listOf(ref), cache).map { GmailPdfFile(it.fileName, downloadGmailAttachment(gmail, it)) }
+        onMessage(ref.id, pdfs)
+    }
+    return true
+}

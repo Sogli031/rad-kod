@@ -12,12 +12,13 @@ import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 import com.rad.shifttracker.uvoz.GmailImportRunner
 import com.rad.shifttracker.listici.SIDE_RUN_LOG_TAG
+import com.rad.shifttracker.listici.uploadPayslipsToDrive
 import com.rad.shifttracker.uvoz.runFinalPayslipCheckOnEntry
 import com.rad.shifttracker.uvoz.runSideRunCheckOnEntry
 
 /**
  * Provera posebnih obračuna (akontacija, prevoz, regres) i konačne liste u pozadini, bez ulaska u
- * aplikaciju. Odluku da li ima šta da se traži donose iste provere kao pri ulasku
+ * aplikaciju, i slanje novih lista na Google Drive kad je uključeno. Odluku da li ima šta da se traži donose iste provere kao pri ulasku
  * ([runSideRunCheckOnEntry], [runFinalPayslipCheckOnEntry]), pa se mreža ne troši bez potrebe.
  */
 class SideRunWorker(
@@ -43,6 +44,11 @@ class SideRunWorker(
                 runFinalPayslipCheckOnEntry(applicationContext, repo)
             } catch (e: Exception) {
                 Log.w(SIDE_RUN_LOG_TAG, "pozadinska provera konačne liste pukla", e)
+            }
+            try {
+                uploadPayslipsToDrive(applicationContext)
+            } catch (e: Exception) {
+                Log.w(SIDE_RUN_LOG_TAG, "pozadinsko slanje lista na Drive puklo", e)
             }
         } finally {
             MainActivity.advanceCheckRunning.set(false)
