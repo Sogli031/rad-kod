@@ -145,6 +145,7 @@ internal fun BottomBar(
     onBasePay: () -> Unit,
     onHolidays: () -> Unit,
     onOptions: () -> Unit,
+    onYearOverview: () -> Unit,
     onDeleteMonth: () -> Unit,
     basePayEnabled: Boolean = true
 ) {
@@ -156,6 +157,7 @@ internal fun BottomBar(
         BottomBarItem(specs.basePay.icon, specs.basePay.label, scheme.onSurfaceVariant, null, onBasePay),
         BottomBarItem(specs.holidays.icon, specs.holidays.label, scheme.onSurfaceVariant, null, onHolidays),
         BottomBarItem(specs.options.icon, specs.options.label, scheme.onSurfaceVariant, null, onOptions),
+        BottomBarItem(specs.yearOverview.icon, specs.yearOverview.label, scheme.onSurfaceVariant, null, onYearOverview),
         BottomBarItem(specs.deleteMonth.icon, specs.deleteMonth.label, scheme.error, null, onDeleteMonth)
     ).filterNotNull()
 
@@ -247,6 +249,7 @@ internal data class BottomBarButtonLabels(
     val basePay: String,
     val holidays: String,
     val options: String,
+    val yearOverview: String,
     val deleteMonth: String
 )
 
@@ -264,6 +267,7 @@ internal data class BottomBarButtonSpecs(
     val basePay: BottomBarButtonSpec,
     val holidays: BottomBarButtonSpec,
     val options: BottomBarButtonSpec,
+    val yearOverview: BottomBarButtonSpec,
     val deleteMonth: BottomBarButtonSpec
 )
 
@@ -275,6 +279,7 @@ internal fun bottomBarButtonLabels(): BottomBarButtonLabels {
         basePay = specs.basePay.label,
         holidays = specs.holidays.label,
         options = specs.options.label,
+        yearOverview = specs.yearOverview.label,
         deleteMonth = specs.deleteMonth.label
     )
 }
@@ -286,6 +291,7 @@ internal fun bottomBarButtonSpecs(): BottomBarButtonSpecs {
         basePay = BottomBarButtonSpec(icon = AppIcons.pay, label = "Lista"),
         holidays = BottomBarButtonSpec(icon = AppIcons.sick, label = BLOOD_DONATION_BOTTOM_BAR_LABEL),
         options = BottomBarButtonSpec(icon = AppIcons.settings, label = "Opcije"),
+        yearOverview = BottomBarButtonSpec(icon = AppIcons.yearOverview, label = "Pregled"),
         deleteMonth = BottomBarButtonSpec(icon = AppIcons.delete, label = "Briši")
     )
 }

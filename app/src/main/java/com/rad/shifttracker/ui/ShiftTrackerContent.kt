@@ -144,6 +144,7 @@ internal fun ShiftTrackerContent(
             onBasePay = { onOpenDialog(DialogState.BasePay) },
             onHolidays = { onOpenDialog(DialogState.BloodDonation) },
             onOptions = { onOpenDialog(DialogState.Options) },
+            onYearOverview = { onOpenDialog(DialogState.YearOverview) },
             onDeleteMonth = { onOpenDialog(DialogState.DeleteMonth) },
             basePayEnabled = !isPayslipMonthUnfinished(month, today)
         )

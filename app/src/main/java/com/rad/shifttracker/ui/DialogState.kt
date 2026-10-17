@@ -26,6 +26,7 @@ internal sealed class DialogState {
     data object DeleteMonth : DialogState()
     data object VacationSettings : DialogState()
     data object BloodDonation : DialogState()
+    data object YearOverview : DialogState()
     data class DayEdit(val day: Int, val record: DayRecord?) : DialogState()
 }
 
@@ -64,7 +65,8 @@ private val simpleDialogStatesByKey: Map<String, DialogState> = listOf(
     DialogState.InitialCompBalance,
     DialogState.DeleteMonth,
     DialogState.VacationSettings,
-    DialogState.BloodDonation
+    DialogState.BloodDonation,
+    DialogState.YearOverview
 ).associateBy { dialogStateToKey(it) }
 
 internal fun dialogStateFromKey(saved: String, recordForDay: (Int) -> DayRecord?): DialogState {

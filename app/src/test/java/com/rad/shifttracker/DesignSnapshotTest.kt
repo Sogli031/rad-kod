@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import org.junit.Rule
@@ -48,6 +49,7 @@ import com.rad.shifttracker.ui.WeekdayHeader
 import com.rad.shifttracker.ui.dialozi.DayEditDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
 import com.rad.shifttracker.ui.dialozi.PayDetailsSections
+import com.rad.shifttracker.ui.dialozi.YearOverviewBody
 import androidx.compose.foundation.background
 import com.rad.shifttracker.repo.getMonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.repo.getMonthlyPayDetails
@@ -164,14 +166,42 @@ class DesignSnapshotTest {
         captureScreenRoboImage(snapshotPath("main", widthDp, fontScale))
     }
 
-    private fun dialog(name: String, fontScale: Float, content: @Composable (ShiftRepository) -> Unit) {
+    @Test
+    fun `year overview dialog 360dp font 1_0`() = yearOverview(fontScale = 1.0f)
+
+    @Test
+    fun `year overview dialog 360dp font 1_5`() = yearOverview(fontScale = 1.5f)
+
+    // Pregled se računa van glavne niti, pa snimak čeka da se pojavi zbir.
+    // Compose Dialog se u Robolectric NATIVE iscrtavanju sa zadatim ekranom ne smiri, pa se snima
+    // sadržaj prozora na istoj površini. Pregled se računa van glavne niti: snimak čeka zbir.
+    private fun yearOverview(fontScale: Float) = dialog("year_overview", fontScale, sampleYearRepository(), ready = "Neto") { repo ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(Spacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
+        ) {
+            YearOverviewBody(repo = repo, today = YearMonth.of(YEAR, MONTH), initialYear = YEAR)
+        }
+    }
+
+    private fun dialog(
+        name: String,
+        fontScale: Float,
+        repo: ShiftRepository = sampleRepository(),
+        ready: String? = null,
+        content: @Composable (ShiftRepository) -> Unit
+    ) {
         setDevice(360, 780, fontScale)
-        val repo = sampleRepository()
         rule.setContent {
             RadTheme { content(repo) }
         }
         // Ulazna animacija lista mora da se završi pre snimka.
         rule.mainClock.advanceTimeBy(DIALOG_SETTLE_MS)
+        ready?.let { text -> rule.waitUntil(READY_TIMEOUT_MS) { rule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() } }
         rule.waitForIdle()
         captureScreenRoboImage(snapshotPath(name, 360, fontScale))
     }
@@ -195,6 +225,7 @@ class DesignSnapshotTest {
         const val MONTH = 10
         const val DIALOG_SETTLE_MS = 1_000L
         const val MAIN_SETTLE_MS = 2_000L
+        const val READY_TIMEOUT_MS = 10_000L
     }
 }
 
@@ -213,6 +244,20 @@ internal fun sampleMonthRepository(year: Int = 2026, month: Int = 10): ShiftRepo
         } else {
             set(year, month, day, shift, hours)
         }
+    }
+}
+
+/** Jul 2025 – septembar 2026 po istom rasporedu, za godišnji pregled sa poređenjem. */
+internal fun sampleYearRepository(): ShiftRepository = testRepository().apply {
+    val pattern = listOf(Shift.FIRST, Shift.FIRST, Shift.SECOND, Shift.SECOND, Shift.THIRD, Shift.THIRD, Shift.OFF, Shift.OFF)
+    var month = YearMonth.of(2025, 7)
+    var index = 0
+    while (!month.isAfter(YearMonth.of(2026, 9))) {
+        for (day in 1..month.lengthOfMonth()) {
+            val shift = pattern[index++ % pattern.size]
+            set(month.year, month.monthValue, day, shift, if (shift == Shift.OFF) 0 else 8)
+        }
+        month = month.plusMonths(1)
     }
 }
 
@@ -278,6 +323,7 @@ internal fun MainScreenSnapshot(repo: ShiftRepository, today: LocalDate) {
             onBasePay = {},
             onHolidays = {},
             onOptions = {},
+            onYearOverview = {},
             onDeleteMonth = {}
         )
     }

@@ -3,6 +3,7 @@ package com.rad.shifttracker.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Healing
 import androidx.compose.material.icons.filled.LocalHospital
@@ -21,5 +22,6 @@ object AppIcons {
     val pay: ImageVector = Icons.Filled.AttachMoney
     val settings: ImageVector = Icons.Filled.Settings
     val delete: ImageVector = Icons.Filled.DeleteForever
+    val yearOverview: ImageVector = Icons.Filled.BarChart
     val sick: ImageVector = Icons.Filled.Healing           // Bolovanje
 }

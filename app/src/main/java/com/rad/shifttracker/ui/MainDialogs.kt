@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.rad.shifttracker.data.backup.SignInState
 import com.rad.shifttracker.data.backup.SyncState
 import java.time.LocalDate
+import java.time.YearMonth
 import com.rad.shifttracker.krv.BloodDonationReminderScheduleStatus
 import com.rad.shifttracker.obracun.MonthlyFinalPaymentBreakdown
 import com.rad.shifttracker.obracun.MonthlyOvertimeNetImpact
@@ -27,6 +28,7 @@ import com.rad.shifttracker.ui.dialozi.InitialCompBalanceDialog
 import com.rad.shifttracker.ui.dialozi.MinuliRadDialog
 import com.rad.shifttracker.ui.dialozi.OptionsDialog
 import com.rad.shifttracker.ui.dialozi.OvertimeNetImpactDialog
+import com.rad.shifttracker.ui.dialozi.YearOverviewDialog
 import com.rad.shifttracker.ui.dialozi.PayslipReaderDialog
 import com.rad.shifttracker.ui.dialozi.TransportDialog
 import com.rad.shifttracker.ui.dialozi.WorkHoursDialog
@@ -151,6 +153,15 @@ internal fun MainDialogs(
 
         DialogState.BloodDonation -> {
             MainBloodDonationDialog(data = data, onDismiss = onDismiss)
+        }
+
+        DialogState.YearOverview -> {
+            YearOverviewDialog(
+                repo = data.repo,
+                today = YearMonth.from(data.today),
+                initialYear = data.currentYear,
+                onDismiss = onDismiss
+            )
         }
 
         DialogState.AdvancePayment -> {
