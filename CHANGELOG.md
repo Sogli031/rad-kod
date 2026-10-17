@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [15.6] - 2026-10-17
+- Liste na Drive idu preko bilo kog Google naloga na uređaju: Gmail nalog, backup nalog ili bilo koji drugi. Bez dijaloga za dozvolu — tiho šalje ako nalog ima pristup.
+
 ## [15.5] - 2026-10-17
 - Liste na Google Drive idu same i tiho, bez prekidača u Opcijama: čim je Gmail povezan, akontacija, prevoz i konačna lista odlaze u folder „Rad liste“. Ko je Gmail povezao ranije, jednom dobija Google ekran za dozvolu za Drive; novo povezivanje Gmail-a odmah traži i Drive.
 

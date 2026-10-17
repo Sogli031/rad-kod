@@ -1,6 +1,7 @@
 package com.rad.shifttracker.listici
 
 import android.accounts.Account
+import android.accounts.AccountManager
 import android.content.Context
 import android.util.Log
 import com.google.android.gms.auth.GoogleAuthException
@@ -25,39 +26,12 @@ internal const val DRIVE_PAYSLIP_FOLDER_NAME = "Rad liste"
 
 private const val DRIVE_PAYSLIP_PREFS_NAME = "rad_drive_payslip_prefs"
 private const val KEY_DONE_MESSAGES = "done_messages"
-private const val KEY_CONSENT_ASKED = "consent_asked"
 private const val DRIVE_FILE_TOKEN_SCOPE = "oauth2:${DriveScopes.DRIVE_FILE}"
 private const val FOLDER_MIME = "application/vnd.google-apps.folder"
 private const val PDF_MIME = "application/pdf"
 
 private fun drivePayslipPrefs(context: Context) =
     context.getSharedPreferences(DRIVE_PAYSLIP_PREFS_NAME, Context.MODE_PRIVATE)
-
-/** Google dozvola za Drive se traži najviše jednom; ako je korisnik odbije, više se ne nudi. */
-internal fun wasDrivePayslipConsentAsked(context: Context): Boolean =
-    drivePayslipPrefs(context).getBoolean(KEY_CONSENT_ASKED, false)
-
-internal fun markDrivePayslipConsentAsked(context: Context) {
-    drivePayslipPrefs(context).edit().putBoolean(KEY_CONSENT_ASKED, true).apply()
-}
-
-/**
- * Proverava Drive dozvolu (`drive.file`) za Gmail nalog sa listama. Radi mrežu — zvati van glavne
- * niti.
- */
-internal fun authorizeDrivePayslipUpload(context: Context): GmailAuthorizeResult {
-    val account = gmailPayslipAccount(context) ?: return GmailAuthorizeResult.Failed
-    return try {
-        GoogleAuthUtil.getToken(context, account, DRIVE_FILE_TOKEN_SCOPE)
-        GmailAuthorizeResult.Authorized
-    } catch (e: UserRecoverableAuthException) {
-        e.intent?.let { GmailAuthorizeResult.NeedsConsent(it) } ?: GmailAuthorizeResult.Failed
-    } catch (e: GoogleAuthException) {
-        GmailAuthorizeResult.Failed
-    } catch (e: java.io.IOException) {
-        GmailAuthorizeResult.Failed
-    }
-}
 
 /**
  * Ime fajla na Drive-u za pročitan PDF: „2026-09 akontacija rb.1.pdf“. Šalju se samo akontacija,
@@ -84,15 +58,45 @@ private val UPLOAD_LOCK = Any()
 private val RUN_LABEL_REGEX = Regex("""rb\.\d+""")
 
 /**
+ * Vraća prvi Google nalog na uređaju koji ima Drive dozvolu (`drive.file`). Redom: Gmail nalog za
+ * liste, backup nalog, pa bilo koji drugi Google nalog. Ako nijedan nema dozvolu, null.
+ */
+private fun driveUploadAccount(context: Context): Account? {
+    val candidates = buildList {
+        gmailPayslipAccount(context)?.let(::add)
+        backupAccountEmail(context)?.let { add(Account(it, GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)) }
+        val seen = map { it.name }.toSet()
+        AccountManager.get(context).getAccountsByType(GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE)
+            .filter { it.name !in seen }
+            .forEach(::add)
+    }
+    for (account in candidates) {
+        try {
+            GoogleAuthUtil.getToken(context, account, DRIVE_FILE_TOKEN_SCOPE)
+            return account
+        } catch (_: UserRecoverableAuthException) { continue }
+        catch (_: GoogleAuthException) { continue }
+        catch (_: java.io.IOException) { continue }
+    }
+    return null
+}
+
+private fun backupAccountEmail(context: Context): String? =
+    context.getSharedPreferences("rad_backup_prefs", Context.MODE_PRIVATE)
+        .getString("account_email", null)?.takeIf { it.isNotBlank() }
+
+/**
  * Šalje na Drive liste iz Gmail-a od januara prošle godine koje još nisu poslate, tiho. Ništa ne
- * radi dok Gmail nije povezan; bez Drive dozvole samo zapiše u log. Radi mrežu — zvati van glavne niti.
+ * radi dok Gmail nije povezan; za Drive koristi bilo koji Google nalog koji ima dozvolu. Radi
+ * mrežu — zvati van glavne niti.
  */
 internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Unit = synchronized(UPLOAD_LOCK) {
-    val account = gmailPayslipAccount(context) ?: return
+    if (gmailPayslipAccount(context) == null) return
+    val driveAccount = driveUploadAccount(context) ?: return
     val prefs = drivePayslipPrefs(context)
     val done = prefs.getStringSet(KEY_DONE_MESSAGES, emptySet()).orEmpty().toMutableSet()
     try {
-        val drive = driveFileService(context, account)
+        val drive = driveFileService(context, driveAccount)
         val folderId = payslipFolderId(drive)
         var uploaded = 0
         forEachGmailPayslipMessage(
@@ -101,13 +105,12 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
             until = MonthKey(today.year, today.monthValue),
             skip = { it in done }
         ) { messageId, pdfs ->
-            // Prilog koji nije preuzet: poruka ostaje neobrađena i pokušava se sledeći put.
             if (pdfs.any { it.bytes == null }) return@forEachGmailPayslipMessage
             uploaded += uploadMessagePdfs(context, drive, folderId, pdfs)
             done += messageId
             prefs.edit().putStringSet(KEY_DONE_MESSAGES, done.toSet()).apply()
         }
-        Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista")
+        Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista (nalog: ${driveAccount.name})")
     } catch (e: GoogleAuthIOException) {
         Log.w(SIDE_RUN_LOG_TAG, "Drive dozvola: ${e.javaClass.simpleName}")
     } catch (e: java.io.IOException) {
