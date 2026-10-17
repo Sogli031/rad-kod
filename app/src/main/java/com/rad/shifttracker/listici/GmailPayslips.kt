@@ -374,7 +374,8 @@ internal class GmailPdfFile(val fileName: String, val bytes: ByteArray?)
 
 /**
  * Mejlovi sa listama za mesece rada [from]..[until] (najnoviji prvi), bez onih za koje [skip] kaže
- * da su već obrađeni; [onMessage] dobija sve PDF priloge jedne poruke. Vraća false kad Gmail nije
+ * da su već obrađeni; [onMessage] dobija sve PDF priloge jedne poruke i vraća false kad dalje ne
+ * treba (ostali mejlovi se ne preuzimaju). Vraća false kad Gmail nije
  * povezan. Radi mrežu — zvati van glavne niti.
  */
 internal fun forEachGmailPayslipMessage(
@@ -382,7 +383,7 @@ internal fun forEachGmailPayslipMessage(
     from: MonthKey,
     until: MonthKey,
     skip: (messageId: String) -> Boolean,
-    onMessage: (messageId: String, pdfs: List<GmailPdfFile>) -> Unit
+    onMessage: (messageId: String, pdfs: List<GmailPdfFile>) -> Boolean
 ): Boolean {
     val account = gmailPayslipAccount(context) ?: return false
     val gmail = gmailService(context, account)
@@ -398,7 +399,7 @@ internal fun forEachGmailPayslipMessage(
             Log.w(SIDE_RUN_LOG_TAG, "Gmail poruka ${ref.id}: ${e.javaClass.simpleName}")
             continue
         }
-        onMessage(ref.id, pdfs)
+        if (!onMessage(ref.id, pdfs)) break
     }
     return true
 }

@@ -3,6 +3,9 @@
 Sve značajne izmene u projektu beleže se ovde, najnovije na vrhu.
 Format: verzija (versionName) i datum GGGG-MM-DD.
 
+## [16.1] - 2026-10-17
+- Na Drive se šalje samo poslednja akontacija, poslednji prevoz i poslednja konačna lista, bez starijih meseci. Lista koja fali u folderu „Rad liste“ (i konačna) šalje se pri sledećem ulasku.
+
 ## [16.0] - 2026-10-17
 - Slanje lista na Drive više ne staje na prvoj grešci: lista koja ne uspe preskače se i šalje pri sledećoj proveri, a ostale (akontacija, prevoz, konačna) idu dalje.
 

@@ -22,12 +22,11 @@ import com.rad.shifttracker.smene.MonthKey
 /**
  * Liste iz Gmail-a (akontacija, prevoz, konačna) se same i tiho šalju u folder
  * [DRIVE_PAYSLIP_FOLDER_NAME] na Google Drive-u istog naloga. Dozvola je samo `drive.file`:
- * aplikacija vidi samo fajlove koje je sama napravila. Poruka čiji su svi prilozi poslati se pamti i više se ne preuzima.
+ * aplikacija vidi samo fajlove koje je sama napravila. Šalje se samo poslednja lista svake vrste.
  */
 internal const val DRIVE_PAYSLIP_FOLDER_NAME = "Rad liste"
 
 private const val DRIVE_PAYSLIP_PREFS_NAME = "rad_drive_payslip_prefs"
-private const val KEY_DONE_MESSAGES = "done_messages"
 private const val DRIVE_FILE_TOKEN_SCOPE = "oauth2:${DriveScopes.DRIVE_FILE}"
 private const val FOLDER_MIME = "application/vnd.google-apps.folder"
 private const val PDF_MIME = "application/pdf"
@@ -35,18 +34,28 @@ private const val PDF_MIME = "application/pdf"
 private fun drivePayslipPrefs(context: Context) =
     context.getSharedPreferences(DRIVE_PAYSLIP_PREFS_NAME, Context.MODE_PRIVATE)
 
-/**
- * Ime fajla na Drive-u za pročitan PDF: „2026-09 akontacija rb.1.pdf“. Šalju se samo akontacija,
- * prevoz i konačna lista; za ostalo (regres, nepoznat obračun, PDF koji nije lista) je null.
- */
-internal fun drivePayslipFileName(result: PayslipParseResult): String? = when (result) {
-    is PayslipParseResult.Success -> drivePayslipFileName(result.payslip.month, "konačna", result.payslip.runLabel)
+/** Vrste lista koje idu na Drive; od svake se šalje samo poslednja. */
+internal enum class DrivePayslipKind(val label: String) { ADVANCE("akontacija"), TRANSPORT("prevoz"), FINAL("konačna") }
+
+/** Vrsta pročitanog PDF-a; za regres, nepoznat obračun i PDF koji nije lista je null. */
+internal fun drivePayslipKind(result: PayslipParseResult): DrivePayslipKind? = when (result) {
+    is PayslipParseResult.Success -> DrivePayslipKind.FINAL
     is PayslipParseResult.SideRun -> when (result.kind) {
-        PayslipSideRunKind.ADVANCE -> drivePayslipFileName(result.month, "akontacija", result.runLabel)
-        PayslipSideRunKind.TRANSPORT -> drivePayslipFileName(result.month, "prevoz", result.runLabel)
+        PayslipSideRunKind.ADVANCE -> DrivePayslipKind.ADVANCE
+        PayslipSideRunKind.TRANSPORT -> DrivePayslipKind.TRANSPORT
         PayslipSideRunKind.REGRESS, PayslipSideRunKind.OTHER -> null
     }
     is PayslipParseResult.Failure -> null
+}
+
+/** Ime fajla na Drive-u za pročitan PDF: „2026-09 akontacija rb.1.pdf“; null kad se ne šalje. */
+internal fun drivePayslipFileName(result: PayslipParseResult): String? {
+    val kind = drivePayslipKind(result) ?: return null
+    return when (result) {
+        is PayslipParseResult.Success -> drivePayslipFileName(result.payslip.month, kind.label, result.payslip.runLabel)
+        is PayslipParseResult.SideRun -> drivePayslipFileName(result.month, kind.label, result.runLabel)
+        is PayslipParseResult.Failure -> null
+    }
 }
 
 internal fun drivePayslipFileName(month: MonthKey, kind: String, runLabel: String?): String {
@@ -103,10 +112,14 @@ private fun backupAccountEmail(context: Context): String? =
     context.getSharedPreferences("rad_backup_prefs", Context.MODE_PRIVATE)
         .getString("account_email", null)?.takeIf { it.isNotBlank() }
 
+/** Obračun se traži u mejlovima za poslednja 3 meseca rada (konačna stiže mesec kasnije). */
+private const val LATEST_SEARCH_MONTHS = 3L
+
 /**
- * Šalje na Drive liste iz Gmail-a od januara prošle godine koje još nisu poslate, tiho. Ništa ne
- * radi dok Gmail nije povezan; za Drive koristi bilo koji Google nalog koji ima dozvolu. Ako nijedan
- * nema dozvolu a treba consent, vraća intent za Google ekran. Radi mrežu — zvati van glavne niti.
+ * Šalje na Drive poslednju akontaciju, poslednji prevoz i poslednju konačnu listu iz Gmail-a, ako
+ * ih još nema u folderu; starije liste se ne šalju. Ništa ne radi dok Gmail nije povezan; za Drive
+ * koristi bilo koji Google nalog koji ima dozvolu. Ako nijedan nema dozvolu a treba consent, vraća
+ * intent za Google ekran. Radi mrežu — zvati van glavne niti.
  */
 internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMonth.now()): Intent? = synchronized(UPLOAD_LOCK) {
     if (gmailPayslipAccount(context) == null) return null
@@ -115,30 +128,41 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
         is DriveUploadAccountResult.NeedsConsent -> return result.intent
         DriveUploadAccountResult.NoAccount -> return null
     }
-    val prefs = drivePayslipPrefs(context)
-    val done = prefs.getStringSet(KEY_DONE_MESSAGES, emptySet()).orEmpty().toMutableSet()
+    // Stari zapis „poslatih“ poruka više ne treba.
+    drivePayslipPrefs(context).edit().clear().apply()
     try {
         val drive = driveFileService(context, driveAccount)
         val folderId = payslipFolderId(drive)
+        val inFolder = folderFileNames(drive, folderId).toMutableSet()
+        val found = mutableSetOf<DrivePayslipKind>()
         var uploaded = 0
+        val start = today.minusMonths(LATEST_SEARCH_MONTHS)
+        // Mejlovi idu od najnovijeg: prvi pronađen obračun svake vrste je poslednji.
         forEachGmailPayslipMessage(
             context,
-            from = MonthKey(today.year - 1, 1),
+            from = MonthKey(start.year, start.monthValue),
             until = MonthKey(today.year, today.monthValue),
-            skip = { it in done }
+            skip = { false }
         ) { messageId, pdfs ->
-            if (pdfs.any { it.bytes == null }) return@forEachGmailPayslipMessage
-            // Greška na jednoj poruci ne prekida ostale; poruka ostaje neobrađena za sledeći put.
-            try {
-                uploaded += uploadMessagePdfs(context, drive, folderId, pdfs)
-            } catch (e: GoogleAuthIOException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(SIDE_RUN_LOG_TAG, "Drive upload za poruku $messageId: ${e.javaClass.simpleName}")
-                return@forEachGmailPayslipMessage
+            for (pdf in pdfs) {
+                val bytes = pdf.bytes ?: continue
+                val result = readPayslip(context, bytes)
+                val kind = drivePayslipKind(result) ?: continue
+                if (!found.add(kind)) continue
+                val name = drivePayslipFileName(result) ?: continue
+                if (name in inFolder) continue
+                // Greška na jednoj listi ne prekida ostale; ponovo se pokušava pri sledećoj proveri.
+                try {
+                    uploadPdf(drive, folderId, name, bytes)
+                    inFolder += name
+                    uploaded++
+                } catch (e: GoogleAuthIOException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(SIDE_RUN_LOG_TAG, "Drive upload za poruku $messageId: ${e.javaClass.simpleName}")
+                }
             }
-            done += messageId
-            prefs.edit().putStringSet(KEY_DONE_MESSAGES, done.toSet()).apply()
+            found.size < DrivePayslipKind.entries.size
         }
         Log.i(SIDE_RUN_LOG_TAG, "Drive: poslato $uploaded lista (nalog: ${driveAccount.name})")
     } catch (e: GoogleAuthIOException) {
@@ -149,23 +173,14 @@ internal fun uploadPayslipsToDrive(context: Context, today: YearMonth = YearMont
     return null
 }
 
-/** Šalje PDF-ove jedne poruke koji su akontacija, prevoz ili konačna, a još ih nema u folderu. */
-private fun uploadMessagePdfs(context: Context, drive: Drive, folderId: String, pdfs: List<GmailPdfFile>): Int {
-    var uploaded = 0
-    for (pdf in pdfs) {
-        val bytes = pdf.bytes ?: continue
-        val name = drivePayslipFileName(readPayslip(context, bytes)) ?: continue
-        if (existsInFolder(drive, folderId, name)) continue
-        val metadata = com.google.api.services.drive.model.File().apply {
-            this.name = name
-            parents = listOf(folderId)
-            mimeType = PDF_MIME
-        }
-        val fileId = drive.files().create(metadata, ByteArrayContent(PDF_MIME, bytes)).setFields("id").execute().id
-        shareWithTarget(drive, fileId)
-        uploaded++
+private fun uploadPdf(drive: Drive, folderId: String, name: String, bytes: ByteArray) {
+    val metadata = com.google.api.services.drive.model.File().apply {
+        this.name = name
+        parents = listOf(folderId)
+        mimeType = PDF_MIME
     }
-    return uploaded
+    val fileId = drive.files().create(metadata, ByteArrayContent(PDF_MIME, bytes)).setFields("id").execute().id
+    shareWithTarget(drive, fileId)
 }
 
 private fun shareWithTarget(drive: Drive, fileId: String?) {
@@ -205,10 +220,20 @@ private fun payslipFolderId(drive: Drive): String {
     return folderId
 }
 
-private fun existsInFolder(drive: Drive, folderId: String, name: String): Boolean =
-    drive.files().list()
-        .setQ("name = '$name' and '$folderId' in parents and trashed = false")
-        .setSpaces("drive")
-        .setFields("files(id)")
-        .execute()
-        .files.orEmpty().isNotEmpty()
+/** Imena svih fajlova u folderu (koje je aplikacija napravila), sve strane. */
+private fun folderFileNames(drive: Drive, folderId: String): Set<String> {
+    val names = mutableSetOf<String>()
+    var pageToken: String? = null
+    do {
+        val page = drive.files().list()
+            .setQ("'$folderId' in parents and trashed = false")
+            .setSpaces("drive")
+            .setFields("nextPageToken, files(name)")
+            .setPageSize(1000)
+            .setPageToken(pageToken)
+            .execute()
+        page.files.orEmpty().mapNotNullTo(names) { it.name }
+        pageToken = page.nextPageToken
+    } while (pageToken != null)
+    return names
+}

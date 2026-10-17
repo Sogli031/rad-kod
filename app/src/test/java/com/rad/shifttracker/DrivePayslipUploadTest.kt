@@ -4,10 +4,12 @@ import java.math.BigDecimal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.rad.shifttracker.listici.DrivePayslipKind
 import com.rad.shifttracker.listici.PayslipPayBaseResult
 import com.rad.shifttracker.listici.PayslipParseResult
 import com.rad.shifttracker.listici.PayslipSideRunKind
 import com.rad.shifttracker.listici.drivePayslipFileName
+import com.rad.shifttracker.listici.drivePayslipKind
 import com.rad.shifttracker.smene.MonthKey
 
 class DrivePayslipUploadTest {
@@ -31,5 +33,13 @@ class DrivePayslipUploadTest {
         assertNull(drivePayslipFileName(sideRun(PayslipSideRunKind.REGRESS, "rb.1")))
         assertNull(drivePayslipFileName(sideRun(PayslipSideRunKind.OTHER, null)))
         assertNull(drivePayslipFileName(PayslipParseResult.Failure(PayslipPayBaseResult.InvalidPdf)))
+    }
+
+    @Test
+    fun `vrsta liste za drive`() {
+        assertEquals(DrivePayslipKind.ADVANCE, drivePayslipKind(sideRun(PayslipSideRunKind.ADVANCE, "rb.1")))
+        assertEquals(DrivePayslipKind.TRANSPORT, drivePayslipKind(sideRun(PayslipSideRunKind.TRANSPORT, null)))
+        assertNull(drivePayslipKind(sideRun(PayslipSideRunKind.REGRESS, "rb.1")))
+        assertNull(drivePayslipKind(PayslipParseResult.Failure(PayslipPayBaseResult.InvalidPdf)))
     }
 }
